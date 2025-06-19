@@ -1,0 +1,317 @@
+
+mat-card {
+    width: 80%;
+    margin: 10px;
+    color: black;
+
+    max-width:1200px;
+    border: 1px solid black;
+}
+
+.mat-row {        
+    // position: relative;
+    cursor: pointer;
+}
+
+.negative-rating {
+    color: #820900;
+}
+
+/* Safari was found calculating this CSS incorrectly, so this media query specifically excludes safari. */
+.non-safari .mat-row {
+    position: relative;
+}
+
+.non-safari .mat-row-link {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+}
+
+// Alternating colored rows
+::ng-deep .mat-row:nth-child(even) {
+    background-color: #f5f5f5;
+}
+
+.highlight-law {
+    color: #7a5600;
+    padding-left: 15px;
+}
+
+.sorting {
+    margin-top: 10px;
+}
+
+.sorting mat-button-toggle {
+    // padding: 5px;
+    margin: 3px;
+}
+
+.sort-label {
+    text-align: center;
+    width: 4.5em;
+    font-weight: bold;
+}
+
+::ng-deep .cdk-overlay-connected-position-bounding-box {
+    // max-height: 400px;
+}
+
+::ng-deep .cdk-overlay-connected-position-bounding-box.closing {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.3s ease-in, transform 0.3s ease-in;
+}
+
+::ng-deep .cdk-overlay-connected-position-bounding-box.hidden {
+    display: none;
+}
+  
+::ng-deep .cdk-overlay-connected-position-bounding-box {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.breadcrumb {
+    position: relative;
+}
+
+.breadcrumb > .float-right {
+    position: absolute;
+    right: 0em;
+    top: -0.3em;
+}
+
+.grade {
+    position: absolute;
+    top: 15px;
+    left: 20px;
+    // font-weight: bold;
+    font-size: 2rem;
+}
+
+.grade > p {
+    text-indent: 0;
+    padding: 0;
+}
+
+.card-text {
+    max-height: 250px;
+    overflow: clip;
+}
+
+.card-title {
+    margin-left: 25px;
+    margin-right: 25px;
+}
+
+.card-tex small {
+    max-height: 100px;
+    overflow: clip;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 0.3fr 0.7fr;
+}
+
+.col-left {
+    grid-column: 1 / 2;
+    grid-row: 1;
+    min-width: calc(25vw - 100px);
+}
+
+.col-right {
+    grid-column: 2 / 2;
+    grid-row: 1;
+    padding-top: 40px;
+}
+
+h1 {
+    margin-bottom: 0;
+    padding-top: 5px;
+}
+
+.leg-summary {
+    text-indent: 40px;
+    padding: 20px;
+    // padding-bottom:20px;
+    // padding-top: 30px;
+    white-space: pre-wrap;
+    text-indent: 40px;
+}
+
+.leg-img {
+    width: 80%;
+    margin: 30px;
+    margin-top: 0;
+    margin-bottom: 8px;
+    max-width:400px;
+}
+
+.invalid-interp {
+    display: flex;
+    justify-content: center;
+    align-items: first baseline !important;
+    width: 100%;
+    height: 100%;
+    padding-left: 40px;
+    padding-bottom: 40px;
+}
+
+.reelection {
+    color: #7a5600;
+}
+
+.chart-container {
+    position: relative;
+    width: calc(60vw - 100px);
+    max-width: 800px;
+    height: 400px;
+}
+
+.card-body {
+    height: 100%;
+}
+
+#barChart {
+    padding-bottom: 20px;
+}
+
+@media screen and (max-width: 1210px) and (min-width:700px) {
+    .grade {
+        right: 25px;
+        left: unset;
+    }
+}
+
+@media screen and (max-width: 410px) {
+    table.bill-history-table {
+        margin-left: calc(50vw - 180px);
+    }
+}
+@media screen and (min-width: 410px) {
+    .sorting-inner {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+    }
+}
+@media screen and (min-width: 570px) {
+    .table-header {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        flex-grow: 1;
+    }
+    .sorting {
+        flex-direction: row-reverse !important;
+        flex-grow: 1;
+    }
+    .sorting-inner {
+        margin-right: -10px;
+    }
+    .sorting {
+        margin-top: -10px;
+    }
+}
+@media screen and (max-width: 400px) {
+    
+}
+
+
+@media screen and (max-width: 424px) {
+    .row {
+        display: block;
+    }
+    .chart-container {
+        width: calc(90vw - 15px);
+    }
+    .invalid-interp {
+        padding-left: 0;
+    }
+}
+
+
+
+
+// Dumb hack because I can't divide by a unit (like 100vw) //
+/*
+@media screen and (max-width: 700px) {
+    .row {
+        display: block;
+    }
+    #barChart {
+        margin-left: -10px;
+    }
+}
+@media screen and (max-width: 600px) {
+    .row {
+        display: block;
+    }
+    #barChart {
+        margin-left: -10px;
+    }
+}
+@media screen and (max-width: 500px) {
+    .row {
+        display: block;
+    }
+    #barChart {
+        margin-left: -80px;
+    }
+}
+@media screen and (max-width: 475px) {
+    #barChart {
+        margin-left: -105px;
+    }
+}
+@media screen and (max-width: 450px) {
+    #barChart {
+        margin-left: -120px;
+    }
+}
+@media screen and (max-width: 425px) {
+    #barChart {
+        margin-left: -145px;
+    }
+}
+@media screen and (max-width: 400px) {
+    #barChart {
+        margin-left: -165px;
+    }
+}
+@media screen and (max-width: 375px) {
+    #barChart {
+        margin-left: -180px;
+    }
+}
+@media screen and (max-width: 350px) {
+    #barChart {
+        margin-left: -200px;
+    }
+}
+@media screen and (max-width: 325px) {
+    #barChart {
+        margin-left: -225px;
+    }
+}
+@media screen and (max-width: 300px) {
+    #barChart {
+        margin-left: -250px;
+    }
+}
+@media screen and (max-width: 250px) {
+    #barChart {
+        margin-left: -285px;
+    }
+}
+@media screen and (max-width: 200px) {
+    #barChart {
+        margin-left: -325px;
+    }
+}
+*/

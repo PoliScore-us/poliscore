@@ -1,0 +1,139 @@
+<div>
+    <span class="purplebg"></span> <!-- There's a bug on Moible Chrome browsers where when the nav bar hides, it reveals the white bg. -->
+<div class="stripedbg">
+    <div *ngIf="loading" class="loader"></div>
+    <h1 *ngIf="!loading && stats == null" class="object-not-found"><a [routerLink]="'/'">Stats not found!</a></h1>
+
+    <!--
+    <div style="width:800px; height:800px">
+        <canvas id="barChart"></canvas>
+    </div>
+-->
+
+<!---->
+    <div class="vertical-layout">
+        <div class="vertical-content">
+        <header [congress]="false" class="content-section"></header>
+
+        <div class="content-section vertical-layout">
+            <div class="col-left horizontal-layout party-selector">
+                <button *ngIf="party !== 'DEMOCRAT'" mat-raised-button [routerLink]="'/congress/democrat'"><span>Democrat</span></button>
+                <button *ngIf="party === 'DEMOCRAT'" mat-button [routerLink]="'/congress/democrat'"><span>Democrat</span></button>
+
+                <button *ngIf="party !== 'REPUBLICAN'" mat-raised-button [routerLink]="'/congress/republican'"><span>Republican</span></button>
+                <button *ngIf="party === 'REPUBLICAN'" mat-button [routerLink]="'/congress/republican'"><span>Republican</span></button>
+
+                <button *ngIf="party !== 'INDEPENDENT'" mat-raised-button [routerLink]="'/congress/independent'"><span>Independent</span></button>
+                <button *ngIf="party === 'INDEPENDENT'" mat-button [routerLink]="'/congress/independent'"><span>Independent</span></button>
+            </div>
+        </div>
+
+        <mat-card class="tran-div stats">
+            <mat-card-content>
+                <div class="row vertical-layout">
+                    <h1 class="grade"><p [ngStyle]="{'color': colorForGrade(gradeForParty())}">{{gradeForParty()}}</p></h1>
+
+                    <!-- <div class="col-left vertical-layout">
+                        <h1 class="grade"><p [ngStyle]="{'color': colorForGrade(gradeForLegislator())}">{{gradeForLegislator()}}</p></h1>
+                        <h1 class="card-title" style="text-align:center;">{{party}}</h1>
+                        <h3 class="card-subtitle" style="text-align:center;">{{subtitleForLegislator()}}</h3>
+                        
+                        <img class="leg-img img-fluid rounded-start" *ngIf="!leg?.photoError" [src]="'https://poliscore-prod-public.s3.amazonaws.com/' + leg?.id + '.jpg'" (error)="legPhotoError(leg)" >
+                        <img class="leg-img img-fluid rounded-start" style="max-height:360px;" src="https://poliscore-prod-public.s3.amazonaws.com/LEG/leg-photo-missing.png" alt=“Name”>
+
+                        <p class="reelection" *ngIf="upForReelection()">Up for reelection in November</p>
+                    </div>
+                    <div class="col-right"> -->
+                        <div class="card-body chart-container">
+                            <canvas #barChart id="barChart"></canvas>
+                        </div>
+                    <!-- </div> -->
+                </div>
+                <div class="row">
+                    
+                </div>
+
+                <section *ngIf="stats != null">
+                    <!-- <h2>Interpretation</h2> -->
+                    <div class="leg-summary"><p *ngFor="let paragraph of getInterpretation()!.longExplain!.split('\n')" [innerHTML]="paragraph"></p></div>
+
+                    
+                </section>
+            </mat-card-content>
+        </mat-card>
+
+        <!-- <div class="horizontal-layout breadcrumb">
+            <h1><a [href]="'/congress/' + session + '/' + party.toLowerCase() + '/best-legislators'">Best Legislators</a></h1>
+            <h1><a [href]="'/congress/' + session + '/' + party.toLowerCase() + '/worst-legislators'">Worst Legislators</a></h1>
+            <h1><a [href]="'/congress/' + session + '/' + party.toLowerCase() + '/best-bills'">Best Bills</a></h1>
+            <h1><a [href]="'/congress/' + session + '/' + party.toLowerCase() + '/worst-bills'">Worst Bills</a></h1>
+        </div> -->
+
+        <div *ngIf="stats" class="content-section">
+            <h1 style="display: none;">Legislators</h1>
+
+            <div class="sorting horizontal-layout">
+                <label class="sort-label left">Sort by:</label>
+                <mat-button-toggle-group [value]="sort" name="fontStyle" class="right" aria-label="Font Style" [hideSingleSelectionIndicator]="true" [hideMultipleSelectionIndicator]="true">
+                    <mat-button-toggle [value]="'legislators'" (click)="toggleSort('legislators')" value="bold">Legislators <i *ngIf="sort === 'legislators'" class="icon solid fa-solid sort-arrow" [ngClass]="{ 'fa-arrow-down': !ascending, 'fa-arrow-up': ascending }"></i></mat-button-toggle>
+                    <mat-button-toggle [value]="'bills'" (click)="toggleSort('bills')" value="bold">Bills <i *ngIf="sort === 'bills'" class="icon solid fa-solid sort-arrow" [ngClass]="{ 'fa-arrow-down': !ascending, 'fa-arrow-up': ascending }"></i></mat-button-toggle>
+                </mat-button-toggle-group>
+            </div>
+        </div>
+
+        <ng-container *ngIf="stats && sort === 'legislators'">
+            <mat-card *ngFor="let leg of getData()" class="legs" appearance="outlined">
+                <a [href]="config.legislatorIdToAbsolutePath(leg.id)">
+                    <div class="left">
+                        <img *ngIf="!leg.photoError" [src]="'https://poliscore-prod-public.s3.amazonaws.com/' + leg.id + '.jpg'" (error)="leg.photoError = true;" >
+                        <img *ngIf="leg.photoError" src="https://poliscore-prod-public.s3.amazonaws.com/LEG/leg-photo-missing.png" alt=“Name”>
+                    </div>
+                    <div class="right">
+                        <mat-card-header>
+                            <mat-card-title-group>
+                                <mat-card-title>{{leg.name.official_full}}</mat-card-title>
+                                <h1 class="col-2 g-0"><p class="text-end" style="padding-right:12px;" [ngStyle]="{'color': colorForGrade(gradeForLegislator(leg))}">{{gradeForLegislator(leg)}}</p></h1>
+                                <mat-card-subtitle>{{subtitleForLegislator(leg)}}</mat-card-subtitle>
+                            </mat-card-title-group>
+                        </mat-card-header>
+                        <mat-card-content>
+                            <span><p>{{descriptionForLegislator(leg)}}</p></span>
+                        </mat-card-content>
+                        <mat-card-footer class="horizontal-layout">
+                            <p class="reelection" *ngIf="upForReelection(leg)">Up for reelection in Nov</p>
+                        </mat-card-footer>
+                    </div>
+                </a>
+            </mat-card>
+        </ng-container>
+
+        <ng-container *ngIf="stats && sort === 'bills'">
+            <mat-card *ngFor="let bill of getData()" class="bills" appearance="outlined" [ngClass]="{'gold-border': bill.billStatus.description.trim().toLowerCase() === 'law'}">
+                <a [href]="config.billIdToAbsolutePath(bill.id)">
+                    <mat-card-header>
+                        <mat-card-title-group>
+                            <mat-card-title>{{bill.name}}</mat-card-title>
+                            <mat-card-subtitle>{{subtitleForBill(bill)}}</mat-card-subtitle>
+                            <span style="display:flex; align-items: space-between;">
+                                <h4 class="title-date" style="margin-top: 10px; margin-right:20px;"><p style="padding-left:12px;">{{bill.introducedDate}}</p></h4>
+                                <h1 class="title-grade"><p style="padding-right:12px;" [ngStyle]="{'color': colorForGrade(gradeForBill(bill))}">{{gradeForBill(bill)}}</p></h1>
+                            </span>
+                        </mat-card-title-group>
+                    </mat-card-header>
+                    <mat-card-content>
+                        <span><p>{{descriptionForBill(bill)}}</p></span>
+                    </mat-card-content>
+                    <mat-card-footer class="horizontal-layout" [ngClass]="{'highlight-law': bill.billStatus.description.trim().toLowerCase() === 'law', 'bill-dead': bill.billStatus.description.trim().toLowerCase() != 'law'}">
+                        <p class="status">{{ bill.billStatus.description }}</p>
+                    </mat-card-footer>
+                </a>
+            </mat-card>
+        </ng-container>
+        </div>
+    </div>
+</div>
+</div>
+
+
+<!-- <p class="card-text"><small class="text-body-secondary">{{leg?.interpretation?.issueStats?.explanation}}</small></p> -->
+<!-- <p class="card-text"><small class="text-body-secondary">Last updated 3 mins ago</small></p> -->

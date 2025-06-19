@@ -1,0 +1,156 @@
+.stripedbg {
+    min-height: 100dvh; // dvh here means "dynamic viewport height", which simply means that it accounts for chrome's address bar resizing
+}
+
+.tran-div {
+    z-index: 1000;
+}
+
+.vertical-content {
+    max-width: 540px;
+}
+
+.vertical-content > * {
+    width: calc(100% - 20px);
+    margin: 10px;
+}
+
+.vertical-content > input {
+    height: 30px;
+    width: calc(100% - 27px);
+}
+
+.breadcrumb > * {
+    flex: 1;
+    height:100%;
+}
+
+.breadcrumb > a {
+    font-size: 16px;
+}
+
+.sorting {
+}
+
+.sort-arrow {
+    margin-right:-10px;
+    margin-left:10px;
+    color: #81548f !important
+}
+
+
+.sort-label {
+    text-align: center;
+    width: 8em;
+    font-weight: bold;
+}
+
+mat-button-toggle-group {
+    width: 100%;
+}
+
+mat-button-toggle {
+    width: 100%;
+}
+
+mat-card {
+    margin: 10px;
+    color: black;
+}
+
+mat-card a {
+    text-decoration: none;
+}
+
+mat-card a :link {
+    text-decoration: none;
+}
+mat-card a, a:visited, a:hover, a:active {
+    color: inherit;
+}
+
+mat-card-content {
+    margin-top: 20px;
+}
+
+mat-card-header {
+    margin-right: 60px;
+}
+
+mat-card-footer {
+    padding: 0 16px;
+}
+
+.highlight-law {
+    color: #7a5600;
+}
+.bill-dead {
+    opacity: 0.5;
+}
+
+.gold-border {
+    border: 2px solid gold;
+    border-radius: 4px; /* Optional: Matches material design style */
+}
+
+.searchbox {
+    width: calc(100% - 25px);
+    margin: 10px;
+    height: 30px;
+}
+
+.bill-title {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 7em 1fr 2em;
+}
+
+.title-date {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+}
+
+.title-grade {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+.loading {
+    width: 15px;
+	aspect-ratio: 1;
+	border-radius: 50%;
+	animation: l5 1s infinite linear alternate;
+    margin: 40px;
+}
+
+@media screen and (min-width: 450px) {
+    .sorting {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+    }
+}
+
+@media screen and (max-width: 400px) {
+    .logo {
+        width: 180px;
+    }
+    .logo-subtitle {
+        font-size: 12px;
+    }
+}
+
+@media screen and (max-width: 450px) {
+    .sorting {
+        margin-left: 10px;
+        margin-right: 10px;
+    }
+    .sorting .sort-label {
+        margin-left: 10px;
+    }
+    .sorting .right {
+        margin-top: 5px !important;
+    }
+}

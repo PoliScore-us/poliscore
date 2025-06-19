@@ -1,0 +1,166 @@
+<div>
+    <span class="purplebg"></span> <!-- There's a bug on Mobile Chrome browsers where when the nav bar hides, it reveals the white bg. -->
+    <div class="stripedbg">
+        <div *ngIf="loading" class="loader"></div>
+        <h1 *ngIf="!loading && bill == null" class="object-not-found"><a [routerLink]="'/bills/'">Bill not found!</a></h1>
+
+        <div class="vertical-layout">
+            <div class="vertical-content">
+                <header [congress]="false" class="content-section"></header>
+
+                <mat-card *ngIf="bill != null" class="tran-div">
+                    <mat-card-content class="vertical-layout">
+                        <div class="title-row">
+                            <!-- <div class="title-left">
+                                <p style="font: 400 24px/32px Roboto,sans-serif; margin-bottom: 4px;" [ngStyle]="{'color': colorForGrade(gradeForBill())}">{{gradeForBill()}}</p>
+                                <disclaimer [small]="getCosponsorSmall()" [large]="getCosponsorLarge()" [positionBelow]="true"></disclaimer>
+                            </div>
+                            <div class="title-middle">
+                                <h1 class="card-title"><a [href]="'https://www.congress.gov/bill/' + bill.session + '-congress/' + getCongressGovBillType() + '/' + bill.number">{{bill.name}}</a></h1>
+                                <h3 class="card-subtitle">Sponsor: <a [routerLink]="'/legislator/' + config.legislatorIdToPath(bill.sponsor.legislatorId)">{{bill.sponsor.name}}</a></h3>
+                            </div>
+                            <div class="title-right">
+                                <h3>
+                                    <p style="margin-bottom: 0px;">{{ bill.introducedDate }}</p>
+                                    <p [ngClass]="{'highlight-law': bill.status.description.trim().toLowerCase() === 'law'}">{{ bill.status.description }}</p>
+                                </h3>
+                            </div> -->
+
+
+                            <!-- title-layout.component.html -->
+
+                            <!-- If it's a small screen, use the "small screen" layout -->
+                            <div *ngIf="isSmallScreen; else bigScreen">
+                                <!-- SMALL SCREEN LAYOUT -->
+                                <!-- 
+                                Goal: Left & Right remain on one line, 
+                                Middle is on its own line below, 
+                                but we want Middle to still stretch to fill the width.
+                                -->
+                                <div class="title-row-small">
+                                <div class="title-left">
+                                    <p style="font: 400 24px/32px Roboto,sans-serif; margin-bottom: 4px;" [ngStyle]="{'color': colorForGrade(gradeForBill())}">{{gradeForBill()}}</p>
+                                    <disclaimer [small]="getCosponsorSmall()" [large]="getCosponsorLarge()" [positionBelow]="true"></disclaimer>
+                                </div>
+                                <div class="title-right">
+                                    <div class="">{{bill.type + " " + bill.number}}</div>
+                                    <p style="margin-bottom: 0px;" class="bill-status" [ngClass]="{'highlight-law': bill.status.description.trim().toLowerCase() === 'law'}">{{ bill.status.description }}</p>
+                                    <p>{{ getBillDate() }}</p>
+                                </div>
+                                </div>
+                                <div class="title-middle-stretch">
+                                    <h1 class="card-title" [matTooltip]="bill.name"><a [href]="'https://www.congress.gov/bill/' + bill.session + '-congress/' + getCongressGovBillType() + '/' + bill.number">{{getBillName()}}</a></h1>
+                                    <h2 *ngIf="bill.interpretation && bill.interpretation.genBillTitle && bill.interpretation.genBillTitle !== bill.name" class="official-bill-title">{{ bill.name }}</h2>
+                                      
+                                    <h3 class="card-subtitle">Sponsor: <a [href]="config.legislatorIdToAbsolutePath(bill.sponsor.legislatorId)">{{bill.sponsor.name.official_full}}</a></h3>
+                                </div>
+                            </div>
+                            
+                            <!-- If it's not a small screen, show the "big screen" layout instead -->
+                            <ng-template #bigScreen>
+                                <!-- BIG SCREEN LAYOUT -->
+                                <!-- 
+                                Goal: Left pinned left (fixed width), 
+                                Right pinned right (fixed width), 
+                                Middle grows in between.
+                                -->
+                                <div class="title-row-big">
+                                    <div class="title-left">
+                                        <p style="font: 400 24px/32px Roboto,sans-serif; margin-bottom: 4px;" [ngStyle]="{'color': colorForGrade(gradeForBill())}">{{gradeForBill()}}</p>
+                                        <disclaimer [small]="getCosponsorSmall()" [large]="getCosponsorLarge()" [positionBelow]="true"></disclaimer>
+                                    </div>
+                                    <div class="title-middle">
+                                        <h1 class="card-title" [matTooltip]="getBillTooltip()" matTooltipClass="bill-tooltip"><a [href]="'https://www.congress.gov/bill/' + bill.session + '-congress/' + getCongressGovBillType() + '/' + bill.number">{{getBillName()}}</a></h1>
+                                        <h2 *ngIf="bill.interpretation && bill.interpretation.genBillTitle && bill.interpretation.genBillTitle !== bill.name" class="official-bill-title">{{ bill.name }}</h2>
+                                        <h3 class="card-subtitle">Sponsor: <a [href]="config.legislatorIdToAbsolutePath(bill.sponsor.legislatorId)">{{bill.sponsor.name.official_full}}</a></h3>
+                                    </div>
+                                    <div class="title-right">
+                                        <div class="">{{bill.type + " " + bill.number}}</div>
+                                        <div class="bill-status" [ngClass]="{'highlight-law': bill.status.description.trim().toLowerCase() === 'law'}">{{ bill.status.description }}</div>
+                                        <div>{{ getBillDate() }}</div>
+                                    </div>
+                                </div>
+                            </ng-template>
+  
+                        </div>
+
+
+                        
+                        <div class="chart-container">
+                            <canvas id="barChart"></canvas>
+                        </div>
+
+                        <!--
+                        Old, experimental code for identifying bill riders. Wasn't found to work all that well with AI.
+
+                        <div class="bill-section" *ngIf="bill.interpretation.riders != null && bill.interpretation.riders.length > 0">
+                            <h2>Riders</h2>
+                            <ul>
+                                <li *ngFor="let rider of bill.interpretation.riders">{{rider}}</li>
+                            </ul>
+                        </div>
+                        -->
+
+                        <!-- <div class="bill-section"><h2>Short Summary</h2><p *ngFor="let paragraph of bill.interpretation.shortExplain?.split('\n')" [innerHTML]="paragraph"></p></div> -->
+
+                        <div class="bill-section"><h2 *ngIf="bill.interpretation.riders.length > 0">Summary</h2><p *ngFor="let paragraph of bill.interpretation.longExplain?.split('\n')" [innerHTML]="paragraph"></p></div>
+
+                        <disclaimer [small]="'Generated by ' + bill.interpretation.metadata.model.replace('gpt', 'GPT')" [metadata]="bill.interpretation.metadata"></disclaimer>
+                    </mat-card-content>
+                </mat-card>
+
+                <mat-card class="tran-div interactions-table" *ngIf="bill != null && bill.interpretation != null && bill.interpretation.pressInterps != null && bill.interpretation.pressInterps.length > 0">
+                    <mat-card-content>
+                        <div>
+                            <div class="table-header" style="margin-bottom: 16px;">
+                                <h2 style="margin:0;">Press Coverage</h2>
+                            </div>
+        
+                            <table mat-table [dataSource]="bill.interpretation.pressInterps" class="press-interp-table mat-elevation-z8" [ngClass]="{ 'non-safari': isNonSafari() }" >
+        
+                                <!--- Note that these columns can be defined in any order.
+                                    The actual rendered columns are set as a property on the row definition" -->
+        
+                                <ng-container matColumnDef="author">
+                                    <th mat-header-cell *matHeaderCellDef>Author</th>
+                                    <td mat-cell *matCellDef="let element">
+                                        {{element.author}}
+        
+                                        <a fxFlexFill [href]="element.origin.url" class="mat-row-link"></a>
+                                    </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="title">
+                                    <th mat-header-cell *matHeaderCellDef>Title</th>
+                                    <td mat-cell *matCellDef="let element"> {{element.genArticleTitle}} </td>
+                                </ng-container>
+        
+                                <ng-container matColumnDef="grade">
+                                    <th mat-header-cell *matHeaderCellDef>Sentiment</th>
+                                    <td mat-cell *matCellDef="let element"> {{gradeForPressInterp(element)}} </td>
+                                </ng-container>
+        
+                                <ng-container matColumnDef="shortReport">
+                                    <th mat-header-cell *matHeaderCellDef>Summary</th>
+                                    <td mat-cell *matCellDef="let element"> {{element.shortExplain}} </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="confidence">
+                                    <th mat-header-cell *matHeaderCellDef>Confidence</th>
+                                    <td mat-cell *matCellDef="let element"> {{element.confidence}} </td>
+                                </ng-container>
+        
+                                <tr mat-header-row *matHeaderRowDef="getDisplayedColumns()"></tr>
+                                <tr mat-row *matRowDef="let row; columns: getDisplayedColumns();" (click)="openOrigin(row.origin.url)" class="mat-row"></tr>
+                            </table>
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- <p class="card-text"><small class="text-body-secondary">{{leg?.interpretation?.issueStats?.explanation}}</small></p> -->
+<!-- <p class="card-text"><small class="text-body-secondary">Last updated 3 mins ago</small></p> -->

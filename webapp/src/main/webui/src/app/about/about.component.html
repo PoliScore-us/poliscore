@@ -1,0 +1,787 @@
+<div (scroll)="onScroll($event)" [class]="isPreload ? 'is-preload' : ''">
+
+<!-- Header -->
+			<header id="header">
+				<div class="header-col">
+					<div class="content">
+						<h1 style="text-align:center;"><a href="#">poliscore.us</a></h1>
+						<!-- <img class="poliscore-full" src="/images/full.png" style="width:250px; margin-top: -190px;"> -->
+						<!-- <div class="poliscore-logo-bg vertical-layout">
+							<span class="horizontal-layout">
+								<img class="poliscore-logo" src="/images/poliscore-word.png">
+							</span>
+						</div> -->
+						<span>
+							<p style="text-align:center">The World's First AI Legislative Rating Service</p>
+							<div class="vertical-layout">
+							<ul>
+								<li>Fully Open-Source</li>
+								<li>Rooted in Policy</li>
+								<li>Non-Partisan AI Prompts</li>
+							</ul>
+							</div>
+						</span>
+						<!-- <ul class="actions">
+							<li><a href="#" class="button primary icon solid fa-download">Press Kit</a></li>
+							<li><a href="#one" class="button icon solid fa-chevron-down scrolly">Email List</a></li>
+						</ul> -->
+						<!--<p style="text-align:center; font-size: 1em;">coming soon</p>-->
+					</div>
+					<!-- <button class="button primary icon solid show-me image" style="min-width: 180px; padding: 0; width: 180px;"><a [routerLink]="'/legislators'" class="unstyled" style="color: #81548f">Show me <i class="icon solid fa-solid fa-arrow-right" style="margin-right:-10px; margin-left:10px; color: #81548f !important;"></i></a></button> -->
+					<!-- <div class="image phone"><div class="inner"><img src="images/screen.jpg" alt="" /></div></div> -->
+				</div>
+
+				<a class="fork-me" href="https://github.com/pissedoffcitizen/poliscore"><img decoding="async" width="149" height="149" src="https://github.blog/wp-content/uploads/2008/12/forkme_right_gray_6d6d6d.png?resize=149%2C149" class="attachment-full size-full" alt="Fork me on GitHub" loading="lazy" data-recalc-dims="1"></a>
+
+				<div class="scroll-for-more"><i class="icon solid fa-solid fa-angle-down"></i> <label>scroll for more</label> <i class="icon solid fa-solid fa-angle-down"></i></div>
+				<div class="privacy-policy">
+					<!-- <a (click)="clickPrivacyPolicy()">privacy policy</a> -->
+					<button class="button primary icon solid show-me image"><a [routerLink]="'/legislators'" class="unstyled" style="color: #81548f">Home</a></button>
+					<button class="button primary icon solid show-me image"><a (click)="clickPrivacyPolicy()" class="unstyled" style="color: #81548f">Privacy Policy</a></button>
+				</div>
+			</header>
+
+		<!-- One -->
+			<section id="one" class="wrapper style2 special">
+				<!-- <header class="major">
+					<h2>The World's First AI
+						Legislative Rating Service
+					</h2>
+				</header> -->
+
+				<div class="icons major">
+					<iframe style="max-width:100%;" width="560" height="315" src="https://www.youtube.com/embed/tJkFbUSHi7g?si=u9TqDcyYongqWBxW" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+				</div>
+
+				<!-- <ul class="icons major">
+                    <li title="Follow us on X">
+						<a href="https://x.com/Poliscore22">
+							<svg style="width: 20px; height: 20px; margin-top: 4px;" width="92" viewBox="0 0 1200 1227" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z" fill="black"></path>
+							</svg>
+						</a>
+                    </li>
+				</ul> -->
+
+				<!-- <header class="major">
+					<h2>The core problem of modern politics is that legislators are being<br />
+						graded on recent 'newsworthy' events, not legislative performance
+					</h2>
+				</header> -->
+				<!-- <ul class="icons major">
+                    <li title="Bill Interpretations Powered by Open AI">
+                        <svg class="w-[1.60625rem] m:w-[1.375rem] h-auto" width="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M26.153 11.46a6.888 6.888 0 0 0-.608-5.73 7.117 7.117 0 0 0-3.29-2.93 7.238 7.238 0 0 0-4.41-.454 7.065 7.065 0 0 0-2.41-1.742A7.15 7.15 0 0 0 12.514 0a7.216 7.216 0 0 0-4.217 1.346 7.061 7.061 0 0 0-2.603 3.539 7.12 7.12 0 0 0-2.734 1.188A7.012 7.012 0 0 0 .966 8.268a6.979 6.979 0 0 0 .88 8.273 6.89 6.89 0 0 0 .607 5.729 7.117 7.117 0 0 0 3.29 2.93 7.238 7.238 0 0 0 4.41.454 7.061 7.061 0 0 0 2.409 1.742c.92.404 1.916.61 2.923.604a7.215 7.215 0 0 0 4.22-1.345 7.06 7.06 0 0 0 2.605-3.543 7.116 7.116 0 0 0 2.734-1.187 7.01 7.01 0 0 0 1.993-2.196 6.978 6.978 0 0 0-.884-8.27Zm-10.61 14.71c-1.412 0-2.505-.428-3.46-1.215.043-.023.119-.064.168-.094l5.65-3.22a.911.911 0 0 0 .464-.793v-7.86l2.389 1.36a.087.087 0 0 1 .046.065v6.508c0 2.952-2.491 5.248-5.257 5.248ZM4.062 21.354a5.17 5.17 0 0 1-.635-3.516c.042.025.115.07.168.1l5.65 3.22a.928.928 0 0 0 .928 0l6.898-3.93v2.72a.083.083 0 0 1-.034.072l-5.711 3.255a5.386 5.386 0 0 1-4.035.522 5.315 5.315 0 0 1-3.23-2.443ZM2.573 9.184a5.283 5.283 0 0 1 2.768-2.301V13.515a.895.895 0 0 0 .464.793l6.897 3.93-2.388 1.36a.087.087 0 0 1-.08.008L4.52 16.349a5.262 5.262 0 0 1-2.475-3.185 5.192 5.192 0 0 1 .527-3.98Zm19.623 4.506-6.898-3.93 2.388-1.36a.087.087 0 0 1 .08-.008l5.713 3.255a5.28 5.28 0 0 1 2.054 2.118 5.19 5.19 0 0 1-.488 5.608 5.314 5.314 0 0 1-2.39 1.742v-6.633a.896.896 0 0 0-.459-.792Zm2.377-3.533a7.973 7.973 0 0 0-.168-.099l-5.65-3.22a.93.93 0 0 0-.928 0l-6.898 3.93V8.046a.083.083 0 0 1 .034-.072l5.712-3.251a5.375 5.375 0 0 1 5.698.241 5.262 5.262 0 0 1 1.865 2.28c.39.92.506 1.93.335 2.913ZM9.631 15.009l-2.39-1.36a.083.083 0 0 1-.046-.065V7.075c.001-.997.29-1.973.832-2.814a5.297 5.297 0 0 1 2.231-1.935 5.382 5.382 0 0 1 5.659.72 4.89 4.89 0 0 0-.168.093l-5.65 3.22a.913.913 0 0 0-.465.793l-.003 7.857Zm1.297-2.76L14 10.5l3.072 1.75v3.5L14 17.499l-3.072-1.75v-3.5Z" fill="currentColor"></path></svg>
+                    </li>
+				</ul> -->
+				<!-- <header class="major">
+					<h2>We created a non-partisan algorithm to evaluate<br />
+                        the performance of politicians based on the <i>aggregate</i> <br />
+						scores of their legislative history
+                    </h2>
+				</header> -->
+			</section>
+
+			<!-- Two -->
+			<section id="two" class="wrapper">
+				<div class="inner alt">
+					<section class="spotlight" id="motivations">
+						<div class="image">
+                            <a [routerLink]="'/about'" fragment="motivations"><img src="images/poliscore2.png" alt="A robot speaking to a crowd" /></a>
+                        </div>
+						<div class="content">
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="motivations">Motivations</a></h3>
+
+							<p>PoliScore is a highly experimental science project born out of deep concern for the state of modern politics leading up to the 2024 election. It was created to answer the fundamental question: "What would happen if we used AI to grade bills and then aggregated those grades to evaluate legislators?" Over time, it has grown to encompass the following goals:</p>
+
+							<ol>
+								<li>To explore and expose the political opinions inherent within AI to the world.</li>
+								<li>To make congressional legislation more readable and accessible using AI.</li>
+								<li>To encourage accountability and traceability between legislators and their legislation.</li>
+							</ol>
+
+							<!-- <p>The primary driving question behind PoliScore is: is it possible, perhaps using AI, to create an algorithm which, similar to what we have here for judges in Colorado, provides a non-paristan performance analysis for legislators in congress, thereby creating a private sector non-partisan congressional oversight comittee. Such an algorithm could be open-source and accountable to the public at large.</p> -->
+
+							<p>A continual driving force behind the project is the desire to create an open-source, non-partisan congressional oversight algorithm, which grades legislators on their performance.</p>
+
+							<!-- <p>PoliScore does not at all intend to in any way diminish the work done by the courageous and vital members of the press or other investigative journalists. In contrast, PoliSocre's mission would be to take the insights gathered by the press, aggregate them, and produce regular reports which can be consumed by the public at large as a tool for more informed voting.</p> -->
+						</div>
+					</section>
+
+					<section class="spotlight" id="ai-bias">
+						<div class="image">
+                            <a [routerLink]="'/about'" fragment="ai-bias"><img src="images/robot-speaker.png" alt="A robot speaking to a crowd" /></a>
+                        </div>
+						<div class="content">
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="ai-bias">Does AI Have a Political Bias?</a></h3>
+
+							<p>A few studies have come out which claim that AI does indeed have a political bias</p>
+
+							<ol>
+								<li><a href="https://www.brookings.edu/articles/the-politics-of-ai-chatgpt-and-political-bias/">https://www.brookings.edu/articles/the-politics-of-ai-chatgpt-and-political-bias/</a></li>
+								<li><a href="https://www.technologyreview.com/2023/08/07/1077324/ai-language-models-are-rife-with-political-biases/">https://www.technologyreview.com/2023/08/07/1077324/ai-language-models-are-rife-with-political-biases/</a></li>
+							</ol>
+
+							<!-- <p>Most AI models these days have a slight leaning towards left-ist policy, and you can see this manifested in the ratings on PoliScore: Democrats do tend to score a little better than Republicans on average (<a href="/congress">see party stats for more information</a>)</p> -->
+
+							<!--<p>These AI models are somehow taking sides on issues like abortion, environmental policy, immigration, etc; and it's happening deep within their corpus. As it turns out, the opinions AI is taking appear to be aligned with the majority of public and scientific opinion.</p>
+
+							<ol>
+								<li><a href="https://www.pewresearch.org/short-reads/2023/08/09/what-the-data-says-about-americans-views-of-climate-change/">Almost 70% of Americans want to transition to renewable energy</a> and <a href="https://science.nasa.gov/climate-change/scientific-consensus/">there is a clear scientific consensus that climate change is something we should be worried about</a>.</li>
+								<li><a href="https://www.pewresearch.org/short-reads/2024/07/24/key-facts-about-americans-and-guns/">A majority of Americans (61%) say it is too easy to legally obtain a gun in this country and six in ten Americans favor stricter gun laws.</a></li>
+								<li><a href="https://www.pewresearch.org/politics/2022/07/06/majority-of-public-disapproves-of-supreme-courts-decision-to-overturn-roe-v-wade/">62% of Americans are in favor of the Roe v Wade decision.</a>.</li>
+							</ol>
+
+							<p>We don't personally claim to know how the AI corpus is coming to these conclusions, but we can definitively say that AI is picking sides. It is our intention to record, publish and track these opinions.</p> -->
+
+							<!-- <p>For a while, PoliScore was claiming non-partisanship for a few reasons</p>
+
+							<ol>
+								<li>We're directly asking AI to attempt to be non-partisan in it's rating process</li>
+								<li>OpenAI claims to be an non-partisan organization and we're just using their tool</li>
+								<li>Everything that we do here (excluding usage of AI) is policy and party agnostic. We don't prompt AI to think a particular way about any issues.</li>
+							</ol>
+
+							<p>We recently changed our messaging for the primary reason: non-partisan organizations are not supposed to endorse political canddiates. The fact that we are giving some candidates good grades and other candidates bad grades could be seen as an endorsement.</p> -->
+
+							<p>We have found that on environmental policy, abortion, and gun control, AI appears to mostly be aligned with the majority of public and scientific opinion.</p>
+							<ol>
+								<li><a href="https://www.pewresearch.org/short-reads/2023/08/09/what-the-data-says-about-americans-views-of-climate-change/">70% of Americans want to transition to renewable energy</a></li>
+								<li><a href="https://www.pewresearch.org/politics/2022/07/06/majority-of-public-disapproves-of-supreme-courts-decision-to-overturn-roe-v-wade/">62% of Americans are in favor of the Roe v Wade decision</a>.</li>
+								<li><a href="https://www.pewresearch.org/short-reads/2024/07/24/key-facts-about-americans-and-guns/">58% of Americans favor stricter gun laws</a></li>
+							</ol>
+
+							<p>From time to time, you may find AI spouting off out some "interesting" opinions. This project makes no attempt to "correct" or validate any of AI's opinions, so take them with a little bit of a grain of salt. AI chatbots work by parroting back their training data, which often times produces intelligent and thoughtful analysis. However, there is always a chance that AI could parrot back unhelpful, incorrect or dangerous training data. There is also a potential for bias in the RLHF (reinforcement learning with human feedback) process which is orchestrated by Open AI.</p>
+
+							<p>That being said, we still believe that there is some limited utility in the unfiltered opinions of AI. If you disagree with an opinion found here, please check back later because it's possible in the future that we might allow people to submit their own bill interpretations. AI itself is also a highly experimental and new technology, so as it continues to evolve so will PoliScore.</p>
+							<!-- <ol>
+								<li><a href="https://www.pewresearch.org/short-reads/2023/08/09/what-the-data-says-about-americans-views-of-climate-change/">Almost 70% of Americans want to transition to renewable energy</a> and <a href="https://science.nasa.gov/climate-change/scientific-consensus/">there is a clear scientific consensus that climate change is something we should be worried about</a>.</li>
+								<li><a href="https://www.pewresearch.org/short-reads/2024/07/24/key-facts-about-americans-and-guns/">A majority of Americans (61%) say it is too easy to legally obtain a gun in this country and six in ten Americans favor stricter gun laws.</a></li>
+								<li><a href="https://www.pewresearch.org/politics/2022/07/06/majority-of-public-disapproves-of-supreme-courts-decision-to-overturn-roe-v-wade/">62% of Americans are in favor of the Roe v Wade decision.</a>.</li>
+							</ol> -->
+
+							<!-- <p>If you're somebody that agrees with these issues, feel free to use PoliScore as a tool to help wade through our political process. If you disagree with an opinion found here on PoliScore, please consider coming back later because we might allow in the future for citizens to submit or vote on your own bill interpretations. Our goal is to be a hub for policy discourse.</p> -->
+						</div>
+					</section>
+
+					<section class="spotlight" id="how-it-works">
+						<div class="image">
+                            <a [routerLink]="'/about'" fragment="how-it-works"><img src="images/robot-judge.png" alt="A Robot Judge" /></a>
+                        </div>
+						<div class="content">
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="how-it-works">How Does It Work?</a></h3>
+							<p>It all starts with bill interpretations. For every bill in the 118th congress, GPT-4o was fed the entire bill text, and then asked to predict the impact the bill would have to society, if it were passed, written as a number from -100 (harmful) to 100 (beneficial). This provides the foundation for our "performance metrics", and we then expand the concept by applying it to a list of policy areas (i.e. healthcare, environment, housing, etc.). This gives a simplified breakdown of how AI is predicting the impact to society, broken down by sector, and is incredibly useful for bills with more mixed or complex impacts.</p>
+							<p>Next comes legislator interpretations. Legislator metrics are produced from a weighted average of the last ~1000 bill interactions. These metrics are then fed to AI, along with some bill summaries, and AI is then asked to produce a critique of their recent legislative history. At a conceptual level, these legislator metrics represent the legislator's predicted impact to society, as estimated by AI, if all their legislation were able to be enacted as is.</p>
+						</div>
+					</section>
+
+					<section class="spotlight" id="local-data">
+						<div class="image">
+                            <a [routerLink]="'/about'" fragment="local-data"><img src="images/local-data.png" alt="Data on a map" /></a>
+                        </div>
+						<div class="content">
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="local-data">I Want State / Local Data</a></h3>
+
+							<p>Data at the State level is unfortunately going to be very expensive to build and maintain and can't be offered for free, unlike our national data. Given the scale and complexity of the task, it will also take us a while to get to all 50 states.</p>
+
+							<p><a href="https://docs.google.com/forms/d/e/1FAIpQLSeG0hp_it7fZ0zipH_iegTnlp6AE2UYowWBHp59JryuLItkQw/viewform?usp=sf_link">If this is something you're interested in, please fill out our Google Form. If enough people request it, we'll build it.</a></p>
+						</div>
+					</section>
+
+					<!-- <section class="spotlight" id="verifiable-ratings">
+						<div class="image">
+                            <a [routerLink]="'/about'" fragment="verifiable-ratings"><img src="images/poliscore2.png" alt="PoliScore searching through bills" /></a>
+                        </div>
+						<div class="content">
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="verifiable-ratings">Ratings Are Rooted in Verifiable Policy Decisions</a></h3>
+							<p>Because every legislator on our website has on average 1000+ bill interactions which are used to calculate their performance metrics, this means that the ratings are:</p>
+							<ul>
+								<li>Based on legislative performance, not partisan rhetoric</li>
+								<li>Third-party verifiable - <a [routerLink]="'/about'" fragment="bill-scoring">our AI prompts can be found below</a> and <a href="https://github.com/pissedoffcitizen/poliscore">our software is open source</a></li>
+								<li>Non-affiliated - We're not affiliated with or funded by any political party or political organization. All legislators are graded using the same AI algorithm.</li>
+								<li>Not influenced by AI hallucinations or prompt quirks - Because legislator scores are the aggregate of 1000+ bill interactions, AI hallucinations or slight prompt tweaks don't make much difference in the legislator scores.</li>
+							</ul>
+						</div>
+					</section> -->
+
+					<!--
+					<section class="spotlight" id="ai-bias">
+						<div class="image">
+                            <a [routerLink]="'/about'" fragment="ai-bias"><img src="images/robot-speaker.png" alt="A robot speaking to a crowd" /></a>
+                        </div>
+						<div class="content">
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="ai-bias">Does AI Have a Political Bias?</a></h3>
+
+							<p>There is a misconception that because AI doesn't rate both parties 50/50 equally favorable, then it must be biased towards one party over the other, violating non-partisanship. Ultimately this misconception stems from a misunderstanding of what it means to be non-partisan. In George Washington's farewell address, he asked Americans to move beyond political parties and to put the needs of the country above that of party. We believe we are consistent with this ideology.</p>
+
+							<p>We have noticed the following trends with the current dataset, which may cause one party to be scored more favorably than the other:</p>
+
+							<ol>
+								<li>Bills rolling back EPA regulations are consistently scored negatively</li>
+								<li>Bills promoting deregulation of firearms are scored negatively</li>
+								<li>Bills affirming the Roe v Wade decision are scored positively</li>
+								<li>Bills criminalizing gender affirming care for trans-sexuals are consistently scored negatively</li>
+								<li>Social equity appears to be a frequent topic of conversation</li>
+							</ol>
+
+							<p>Let's break these down one by one:</p>
+							<ol>
+								<li><a href="https://www.pewresearch.org/short-reads/2023/08/09/what-the-data-says-about-americans-views-of-climate-change/">Almost 70% of Americans want to transition to renewable energy</a> and <a href="https://science.nasa.gov/climate-change/scientific-consensus/">there is a clear scientific consensus that climate change is something we should be worried about</a>.</li>
+								<li><a href="https://www.pewresearch.org/short-reads/2024/07/24/key-facts-about-americans-and-guns/">A majority of Americans (61%) say it is too easy to legally obtain a gun in this country and six in ten Americans favor stricter gun laws.</a> Additionally, <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5801608/">studies repeatedly show that stricter gun laws reduce gun related violence, such as school shootings.</a></li>
+								<li><a href="https://www.pewresearch.org/politics/2022/07/06/majority-of-public-disapproves-of-supreme-courts-decision-to-overturn-roe-v-wade/">62% of Americans are in favor of the Roe v Wade decision.</a> Additionally, many of the proposed and poorly rated abortion bills do not include exemptions for rape or incest, <a href="https://www.nbcnews.com/politics/2022-election/vast-majority-republicans-support-abortion-exceptions-rape-incest-moth-rcna52237">which has broad support even amongst republicans</a>.</li>
+								<li><a href="https://www.scientificamerican.com/article/what-the-science-on-gender-affirming-care-for-transgender-kids-really-shows/">Science repeatedly and consistently shows that gender-affirming care is associated with better mental health outcomes—and that lack of access to such care is associated with higher rates of suicidality.</a></li>
+								<li><a href="https://apps.urban.org/features/wealth-inequality-charts/">Wealth inequality is higher in the United States than in almost any other developed country and has risen for much of the past 60 years.</a> Conversations about equity are the foundation of tackling inequality. <a href="https://news.stanford.edu/stories/2017/01/stanford-historian-uncovers-grim-correlation-violence-inequality-millennia">Researchers have found that more unequal societys are also more violent.</a></li>
+							</ol>
+
+							<p>If AI does have a bias, it does appear to be "biased" towards the majority of public and scientific opinion, which is useful when considering that legislation enacted at the federal level would impact all Americans and ideally would be backed by credible scientific research. Finally, there are plenty of examples of AI grading legislators of either party favorably</p>
+
+							!-- <p>While interesting, this question is ultimately a little out of scope for the original goals of PoliScore. PoliScore as a project is about using AI to rate bills and legislators. In order to properly rate bills, AI is forced to decide whether or not certain stances on these issues will produce a better or worse society for us all to live in. If you disagree with the conclusions of AI, that will always be your right as a citizen. Our goal is simply to make it known what AI's opinions are, and if we can, get it to explain why.</p> --
+						</div>
+					</section>
+					-->
+
+					<section class="spotlight" id="bill-scoring">
+						<div class="image">
+                            <a [routerLink]="'/about'" fragment="bill-scoring"><img src="images/bill-scoring-details.png" alt="Political dashboard" /></a>
+                        </div>
+						<div class="content">
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="bill-scoring">Specifics on Bill Scoring</a></h3>
+
+							<p>The current data loaded on this website is all bills (excluding SCONRES, HCONRES, HRES, SRES) of the 118th US congress. Bill status data and legislator data was fetched using the <a href="https://github.com/unitedstates/congress">open source Github USC</a> project.</p>
+
+							<p style="text-indent: 0;">Bill text was split into sections and interpreted using Open AI's GPT-4o with the following prompt:</p>
+
+							<div class="prompt">You will be given the text of a United States bill currently in congress. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Stats:') in your response. Do not include the section instructions in your response.
+								<br/><br/>
+
+								Stats:<br/>
+								Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. If the bill includes riders, please score it negatively.
+								
+								<br/><br/>
+								Agriculture and Food: &lt;score or N/A&gt;<br/>
+								Education: &lt;score or N/A&gt;<br/>
+								Transportation: &lt;score or N/A&gt;<br/>
+								Economics and Commerce: &lt;score or N/A&gt;<br/>
+								Foreign relations: &lt;score or N/A&gt;<br/>
+								Government Efficiency and Management: &lt;score or N/A&gt;<br/>
+								Healthcare: &lt;score or N/A&gt;<br/>
+								Housing: &lt;score or N/A&gt;<br/>
+								Energy: &lt;score or N/A&gt;<br/>
+								Technology: &lt;score or N/A&gt;<br/>
+								Immigration: &lt;score or N/A&gt;<br/>
+								National Defense: &lt;score or N/A&gt;<br/>
+								Crime and Law Enforcement: &lt;score or N/A&gt;<br/>
+								Wildlife and Forest Management: &lt;score or N/A&gt;<br/>
+								Public Lands and Natural Resources: &lt;score or N/A&gt;<br/>
+								Environmental Management and climate change: &lt;score or N/A&gt;<br/>
+								Overall benefit to society: &lt;score or N/A&gt;<br/>
+								<br/>
+
+								Bill Title:<br/>
+								Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very short title for the bill based on its content.
+								<br/><br/>
+								
+								Riders:<br/>
+								- A bill rider is a extraneous, harmful piece of unrelated legislation added to a bill which undermines or detracts from the original intent of the bill. List the bill riders identified and the section they occured at, or 'None' if there are none
+								<br/><br/>
+								
+								Short Report:<br/>
+								A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and it's expected impact to society. If riders are present in the bill mention them and the section they occur at here, otherwise do not mention their absence. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.
+								<br/><br/>
+								
+								Long Report:<br/>
+								A detailed, but not repetitive, report of the bill which references concrete, notable and specific text of the bill where possible. Make sure to explain: an overall summary of the bill; the high level goals the bill is attempting to achieve, and how it plans to achieve those goals; the impact to society the bill would have, if enacted. Your audience here is general public layman voters, so if you think they won't understand an acronym or a complex topic, please explain it. Should be between one and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. Keep in mind that we're trying to figure out how to spend U.S. taxpayer dollars: budgetary concerns are important. If there are riders in the bill, mention them in this summary, otherwise do not mention their absence. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.
+							</div>
+						</div>
+					</section>
+
+					<section class="spotlight" id="legislator-scoring">
+						<div class="image">
+                            <a [routerLink]="'/about'" fragment="legislator-scoring"><img src="images/legislator-scoring.png" alt="Bill scoring" /></a>
+                        </div>
+						<div class="content">
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="legislator-scoring">Specifics on Legislator Scoring</a></h3>
+
+							<p>To calculate legislator statistics, we calculated a weighted average across all each legislator's bill interactions. The weights were assigned as follows:</p>
+
+							<ul>
+								<li>Sponsor: 1.0</li>
+								<li>Cosponsor: 0.7</li>
+								<li>Voted For: 0.5</li>
+								<li>Voted Against: -0.5</li>
+							</ul>
+
+							<p>Votes against a bill were assigned a negative weight, which simply means that if the legislator voted against a bill with a negative score then it affected them positively and vise versa.</p>
+						</div>
+					</section>
+
+					<section class="spotlight" id="letter-grades">
+						<div class="image">
+                            <a [routerLink]="'/about'" fragment="letter-grades"><img src="images/lettergrades2.png" alt="Letter grades" /></a>
+                        </div>
+						<div class="content">
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="letter-grades">Legislator and Bill Letter Grades</a></h3>
+
+							<p>Letter grades for both bills and legislators are calculated with the same, simple algorithm. The grades are derived entirely from the 'Overall Benefit to Society' statistic and are assigned as follows:</p>
+
+							<ul>
+								<li>A: greater than or equal to 40</li>
+								<li>B: greater than or equal to 30 and less than 40</li>
+								<li>C: greater than or equal to 15 and less than 30</li>
+								<li>D: greater than or equal to 0 and less than 15</li>
+								<li>F: less than zero</li>
+							</ul>
+						</div>
+					</section>
+
+					<section class="spotlight" id="legislator-prompt">
+						<div class="image">
+                            <a [routerLink]="'/about'" fragment="legislator-prompt"><img src="images/legislator-prompt.png" alt="Legislator prompt" /></a>
+                        </div>
+						<div class="content">
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="legislator-prompt">Parameterized Legislator Summaries</a></h3>
+
+							<p>Legislator summaries are calculated using a parameterized prompt which includes information from the previously mentioned aggregate scoring algorithm. The prompt is as follows:</p>
+
+							<div class="prompt" ngNonBindable>The United States {{politicianType}} {{fullName}} has been evaluated based on recent legislative performance and has received the following policy area grades (scores range from -100 to 100):
+								<br/><br/>
+
+{{stats}}
+
+<br/><br/>
+
+Based on these scores, this legislator has received the overall letter grade: {{letterGrade}}. You will be given bill interaction summaries of this politician’s recent legislative history, sorted by their impact to the relevant policy area grades. Please generate a layman's, concise, three paragraph, {{analysisType}}, highlighting any {{behavior}}, identifying trends, referencing specific bill titles (in quotes), and pointing out major focuses and priorities of the legislator. Focus on the policy areas with the largest score magnitudes (either positive or negative). Do not include the legislator's policy area grade scores and do not mention their letter grade in your summary.
+								
+								<br/><br/>
+
+								{{billInteractions}}
+							</div>
+
+							<p style="text-indent: 0;">The parameters are replaced as follows:</p>
+
+							<ul ngNonBindable>
+								<li>politicianType: Either 'Senator' or 'House Representative', depending on the chamber of their legislative term.</li>
+								<li>fullName: The legislator's full first and last name.</li>
+								<li>stats: The previously calculated legislator's policy score statistics, written as text.</li>
+								<li>letterGrade: The calculated letter grade for the legislator, as described in 'Legislator and Bill Letter Grades'</li>
+								<li>analysisType: One of 'endorsement', 'mixed analysis' or 'harsh critique', dependent upon the legislator's previosuly calculated letter grade. A's and B's are assigned as 'endorsement'. C's and D's are assigned as 'mixed analysis'. F's are assigned as 'harsh critique'.</li>
+								<li>behavior: One of 'specific accomplishments', 'specific accomplishments or alarming behaviour', or 'alarming behaviour', dependent upon the legislator's previously calculated letter grade. A's and B's are assigned as 'specific accomplishments'. C's and D's are assigned as 'specific accomplishments or alarming behaviour'. F's are assigned as 'alarming behaviour'.</li>
+								<li>billInteractions: A list of previously calculated bill summaries of the legislator's bill interactions. The bill interactions are first grouped by the policy areas, and then they are sorted by the absolute value of the score magnitude multiplied by the interaction weight. We then rotate through the policy areas, including the top bills for each policy area until we run out of token space in the prompt.</li>
+							</ul>
+						</div>
+					</section>
+
+					<section class="spotlight" id="roadmap">
+						<div class="image">
+                            <a [routerLink]="'/about'" fragment="roadmap"><img src="images/roadmap.png" alt="A robot conquering a mountain" /></a>
+                        </div>
+						<div class="content">
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="roadmap">Roadmap</a></h3>
+
+							<p>The project opens the door to many additional exciting questions that we would love to explore at some point, such as:</p>
+
+							<ol>
+								<li>Would the public be interested in discussing or contributing to bill interpretations? While AI provides a good starting point, it's expected to make mistakes, which is where policy experts can offer valuable insights.</li>
+								<li>Are there additional metrics we can use to grade legislators, such as attendance?</li>
+								<li>Include information about whether or not a bill passed, and if it didn't pass, why not?</li>
+								<li>Recognizing that much of the useful information comes from the courageous work of the press and investigative journalists, is it possible to link directly to source news articles and collaborate more closely with them to give back?</li>
+								<li>Somehow expose the guiding values behind AI's interpretations. This would create a little more room to debate a particular issue, such as for example immigration, in a way where all "downstream" immigration bills could be rooted within an agreed-upon guiding ethos or principles.</li>
+								<li>Include higher level information about the political parties such as: what are the larger accompishments of this legislative session? What sorts of things did they work to accompish and what sort of roadblocks did they encounter?</li>
+							</ol>
+						</div>
+					</section>
+
+					<section class="spotlight" id="mission">
+						<div class="image">
+                            <a [routerLink]="'/about'" fragment="mission"><img src="images/donate.png" alt="Please donate" /></a>
+                        </div>
+						<div class="content">
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="mission">A Misson to Serve Voters</a></h3>
+							<p>At Poliscore, our mission is to provide a clear AI evaluation of legislative performance in America. In an era where misinformation and sensationalized news dominate, we aim to bring clarity and accountability by grading legislators based on their actual legislative actions, not media portrayals. We utilize advanced AI technology to scan and interpret bills, which we then use to create comprehensive performance metrics for legislators. This approach ensures discussions are rooted in verifiable policy actions rather than partisan rhetoric.</p>
+						</div>
+					</section>
+				</div>
+			</section>
+
+		<!-- Three -->
+			<section id="three" class="wrapper style2 special">
+				<header class="major" id="get-involved">
+					<h2><a [routerLink]="'/about'" fragment="get-involved">Get Involved</a></h2>
+					<div class="vertical-layout"><p>If you're excited about what we're doing, the best way to support the project is to support us on Ko-Fi. Because we're not funded by any large political parties or organizations, we rely on individual donors such as yourself.</p></div>
+				</header>
+				<ul class="actions special">
+					<li><a href="https://ko-fi.com/poliscore" class="vertical-layout button primary icon solid">
+						<div class="horizontal-layout">
+							<img src="images/kofi.png" class="kofi">
+							Support on Ko-Fi
+						</div>
+					</a></li>
+					<!-- <li><a class="button primary vertical-layout" href="https://mastodon.social/@pissedoffcitizen">
+						
+						<div class="horizontal-layout">
+							Follow On 
+							<svg style="margin-left: 7px;" width="25" height="26" viewBox="0 0 75 79" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path d="M73.8393 17.4898C72.6973 9.00165 65.2994 2.31235 56.5296 1.01614C55.05 0.797115 49.4441 0 36.4582 0H36.3612C23.3717 0 20.585 0.797115 19.1054 1.01614C10.5798 2.27644 2.79399 8.28712 0.904997 16.8758C-0.00358524 21.1056 -0.100549 25.7949 0.0682394 30.0965C0.308852 36.2651 0.355538 42.423 0.91577 48.5665C1.30307 52.6474 1.97872 56.6957 2.93763 60.6812C4.73325 68.042 12.0019 74.1676 19.1233 76.6666C26.7478 79.2728 34.9474 79.7055 42.8039 77.9162C43.6682 77.7151 44.5217 77.4817 45.3645 77.216C47.275 76.6092 49.5123 75.9305 51.1571 74.7385C51.1797 74.7217 51.1982 74.7001 51.2112 74.6753C51.2243 74.6504 51.2316 74.6229 51.2325 74.5948V68.6416C51.2321 68.6154 51.2259 68.5896 51.2142 68.5661C51.2025 68.5426 51.1858 68.522 51.1651 68.5058C51.1444 68.4896 51.1204 68.4783 51.0948 68.4726C51.0692 68.4669 51.0426 68.467 51.0171 68.4729C45.9835 69.675 40.8254 70.2777 35.6502 70.2682C26.7439 70.2682 24.3486 66.042 23.6626 64.2826C23.1113 62.762 22.7612 61.1759 22.6212 59.5646C22.6197 59.5375 22.6247 59.5105 22.6357 59.4857C22.6466 59.4609 22.6633 59.4391 22.6843 59.422C22.7053 59.4048 22.73 59.3929 22.7565 59.3871C22.783 59.3813 22.8104 59.3818 22.8367 59.3886C27.7864 60.5826 32.8604 61.1853 37.9522 61.1839C39.1768 61.1839 40.3978 61.1839 41.6224 61.1516C46.7435 61.008 52.1411 60.7459 57.1796 59.7621C57.3053 59.7369 57.431 59.7154 57.5387 59.6831C65.4861 58.157 73.0493 53.3672 73.8178 41.2381C73.8465 40.7606 73.9184 36.2364 73.9184 35.7409C73.9219 34.0569 74.4606 23.7949 73.8393 17.4898Z" fill="url(#paint0_linear_549_34)"/>
+								<path d="M61.2484 27.0263V48.114H52.8916V27.6475C52.8916 23.3388 51.096 21.1413 47.4437 21.1413C43.4287 21.1413 41.4177 23.7409 41.4177 28.8755V40.0782H33.1111V28.8755C33.1111 23.7409 31.0965 21.1413 27.0815 21.1413C23.4507 21.1413 21.6371 23.3388 21.6371 27.6475V48.114H13.2839V27.0263C13.2839 22.7176 14.384 19.2946 16.5843 16.7572C18.8539 14.2258 21.8311 12.926 25.5264 12.926C29.8036 12.926 33.0357 14.5705 35.1905 17.8559L37.2698 21.346L39.3527 17.8559C41.5074 14.5705 44.7395 12.926 49.0095 12.926C52.7013 12.926 55.6784 14.2258 57.9553 16.7572C60.1531 19.2922 61.2508 22.7152 61.2484 27.0263Z" fill="white"/>
+								<defs>
+								<linearGradient id="paint0_linear_549_34" x1="37.0692" y1="0" x2="37.0692" y2="79" gradientUnits="userSpaceOnUse">
+								<stop stop-color="#6364FF"/>
+								<stop offset="1" stop-color="#563ACC"/>
+								</linearGradient>
+								</defs>
+							</svg>
+						</div>
+					</a></li> -->
+					<!-- <li><a class="button primary icon solid fa-pen-to-square" href="https://docs.google.com/forms/d/e/1FAIpQLSeG0hp_it7fZ0zipH_iegTnlp6AE2UYowWBHp59JryuLItkQw/viewform?usp=sf_link">Request Local Data</a></li> -->
+					<!-- <li><a (click)="captureEmailForm()" class="button primary icon solid fa-envelope" style="">Mailing List</a></li> -->
+					<!-- <li><a href="mailto:contact@poliscore.us" class="button primary icon solid fa-envelope" style="">Contact</a></li> -->
+					<!-- <li><a href="#" class="button primary icon solid fa-envelope">Donate</a></li> -->
+
+					<li><a href="https://poliscore-prod-public.s3.amazonaws.com/press-kit.zip" class="button primary icon solid fa-solid fa-download">Press Kit</a></li>
+				</ul>
+			</section>
+
+		<!-- Four -->
+		<!--
+			<section id="four" class="wrapper">
+				<div class="inner">
+
+					<header class="major">
+						<h2>Elements</h2>
+					</header>
+
+					<section>
+						<h4>Text</h4>
+						<p>This is <b>bold</b> and this is <strong>strong</strong>. This is <i>italic</i> and this is <em>emphasized</em>.
+						This is <sup>superscript</sup> text and this is <sub>subscript</sub> text.
+						This is <u>underlined</u> and this is code: <code>for (;;) { ... }</code>. Finally, <a href="#">this is a link</a>.</p>
+						<hr />
+						<header>
+							<h4>Heading with a Subtitle</h4>
+							<p>Lorem ipsum dolor sit amet nullam id egestas urna aliquam</p>
+						</header>
+						<p>Nunc lacinia ante nunc ac lobortis. Interdum adipiscing gravida odio porttitor sem non mi integer non faucibus ornare mi ut ante amet placerat aliquet. Volutpat eu sed ante lacinia sapien lorem accumsan varius montes viverra nibh in adipiscing blandit tempus accumsan.</p>
+						<header>
+							<h5>Heading with a Subtitle</h5>
+							<p>Lorem ipsum dolor sit amet nullam id egestas urna aliquam</p>
+						</header>
+						<p>Nunc lacinia ante nunc ac lobortis. Interdum adipiscing gravida odio porttitor sem non mi integer non faucibus ornare mi ut ante amet placerat aliquet. Volutpat eu sed ante lacinia sapien lorem accumsan varius montes viverra nibh in adipiscing blandit tempus accumsan.</p>
+						<hr />
+						<h2>Heading Level 2</h2>
+						<h3>Heading Level 3</h3>
+						<h4>Heading Level 4</h4>
+						<h5>Heading Level 5</h5>
+						<h6>Heading Level 6</h6>
+						<hr />
+						<h5>Blockquote</h5>
+						<blockquote>Fringilla nisl. Donec accumsan interdum nisi, quis tincidunt felis sagittis eget tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan faucibus. Vestibulum ante ipsum primis in faucibus lorem ipsum dolor sit amet nullam adipiscing eu felis.</blockquote>
+						<h5>Preformatted</h5>
+						<pre><code>i = 0;
+
+while (!deck.isInOrder()) {
+  print 'Iteration ' + i;
+  deck.shuffle();
+  i++;
+}
+
+print 'It took ' + i + ' iterations to sort the deck.';</code></pre>
+					</section>
+
+					<section>
+						<h4>Lists</h4>
+						<div class="row">
+							<div class="col-6 col-12-medium">
+								<h5>Unordered</h5>
+								<ul>
+									<li>Dolor pulvinar etiam.</li>
+									<li>Sagittis adipiscing.</li>
+									<li>Felis enim feugiat.</li>
+								</ul>
+								<h5>Alternate</h5>
+								<ul class="alt">
+									<li>Dolor pulvinar etiam.</li>
+									<li>Sagittis adipiscing.</li>
+									<li>Felis enim feugiat.</li>
+								</ul>
+							</div>
+							<div class="col-6 col-12-medium">
+								<h5>Ordered</h5>
+								<ol>
+									<li>Dolor pulvinar etiam.</li>
+									<li>Etiam vel felis viverra.</li>
+									<li>Felis enim feugiat.</li>
+									<li>Dolor pulvinar etiam.</li>
+									<li>Etiam vel felis lorem.</li>
+									<li>Felis enim et feugiat.</li>
+								</ol>
+								<h5>Icons</h5>
+								<ul class="icons">
+									<li><a href="#" class="icon brands fa-twitter"><span class="label">Twitter</span></a></li>
+									<li><a href="#" class="icon brands fa-facebook-f"><span class="label">Facebook</span></a></li>
+									<li><a href="#" class="icon brands fa-instagram"><span class="label">Instagram</span></a></li>
+									<li><a href="#" class="icon brands fa-github"><span class="label">Github</span></a></li>
+								</ul>
+							</div>
+						</div>
+						<h5>Actions</h5>
+						<div class="row">
+							<div class="col-6 col-12-medium">
+								<ul class="actions">
+									<li><a href="#" class="button primary">Default</a></li>
+									<li><a href="#" class="button">Default</a></li>
+								</ul>
+								<ul class="actions small">
+									<li><a href="#" class="button primary small">Small</a></li>
+									<li><a href="#" class="button small">Small</a></li>
+								</ul>
+								<ul class="actions stacked">
+									<li><a href="#" class="button primary">Default</a></li>
+									<li><a href="#" class="button">Default</a></li>
+								</ul>
+								<ul class="actions stacked">
+									<li><a href="#" class="button primary small">Small</a></li>
+									<li><a href="#" class="button small">Small</a></li>
+								</ul>
+							</div>
+							<div class="col-6 col-12-medium">
+								<ul class="actions stacked">
+									<li><a href="#" class="button primary fit">Default</a></li>
+									<li><a href="#" class="button fit">Default</a></li>
+								</ul>
+								<ul class="actions stacked">
+									<li><a href="#" class="button primary small fit">Small</a></li>
+									<li><a href="#" class="button small fit">Small</a></li>
+								</ul>
+							</div>
+						</div>
+					</section>
+
+					<section>
+						<h4>Table</h4>
+						<h5>Default</h5>
+						<div class="table-wrapper">
+							<table>
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th>Description</th>
+										<th>Price</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td>Item One</td>
+										<td>Ante turpis integer aliquet porttitor.</td>
+										<td>29.99</td>
+									</tr>
+									<tr>
+										<td>Item Two</td>
+										<td>Vis ac commodo adipiscing arcu aliquet.</td>
+										<td>19.99</td>
+									</tr>
+									<tr>
+										<td>Item Three</td>
+										<td> Morbi faucibus arcu accumsan lorem.</td>
+										<td>29.99</td>
+									</tr>
+									<tr>
+										<td>Item Four</td>
+										<td>Vitae integer tempus condimentum.</td>
+										<td>19.99</td>
+									</tr>
+									<tr>
+										<td>Item Five</td>
+										<td>Ante turpis integer aliquet porttitor.</td>
+										<td>29.99</td>
+									</tr>
+								</tbody>
+								<tfoot>
+									<tr>
+										<td colspan="2"></td>
+										<td>100.00</td>
+									</tr>
+								</tfoot>
+							</table>
+						</div>
+
+						<h5>Alternate</h5>
+						<div class="table-wrapper">
+							<table class="alt">
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th>Description</th>
+										<th>Price</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td>Item One</td>
+										<td>Ante turpis integer aliquet porttitor.</td>
+										<td>29.99</td>
+									</tr>
+									<tr>
+										<td>Item Two</td>
+										<td>Vis ac commodo adipiscing arcu aliquet.</td>
+										<td>19.99</td>
+									</tr>
+									<tr>
+										<td>Item Three</td>
+										<td> Morbi faucibus arcu accumsan lorem.</td>
+										<td>29.99</td>
+									</tr>
+									<tr>
+										<td>Item Four</td>
+										<td>Vitae integer tempus condimentum.</td>
+										<td>19.99</td>
+									</tr>
+									<tr>
+										<td>Item Five</td>
+										<td>Ante turpis integer aliquet porttitor.</td>
+										<td>29.99</td>
+									</tr>
+								</tbody>
+								<tfoot>
+									<tr>
+										<td colspan="2"></td>
+										<td>100.00</td>
+									</tr>
+								</tfoot>
+							</table>
+						</div>
+					</section>
+
+					<section>
+						<h4>Buttons</h4>
+						<ul class="actions">
+							<li><a href="#" class="button primary">Primary</a></li>
+							<li><a href="#" class="button">Default</a></li>
+						</ul>
+						<ul class="actions">
+							<li><a href="#" class="button large">Large</a></li>
+							<li><a href="#" class="button">Default</a></li>
+							<li><a href="#" class="button small">Small</a></li>
+						</ul>
+						<ul class="actions fit">
+							<li><a href="#" class="button fit">Fit</a></li>
+							<li><a href="#" class="button primary fit">Fit</a></li>
+							<li><a href="#" class="button fit">Fit</a></li>
+						</ul>
+						<ul class="actions fit small">
+							<li><a href="#" class="button primary fit small">Fit + Small</a></li>
+							<li><a href="#" class="button fit small">Fit + Small</a></li>
+							<li><a href="#" class="button primary fit small">Fit + Small</a></li>
+						</ul>
+						<ul class="actions">
+							<li><a href="#" class="button primary icon solid fa-download">Icon</a></li>
+							<li><a href="#" class="button icon solid fa-download">Icon</a></li>
+						</ul>
+						<ul class="actions">
+							<li><span class="button primary disabled">Disabled</span></li>
+							<li><span class="button disabled">Disabled</span></li>
+						</ul>
+					</section>
+
+					<section>
+						<h4>Form</h4>
+						<form method="post" action="#">
+							<div class="row gtr-uniform">
+								<div class="col-6 col-12-xsmall">
+									<input type="text" name="demo-name" id="demo-name" value="" placeholder="Name" />
+								</div>
+								<div class="col-6 col-12-xsmall">
+									<input type="email" name="demo-email" id="demo-email" value="" placeholder="Email" />
+								</div>
+								<div class="col-12">
+									<select name="demo-category" id="demo-category">
+										<option value="">- Category -</option>
+										<option value="1">Manufacturing</option>
+										<option value="1">Shipping</option>
+										<option value="1">Administration</option>
+										<option value="1">Human Resources</option>
+									</select>
+								</div>
+								<div class="col-4 col-12-small">
+									<input type="radio" id="demo-priority-low" name="demo-priority" checked>
+									<label for="demo-priority-low">Low</label>
+								</div>
+								<div class="col-4 col-12-small">
+									<input type="radio" id="demo-priority-normal" name="demo-priority">
+									<label for="demo-priority-normal">Normal</label>
+								</div>
+								<div class="col-4 col-12-small">
+									<input type="radio" id="demo-priority-high" name="demo-priority">
+									<label for="demo-priority-high">High</label>
+								</div>
+								<div class="col-6 col-12-small">
+									<input type="checkbox" id="demo-copy" name="demo-copy">
+									<label for="demo-copy">Email me a copy</label>
+								</div>
+								<div class="col-6 col-12-small">
+									<input type="checkbox" id="demo-human" name="demo-human" checked>
+									<label for="demo-human">Not a robot</label>
+								</div>
+								<div class="col-12">
+									<textarea name="demo-message" id="demo-message" placeholder="Enter your message" rows="6"></textarea>
+								</div>
+								<div class="col-12">
+									<ul class="actions">
+										<li><input type="submit" value="Send Message" class="primary" /></li>
+										<li><input type="reset" value="Reset" /></li>
+									</ul>
+								</div>
+							</div>
+						</form>
+					</section>
+
+					<section>
+						<h4>Image</h4>
+						<h5>Fit</h5>
+						<div class="box alt">
+							<div class="row gtr-uniform">
+								<div class="col-12"><span class="image fit"><img src="images/pic04.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img src="images/pic01.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img src="images/pic02.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img src="images/pic03.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img src="images/pic02.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img src="images/pic03.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img src="images/pic01.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img src="images/pic03.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img src="images/pic01.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img src="images/pic02.jpg" alt="" /></span></div>
+							</div>
+						</div>
+						<h5>Left &amp; Right</h5>
+						<p><span class="image left"><img src="images/pic05.jpg" alt="" /></span>Fringilla nisl. Donec accumsan interdum nisi, quis tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent. Donec accumsan interdum nisi, quis tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent.</p>
+						<p><span class="image right"><img src="images/pic05.jpg" alt="" /></span>Fringilla nisl. Donec accumsan interdum nisi, quis tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent. Donec accumsan interdum nisi, quis tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent.</p>
+					</section>
+
+				</div>
+			</section>
+		-->
+
+		<!-- Donate bar -->
+		 <div class="popup-donate vertical-layout" [class]="donateBarHidden ? 'hidden' : ''"><div class="vertical-layout" style="height: 100%;">
+			<a href="https://ko-fi.com/poliscore" class="horizontal-layout button primary icon solid" style="min-width: 175px;"><img src="images/kofi.png" class="kofi" style="margin-left: 10px;">Support on Ko-Fi</a>
+		</div></div>
+
+		<!-- Footer -->
+			<footer id="footer">
+                <!--
+				<ul class="icons">
+					<li><a href="#" class="icon brands fa-facebook-f"><span class="label">Facebook</span></a></li>
+					<li><a href="#" class="icon brands fa-twitter"><span class="label">Twitter</span></a></li>
+					<li><a href="#" class="icon brands fa-instagram"><span class="label">Instagram</span></a></li>
+				</ul>
+                -->
+				<p class="copyright">&copy; 2024 Poliscore</p>
+				<p class="copyright">Made With Fractal Site Template: <a href="https://html5up.net">HTML5 UP</a> + <a href="http://unsplash.com">Unsplash</a></p>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/jquery.scrolly.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+</div>

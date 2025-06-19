@@ -1,0 +1,22 @@
+**/target/**
+**/node_modules/**
+**/.quinoa/**
+graphics/press-kit
+graphics/press-kit.zip
+
+# MacOSX
+**/.DS_Store
+
+# Eclipse stuff
+**/.metadata
+**/.classpath
+**/bin/**
+**/tmp/**
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+**/.settings/**
+.loadpath
+.recommenders

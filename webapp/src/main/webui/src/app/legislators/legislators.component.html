@@ -1,0 +1,84 @@
+<div>
+    <span class="purplebg"></span> <!-- There's a bug on Mobile Chrome browsers where when the nav bar hides, it reveals the white bg. -->
+<div class="stripedbg" >
+    <!-- <div *ngIf="legs == null" class="loader"></div> -->
+
+	<div class="vertical-layout">
+
+        <div class="vertical-content">
+
+            <header [legislators]="false" class="content-section"></header>
+
+            <div *ngIf="legs" class="content-section">
+                <h1 style="display: none;">Legislators</h1>
+
+                <div class="sorting">
+                    <label class="sort-label left">Sort by:</label>
+                    <mat-button-toggle-group [value]="page.index" name="fontStyle" class="right" aria-label="Font Style" [hideSingleSelectionIndicator]="true" [hideMultipleSelectionIndicator]="true">
+                        <mat-button-toggle (click)="togglePage('ObjectsByLocation')" [value]="'ObjectsByLocation'" value="bold">State</mat-button-toggle>
+                        <mat-button-toggle (click)="togglePage(page.index == 'ObjectsByRating' || page.index == 'ObjectsByRatingAbs' ? page.index : 'ObjectsByRatingAbs')" [value]="'ObjectsByRating'" value="bold" [class.mat-button-toggle-checked]="page.index === 'ObjectsByRating' || page.index === 'ObjectsByRatingAbs'">Grade <i *ngIf="page.index === 'ObjectsByRating' || page.index === 'ObjectsByRatingAbs'" class="icon solid fa-solid sort-arrow" [ngClass]="{ 'fa-arrow-down': (page.index === 'ObjectsByRating' && !page.ascending), 'fa-arrow-up': (page.index === 'ObjectsByRating' && page.ascending), 'fa-arrows-up-down': (page.index === 'ObjectsByRatingAbs') }"></i></mat-button-toggle>
+                        <!-- <mat-button-toggle (click)="togglePage('ObjectsByRating')" [value]="'ObjectsByRating'" value="bold">Grade <i *ngIf="page.index === 'ObjectsByRating'" class="icon solid fa-solid sort-arrow" [ngClass]="{ 'fa-arrow-down': !page.ascending, 'fa-arrow-up': page.ascending }"></i></mat-button-toggle> -->
+                        <mat-button-toggle (click)="togglePage(page.index == 'ObjectsByImpact' || page.index == 'ObjectsByImpactAbs' ? page.index : 'ObjectsByImpactAbs')" [value]="'ObjectsByImpact'" value="bold" [class.mat-button-toggle-checked]="page.index === 'ObjectsByImpact' || page.index === 'ObjectsByImpactAbs'">Impact <i *ngIf="page.index === 'ObjectsByImpact' || page.index === 'ObjectsByImpactAbs'" class="icon solid fa-solid sort-arrow" [ngClass]="{ 'fa-arrow-down': (page.index === 'ObjectsByImpact' && !page.ascending), 'fa-arrow-up': (page.index === 'ObjectsByImpact' && page.ascending), 'fa-arrows-up-down': (page.index === 'ObjectsByImpactAbs') }"></i></mat-button-toggle>
+                        <mat-button-toggle (click)="togglePage('ObjectsByDate')" [value]="'ObjectsByDate'" value="italic">Age <i *ngIf="page.index === 'ObjectsByDate'" class="icon solid fa-solid sort-arrow" [ngClass]="{ 'fa-arrow-down': page.ascending, 'fa-arrow-up': !page.ascending }"></i></mat-button-toggle>
+                        <mat-button-toggle [value]="'ObjectsByIssueRating'" #menuTrigger="matMenuTrigger" [matMenuTriggerFor]="sortMenu" value="bold">Issue <i *ngIf="page.index === 'ObjectsByIssueRating'" class="icon solid fa-solid sort-arrow" [ngClass]="{ 'fa-arrow-down': !page.ascending, 'fa-arrow-up': page.ascending }"></i></mat-button-toggle>
+                    </mat-button-toggle-group>
+
+                    <mat-menu #sortMenu="matMenu">
+                        <button mat-menu-item *ngFor="let issue of issueMap | keyvalue" (click)="togglePage('ObjectsByIssueRating', issue.key, menuTrigger, $event)">
+                            {{ issue.value }}
+                            <i *ngIf="page.index === 'ObjectsByIssueRating' && page.sortKey === issue.key" class="icon solid fa-solid sort-arrow" [ngClass]="{ 'fa-arrow-down': !page.ascending, 'fa-arrow-up': page.ascending }"></i>
+                        </button>
+                    </mat-menu>
+                </div>
+
+                <input *ngIf="allLegislators.length > 0" class="searchbox" type="text"
+                    placeholder="Search for legislator or state"
+                    aria-label="Number"
+                    matInput
+                    [formControl]="myControl"
+                    [matAutocomplete]="auto"
+                    (keydown.enter)="onLegislatorSearchEnter($event)">
+                <mat-autocomplete #auto="matAutocomplete">
+                    @for (idAndName of filteredOptions | async; track idAndName) {
+                        <mat-option (click)="onSelectAutocomplete(idAndName[0])" [value]="idAndName[0]">{{idAndName[1]}}</mat-option>
+                    }
+                </mat-autocomplete>
+            </div>
+            
+            <ng-container *ngIf="legs">
+            <mat-card *ngFor="let leg of legs" class="example-card" appearance="outlined">
+                <a [href]="config.legislatorIdToAbsolutePath(leg.id ?? leg.legislatorId!)">
+                    <div class="left">
+                        <img *ngIf="!leg.photoError" [src]="'https://poliscore-prod-public.s3.amazonaws.com/' + (leg.id ?? leg.legislatorId!) + '.jpg'" (error)="leg.photoError = true;" >
+                        <img *ngIf="leg.photoError" src="https://poliscore-prod-public.s3.amazonaws.com/LEG/leg-photo-missing.png" alt=“Name”>
+                    </div>
+                    <div class="right">
+                        <mat-card-header>
+                            <mat-card-title-group>
+                                <mat-card-title>{{leg.name.official_full}}</mat-card-title>
+                                <h1 class="col-2 g-0"><p class="text-end" style="padding-right:12px;" [ngStyle]="{'color': colorForGrade(gradeForLegislator(leg))}">{{gradeForLegislator(leg)}}</p></h1>
+                                <mat-card-subtitle>{{subtitleForLegislator(leg)}}</mat-card-subtitle>
+                            </mat-card-title-group>
+                        </mat-card-header>
+                        <mat-card-content>
+                            <span><p>{{descriptionForLegislator(leg)}}</p></span>
+                        </mat-card-content>
+                        <mat-card-footer class="horizontal-layout" style="justify-content: space-between;">
+                            <p class="reelection"><span *ngIf="upForReelection(leg)">Up for reelection in Nov</span></p>
+                            <p class="party">{{leg.terms[leg.terms.length-1].party | titlecase}}</p>
+                        </mat-card-footer>
+                    </div>
+                </a>
+            </mat-card>
+            </ng-container>
+
+            <mat-card *ngIf="hasMoreContent && isRequestingData" class="loading-card vertical-layout" appearance="outlined">
+                <div class="loading">
+                </div>
+            </mat-card>
+       
+        </div>
+
+	</div>
+</div>
+</div>

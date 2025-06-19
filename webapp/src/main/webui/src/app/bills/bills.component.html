@@ -1,0 +1,75 @@
+<div>
+    <span class="purplebg"></span> <!-- There's a bug on Mobile Chrome browsers where when the nav bar hides, it reveals the white bg. -->
+<div class="stripedbg" >
+    <!-- <div *ngIf="legs == null" class="loader"></div> -->
+
+	<div class="vertical-layout">
+
+        <div class="vertical-content">
+
+            <header [bills]="false" class="content-section"></header>
+
+            <div *ngIf="bills" class="content-section">
+                <h1 style="display: none;">Bills</h1>
+
+                <div class="sorting">
+                    <label class="sort-label left">Sort by:</label>
+                    <mat-button-toggle-group [value]="page.index" name="fontStyle" class="right" aria-label="Font Style" [hideSingleSelectionIndicator]="true" [hideMultipleSelectionIndicator]="true">
+                        <mat-button-toggle (click)="togglePage('ObjectsByHot')" [value]="'ObjectsByHot'" value="bold">Hot </mat-button-toggle>
+                        <mat-button-toggle (click)="togglePage(page.index == 'ObjectsByRating' || page.index == 'ObjectsByRatingAbs' ? page.index : 'ObjectsByRatingAbs')" [value]="'ObjectsByRating'" [class.mat-button-toggle-checked]="page.index === 'ObjectsByRating' || page.index === 'ObjectsByRatingAbs'" value="bold">Grade <i *ngIf="page.index === 'ObjectsByRating' || page.index === 'ObjectsByRatingAbs'" class="icon solid fa-solid sort-arrow" [ngClass]="{ 'fa-arrow-down': (page.index === 'ObjectsByRating' && !page.ascending), 'fa-arrow-up': (page.index === 'ObjectsByRating' && page.ascending), 'fa-arrows-up-down': (page.index === 'ObjectsByRatingAbs') }"></i></mat-button-toggle>
+                        <mat-button-toggle (click)="togglePage(page.index == 'ObjectsByImpact' || page.index == 'ObjectsByImpactAbs' ? page.index : 'ObjectsByImpactAbs')" [value]="'ObjectsByImpact'" [class.mat-button-toggle-checked]="page.index === 'ObjectsByImpact' || page.index === 'ObjectsByImpactAbs'">Impact <i *ngIf="page.index === 'ObjectsByImpact' || page.index === 'ObjectsByImpactAbs'" class="icon solid fa-solid sort-arrow" [ngClass]="{ 'fa-arrow-down': (page.index === 'ObjectsByImpact' && !page.ascending), 'fa-arrow-up': (page.index === 'ObjectsByImpact' && page.ascending), 'fa-arrows-up-down': (page.index === 'ObjectsByImpactAbs') }"></i></mat-button-toggle>
+                        <mat-button-toggle (click)="togglePage('ObjectsByDate')" [value]="'ObjectsByDate'" value="italic">Date <i *ngIf="page.index === 'ObjectsByDate'" class="icon solid fa-solid sort-arrow" [ngClass]="{ 'fa-arrow-down': !page.ascending, 'fa-arrow-up': page.ascending }"></i></mat-button-toggle>
+                        <mat-button-toggle [value]="'ObjectsByIssueRating'" #menuTrigger="matMenuTrigger" [matMenuTriggerFor]="sortMenu" value="bold">Issue <i *ngIf="page.index === 'ObjectsByIssueRating'" class="icon solid fa-solid sort-arrow" [ngClass]="{ 'fa-arrow-down': !page.ascending, 'fa-arrow-up': page.ascending }"></i></mat-button-toggle>
+                    </mat-button-toggle-group>
+
+                    <mat-menu #sortMenu="matMenu">
+                        <button mat-menu-item *ngFor="let issue of issueMap | keyvalue" (click)="togglePage('ObjectsByIssueRating', issue.key, menuTrigger, $event)">
+                            {{ issue.value }}
+                            <i *ngIf="page.index === 'ObjectsByIssueRating' && page.sortKey === issue.key" class="icon solid fa-solid sort-arrow" [ngClass]="{ 'fa-arrow-down': !page.ascending, 'fa-arrow-up': page.ascending }"></i>
+                        </button>
+                    </mat-menu>
+                </div>
+
+                <input class="searchbox" type="text"
+                    placeholder="Search for a bill by name, number or type."
+                    aria-label="Number"
+                    matInput
+                    [formControl]="myControl"
+                    [matAutocomplete]="auto"
+                    (keydown.enter)="onBillSearchEnter($event)">
+                <mat-autocomplete #auto="matAutocomplete">
+                    @for (idAndName of filteredOptions | async; track idAndName) {
+                        <mat-option (click)="onSelectAutocomplete(idAndName[0])" [value]="idAndName[0]">{{idAndName[1]}}</mat-option>
+                    }
+                </mat-autocomplete>
+            </div>
+            
+            <mat-card *ngFor="let bill of bills" class="example-card" appearance="outlined" [ngClass]="{'gold-border': bill.status.description.trim().toLowerCase() === 'law'}">
+                <a [href]="config.billIdToAbsolutePath(bill.id ?? bill.billId!)">
+                    <mat-card-header>
+                        <mat-card-title-group>
+                            <h4 class="title-date"><p style="padding-left:12px;">{{bill.introducedDate}}</p></h4>
+                            <mat-card-title>{{getBillName(bill)}}</mat-card-title>
+                            <h1 class="title-grade"><p style="padding-right:12px;" [ngStyle]="{'color': colorForGrade(gradeForBill(bill))}">{{gradeForBill(bill)}}</p></h1>
+                            <mat-card-subtitle>{{subtitleForBill(bill)}}</mat-card-subtitle>
+                        </mat-card-title-group>
+                    </mat-card-header>
+                    <mat-card-content>
+                        <span><p>{{descriptionForBill(bill)}}</p></span>
+                    </mat-card-content>
+                    <mat-card-footer class="horizontal-layout" [ngClass]="{'highlight-law': bill.status.description.trim().toLowerCase() === 'law', 'bill-dead': bill.status.description.trim().toLowerCase() != 'law'}">
+                        <p class="status">{{ bill.status.description }}</p>
+                    </mat-card-footer>
+                </a>
+            </mat-card>
+
+            <mat-card *ngIf="hasMoreContent && isRequestingData" class="loading-card vertical-layout" appearance="outlined">
+                <div class="loading">
+                </div>
+            </mat-card>
+       
+        </div>
+
+	</div>
+</div>
+</div>

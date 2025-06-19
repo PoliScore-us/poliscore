@@ -1,0 +1,226 @@
+/* @import '@fortawesome/fontawesome-free/css/fontawesome.min.css'; */
+
+/* Custom CSS Specific to Poliscore */
+
+/* Header */
+.title {
+    display: grid;
+    grid-template-columns: minmax(100px, 260px) 1fr;
+}
+.title-centered {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+.title-centered > :first-child {
+	margin-left: 40%;
+}
+.title-centered > :nth-child(2) {
+	margin-right: 40%;
+}
+.nav-buttons {
+    min-width: 120px;
+}
+.nav-buttons button {
+    width: 8.43em;
+    height: 30px;
+    margin: 5px;
+}
+.logo {
+    cursor: pointer;
+    width:230px;
+    padding:0;
+    margin:16px;
+    margin-top:5px;
+}
+.vertical-content > * {
+    width: calc(100% - 20px) !important;
+    margin: 10px !important;
+}
+.vertical-content {
+    max-width: 100%;
+}
+@media screen and (max-width: 400px) {
+    .logo {
+        width: 180px;
+    }
+    .logo-subtitle {
+        font-size: 12px;
+    }
+}
+
+/* Shine */
+button.about-button {
+    overflow: clip !important;
+}
+.about-button:after {
+    content:'';
+    top:0;
+    transform:translateX(100%);
+    width:100%;
+    height:40px;
+    position: absolute;
+    z-index:1;
+    animation: slide 1s ease-in-out;
+    animation-delay: 3s;
+        
+    /* 
+    CSS Gradient - complete browser support from http://www.colorzilla.com/gradient-editor/ 
+    */
+    background: -moz-linear-gradient(left, rgba(255,255,255,0) 0%, #f9f9f9 50%, rgba(128,186,232,0) 99%, rgba(125,185,232,0) 100%); /* FF3.6+ */
+    background: -webkit-gradient(linear, left top, right top, color-stop(0%,rgba(255,255,255,0)), color-stop(50%,#f9f9f9), color-stop(99%,rgba(128,186,232,0)), color-stop(100%,rgba(125,185,232,0))); /* Chrome,Safari4+ */
+    background: -webkit-linear-gradient(left, rgba(255,255,255,0) 0%,#f9f9f9 50%,rgba(128,186,232,0) 99%,rgba(125,185,232,0) 100%); /* Chrome10+,Safari5.1+ */
+    background: -o-linear-gradient(left, rgba(255,255,255,0) 0%,#f9f9f9 50%,rgba(128,186,232,0) 99%,rgba(125,185,232,0) 100%); /* Opera 11.10+ */
+    background: -ms-linear-gradient(left, rgba(255,255,255,0) 0%,#f9f9f9 50%,rgba(128,186,232,0) 99%,rgba(125,185,232,0) 100%); /* IE10+ */
+    background: linear-gradient(to right, rgba(255,255,255,0) 0%,#f9f9f9 50%,rgba(128,186,232,0) 99%,rgba(125,185,232,0) 100%); /* W3C */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00ffffff', endColorstr='#007db9e8',GradientType=1 ); /* IE6-9 */
+}
+
+/* animation */
+
+@keyframes slide {
+    0% {transform:translateX(-100%);}
+    100% {transform:translateX(100%);}
+}
+
+
+
+
+a.unstyled {
+	margin: 0;
+	padding: 0;
+}
+
+a.unstyled :link {
+    text-decoration: none;
+	text-decoration-line: none;
+}
+a.unstyled, a.unstyled:visited, a.unstyled:hover, a.unstyled:active {
+	text-decoration: none;
+	text-decoration-line: none;
+    color: inherit;
+}
+
+.stripedbg {
+	background-color: #81548f;
+	color: #d1e5f9;
+	overflow-y: visible;
+    overflow-x: clip;
+	-moz-align-items: center;
+	-webkit-align-items: center;
+	-ms-align-items: center;
+	align-items: center;
+	-moz-justify-content: center;
+	-webkit-justify-content: center;
+	-ms-justify-content: center;
+	justify-content: center;
+	background-image: url("/2026/images/overlay.png"), url("/2026/images/pattern-size1.svg");
+	background-position: top left, center center;
+	background-attachment: fixed, fixed;
+	background-size: auto, cover;
+	height: 99%; // Make sure to use 100% and not 100vh here otherwise it won't work with chrome's address bar hiding
+	min-height: 99dvh; // dvh here means "dynamic viewport height", which simply means that it accounts for chrome's address bar resizing
+	width: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+.purplebg {
+	background-color: #81548f;
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	z-index: -10;
+}
+
+.object-not-found {
+	color: red;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 999;
+}
+.object-not-found a {
+	color: red;
+}
+
+/*
+.stripedbg-inner {
+	padding: 4.5em 0 2.5em 0 ;
+}
+*/
+
+.vertical-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+}
+
+.horizontal-layout {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+}
+
+.stripedbg > .vertical-layout {
+	padding-top: 10px;
+	padding-bottom: 20px;
+}
+
+html {
+	overflow: visible;
+}
+
+/* HTML: <div class="loader"></div> */
+.loader {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 9999;
+
+	width: 15px;
+	aspect-ratio: 1;
+	border-radius: 50%;
+	animation: l5 1s infinite linear alternate;
+  }
+  @keyframes l5 {
+	  0%  {box-shadow: 20px 0 #000, -20px 0 #0002;background: #000 }
+	  33% {box-shadow: 20px 0 #000, -20px 0 #0002;background: #0002}
+	  66% {box-shadow: 20px 0 #0002,-20px 0 #000; background: #0002}
+	  100%{box-shadow: 20px 0 #0002,-20px 0 #000; background: #000 }
+  }
+
+.content-section {
+	width: 80%;
+    max-width: 1200px;
+    margin: 10px;
+    background-color: white;
+    color: black;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    border: 1px solid black;
+}
+
+.breadcrumb {
+    width: 80%;
+    max-width: 1200px;
+    margin: 10px;
+    background-color: white;
+    color: black;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.breadcrumb a:not(.unstyled) {
+    padding: 10px;
+}
+
+/* Custom CSS Specific to Poliscore */
+
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
