@@ -6,7 +6,7 @@ set -x
 
 sudo docker ps
 
-cd ../congress
+cd ../../congress
 git pull
 python3 -m venv env
 source env/bin/activate
@@ -18,7 +18,7 @@ usc-run govinfo --bulkdata=BILLSTATUS --congress=$CONGRESS
 usc-run bills --govtrack --congress=$CONGRESS
 usc-run votes --congress=$CONGRESS
 
-cd ../poliscore
+cd ../pissedoffcitizen/poliscore
 
 mvn install
 

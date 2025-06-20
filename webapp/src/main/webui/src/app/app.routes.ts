@@ -6,6 +6,7 @@ import { LegislatorsComponent } from './legislators/legislators.component';
 import { BillComponent } from './bill/bill.component';
 import { BillsComponent } from './bills/bills.component';
 import { SessionStatsComponent } from './sessionstats/sessionstats.component';
+import { PromoComponent } from './promo/promo.component';
 
 function idPathMatcher(path: string) {
   let p = path;
@@ -48,7 +49,7 @@ function idPathMatcher(path: string) {
 // }
 
 export const routes: Routes = [
-  { path: "", component: LegislatorsComponent, data: { animation: 'legislatorsPage' } },
+  { path: "", component: PromoComponent, data: { animation: 'promoPage' } },
   { matcher: idPathMatcher('legislator'), component: LegislatorComponent, data: { animation: 'legislatorPage' } },
   { path: 'legislators', component: LegislatorsComponent, data: { animation: 'legislatorsPage' } },
   { path: 'legislators/:index/:ascending', component: LegislatorsComponent, data: { animation: 'legislatorsPage' } },
@@ -58,5 +59,7 @@ export const routes: Routes = [
   { path: 'congress', component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
   { path: 'congress/:party', component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
   { path: 'congress/:party/:sort', component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
-  { path: 'about', component: AboutComponent, title: "About - PoliScore: AI Political Rating Service", data: { animation: 'about' } }
+
+  { path: "about", redirectTo: "", pathMatch: "full" }
+  // { path: 'about', component: PromoComponent, title: "About - PoliScore: AI Political Rating Service", data: { animation: 'about' } }
 ];
