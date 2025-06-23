@@ -770,7 +770,7 @@ input, select, textarea {
 	}
 
 	.scroll-for-more label,i {
-		color: rgba(255, 255, 255, 0.3) !important;
+		// color: rgba(255, 255, 255, 0.3) !important;
 	}
 
 	.privacy-policy {
@@ -818,7 +818,7 @@ input, select, textarea {
 	@media screen and (max-width: 1280px) {
 
 		#header {
-			background-image: url("/images/overlay.png"), url("/images/pattern-size2.svg");
+			background-image: url("/2026/images/overlay.png"), url("/images/pattern-size2.svg");
 		}
 
 	}
@@ -875,7 +875,7 @@ input, select, textarea {
 	@media screen and (max-width: 736px) {
 
 		#header {
-			background-image: url("/images/overlay.png"), url("/images/pattern-size3.svg");
+			background-image: url("/2026/images/overlay.png"), url("/images/pattern-size3.svg");
 		}
 
 		#header h1 {
