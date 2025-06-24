@@ -32,11 +32,15 @@
     font-family: 'Arial', sans-serif;
     text-align: justify;
     letter-spacing: 0.02em;
-}
 
-.disclaimer-popup.below {
-    top: 60%; /* Position the popup below the text */
-    bottom: auto;
+    &.below {
+        top: 60%; /* Position the popup below the text */
+        bottom: auto;
+        
+        @media (max-width: 1400px) {
+            transform: translateX(-18%);
+        }
+    }
 }
 
 .disclaimer-popup:before {

@@ -6,12 +6,15 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.jboss.resteasy.reactive.RestQuery;
+import org.tartarus.snowball.SnowballStemmer;
+import org.tartarus.snowball.ext.englishStemmer;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -321,14 +324,52 @@ public class Lambda {
     @GET
     @Path("/queryBills")
     public List<List<String>> queryBills(@RestQuery("text") String text) {
-    	val bills = new ArrayList<List<String>>(getBillsIndex());
-    	
-//    	bills.addAll(Arrays.asList(TrackedIssue.values()).stream().map(i -> Arrays.asList(TRACKED_ISSUE_INDEX + i.name(), i.getName() + " (issue)")).toList());
-    	
-    	return bills.stream()
-    			.filter(b -> b.get(1).toLowerCase().trim().contains(text.toLowerCase().trim()) || b.get(0).toLowerCase().trim().contains(text.toLowerCase().trim()))
-    			.sorted((a,b) -> LevenshteinDistance.getDefaultInstance().apply(a.get(1), text) - LevenshteinDistance.getDefaultInstance().apply(b.get(1), text))
-    			.limit(30)
-    			.collect(Collectors.toList());
+    	SnowballStemmer stemmer = new englishStemmer();
+
+        // Normalize query to tokens
+        List<String> queryTokens = Arrays.stream(text.toLowerCase()
+                .replaceAll("[^a-z0-9\\s]", " ")
+                .replaceAll("\\s+", " ")
+                .trim()
+                .split(" "))
+            .filter(token -> !STOPWORDS.contains(token))
+            .map(token -> {
+                stemmer.setCurrent(token);
+                stemmer.stem();
+                return stemmer.getCurrent();
+            })
+            .toList();
+
+        // Also check if query looks like a bill type + number
+        String normalizedBillRef = normalizeBillRef(text);  // e.g., "hr123"
+
+        List<List<String>> bills = new ArrayList<>(getBillsIndex());
+
+        return bills.stream()
+            .filter(bill -> {
+                String billId = bill.get(0);       // us/congress/117/hr/123
+                String stemmedTokens = bill.get(2);
+
+                boolean matchesTokens = queryTokens.stream().allMatch(stemmedTokens::contains);
+                boolean matchesTypeNumber = billId.replaceAll("[^a-z0-9]", "").endsWith(normalizedBillRef);
+
+                return matchesTokens || matchesTypeNumber;
+            })
+            .sorted(Comparator.comparingInt(bill ->
+                LevenshteinDistance.getDefaultInstance().apply(bill.get(1).toLowerCase(), text.toLowerCase())
+            ))
+            .limit(30)
+            .map(bill -> List.of(bill.get(0), bill.get(1)))
+            .collect(Collectors.toList());
     }
+
+    private String normalizeBillRef(String input) {
+        return input.toLowerCase().replaceAll("[^a-z0-9]", "");  // "H.R. 123" → "hr123"
+    }
+
+
+    private static final Set<String> STOPWORDS = Set.of(
+        "the", "of", "to", "and", "a", "in", "for", "on", "at", "by", "with", "act"
+    );
+
 }

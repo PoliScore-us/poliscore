@@ -57,6 +57,11 @@
   
   <dependencies>
 	<dependency>
+	  <groupId>com.github.rholder</groupId>
+	  <artifactId>snowball-stemmer</artifactId>
+	  <version>1.3.0.581.1</version>
+	</dependency>
+	<dependency>
 		<groupId>us.poliscore</groupId>
 		<artifactId>databuilder</artifactId>
 		<version>${project.version}</version>

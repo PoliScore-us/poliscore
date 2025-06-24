@@ -199,10 +199,11 @@ export class BillsComponent implements OnInit {
       this.page.sortKey = undefined;
       this.page.ascending = true;
       this.fetchData();
-      this.myControl.setValue("");
     } else {
       window.location.href = this.config.billIdToAbsolutePath(id);
     }
+
+    this.myControl.setValue("");
   }
 
   togglePage(index: PageIndex, sortKey: string | undefined = undefined, menuTrigger: MatMenuTrigger | undefined = undefined, event: Event | undefined = undefined) {

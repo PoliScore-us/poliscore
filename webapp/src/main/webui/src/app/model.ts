@@ -116,7 +116,7 @@ export class Legislator {
 export interface LegislatorPageData {
   location: string;
   legislators: Legislator[];
-  allLegislators: [string, string][];
+  allLegislators: [string, string, string][];
 }
 
 export interface LegislatorInterpretation {

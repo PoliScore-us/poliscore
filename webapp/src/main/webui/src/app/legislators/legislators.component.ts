@@ -16,6 +16,7 @@ import { descriptionForLegislator, gradeForLegislator, subtitleForLegislator, up
 import { HeaderComponent } from '../header/header.component';
 import { ConfigService } from '../config.service';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
+import Fuse from 'fuse.js';
 
 @Component({
   selector: 'legislators',
@@ -29,9 +30,9 @@ export class LegislatorsComponent implements OnInit {
 
   legs?: Legislator[];
 
-  allLegislators: [string, string][] = [];
+  allLegislators: [string, string, string][] = [];
 
-  searchOptions: [string, string][] = [];
+  searchOptions: { id: string, name: string, alias: string }[] = [];
 
   myControl = new FormControl('');
 
@@ -44,6 +45,8 @@ export class LegislatorsComponent implements OnInit {
   public isRequestingData: boolean = false;
 
   private lastDataFetchSequence = 0;
+
+  private fuse!: Fuse<{ id: string, name: string, alias: string }>;
 
   issueMap = issueMap;
 
@@ -150,15 +153,11 @@ export class LegislatorsComponent implements OnInit {
   }
 
   private _filter(value: string): [string, string][] {
-    const filterValue = value.toLowerCase();
+    if (!value.trim() || !this.fuse) return [];
 
-    // levenshtein apparently doesn't work for this search usecase? 
-    // return this.allLegislators.sort((a,b) => 
-    //   levenshtein(a[1].toLowerCase(), filterValue.toLowerCase())
-    //   - levenshtein(b[1].toLowerCase(), filterValue.toLowerCase())
-    // ).slice(0, 15);
-
-    return this.searchOptions.filter(leg => leg[1].toLowerCase().includes(filterValue.toLowerCase()));
+    return this.fuse.search(value)
+      .slice(0, 15)
+      .map(res => [res.item.id, res.item.name]);
   }
 
   @HostListener('window:scroll', ['$event'])
@@ -221,7 +220,6 @@ export class LegislatorsComponent implements OnInit {
       this.hasMoreContent = true;
       this.legs = [];
       this.page.exclusiveStartKey = undefined;
-      this.myControl.setValue("");
 
       this.myLocation = id.substring(6);
       // this.router.navigate(['/legislators/state/' + this.myLocation.toLowerCase()]);
@@ -232,6 +230,8 @@ export class LegislatorsComponent implements OnInit {
       window.location.href = this.config.legislatorIdToAbsolutePath(id);
       // this.router.navigate(this.config.legislatorIdToAbsolutePath(id));
     }
+
+    this.myControl.setValue("");
   }
 
   togglePage(index: PageIndex, sortKey: string | undefined = undefined, menuTrigger: MatMenuTrigger | undefined = undefined, event: Event | undefined = undefined) {
@@ -328,7 +328,17 @@ export class LegislatorsComponent implements OnInit {
       }
 
       this.allLegislators = data.allLegislators;
-      this.searchOptions = data.allLegislators.concat(states.map(s => ["STATE/" + s[1], s[0]]));
+      this.searchOptions = data.allLegislators.concat(states.map(s => ["STATE/" + s[1], s[0], ""])).map(([id, name, alias]) => ({
+        id,
+        name,
+        alias
+      }));
+
+      this.fuse = new Fuse(this.searchOptions, {
+        keys: ['name', 'alias'],
+        threshold: 0.3
+      });
+
       this.myLocation = data.location;
 
       let hasntChangedUrl = (this.router.url == "" || this.router.url == "/" || this.router.url == "/legislators");

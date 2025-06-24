@@ -4,11 +4,15 @@ import java.io.File;
 import java.net.URI;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
+import org.tartarus.snowball.SnowballStemmer;
+import org.tartarus.snowball.ext.englishStemmer;
 
 import io.quarkus.logging.Log;
 import jakarta.annotation.Priority;
@@ -18,22 +22,18 @@ import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.Environment;
 import us.poliscore.PoliscoreUtil;
-import us.poliscore.model.CongressionalSession;
 import us.poliscore.model.InterpretationOrigin;
-import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillIssueStat;
-import us.poliscore.model.bill.BillStatus;
 import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.BillType;
 import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 import us.poliscore.service.storage.MemoryObjectService;
-import us.poliscore.view.USCBillView;
 
 @ApplicationScoped
 @Priority(4)
@@ -105,45 +105,78 @@ public class BillService {
 	}
 	
 //	@SneakyThrows
-//	public void saveDatabaseBillIndex() {
+//	public void generateBillWebappIndex() {
+//		final File out = new File(Environment.getDeployedPath(), "../../webapp/src/main/resources/bills.index");
+//		
 //		DateTimeFormatter usFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 //		
 //		val data = memService.queryAll(Bill.class).stream()
-//			.filter(b -> b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION))
+//			.filter(b -> PoliscoreUtil.SUPPORTED_CONGRESSES.stream().anyMatch(s -> b.isIntroducedInSession(s)) && s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
 //			.map(b -> {
-//				return Arrays.asList(b.getId(), b.getLastUpdateDate().format(usFormat));
+//				// The bill name can come from the interpretation so we have to fetch it.
+//				b.setInterpretation(s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).orElseThrow());
+//				
+//				if (b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION)) {
+//					return Arrays.asList(b.getId(), b.getName() + " (" + b.getType().toString() + " " + b.getNumber() + ")");
+//				} else {
+//					return Arrays.asList(b.getId(), b.getName() + " (" + b.getIntroducedDate().format(usFormat) + ")");
+//				}
 //			})
-//			.sorted((a,b) -> a.get(0).compareTo(b.get(0)))
+//			.sorted((a,b) -> a.get(1).compareTo(b.get(1)))
 //			.toList();
 //		
+//		Log.info("Generated a bill 'index' of size " + data.size());
 //		
+//		FileUtils.write(out, PoliscoreUtil.getObjectMapper().writeValueAsString(data), "UTF-8");
 //	}
 	
 	@SneakyThrows
 	public void generateBillWebappIndex() {
-		final File out = new File(Environment.getDeployedPath(), "../../webapp/src/main/resources/bills.index");
-		
-		DateTimeFormatter usFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-		
-		val data = memService.queryAll(Bill.class).stream()
-			.filter(b -> PoliscoreUtil.SUPPORTED_CONGRESSES.stream().anyMatch(s -> b.isIntroducedInSession(s)) && s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
-			.map(b -> {
-				// The bill name can come from the interpretation so we have to fetch it.
-				b.setInterpretation(s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).orElseThrow());
-				
-				if (b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION)) {
-					return Arrays.asList(b.getId(), b.getName());
-				} else {
-					return Arrays.asList(b.getId(), b.getName() + " (" + b.getIntroducedDate().format(usFormat) + ")");
-				}
-			})
-			.sorted((a,b) -> a.get(1).compareTo(b.get(1)))
-			.toList();
-		
-		Log.info("Generated a bill 'index' of size " + data.size());
-		
-		FileUtils.write(out, PoliscoreUtil.getObjectMapper().writeValueAsString(data), "UTF-8");
+	    final File out = new File(Environment.getDeployedPath(), "../../webapp/src/main/resources/bills.index");
+	    DateTimeFormatter usFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+	    SnowballStemmer stemmer = new englishStemmer();
+
+	    val data = memService.queryAll(Bill.class).stream()
+	        .filter(b -> PoliscoreUtil.SUPPORTED_CONGRESSES.stream().anyMatch(s -> b.isIntroducedInSession(s)) &&
+	                     s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
+	        .map(b -> {
+	            b.setInterpretation(s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).orElseThrow());
+
+	            String displayName = b.getName();
+	            String normalizedTokens = normalize(displayName, stemmer);
+
+	            String label = b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION)
+	                    ? displayName + " (" + b.getType() + " " + b.getNumber() + ")"
+	                    : displayName + " (" + b.getIntroducedDate().format(usFormat) + ")";
+
+	            return Arrays.asList(b.getId(), label, normalizedTokens);
+	        })
+	        .sorted(Comparator.comparing(b -> b.get(1)))
+	        .toList();
+
+	    FileUtils.write(out, PoliscoreUtil.getObjectMapper().writeValueAsString(data), "UTF-8");
+	    Log.info("Generated a bill 'index' of size " + data.size());
 	}
+
+	private static final Set<String> STOPWORDS = Set.of(
+	    "the", "of", "to", "and", "a", "in", "for", "on", "at", "by", "with", "act"
+	);
+
+	private String normalize(String input, SnowballStemmer stemmer) {
+	    return Arrays.stream(input.toLowerCase()
+	            .replaceAll("[^a-z0-9\\s]", " ")   // remove punctuation
+	            .replaceAll("\\s+", " ")           // collapse spaces
+	            .trim()
+	            .split(" "))
+	        .filter(token -> !STOPWORDS.contains(token))
+	        .map(token -> {
+	            stemmer.setCurrent(token);
+	            stemmer.stem();
+	            return stemmer.getCurrent();
+	        })
+	        .collect(Collectors.joining(" "));
+	}
+
 	
 	@SneakyThrows
 	public void dumbAllBills() {
