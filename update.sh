@@ -11,7 +11,7 @@ sudo docker ps
 source ./set-deployment-target.sh
 
 
-cd "$CONGRESS_DIR"
+cd "$USC_DIR"
 git pull
 python3 -m venv env
 source env/bin/activate
