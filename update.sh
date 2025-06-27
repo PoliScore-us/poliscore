@@ -4,11 +4,14 @@ set -e
 set -o pipefail
 set -x
 
+START_DIR="$(pwd)"
+USC_DIR="$START_DIR/../../congress"
+
 sudo docker ps
 source ./set-deployment-target.sh
 
 
-cd ../../congress
+cd "$CONGRESS_DIR"
 git pull
 python3 -m venv env
 source env/bin/activate
@@ -20,7 +23,7 @@ usc-run govinfo --bulkdata=BILLSTATUS --congress=$CONGRESS
 usc-run bills --govtrack --congress=$CONGRESS
 usc-run votes --congress=$CONGRESS
 
-cd ../pissedoffcitizen/poliscore
+cd "$START_DIR"
 
 mvn install
 
