@@ -60,7 +60,7 @@ import us.poliscore.service.storage.MemoryObjectService;
 @QuarkusMain(name="BatchOpenAIResponseImporter")
 public class BatchOpenAIResponseImporter implements QuarkusApplication
 {
-	public static final String INPUT = "/Users/rrowlands/dev/projects/poliscore/databuilder/target/unprocessed.jsonl";
+	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/unprocessed.jsonl";
 	
 //	 All Legislators (August 21st)
 //	public static final String INPUT = "/Users/rrowlands/Downloads/batch_P8Wsivj5pgknA2QPVrK9KZJI_output.jsonl";
@@ -335,7 +335,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		
 		if (StringUtils.isBlank(bi.getLongExplain()) || StringUtils.isBlank(bi.getShortExplain()) || bi.getSentiment() > 100 || bi.getSentiment() < -100) {
 			Log.error(interpText);
-			throw new RuntimeException("Press interpretation missing required field." + billId);
+			throw new RuntimeException("Press interpretation missing required field. " + billId);
 		}
 		
 		s3.put(bi);

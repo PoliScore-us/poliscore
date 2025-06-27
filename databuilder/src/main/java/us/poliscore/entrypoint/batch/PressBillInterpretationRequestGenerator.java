@@ -331,11 +331,11 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		// Process the bills //
 		for (Bill b : bills.sorted(Comparator.comparing(Bill::getDate).reversed()).collect(Collectors.toList())) {
 			// Don't interpret really old bills
-			// TODO : Once we get all the old bills interpreted we can replace this with a filter where we just ignore bills older than 101 days. (we won't always need to check the interp's lastPressQuery so long as we keep on top of generation)
 			if (!Arrays.asList(specificFetch).contains(b.getId()) && b.getDate().isBefore(LocalDate.now().minus(101, ChronoUnit.DAYS))) {
-				val interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class);
+//				val interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class);
+//				if (interp.isPresent() && interp.get().getLastPressQuery() != LocalDate.EPOCH) continue;
 				
-				if (interp.isPresent() && interp.get().getLastPressQuery() != LocalDate.EPOCH) continue;
+				continue; // we won't always need to check the interp's lastPressQuery so long as we keep on top of generation
 			}
 			
 			if (!quotaLimitHit && totalQueries < MAX_QUERIES) {
@@ -405,7 +405,8 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	private void processBill(Bill b) {
 		var interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).orElse(null);
 		
-		if (interp != null && interp.getLastPressQuery().isAfter(LocalDate.now().minus(30, ChronoUnit.DAYS)) && !Arrays.asList(specificFetch).contains(b.getId())) return; // Skip if it was interpreted in the last x days
+		if (interp != null && LocalDate.now().isAfter(b.getIntroducedDate().plus(19, ChronoUnit.DAYS)) && interp.getLastPressQuery().isAfter(LocalDate.now().minus(30, ChronoUnit.DAYS)) && !Arrays.asList(specificFetch).contains(b.getId())) return; // Skip if it was interpreted in the last x days
+		if (interp != null && LocalDate.now().isBefore(b.getIntroducedDate().plus(19, ChronoUnit.DAYS)) && interp.getLastPressQuery().isAfter(LocalDate.now().minus(10, ChronoUnit.DAYS)) && !Arrays.asList(specificFetch).contains(b.getId())) return;
 		if (interp == null) interp = new BillInterpretation();
 		
 		final String typeAndNumber = b.getType().getName().toUpperCase() + " " + b.getNumber();

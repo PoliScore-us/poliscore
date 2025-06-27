@@ -82,6 +82,8 @@ public class PressInterpretationParser {
 	}
 	
 	private void processConfidence(String line) {
+		line = stripNumericLeads(line);
+		
 		try {
 			// Extract only the first integer (handles things like "-20 (explanation)")
 			String numericPart = line.trim().split("\\s+")[0];
@@ -93,6 +95,8 @@ public class PressInterpretationParser {
 	}
 	
 	private void processSentiment(String line) {
+		line = stripNumericLeads(line);
+		
 		try {
 			// Extract only the first integer (handles things like "-20 (explanation)")
 			String numericPart = line.trim().split("\\s+")[0];
@@ -101,6 +105,22 @@ public class PressInterpretationParser {
 		} catch (Throwable t) {
 			logger.error("Error setting sentiment", t);
 		}
+	}
+	
+	/**
+	 * Someitmes ChatGPT will return a number as "Positive 40" or "Negative 40". Here we just strip that and make it more predictable, i.e. -40, or 40.
+	 * @param line
+	 * @return
+	 */
+	private String stripNumericLeads(String line) {
+		line = line.trim();
+		
+		if (line.startsWith("Positive")) line = line.replaceFirst("Positive", "");
+		if (line.startsWith("positive")) line = line.replaceFirst("positive", "");
+		if (line.startsWith("Negative")) line = line.replaceFirst("Negative", "");
+		if (line.startsWith("negative")) line = line.replaceFirst("negative", "");
+		
+		return line;
 	}
 	
 	private void processAuthor(String line) {
