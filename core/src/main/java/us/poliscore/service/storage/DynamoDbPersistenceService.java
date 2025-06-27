@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -41,7 +42,8 @@ import us.poliscore.model.dynamodb.DdbListPage;
 @ApplicationScoped
 public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 {
-	public static final String TABLE_NAME = "poliscore2";
+	@ConfigProperty(name = "ddb.table")
+	public String TABLE_NAME;
 	
 	public static final String HEAD_PAGE = "0";
 	

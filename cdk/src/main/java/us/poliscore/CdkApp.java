@@ -1,16 +1,13 @@
 package us.poliscore;
 
 import software.amazon.awscdk.App;
-import software.amazon.awscdk.Environment;
 import software.amazon.awscdk.StackProps;
-
-import java.util.Arrays;
 
 public class CdkApp {
     public static void main(final String[] args) {
         App app = new App();
 
-        new PoliscoreStack(app, "Poliscore2", StackProps.builder()
+        new PoliscoreStack(app, getDeployment(), StackProps.builder()
                 // If you don't specify 'env', this stack will be environment-agnostic.
                 // Account/Region-dependent features and context lookups will not work,
                 // but a single synthesized template can be deployed anywhere.
@@ -38,5 +35,13 @@ public class CdkApp {
 
         app.synth();
     }
+    
+    public static String getDeployment() {
+		var result = System.getenv("POLISCORE_DEPLOYMENT");
+		
+		if (result == null || result.isBlank()) throw new UnsupportedOperationException("Environment variable POLISCORE_DEPLOYMENT must be set!");
+		
+		return result;
+	}
 }
 

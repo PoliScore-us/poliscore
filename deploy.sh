@@ -9,30 +9,19 @@ fi
 # Exit on error
 set -e
 
-# Load deployment config
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/bluegreen.env"
+source ./set-deployment-target.sh
 
-if [[ ! -f "$CONFIG_FILE" ]]; then
-  echo "Error: Config file 'bluegreen.env' not found in $SCRIPT_DIR"
-  exit 1
-fi
-
-set -o allexport
-source "$CONFIG_FILE"
-set +o allexport
-
-if [[ "$POLISCORE_DEPLOYMENT" != "1" && "$POLISCORE_DEPLOYMENT" != "2" ]]; then
-  echo "Error: POLISCORE_DEPLOYMENT must be 1 or 2."
+if [[ "$POLISCORE_DEPLOYMENT" != "Poliscore1" && "$POLISCORE_DEPLOYMENT" != "Poliscore2" ]]; then
+  echo "Error: POLISCORE_DEPLOYMENT must be Poliscore1 or Poliscore2."
   exit 1
 fi
 
 export NODE_OPTIONS="--max-old-space-size=8192"
-export BUCKET_NAME="poliscore-website$POLISCORE_DEPLOYMENT"
+export BUCKET_SLOT="${POLISCORE_DEPLOYMENT/Poliscore/}" # extracts 1 or 2
+export BUCKET_NAME="poliscore-website$BUCKET_SLOT"
 export YEAR=2026
 
-
-if [ "$1" != "view" ]; then
+if [ "${1:-}" != "view" ]; then
   docker ps
 
   mvn clean install
@@ -46,8 +35,17 @@ if [ "$1" != "view" ]; then
   cd ..
 fi
 
-if [ "$1" != "backend" ]; then
+if [ "${1:-}" != "backend" ]; then
   cd webapp/src/main/webui
+  
+  if [ "$POLISCORE_DEPLOYMENT" == "Poliscore1" ]; then
+	  sed -i '' "s|https://5hta4jxn7q6cfcyxnvz4qmkyli0tambn.lambda-url.us-east-1.on.aws/|$LAMBDA_DEPLOYMENT_URL|g" src/app/app.config.ts
+  fi
+	
+	if [ "$POLISCORE_DEPLOYMENT" == "Poliscore2" ]; then
+	  sed -i '' "s|https://y5i3jhm7k5vy67elvzly4b3b240kjwlp.lambda-url.us-east-1.on.aws/|$LAMBDA_DEPLOYMENT_URL|g" src/app/app.config.ts
+	fi
+  
   ng build --base-href /$YEAR/
   cd ../../../../
 

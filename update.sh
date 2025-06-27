@@ -5,6 +5,8 @@ set -o pipefail
 set -x
 
 sudo docker ps
+source ./set-deployment-target.sh
+
 
 cd ../../congress
 git pull

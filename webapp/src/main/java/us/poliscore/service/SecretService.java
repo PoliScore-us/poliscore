@@ -1,5 +1,7 @@
 package us.poliscore.service;
 
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
@@ -8,6 +10,10 @@ import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRespon
 
 @ApplicationScoped
 public class SecretService {
+	
+	@ConfigProperty(name = "ipGeoSecretName")
+	private String ipGeoSecretName;
+	
 	public String getIpStackKey() {
 		String secretName = "ipstackF831BC04-Y7kuTryfe83Q";
 	    Region region = Region.of("us-east-1");
@@ -37,7 +43,7 @@ public class SecretService {
 	}
 	
 	public String getIpGeoLocationKey() {
-		String secretName = "Poliscore2ipgeolocation94A2-SonL4BB2tvpP";
+		String secretName = ipGeoSecretName;
 	    Region region = Region.of("us-east-1");
 
 	    // Create a Secrets Manager client

@@ -2,21 +2,10 @@
 
 set -e
 
-# Load deployment config from bluegreen.env
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/bluegreen.env"
-
-if [[ ! -f "$CONFIG_FILE" ]]; then
-  echo "Error: Config file 'bluegreen.env' not found in $SCRIPT_DIR"
-  exit 1
-fi
-
-set -o allexport
-source "$CONFIG_FILE"
-set +o allexport
+source ./set-deployment-target.sh
 
 # Ensure POLISCORE_DEPLOYMENT is valid
-if [[ "$POLISCORE_DEPLOYMENT" != "1" && "$POLISCORE_DEPLOYMENT" != "2" ]]; then
+if [[ "$POLISCORE_DEPLOYMENT" != "Poliscore1" && "$POLISCORE_DEPLOYMENT" != "Poliscore2" ]]; then
   echo "Error: POLISCORE_DEPLOYMENT must be 1 or 2."
   exit 1
 fi
@@ -27,12 +16,14 @@ fi
 
 export AWS_PAGER=""
 
-if [ "$POLISCORE_DEPLOYMENT" -eq 1 ]; then
+export POLISCORE_DEPLOYMENT_NUMBER="${POLISCORE_DEPLOYMENT/Poliscore/}" # extracts 1 or 2
+
+if [ "$POLISCORE_DEPLOYMENT_NUMBER" -eq 1 ]; then
   NEW_ORIGIN="poliscore-website1.s3-website-us-east-1.amazonaws.com"
-elif [ "$POLISCORE_DEPLOYMENT" -eq 2 ]; then
+elif [ "$POLISCORE_DEPLOYMENT_NUMBER" -eq 2 ]; then
   NEW_ORIGIN="poliscore-website2.s3-website-us-east-1.amazonaws.com"
 else
-  echo "Invalid POLISCORE_DEPLOYMENT: Please specify 1 or 2."
+  echo "Invalid POLISCORE_DEPLOYMENT_NUMBER: Please specify 1 or 2."
   exit 1
 fi
 
@@ -69,37 +60,4 @@ update_distribution "$DISTRIBUTION_1" "poliscore.us"
 update_distribution "$DISTRIBUTION_2" "www.poliscore.us"
 
 echo "CloudFront distributions updated successfully."
-
-###
-# Update the source code to point to the new dev deployment
-###
-
-if [ "$POLISCORE_DEPLOYMENT" == "1" ]; then
-  sed -i '' 's|poliscore1|poliscore2|g' ./core/src/main/java/us/poliscore/service/storage/DynamoDbPersistenceService.java
-  #sed -i '' 's|poliscore-prod1|poliscore-prod2|g' ./core/src/main/java/us/poliscore/service/storage/S3PersistenceService.java
-  sed -i '' 's|Poliscore1ipgeolocation683E-N4epMkZ8yjtM|Poliscore2ipgeolocation94A2-SonL4BB2tvpP|g' ./webapp/src/main/java/us/poliscore/service/SecretService.java
-  sed -i '' 's|Poliscore1|Poliscore2|g' ./cdk/src/main/java/us/poliscore/CdkApp.java
-  sed -i '' 's|https://y5i3jhm7k5vy67elvzly4b3b240kjwlp.lambda-url.us-east-1.on.aws/|https://5hta4jxn7q6cfcyxnvz4qmkyli0tambn.lambda-url.us-east-1.on.aws/|g' ./webapp/src/main/webui/src/app/app.config.ts
-fi
-
-if [ "$POLISCORE_DEPLOYMENT" == "2" ]; then
-  sed -i '' 's|poliscore2|poliscore1|g' ./core/src/main/java/us/poliscore/service/storage/DynamoDbPersistenceService.java
-  #sed -i '' 's|poliscore-prod2|poliscore-prod1|g' ./core/src/main/java/us/poliscore/service/storage/S3PersistenceService.java
-  sed -i '' 's|Poliscore2ipgeolocation94A2-SonL4BB2tvpP|Poliscore1ipgeolocation683E-N4epMkZ8yjtM|g' ./webapp/src/main/java/us/poliscore/service/SecretService.java
-  sed -i '' 's|Poliscore2|Poliscore1|g' ./cdk/src/main/java/us/poliscore/CdkApp.java
-  sed -i '' 's|https://5hta4jxn7q6cfcyxnvz4qmkyli0tambn.lambda-url.us-east-1.on.aws/|https://y5i3jhm7k5vy67elvzly4b3b240kjwlp.lambda-url.us-east-1.on.aws/|g' ./webapp/src/main/webui/src/app/app.config.ts
-fi
-
-
-###
-# Toggle POLISCORE_DEPLOYMENT in bluegreen.env
-###
-
-if [ "$POLISCORE_DEPLOYMENT" == "1" ]; then
-  sed -i '' 's/POLISCORE_DEPLOYMENT=1/POLISCORE_DEPLOYMENT=2/' "$CONFIG_FILE"
-elif [ "$POLISCORE_DEPLOYMENT" == "2" ]; then
-  sed -i '' 's/POLISCORE_DEPLOYMENT=2/POLISCORE_DEPLOYMENT=1/' "$CONFIG_FILE"
-fi
-
-echo "POLISCORE_DEPLOYMENT value in bluegreen.env toggled."
 
