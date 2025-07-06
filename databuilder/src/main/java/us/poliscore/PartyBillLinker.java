@@ -16,8 +16,8 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.session.SessionInterpretation;
 import us.poliscore.model.session.SessionInterpretation.PartyInterpretation;
+import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.storage.LocalCachedS3Service;
-import us.poliscore.service.storage.MemoryObjectService;
 
 public class PartyBillLinker {
 	public static void linkPartyBillsSinglePass(PartyInterpretation interp, SessionInterpretation sessionInterp, MemoryObjectService memService, LocalCachedS3Service s3) {

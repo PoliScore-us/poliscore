@@ -13,6 +13,7 @@ import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.Persistable;
+import us.poliscore.service.MemoryObjectService;
 
 @ApplicationScoped
 @DefaultBean

@@ -1,6 +1,7 @@
 package us.poliscore.model;
 
 import lombok.SneakyThrows;
+import us.poliscore.PoliscoreUtil;
 
 public interface Persistable {
 	
@@ -31,7 +32,7 @@ public interface Persistable {
 	@SneakyThrows
 	public static String getClassStorageBucket(Class<?> clazz)
 	{
-		try { return (String) clazz.getMethod("getClassStorageBucket").invoke(null); } catch (Throwable t) {}
+		try { return (String) clazz.getMethod("getClassStorageBucket").invoke(PoliscoreUtil.DEPLOYMENT_SESSION_KEY); } catch (Throwable t) {}
 		
 		return (String) clazz.getField("ID_CLASS_PREFIX").get(null);
 	}

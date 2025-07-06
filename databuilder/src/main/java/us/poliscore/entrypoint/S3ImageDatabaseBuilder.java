@@ -33,8 +33,9 @@ import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import us.poliscore.model.legislator.Legislator;
+import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorService;
-import us.poliscore.service.storage.MemoryObjectService;
+import us.poliscore.service.MemoryObjectService;
 
 /**
  * Fetches images from congress.gov for all the legislators and uploads them to our S3 repository.
@@ -56,6 +57,9 @@ public class S3ImageDatabaseBuilder implements QuarkusApplication {
 	@Inject
 	private MemoryObjectService memService;
 	
+	@Inject
+	private GovernmentDataService data;
+	
 	private S3Client client;
 	
 	private int lastWaitMs = -1;
@@ -64,7 +68,7 @@ public class S3ImageDatabaseBuilder implements QuarkusApplication {
 	@SneakyThrows
 	protected void process() throws IOException
 	{
-		legService.importLegislators();
+		data.importDataset();
 		
 		int success = 0;
 		int skipped = 0;

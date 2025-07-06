@@ -33,10 +33,10 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.service.BillService;
 import us.poliscore.service.LegislatorService;
+import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PressInterpService;
 import us.poliscore.service.storage.LocalCachedS3Service;
-import us.poliscore.service.storage.MemoryObjectService;
 
 @QuarkusMain(name = "PressInterpModelComparator")
 public class PressInterpModelComparator implements QuarkusApplication {

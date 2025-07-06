@@ -5,16 +5,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.bill.Bill;
 
-@ApplicationScoped
-public class MemoryObjectService implements ObjectStorageServiceIF {
+public class MemoryObjectStore implements ObjectStorageServiceIF {
 	
-	protected static Map<String, Persistable> memoryStore = new HashMap<String,Persistable>();
+	protected Map<String, Persistable> memoryStore = new HashMap<String,Persistable>();
 	
 	public void put(Persistable obj)
 	{

@@ -29,11 +29,10 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillIssueStat;
 import us.poliscore.model.bill.BillText;
-import us.poliscore.model.bill.BillType;
+import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
-import us.poliscore.service.storage.MemoryObjectService;
 
 @ApplicationScoped
 @Priority(4)
@@ -51,15 +50,7 @@ public class BillService {
 	@Inject
 	private DynamoDbPersistenceService ddb;
 	
-	@Inject
-	private USCService usc;
-	
-	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(BillType.values()).stream().filter(bt -> !BillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
-	
-	public void importBills()
-	{
-		usc.importUscBills();
-	}
+	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
 	public void populatePressInterps(BillInterpretation interp)
 	{

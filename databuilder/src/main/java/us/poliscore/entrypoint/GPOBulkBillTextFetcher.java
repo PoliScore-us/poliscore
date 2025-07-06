@@ -31,7 +31,7 @@ import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.BillTextPublishVersion;
-import us.poliscore.model.bill.BillType;
+import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.service.storage.S3PersistenceService;
 
 /**
@@ -46,7 +46,7 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	
 	public static final String URL_TEMPLATE = "https://www.govinfo.gov/bulkdata/BILLS/{{congress}}/{{session}}/{{type}}/BILLS-{{congress}}-{{session}}-{{type}}.zip";
 	
-	public static List<String> FETCH_BILL_TYPE = Arrays.asList(BillType.values()).stream().filter(bt -> !BillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
+	public static List<String> FETCH_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
 	@Inject
 	private S3PersistenceService s3;
@@ -106,7 +106,7 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 						.collect(Collectors.toList()))
 				{
 					String number = f.getName().replace("BILLS-" + congress.getNumber() + billType, "").replaceAll("\\D", "");
-					val billId = Bill.generateId(congress.getNumber(), BillType.valueOf(billType.toUpperCase()), Integer.parseInt(number));
+					val billId = Bill.generateId(congress.getNumber(), CongressionalBillType.valueOf(billType.toUpperCase()), Integer.parseInt(number));
 					
 					if (!processedBills.contains(billId) && !s3.exists(BillText.generateId(billId), BillText.class))
 					{

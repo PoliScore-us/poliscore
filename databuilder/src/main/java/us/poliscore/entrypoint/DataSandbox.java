@@ -17,16 +17,17 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillSlice;
 import us.poliscore.model.bill.BillText;
-import us.poliscore.model.bill.BillType;
+import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.session.SessionInterpretationOld;
 import us.poliscore.parsing.BillSlicer;
 import us.poliscore.parsing.XMLBillSlicer;
 import us.poliscore.service.BillService;
+import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorService;
+import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 import us.poliscore.service.storage.LocalFilePersistenceService;
-import us.poliscore.service.storage.MemoryObjectService;
 
 @QuarkusMain(name="DataSandbox")
 public class DataSandbox implements QuarkusApplication
@@ -49,12 +50,14 @@ public class DataSandbox implements QuarkusApplication
 	@Inject
 	private BillService billService;
 	
-	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(BillType.values()).stream().filter(bt -> !BillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
+	@Inject
+	private GovernmentDataService data;
+	
+	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
 	protected void process() throws IOException
 	{
-		legService.importLegislators();
-		billService.importBills();
+		data.importDataset();
 		
 		
 //		val sessionStats = new SessionInterpretation();

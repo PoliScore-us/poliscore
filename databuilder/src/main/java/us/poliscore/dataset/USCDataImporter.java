@@ -1,9 +1,18 @@
-package us.poliscore.service;
+package us.poliscore.dataset;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -11,31 +20,193 @@ import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
 import software.amazon.awssdk.utils.StringUtils;
+import us.poliscore.PoliscoreDataset;
+import us.poliscore.PoliscoreDataset.DatasetReference;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.CongressionalSession;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.model.LegislativeSession;
+import us.poliscore.model.VoteStatus;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillStatus;
-import us.poliscore.model.bill.BillType;
+import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
+import us.poliscore.model.legislator.Legislator.LegislatorLegislativeTermSortedSet;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCosponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
-import us.poliscore.service.storage.MemoryObjectService;
+import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
+import us.poliscore.service.BillService;
+import us.poliscore.service.LegislatorService;
 import us.poliscore.view.USCBillView;
+import us.poliscore.view.USCLegislatorView;
+import us.poliscore.view.USCRollCallData;
+import us.poliscore.view.USCRollCallData.USCRollCallVote;
 
 @ApplicationScoped
-public class USCService {
+public class USCDataImporter implements DatasetImporter {
 	
-	@Inject
-	private MemoryObjectService memService;
+	public static boolean memorizedRollCall = false;
 	
 	@Inject
 	protected LegislatorService lService;
 	
+	@Override
+	public PoliscoreDataset importDataset(DatasetReference ref) {
+		LegislativeSession session = new LegislativeSession(LocalDate.of(ref.getYear() - 1, 1, 1), LocalDate.of(ref.getYear(), 12, 31), String.valueOf(CongressionalSession.fromYear(ref.getYear()).getNumber()), LegislativeNamespace.US_CONGRESS);
+		PoliscoreDataset dataset = new PoliscoreDataset(session);
+		
+		importUSCLegislators(dataset);
+		importUscBills(dataset);
+		importUscVotes(dataset);
+		
+		return dataset;
+	}
+	
 	@SneakyThrows
-	public void importUscBills() {
-		if (memService.query(Bill.class).size() > 0) return;
+	public void importUSCLegislators(PoliscoreDataset dataset)
+	{
+		if (dataset.query(Legislator.class).size() > 0) return;
+		
+		importUSCLegislator(dataset, "/legislators-current.json");
+		importUSCLegislator(dataset, "/legislators-historical.json");
+	}
+
+	private void importUSCLegislator(PoliscoreDataset dataset, String file) throws IOException, JsonProcessingException {
+		int count = 0;
+		
+		ObjectMapper mapper = PoliscoreUtil.getObjectMapper();
+		JsonNode jn = mapper.readTree(LegislatorService.class.getResourceAsStream(file));
+		Iterator<JsonNode> it = jn.elements();
+		while (it.hasNext())
+		{
+			USCLegislatorView view = mapper.treeToValue(it.next(), USCLegislatorView.class);
+			
+			Legislator leg = new Legislator();
+			leg.setName(view.getName().convert());
+			leg.setBioguideId(view.getId().getBioguide());
+			// These fields were required back when we were using USC, but since we've moved over to Legiscan they were removed from Legislator so they're commented out just to get it to compile.
+//			leg.setThomasId(view.getId().getThomas());
+//			leg.setLisId(view.getId().getLis());
+//			leg.setWikidataId(view.getId().getWikidata());
+			leg.setBirthday(view.getBio().getBirthday());
+			leg.setTerms(view.getTerms().stream().map(t -> t.convert()).collect(Collectors.toCollection(LegislatorLegislativeTermSortedSet::new)));
+			
+			if (leg.isMemberOfSession(dataset.getSession()))
+			{
+				leg.setSession(dataset.getSession());
+				
+				dataset.put(leg);
+				count++;
+			}
+		}
+		
+		Log.info("Imported " + count + " politicians");
+	}
+	
+	@SneakyThrows
+	public void importUscVotes(PoliscoreDataset dataset) {
+		if (memorizedRollCall) return;
+		
+		long totalVotes = 0;
+		long skipped = 0;
+		
+		for (File fCongress : Arrays.asList(PoliscoreUtil.USC_DATA.listFiles()).stream()
+				.filter(f -> f.getName().matches("\\d+") && f.isDirectory())
+				.sorted((a,b) -> a.getName().compareTo(b.getName()))
+				.collect(Collectors.toList()))
+		{
+			Integer congressNum = Integer.valueOf(dataset.getSession().getKey());
+			if (!congressNum.equals(Integer.valueOf(fCongress.getName()))) continue;
+			
+			Log.info("Processing " + fCongress.getName() + " congress");
+			
+			for (File data : PoliscoreUtil.allFilesWhere(new File(fCongress, "votes"), f -> f.getName().equals("data.json")))
+			{
+				try (var fos = new FileInputStream(data))
+				{
+					if (importRollCall(dataset, fos))
+						totalVotes++;
+					else
+						skipped++;
+				}
+				catch (Exception e)
+				{
+					Log.error("Exception encountered while processing roll call file [" + data.getAbsolutePath() + "]", e);
+				}
+			}
+		}
+		
+		memorizedRollCall = true;
+		
+		Log.info("Imported " + totalVotes + " votes. Skipped " + skipped);
+	}
+	
+	@SneakyThrows
+	protected boolean importRollCall(PoliscoreDataset dataset, InputStream is)
+	{
+		USCRollCallData rollCall = PoliscoreUtil.getObjectMapper().readValue(is, USCRollCallData.class);
+		
+		// There are a lot of roll call categories that we don't care about. Quorum is one of them.
+		if (!rollCall.getCategory().contains("passage")) return false;
+//		if (rollCall.getBill() == null) return false;
+		
+		// There are some bill types we don't care about. Don't bother printing noisy warnings or anything
+		if (CongressionalBillType.getIgnoredBillTypes().contains(CongressionalBillType.valueOf(rollCall.getBill().getType().toUpperCase()))) return false;
+		
+		rollCall.getVotes().getAffirmative().forEach(v -> importRollCallHelper(dataset, rollCall, v, VoteStatus.AYE));
+		rollCall.getVotes().getNegative().forEach(v -> importRollCallHelper(dataset, rollCall, v, VoteStatus.NAY));
+		
+		// At the moment these are just pointless noise so we're ignoring them.
+//		rollCall.getVotes().getNotVoting().forEach(v -> process(rollCall, v, VoteStatus.NOT_VOTING));
+//		rollCall.getVotes().getPresent().forEach(v -> process(rollCall, v, VoteStatus.PRESENT));
+		
+		return true;
+	}
+	
+	protected void importRollCallHelper(PoliscoreDataset dataset, USCRollCallData rollCall, USCRollCallVote vote, VoteStatus vs)
+	{
+		Legislator leg;
+		try
+		{
+			if (vote.getId().length() == 4 && vote.getId().startsWith("S"))
+				leg = dataset.query(Legislator.class).stream().filter(l -> vote.getId().equals(l.getLisId())).findFirst().orElseThrow();
+			else
+				leg = dataset.get(Legislator.generateId(LegislativeNamespace.US_CONGRESS, dataset.getSession(), vote.getId()), Legislator.class).orElseThrow();
+		}
+		catch (NoSuchElementException ex)
+		{
+			Log.warn("Could not find legislator with bioguide id " + vote.getId());
+			return;
+		}
+		
+		Bill bill;
+		var billView = rollCall.getBill();
+		var billId = Bill.generateId(billView.getCongress(), CongressionalBillType.valueOf(billView.getType().toUpperCase()), billView.getNumber());
+		try
+		{
+			bill = dataset.get(billId, Bill.class).orElseThrow();
+		}
+		catch (NoSuchElementException ex)
+		{
+			Log.warn("Could not find bill with id " + billId);
+			return;
+		}
+		
+		LegislatorBillVote interaction = new LegislatorBillVote(vs);
+		interaction.setLegId(leg.getId());
+		interaction.setBillId(bill.getId());
+		interaction.setDate(rollCall.getDate().toLocalDate());
+		interaction.setBillName(bill.getName());
+		
+		leg.addBillInteraction(interaction);
+		
+		dataset.put(leg);
+	}
+	
+	@SneakyThrows
+	public void importUscBills(PoliscoreDataset dataset) {
+		if (dataset.query(Bill.class).size() > 0) return;
 		
 		long totalBills = 0;
 		
@@ -44,9 +215,8 @@ public class USCService {
 				.sorted((a,b) -> a.getName().compareTo(b.getName()))
 				.collect(Collectors.toList()))
 		{
-			if (!Integer.valueOf(PoliscoreUtil.CURRENT_SESSION.getNumber()).equals(Integer.valueOf(fCongress.getName()))) continue;
-			
-			val session = CongressionalSession.of(Integer.valueOf(fCongress.getName()));
+			Integer congressNum = Integer.valueOf(dataset.getSession().getKey());
+			if (!congressNum.equals(Integer.valueOf(fCongress.getName()))) continue;
 			
 			Log.info("Processing " + fCongress.getName() + " congress");
 			
@@ -58,7 +228,7 @@ public class USCService {
 				{
 					try (var fos = new FileInputStream(data))
 					{
-						importUscBill(fos, String.valueOf(session.getNumber()));
+						importUscBill(dataset, fos);
 						totalBills++;
 					}
 				}
@@ -72,7 +242,7 @@ public class USCService {
 	    BillStatus status = new BillStatus();
 	    status.setSourceStatus(view.getStatus());
 	    
-	    final LegislativeChamber chamber = BillType.getOriginatingChamber(BillType.valueOf(view.getBill_type().toUpperCase()));
+	    final LegislativeChamber chamber = CongressionalBillType.getOriginatingChamber(CongressionalBillType.valueOf(view.getBill_type().toUpperCase()));
 	    final String stat = view.getStatus().toUpperCase();
 	    final boolean sessionOver = CongressionalSession.of(Integer.parseInt(view.getCongress())).isOver();
 
@@ -207,7 +377,7 @@ public class USCService {
 	}
 	
 	@SneakyThrows
-	protected void importUscBill(FileInputStream fos, String session) {
+	protected void importUscBill(PoliscoreDataset dataset, FileInputStream fos) {
 		val view = PoliscoreUtil.getObjectMapper().readValue(fos, USCBillView.class);
 		
 //		String text = fetchBillText(view.getUrl());
@@ -215,19 +385,19 @@ public class USCService {
     	val bill = new Bill();
 //    	bill.setText(text);
     	bill.setName(view.getBillName());
-    	bill.setSession(Integer.parseInt(view.getCongress()));
-    	bill.setType(BillType.valueOf(view.getBill_type().toUpperCase()));
+    	bill.setSession(dataset.getSession());
+    	bill.setType(CongressionalBillType.valueOf(view.getBill_type().toUpperCase()));
     	bill.setNumber(Integer.parseInt(view.getNumber()));
     	bill.setStatus(buildStatus(view));
 //    	bill.setStatusUrl(view.getUrl());
     	bill.setIntroducedDate(view.getIntroduced_at());
-    	bill.setSponsor(view.getSponsor() == null ? null : view.getSponsor().convert(session, memService));
-    	bill.setCosponsors(view.getCosponsors().stream().map(s -> s.convert(session, memService)).collect(Collectors.toList()));
+    	bill.setSponsor(view.getSponsor() == null ? null : view.getSponsor().convert(dataset));
+    	bill.setCosponsors(view.getCosponsors().stream().map(s -> s.convert(dataset)).collect(Collectors.toList()));
     	bill.setLastActionDate(view.getLastActionDate());
     	
     	if (view.getSponsor() != null && !StringUtils.isBlank(view.getSponsor().getBioguide_id()))
     	{
-			val leg = lService.getById(Legislator.generateId(LegislativeNamespace.US_CONGRESS, PoliscoreUtil.CURRENT_SESSION.getNumber(), view.getSponsor().getBioguide_id()));
+			val leg = lService.getById(bill.getSponsor().getLegislatorId());
 			
 			if (leg.isPresent()) {
 				LegislatorBillSponsor interaction = new LegislatorBillSponsor();
@@ -237,13 +407,13 @@ public class USCService {
 				interaction.setBillName(bill.getName());
 				leg.get().addBillInteraction(interaction);
 				
-				memService.put(leg.get());
+				dataset.put(leg.get());
 			}
     	}
     	
-    	view.getCosponsors().stream().filter(cs -> view.getSponsor() == null || !view.getSponsor().getBioguide_id().equals(cs.getBioguide_id())).forEach(cs -> {
-    		if (!StringUtils.isBlank(cs.getBioguide_id())) {
-	    		val leg = lService.getById(Legislator.generateId(LegislativeNamespace.US_CONGRESS, PoliscoreUtil.CURRENT_SESSION.getNumber(), cs.getBioguide_id()));
+    	bill.getCosponsors().stream().filter(cs -> bill.getSponsor() == null || !bill.getSponsor().getLegislatorId().equals(cs.getLegislatorId())).forEach(cs -> {
+    		if (!StringUtils.isBlank(cs.getLegislatorId())) {
+	    		val leg = lService.getById(cs.getLegislatorId());
 				
 	    		if (leg.isPresent()) {
 					LegislatorBillCosponsor interaction = new LegislatorBillCosponsor();
@@ -253,11 +423,11 @@ public class USCService {
 					interaction.setBillName(bill.getName());
 					leg.get().addBillInteraction(interaction);
 					
-					memService.put(leg.get());
+					dataset.put(leg.get());
 	    		}
     		}
     	});
     	
-    	memService.put(bill);
+    	dataset.put(bill);
 	}
 }

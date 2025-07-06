@@ -4,8 +4,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import us.poliscore.service.LegislatorService;
+import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
-import us.poliscore.service.storage.MemoryObjectService;
 
 @ApplicationScoped
 public class DdbBuilder

@@ -10,6 +10,7 @@ import lombok.val;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import us.poliscore.model.Persistable;
+import us.poliscore.service.MemoryObjectService;
 
 @ApplicationScoped
 @DefaultBean

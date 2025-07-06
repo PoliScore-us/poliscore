@@ -33,7 +33,7 @@ import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
-import us.poliscore.model.bill.BillType;
+import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
 import us.poliscore.model.legislator.LegislatorBillInteraction;
@@ -42,15 +42,16 @@ import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.model.session.SessionInterpretationOld;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
+import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
+import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
 import us.poliscore.service.RollCallService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 import us.poliscore.service.storage.LocalFilePersistenceService;
-import us.poliscore.service.storage.MemoryObjectService;
 
 /**
  * Run this to keep a deployed server up-to-date.
@@ -109,7 +110,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	private LegislatorService legService;
 	
 	@Inject
-	private RollCallService rollCallService;
+	private GovernmentDataService data;
 	
 	@Inject
 	protected OpenAIService openAi;
@@ -120,7 +121,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	@Inject
 	private LegislatorInterpretationService legInterp;
 	
-	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(BillType.values()).stream().filter(bt -> !BillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
+	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
 	protected void process() throws IOException
 	{
@@ -129,9 +130,7 @@ public class DatabaseBuilder implements QuarkusApplication
 		s3.optimizeExists(BillInterpretation.class);
 		s3.optimizeExists(LegislatorInterpretation.class);
 		
-		legService.importLegislators();
-		billService.importBills();
-		rollCallService.importUscVotes();
+		data.importDataset();
 		
 		imageBuilder.process();
 		billTextFetcher.process();

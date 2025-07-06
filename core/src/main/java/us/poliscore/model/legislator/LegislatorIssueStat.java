@@ -31,7 +31,7 @@ public class LegislatorIssueStat implements Persistable {
 	
 	public static String getIndexPrimaryKey(TrackedIssue issue)
 	{
-		return ID_CLASS_PREFIX + "/" + LegislativeNamespace.US_CONGRESS.getNamespace() + "/" + PoliscoreUtil.CURRENT_SESSION.getNumber() + "/" + issue.name();
+		return ID_CLASS_PREFIX + "/" + LegislativeNamespace.US_CONGRESS.getNamespace() + "/" + PoliscoreUtil.DEPLOYMENT_DATASET.getSessionKey() + "/" + issue.name();
 	}
 	
 	public LegislatorIssueStat(TrackedIssue issue, long impact, Legislator leg) {

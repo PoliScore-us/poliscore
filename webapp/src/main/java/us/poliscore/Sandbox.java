@@ -24,16 +24,16 @@ import us.poliscore.entrypoint.Lambda;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.bill.Bill;
-import us.poliscore.model.bill.BillType;
+import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
 import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionSet;
 import us.poliscore.model.legislator.LegislatorBillInteraction;
 import us.poliscore.service.IpGeolocationService;
+import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 import us.poliscore.service.storage.LocalFilePersistenceService;
-import us.poliscore.service.storage.MemoryObjectService;
 
 @QuarkusMain(name="Sandbox")
 public class Sandbox implements QuarkusApplication
@@ -53,7 +53,7 @@ public class Sandbox implements QuarkusApplication
 	@Inject
     IpGeolocationService ipService;
 	
-	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(BillType.values()).stream().filter(bt -> !BillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
+	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
 	protected void process() throws IOException
 	{

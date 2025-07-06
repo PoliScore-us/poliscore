@@ -12,11 +12,10 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import lombok.Data;
 import software.amazon.awssdk.utils.StringUtils;
+import us.poliscore.PoliscoreDataset;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill.BillSponsor;
 import us.poliscore.model.legislator.Legislator;
-import us.poliscore.model.legislator.Legislator.LegislatorName;
-import us.poliscore.service.storage.MemoryObjectService;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -109,10 +108,10 @@ public class USCBillView {
 		
 		protected String type;
 		
-		public BillSponsor convert(String session, MemoryObjectService memService)
+		public BillSponsor convert(PoliscoreDataset dataset)
 		{
-			var legId = Legislator.generateId(LegislativeNamespace.US_CONGRESS, session, bioguide_id);
-			var leg = memService.get(legId, Legislator.class).get();
+			var legId = Legislator.generateId(LegislativeNamespace.US_CONGRESS, dataset.getSession(), bioguide_id);
+			var leg = dataset.get(legId, Legislator.class).get();
 			
 			var sponsor = new BillSponsor(legId, leg.getName());
 			sponsor.setParty(leg.getParty());

@@ -24,9 +24,9 @@ import us.poliscore.model.legislator.LegislatorInterpretation;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
 import us.poliscore.service.LegislatorService;
+import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.RollCallService;
 import us.poliscore.service.storage.LocalCachedS3Service;
-import us.poliscore.service.storage.MemoryObjectService;
 
 /**
  * Generates static resources for consumption by the webapp project 

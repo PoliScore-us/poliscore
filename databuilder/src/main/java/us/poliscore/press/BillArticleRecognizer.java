@@ -17,7 +17,7 @@ import lombok.experimental.UtilityClass;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
-import us.poliscore.model.bill.BillType;
+import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator.LegislatorName;
 
 /**
@@ -65,16 +65,16 @@ public class BillArticleRecognizer {
     );
 
     // BillType tokens
-    private static final Map<BillType, List<String>> TYPE_TOKENS = new EnumMap<>(BillType.class);
+    private static final Map<CongressionalBillType, List<String>> TYPE_TOKENS = new EnumMap<>(CongressionalBillType.class);
     static {
-        TYPE_TOKENS.put(BillType.HR,    Arrays.asList("hr", "h.r.", "house bill"));
-        TYPE_TOKENS.put(BillType.S,     Arrays.asList("s", "s.", "senate bill"));
-        TYPE_TOKENS.put(BillType.SCONRES, Collections.singletonList("s.con.res."));
-        TYPE_TOKENS.put(BillType.HRES,  Collections.singletonList("h.res."));
-        TYPE_TOKENS.put(BillType.HCONRES,Collections.singletonList("h.con.res."));
-        TYPE_TOKENS.put(BillType.SJRES, Collections.singletonList("s.j.res."));
-        TYPE_TOKENS.put(BillType.SRES,  Collections.singletonList("s.res."));
-        TYPE_TOKENS.put(BillType.HJRES, Collections.singletonList("h.j.res."));
+        TYPE_TOKENS.put(CongressionalBillType.HR,    Arrays.asList("hr", "h.r.", "house bill"));
+        TYPE_TOKENS.put(CongressionalBillType.S,     Arrays.asList("s", "s.", "senate bill"));
+        TYPE_TOKENS.put(CongressionalBillType.SCONRES, Collections.singletonList("s.con.res."));
+        TYPE_TOKENS.put(CongressionalBillType.HRES,  Collections.singletonList("h.res."));
+        TYPE_TOKENS.put(CongressionalBillType.HCONRES,Collections.singletonList("h.con.res."));
+        TYPE_TOKENS.put(CongressionalBillType.SJRES, Collections.singletonList("s.j.res."));
+        TYPE_TOKENS.put(CongressionalBillType.SRES,  Collections.singletonList("s.res."));
+        TYPE_TOKENS.put(CongressionalBillType.HJRES, Collections.singletonList("h.j.res."));
     }
 
     // Chamber tokens
@@ -232,7 +232,7 @@ public class BillArticleRecognizer {
 
     private float scoreTypeNumber(Bill bill, String text) {
         int number = bill.getNumber();
-        BillType type = bill.getType();
+        CongressionalBillType type = bill.getType();
         return TYPE_TOKENS.getOrDefault(type, Collections.emptyList())
                 .stream()
                 .anyMatch(tok -> Pattern.compile("\\b" + Pattern.quote(tok) + "\\W*" + number + "\\b",
@@ -244,7 +244,7 @@ public class BillArticleRecognizer {
     }
 
     private float scoreChamber(Bill bill, String text) {
-        LegislativeChamber cham = BillType.getOriginatingChamber(bill.getType());
+        LegislativeChamber cham = CongressionalBillType.getOriginatingChamber(bill.getType());
         return CHAMBER_TOKENS.getOrDefault(cham, Collections.emptyList())
                 .stream()
                 .anyMatch(text::contains)

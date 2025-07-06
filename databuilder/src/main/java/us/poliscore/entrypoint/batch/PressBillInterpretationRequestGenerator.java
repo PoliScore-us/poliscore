@@ -54,6 +54,7 @@ import us.poliscore.press.RedditFetcher;
 import us.poliscore.service.BillService;
 import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
+import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PressInterpService;
 import us.poliscore.service.RollCallService;
@@ -61,7 +62,6 @@ import us.poliscore.service.SecretService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 import us.poliscore.service.storage.LocalFilePersistenceService;
-import us.poliscore.service.storage.MemoryObjectService;
 
 @QuarkusMain(name="PressScraperEntrypoint")
 public class PressBillInterpretationRequestGenerator implements QuarkusApplication {

@@ -18,10 +18,10 @@ import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
 import us.poliscore.service.LegislatorService;
+import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.RollCallService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
-import us.poliscore.service.storage.MemoryObjectService;
 
 @QuarkusMain(name="S3DataPatcher")
 public class S3DataPatcher implements QuarkusApplication {

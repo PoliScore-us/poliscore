@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.Bill.BillSponsor;
-import us.poliscore.model.bill.BillType;
+import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator.LegislatorName;
 
 public class BillArticleRecognizerTest {

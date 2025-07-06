@@ -20,17 +20,17 @@ import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.bill.Bill;
-import us.poliscore.model.bill.BillType;
 import us.poliscore.model.bill.CBOBillAnalysis;
+import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
+import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
-import us.poliscore.service.RollCallService;
+import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 import us.poliscore.service.storage.LocalFilePersistenceService;
-import us.poliscore.service.storage.MemoryObjectService;
 
 /**
  * TODO : This really only provides half of what we need in order to do a real budget analysis. The other half of the equation is "how much value will it provide"
@@ -73,12 +73,12 @@ public class CBODataFetcher implements QuarkusApplication
 	private LegislatorService legService;
 	
 	@Inject
-	private RollCallService rollCallService;
+	private GovernmentDataService data;
 	
 	@Inject
 	private LegislatorInterpretationService legInterp;
 	
-	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(BillType.values()).stream().filter(bt -> !BillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
+	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
 	public static void main(String[] args) {
 		Quarkus.run(CBODataFetcher.class, args);
@@ -86,15 +86,13 @@ public class CBODataFetcher implements QuarkusApplication
 	
 	protected void process() throws IOException
 	{
-		legService.importLegislators();
-		billService.importBills();
-		rollCallService.importUscVotes();
+		data.importDataset();
 		
 		if (CHECK_EXISTS) s3.optimizeExists(CBOBillAnalysis.class);
 		
 		long count = 0;
 		
-		val doc = fetchWithRetry("https://www.cbo.gov/rss/" + PoliscoreUtil.CURRENT_SESSION.getNumber() + "congress-cost-estimates.xml");
+		val doc = fetchWithRetry("https://www.cbo.gov/rss/" + PoliscoreUtil.DEPLOYMENT_DATASET.getSessionKey() + "congress-cost-estimates.xml");
 		
 		for (val element : doc.select("response item")) {
 			if (StringUtils.isBlank(element.child(4).text()) || StringUtils.isBlank(element.child(2).text())) continue;
@@ -145,7 +143,7 @@ public class CBODataFetcher implements QuarkusApplication
 		}
 	}
 	
-	private Integer getBillNumber(String name, BillType type) {
+	private Integer getBillNumber(String name, CongressionalBillType type) {
 		try {
 			return Integer.valueOf(name.replaceAll("[^\\d]", ""));
 		} catch (Exception e) {
@@ -154,11 +152,11 @@ public class CBODataFetcher implements QuarkusApplication
 		}
 	}
 	
-	private BillType getBillType(String name) {
+	private CongressionalBillType getBillType(String name) {
 		try {
 			val clean = name.toUpperCase().replace(".", "").replace(" ", "").replaceAll("[\\d]", "");
 			
-			return BillType.valueOf(clean);
+			return CongressionalBillType.valueOf(clean);
 		} catch (IllegalArgumentException e) {
 			Log.error("Unable to parse bill type from " + name, e);
 			return null;

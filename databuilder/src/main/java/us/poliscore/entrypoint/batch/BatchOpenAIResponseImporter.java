@@ -47,12 +47,12 @@ import us.poliscore.parsing.XMLBillSlicer;
 import us.poliscore.service.BillService;
 import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
+import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
 import us.poliscore.service.RollCallService;
 import us.poliscore.service.storage.CachedDynamoDbService;
 import us.poliscore.service.storage.LocalCachedS3Service;
-import us.poliscore.service.storage.MemoryObjectService;
 
 /**
  * This bulk importer is designed to import a response from the open ai api.

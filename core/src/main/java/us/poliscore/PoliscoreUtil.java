@@ -9,9 +9,8 @@ import java.util.function.Predicate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
-import us.poliscore.model.CongressionalSession;
+import us.poliscore.PoliscoreDataset.DatasetReference;
 import us.poliscore.model.LegislativeNamespace;
-import us.poliscore.model.legislator.Legislator;
 
 public class PoliscoreUtil {
 	
@@ -22,11 +21,11 @@ public class PoliscoreUtil {
 		APP_DATA.mkdirs();
 	}
 	
-	public static String DEPLOYMENT_YEAR = "2026";
+	public static DatasetReference DEPLOYMENT_DATASET = new DatasetReference(LegislativeNamespace.US_CONGRESS, 2026);
 	
-	public static CongressionalSession CURRENT_SESSION = CongressionalSession.of((int)Math.floor((Integer.parseInt(DEPLOYMENT_YEAR) - 1789) / 2) + 1);
+	public static String DEPLOYMENT_SESSION_KEY;
 	
-	public static List<CongressionalSession> SUPPORTED_CONGRESSES = Arrays.asList(CongressionalSession.S118, CongressionalSession.S119);
+	public static List<DatasetReference> SUPPORTED_DATASETS = Arrays.asList(DEPLOYMENT_DATASET, new DatasetReference(LegislativeNamespace.US_CONGRESS, 2024));
 	
 	public static List<File> allFilesWhere(File parent, Predicate<File> criteria)
 	{

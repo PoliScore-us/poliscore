@@ -9,7 +9,7 @@ import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillText;
-import us.poliscore.model.bill.BillType;
+import us.poliscore.model.bill.CongressionalBillType;
 
 public class BillGen {
 	
@@ -27,7 +27,7 @@ public class BillGen {
 
 		// TODO : Sponsor and cosponsor
 		bill.setSession(118);
-		bill.setType(BillType.HR);
+		bill.setType(CongressionalBillType.HR);
 		bill.setNumber(8580);
 		bill.setName("The Best Bill Ever");
 		bill.setIntroducedDate(LocalDate.now());

@@ -38,8 +38,8 @@ public class SecretService {
 	}
 
 	@SneakyThrows
-	public UsernameAndPassword getLegiscanSecret() {
-		return new ObjectMapper().readValue(getSecret("legiscan2", Region.of("us-east-1")), UsernameAndPassword.class);
+	public String getLegiscanSecret() {
+		return getSecret("legiscan2", Region.of("us-east-1"));
 	}
 
 	private String getSecret(String secretName, Region region) {

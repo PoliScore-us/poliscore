@@ -42,7 +42,6 @@ import us.poliscore.model.session.SessionInterpretationOld;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 import us.poliscore.service.storage.LocalFilePersistenceService;
-import us.poliscore.service.storage.MemoryObjectService;
 
 @ApplicationScoped
 public class PartyInterpretationService {

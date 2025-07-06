@@ -10,8 +10,8 @@ import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import us.poliscore.dynamodb.DdbBuilder;
 import us.poliscore.model.Persistable;
+import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
-import us.poliscore.service.storage.MemoryObjectService;
 
 public class EntrypointTest {
 	

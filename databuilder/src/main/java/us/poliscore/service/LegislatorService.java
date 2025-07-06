@@ -34,7 +34,6 @@ import us.poliscore.model.legislator.Legislator.LegislatorLegislativeTermSortedS
 import us.poliscore.model.legislator.LegislatorInterpretation;
 import us.poliscore.model.legislator.LegislatorIssueStat;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
-import us.poliscore.service.storage.MemoryObjectService;
 import us.poliscore.view.USCLegislatorView;
 
 @ApplicationScoped
@@ -48,46 +47,6 @@ public class LegislatorService {
 	
 	@Inject
 	private LegislatorInterpretationService legInterp;
-	
-	@SneakyThrows
-	public void importLegislators()
-	{
-		if (memService.query(Legislator.class).size() > 0) return;
-		
-		importUSCJson("/legislators-current.json");
-		importUSCJson("/legislators-historical.json");
-	}
-
-	private void importUSCJson(String file) throws IOException, JsonProcessingException {
-		int count = 0;
-		
-		ObjectMapper mapper = PoliscoreUtil.getObjectMapper();
-		JsonNode jn = mapper.readTree(LegislatorService.class.getResourceAsStream(file));
-		Iterator<JsonNode> it = jn.elements();
-		while (it.hasNext())
-		{
-			USCLegislatorView view = mapper.treeToValue(it.next(), USCLegislatorView.class);
-			
-			Legislator leg = new Legislator();
-			leg.setName(view.getName().convert());
-			leg.setBioguideId(view.getId().getBioguide());
-			leg.setThomasId(view.getId().getThomas());
-			leg.setLisId(view.getId().getLis());
-			leg.setWikidataId(view.getId().getWikidata());
-			leg.setBirthday(view.getBio().getBirthday());
-			leg.setTerms(view.getTerms().stream().map(t -> t.convert()).collect(Collectors.toCollection(LegislatorLegislativeTermSortedSet::new)));
-			
-			if (leg.isMemberOfSession(PoliscoreUtil.CURRENT_SESSION))
-			{
-				leg.setSession(PoliscoreUtil.CURRENT_SESSION.getNumber());
-				
-				memService.put(leg);
-				count++;
-			}
-		}
-		
-		Log.info("Imported " + count + " politicians");
-	}
 	
 	public Optional<Legislator> getById(String id)
 	{

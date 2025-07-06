@@ -64,7 +64,7 @@ public class BillIssueStat implements Persistable {
 	protected int rating;
 	
 	// BIL/us/congress/118/hr/8580
-	@DynamoDbIgnore public BillType getType() { return BillType.valueOf(billId.split("/")[4].toUpperCase()); }
+	@DynamoDbIgnore public CongressionalBillType getType() { return CongressionalBillType.valueOf(billId.split("/")[4].toUpperCase()); }
 	
 	@JsonIgnore @DynamoDbIgnore public String getSession() { return billId.split("/")[3]; }
 	@JsonIgnore @DynamoDbIgnore public LegislativeNamespace getNamespace() { return LegislativeNamespace.of(billId.split("/")[1] + "/" + billId.split("/")[2]); }

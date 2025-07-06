@@ -1,9 +1,7 @@
 package us.poliscore.model.legislator;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeSet;
@@ -20,7 +18,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import lombok.val;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
@@ -28,9 +25,10 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
 import us.poliscore.PoliscoreUtil;
-import us.poliscore.model.CongressionalSession;
+import us.poliscore.legiscan.view.LegiscanState;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Party;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.TrackedIssue;
@@ -53,24 +51,23 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 	 * "storage buckets". Really only used in DynamoDb at the moment, and is used for querying on the object indexes with objects that exist
 	 * in different congressional sessions.
 	 */
-	public static String getClassStorageBucket()
+	public static String getClassStorageBucket(String sessionKey)
 	{
-		return ID_CLASS_PREFIX + "/" + LegislativeNamespace.US_CONGRESS.getNamespace() + "/" + PoliscoreUtil.CURRENT_SESSION.getNumber();
+		return ID_CLASS_PREFIX + "/" + PoliscoreUtil.DEPLOYMENT_DATASET.getNamespace().getNamespace() + "/" + sessionKey;
 	}
 	
 	@NonNull
 	protected LegislatorName name;
 	
-	protected Integer session;
+	protected LegislativeSession session;
 	
+	// Only exists for congressional datasets
 	protected String bioguideId;
 	
-	protected String thomasId;
+	protected int legiscanId;
 	
 	// Senate Id : https://github.com/usgpo/bill-status/issues/241
-	protected String lisId;
-	
-	protected String wikidataId;
+//	protected String lisId;
 	
 	protected LegislatorInterpretation interpretation;
 	
@@ -82,7 +79,7 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 	
 	@NonNull
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(LegislatorLegislativeTermSortedSetConverter.class) }))
-	protected LegislatorLegislativeTermSortedSet terms;
+	protected LegislatorLegislativeTermSortedSet terms = new LegislatorLegislativeTermSortedSet();
 	
 	private LegislatorBillInteractionList interactionsPrivate1 = new LegislatorBillInteractionList();
 	@DdbDataPage
@@ -122,10 +119,10 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 	@DynamoDbPartitionKey
 	public String getId()
 	{
-		if (bioguideId != null) return generateId(LegislativeNamespace.US_CONGRESS, session, bioguideId);
-		if (thomasId != null) return generateId(LegislativeNamespace.US_CONGRESS, session, thomasId);
-		
-		throw new NullPointerException();
+		if (session.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+			return generateId(LegislativeNamespace.US_CONGRESS, session, bioguideId);
+		else
+			return generateId(LegislativeNamespace.US_CONGRESS, session, legiscanId);
 	}
 	
 	public void setId(String id) { }
@@ -165,34 +162,34 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 	{
 		if (this.terms == null || this.terms.size() == 0) return null;
 		
-		val session = CongressionalSession.of(this.session);
-		
-		return this.terms.stream().filter(t -> t.getStartDate().isBefore(session.getEndDate()) && t.getEndDate().isAfter(session.getStartDate())).findFirst().orElse(null);
+		return this.terms.stream().filter(t -> t.getSession().getStartDate().isBefore(session.getEndDate()) && t.getSession().getEndDate().isAfter(session.getStartDate())).findFirst().orElse(null);
 	}
 	
-	public boolean isMemberOfSession(CongressionalSession session) {
+	public boolean isMemberOfSession(LegislativeSession session) {
 		if (this.terms == null || this.terms.size() == 0) return false;
 		
-		return this.terms.stream().anyMatch(t -> t.getStartDate().isBefore(session.getEndDate()) && t.getEndDate().isAfter(session.getStartDate()));
+//		return this.terms.stream().anyMatch(t -> t.getSession().getStartDate().isBefore(session.getEndDate()) && t.getSession().getEndDate().isAfter(session.getStartDate()));
 		
-//		return Integer.valueOf(session.getNumber()).equals(this.session);
+		return this.terms.stream().anyMatch(t -> t.getSession().equals(session));
 	}
 	
-	public static String generateId(LegislativeNamespace ns, Integer session, String bioguideId)
+	// Used for congress
+	public static String generateId(LegislativeNamespace ns, LegislativeSession session, String bioguideId)
 	{
-		return generateId(ns, session.toString(), bioguideId);
+		return ID_CLASS_PREFIX + "/" + ns.getNamespace() + "/" + session.getKey() + "/" + bioguideId;
 	}
 	
-	public static String generateId(LegislativeNamespace ns, String session, String bioguideId)
+	// Used for state legislatures
+	public static String generateId(LegislativeNamespace ns, LegislativeSession session, int legiscanId)
 	{
-		return ID_CLASS_PREFIX + "/" + ns.getNamespace() + "/" + session + "/" + bioguideId;
+		return ID_CLASS_PREFIX + "/" + ns.getNamespace() + "/" + session.getKey() + "/" + legiscanId;
 	}
 	
 	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX, Persistable.OBJECT_BY_RATING_ABS_INDEX, Persistable.OBJECT_BY_LOCATION_INDEX, Persistable.OBJECT_BY_IMPACT_INDEX, Persistable.OBJECT_BY_IMPACT_ABS_INDEX}) public String getStorageBucket() {
 		if (!StringUtils.isEmpty(this.getId()))
 			return this.getId().substring(0, StringUtils.ordinalIndexOf(getId(), "/", 4));
 		
-		return getClassStorageBucket();
+		return getClassStorageBucket(PoliscoreUtil.DEPLOYMENT_SESSION_KEY);
 	}
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 	
@@ -240,18 +237,16 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 	
 	@Data
 	@DynamoDbBean
-	@NoArgsConstructor
 	@AllArgsConstructor
+	@NoArgsConstructor
 	@EqualsAndHashCode
 	public static class LegislativeTerm implements Comparable<LegislativeTerm> {
 		
-		protected LocalDate startDate;
+		protected LegislativeSession session;
 		
-		protected LocalDate endDate;
+		protected LegiscanState state;
 		
-		protected String state;
-		
-		protected Integer district;
+		protected String district;
 		
 		protected Party party;
 		
@@ -259,7 +254,7 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 
 		@Override
 		public int compareTo(LegislativeTerm o) {
-			return this.startDate.compareTo(o.startDate);
+			return this.session.getStartDate().compareTo(o.session.getStartDate());
 		}
 		
 	}

@@ -31,16 +31,16 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillSlice;
 import us.poliscore.model.bill.BillText;
-import us.poliscore.model.bill.BillType;
+import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.parsing.XMLBillSlicer;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
 import us.poliscore.service.LegislatorService;
+import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.RollCallService;
 import us.poliscore.service.storage.LocalCachedS3Service;
-import us.poliscore.service.storage.MemoryObjectService;
 
 @QuarkusMain(name="BatchBillRequestGenerator")
 public class BatchBillRequestGenerator implements QuarkusApplication
@@ -78,7 +78,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	
 	private List<File> writtenFiles = new ArrayList<File>();
 	
-	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(BillType.values()).stream().filter(bt -> !BillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
+	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
 	public static void main(String[] args) {
 		Quarkus.run(BatchBillRequestGenerator.class, args);

@@ -33,7 +33,6 @@ import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSpo
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
-import us.poliscore.service.storage.MemoryObjectService;
 
 @ApplicationScoped
 public class LegislatorInterpretationService
