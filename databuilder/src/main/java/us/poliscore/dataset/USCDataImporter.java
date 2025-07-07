@@ -44,7 +44,7 @@ import us.poliscore.view.USCRollCallData;
 import us.poliscore.view.USCRollCallData.USCRollCallVote;
 
 @ApplicationScoped
-public class USCDataImporter implements DatasetImporter {
+public class USCDataImporter implements DatasetSupplier {
 	
 	public static boolean memorizedRollCall = false;
 	
@@ -61,6 +61,12 @@ public class USCDataImporter implements DatasetImporter {
 		importUscVotes(dataset);
 		
 		return dataset;
+	}
+	
+	@Override
+	public LegislativeSession getPreviousSession(LegislativeSession current) {
+		int endYear = current.getEndDate().getYear() - 2;
+		return new LegislativeSession(LocalDate.of(endYear - 1, 1, 1), LocalDate.of(endYear, 12, 31), String.valueOf(CongressionalSession.fromYear(endYear).getNumber()), LegislativeNamespace.US_CONGRESS);
 	}
 	
 	@SneakyThrows
@@ -85,12 +91,9 @@ public class USCDataImporter implements DatasetImporter {
 			Legislator leg = new Legislator();
 			leg.setName(view.getName().convert());
 			leg.setBioguideId(view.getId().getBioguide());
-			// These fields were required back when we were using USC, but since we've moved over to Legiscan they were removed from Legislator so they're commented out just to get it to compile.
-//			leg.setThomasId(view.getId().getThomas());
-//			leg.setLisId(view.getId().getLis());
-//			leg.setWikidataId(view.getId().getWikidata());
+			leg.setLisId(view.getId().getLis());
 			leg.setBirthday(view.getBio().getBirthday());
-			leg.setTerms(view.getTerms().stream().map(t -> t.convert()).collect(Collectors.toCollection(LegislatorLegislativeTermSortedSet::new)));
+			leg.setTerms(view.getTerms().stream().map(t -> t.convert(dataset.getSession())).collect(Collectors.toCollection(LegislatorLegislativeTermSortedSet::new)));
 			
 			if (leg.isMemberOfSession(dataset.getSession()))
 			{
@@ -182,7 +185,7 @@ public class USCDataImporter implements DatasetImporter {
 		
 		Bill bill;
 		var billView = rollCall.getBill();
-		var billId = Bill.generateId(billView.getCongress(), CongressionalBillType.valueOf(billView.getType().toUpperCase()), billView.getNumber());
+		var billId = Bill.generateId(dataset.getSession(), CongressionalBillType.valueOf(billView.getType().toUpperCase()).name(), billView.getNumber());
 		try
 		{
 			bill = dataset.get(billId, Bill.class).orElseThrow();
@@ -386,7 +389,7 @@ public class USCDataImporter implements DatasetImporter {
 //    	bill.setText(text);
     	bill.setName(view.getBillName());
     	bill.setSession(dataset.getSession());
-    	bill.setType(CongressionalBillType.valueOf(view.getBill_type().toUpperCase()));
+    	bill.setType(CongressionalBillType.valueOf(view.getBill_type().toUpperCase()).name());
     	bill.setNumber(Integer.parseInt(view.getNumber()));
     	bill.setStatus(buildStatus(view));
 //    	bill.setStatusUrl(view.getUrl());

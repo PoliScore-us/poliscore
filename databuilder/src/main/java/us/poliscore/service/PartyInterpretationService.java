@@ -26,9 +26,10 @@ import us.poliscore.ai.BatchOpenAIRequest;
 import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
-import us.poliscore.model.CongressionalSession;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.IssueStats;
+import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Party;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
@@ -46,15 +47,12 @@ import us.poliscore.service.storage.LocalFilePersistenceService;
 @ApplicationScoped
 public class PartyInterpretationService {
 	public static final String PROMPT_TEMPLATE = """
-			You are part of a U.S. non-partisan oversight committee which has graded the {{partyName}} party for the {{session}} congressional session. The evaluations were compiled based on grading every bill within the session, and then aggregating the scores. The party has received the following policy area grades (scores range from -100 to 100):
+			You are part of a U.S. non-partisan oversight committee which has graded the {{partyName}} party for the {{session}}. The evaluations were compiled based on grading every bill within the session, and then aggregating the scores. The party has received the following policy area grades (scores range from -100 to 100):
 			
 			{{stats}}
 			
-			Based on these scores, this party has received the overall letter grade: {{letterGrade}}. You will be given summaries of bills this party has introduced within this congressional session, sorted by two different scoring and sorting mechanisms: rating and impact. Rating was calculated by directly sorting the bills based on the \"Overall Benefit to Society\" metric. Impact is a metric which factors in rating, number of cosponsors, and how far the bill made it through the legislative process (i.e. laws are more important than bills). Highest and lowest rated bills can be useful for knowing what the extremes of the party are up to, versus impact is useful for knowing what the party actually found coalitions around. Please generate a layman's, concise, five paragraph, {{analysisType}}. Begin your first paragraph by focusing on higher level goals, highlighting any {{behavior}}, identifying trends, and pointing out major focuses and priorities of the party. Your next three paragraphs will attempt to explain why the party received the scores they did in the following policy areas: [{{highlightPolicyAreas}}] and should reference specific bill titles (in quotes). Do not include the party's policy area grade scores and do not mention their letter grade in your summary.
+			Based on these scores, this party has received the overall letter grade: {{letterGrade}}. You will be given summaries of bills this party has introduced within this session, sorted by two different scoring and sorting mechanisms: rating and impact. Rating was calculated by directly sorting the bills based on the \"Overall Benefit to Society\" metric. Impact is a metric which factors in rating, number of cosponsors, and how far the bill made it through the legislative process (i.e. laws are more important than bills). Highest and lowest rated bills can be useful for knowing what the extremes of the party are up to, versus impact is useful for knowing what the party actually found coalitions around. Please generate a layman's, concise, five paragraph, {{analysisType}}. Begin your first paragraph by focusing on higher level goals, highlighting any {{behavior}}, identifying trends, and pointing out major focuses and priorities of the party. Your next three paragraphs will attempt to explain why the party received the scores they did in the following policy areas: [{{highlightPolicyAreas}}] and should reference specific bill titles (in quotes). Do not include the party's policy area grade scores and do not mention their letter grade in your summary.
 			""";
-	
-	@Inject
-	private MemoryObjectService memService;
 	
 	@Inject
 	private LocalFilePersistenceService localStore;
@@ -75,7 +73,7 @@ public class PartyInterpretationService {
 	private LegislatorService legService;
 	
 	@Inject
-	private RollCallService rollCallService;
+	private GovernmentDataService data;
 	
 	@Inject
 	private LegislatorInterpretationService legInterp;
@@ -90,9 +88,7 @@ public class PartyInterpretationService {
 	
 	public List<File> process() throws IOException
 	{
-		legService.importLegislators();
-		billService.importBills();
-		rollCallService.importUscVotes();
+		data.importDataset();
 		
 		val partyStats = recalculateStats();
 		
@@ -109,7 +105,7 @@ public class PartyInterpretationService {
 	{
 		// Initialize datastructures //
 		val sessionStats = new SessionInterpretation();
-		sessionStats.setSession(PoliscoreUtil.CURRENT_SESSION.getNumber());
+		sessionStats.setSession(data.getSession());
 		
 		val mostImpactfulBills = new HashMap<Party, PriorityQueue<PartyBillInteraction>>();
 		val leastImpactfulBills = new HashMap<Party, PriorityQueue<PartyBillInteraction>>();
@@ -143,16 +139,16 @@ public class PartyInterpretationService {
 		}
 		
 		// Calculate Stats //
-		for (val b : memService.query(Bill.class)) {
+		for (val b : data.getDataset().query(Bill.class)) {
 			val op = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class);
 			
 			if (op.isPresent()) {
 				val interp = op.get();
 				b.setInterpretation(interp);
 				
-				val sponsor = memService.get(b.getSponsor().getId(), Legislator.class).orElseThrow();
+				val sponsor = data.getDataset().get(b.getSponsor().getId(), Legislator.class).orElseThrow();
 				val party = sponsor.getTerms().last().getParty();
-				val partyCosponsors = b.getCosponsors().stream().filter(sp -> memService.exists(sp.getId(), Legislator.class) && memService.get(sp.getId(), Legislator.class).get().getParty().equals(party)).toList();
+				val partyCosponsors = b.getCosponsors().stream().filter(sp -> data.getDataset().exists(sp.getId(), Legislator.class) && data.getDataset().get(sp.getId(), Legislator.class).get().getParty().equals(party)).toList();
 						
 				val pbi = new PartyBillInteraction(b.getId(), b.getName(), b.getStatus(), b.getType(), b.getIntroducedDate(), b.getSponsor(), partyCosponsors, b.getRating(), b.getImpact(), interp.getShortExplain());
 				mostImpactfulBills.get(party).add(pbi);
@@ -168,8 +164,8 @@ public class PartyInterpretationService {
 				}
 			}
 		}
-		for (val l : memService.query(Legislator.class).stream().filter(leg -> leg.isMemberOfSession(CongressionalSession.S118)).toList()) {
-			val op = s3.get(LegislatorInterpretation.generateId(l.getId(), sessionStats.getSession()), LegislatorInterpretation.class);
+		for (val l : data.getDataset().query(Legislator.class).stream().filter(leg -> leg.isMemberOfSession(data.getSession())).toList()) {
+			val op = s3.get(LegislatorInterpretation.generateId(l.getId(), sessionStats.getSession().getKey(), sessionStats.getSession().getNamespace()), LegislatorInterpretation.class);
 			
 			if (op.isPresent()) {
 				val interp = op.get();
@@ -264,7 +260,7 @@ public class PartyInterpretationService {
 				msg.add(StringUtils.join(queueTake(10, worstBillsByIssue.get(interp.getParty()).get(issue)).stream().map(i -> i.getShortExplainForInterp()).toArray(), "\n"));
 		}
 		
-		createRequest(interp.getParty(), PartyInterpretationService.getAiPrompt(PoliscoreUtil.CURRENT_SESSION, interp.getParty(), interp.getStats()), StringUtils.join(msg, "\n"));
+		createRequest(interp.getParty(), PartyInterpretationService.getAiPrompt(data.getSession(), interp.getParty(), interp.getStats()), StringUtils.join(msg, "\n"));
 	}
 	
 	private List<PartyBillInteraction> queueTake(int amt, PriorityQueue<PartyBillInteraction> queue)
@@ -346,12 +342,18 @@ public class PartyInterpretationService {
 		return highlightPolicyAreas;
 	}
 	
-	public static String getAiPrompt(CongressionalSession session, Party party, IssueStats stats) {
+	public static String getAiPrompt(LegislativeSession session, Party party, IssueStats stats) {
 		val grade = stats.getLetterGrade();
+		
+		String sessionName;
+		if (session.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+			sessionName = String.valueOf(session.getKey()) + "th congressional session";
+		else
+			sessionName = String.valueOf(session.getStartDate().getYear()) + "-" + String.valueOf(session.getEndDate().getYear()) + " " + session.getNamespace().getDescription() + " state legislature";
 		
 		return PROMPT_TEMPLATE
 				.replace("{{partyName}}", party.getName())
-				.replace("{{session}}", String.valueOf(session.getNumber()))
+				.replace("{{session}}", sessionName)
 				.replace("{{stats}}", stats.toString())
 				.replace("{{letterGrade}}", grade)
 				.replace("{{analysisType}}", grade.equals("A") || grade.equals("B") ? "endorsement" : (grade.equals("C") || grade.equals("D") ? "mixed analysis" : "harsh critique"))

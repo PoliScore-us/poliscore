@@ -45,12 +45,12 @@ import us.poliscore.model.session.SessionInterpretation.PartyInterpretation;
 import us.poliscore.model.session.SessionInterpretationOld;
 import us.poliscore.parsing.XMLBillSlicer;
 import us.poliscore.service.BillService;
+import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
-import us.poliscore.service.RollCallService;
 import us.poliscore.service.storage.CachedDynamoDbService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
@@ -86,10 +86,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	private LegislatorInterpretationService legInterp;
 	
 	@Inject
-	private RollCallService rollCallService;
-	
-	@Inject
-	private MemoryObjectService memService;
+	private GovernmentDataService data;
 	
 	@Inject
 	private PartyInterpretationService partyService;
@@ -104,9 +101,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	@SneakyThrows
 	public void process(File input)
 	{
-		legService.importLegislators();
-		billService.importBills();
-		rollCallService.importUscVotes();
+		data.importDataset();
 		
 		Log.info("Importing " + input.getAbsolutePath());
 		
@@ -161,13 +156,13 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	private void importLegislator(final BatchOpenAIResponse resp) {
 //		if (!resp.getCustomData().contains("D000197")) return;
 		
-		val leg = memService.get(resp.getCustomData().getOid().replace(LegislatorInterpretation.ID_CLASS_PREFIX, Legislator.ID_CLASS_PREFIX), Legislator.class).orElseThrow();
+		val leg = data.getDataset().get(resp.getCustomData().getOid().replace(LegislatorInterpretation.ID_CLASS_PREFIX, Legislator.ID_CLASS_PREFIX), Legislator.class).orElseThrow();
 		
 //		if (ddb.exists(leg.getId(), Legislator.class)) return;
 		
 		legInterp.updateInteractionsInterp(leg);
 		
-		LegislatorInterpretation interp = s3.get(LegislatorInterpretation.generateId(leg.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class)
+		LegislatorInterpretation interp = s3.get(LegislatorInterpretation.generateId(leg.getId(), data.getSession().getKey(), data.getSession().getNamespace()), LegislatorInterpretation.class)
 				.orElse(new LegislatorInterpretation(leg.getId(), leg.getSession(), OpenAIService.metadata(), null));
 		
 		interp.setHash(legInterp.calculateInterpHashCode(leg));
@@ -214,7 +209,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		}
 		
 		partyInterp.setLongExplain(interpText);
-		PartyBillLinker.linkPartyBillsSinglePass(partyInterp, sessionInterp, memService, s3);
+		PartyBillLinker.linkPartyBillsSinglePass(partyInterp, sessionInterp, data.getDataset(), s3);
 		
 		sessionInterp.setMetadata(OpenAIService.metadata());
 	}

@@ -29,9 +29,11 @@ import us.poliscore.ai.BatchOpenAIResponse;
 import us.poliscore.entrypoint.batch.BatchOpenAIResponseImporter;
 import us.poliscore.entrypoint.batch.PressBillInterpretationRequestGenerator;
 import us.poliscore.model.InterpretationOrigin;
+import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.service.BillService;
+import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
@@ -52,13 +54,13 @@ public class PressInterpModelComparator implements QuarkusApplication {
     private static final String REPROCESS_RESPONSE = "/Users/rrowlands/dev/projects/poliscore/databuilder/target/file-WSQi6X89qWPpudadPJnera.jsonl";
 
     @Inject LocalCachedS3Service s3;
-    @Inject MemoryObjectService memService;
     @Inject BillService billService;
     @Inject LegislatorService legService;
     @Inject OpenAIService aiService;
 
     @Inject PressInterpService pressService;
     @Inject BatchOpenAIResponseImporter responseImporter;
+    @Inject private GovernmentDataService data;
 
     private final List<BatchOpenAIRequest> requests = new ArrayList<>();
     
@@ -68,8 +70,7 @@ public class PressInterpModelComparator implements QuarkusApplication {
 
     @SneakyThrows
     protected void process() {
-        legService.importLegislators();
-        billService.importBills();
+    	data.importDataset();
         
         List<File> responses;
         
@@ -84,7 +85,7 @@ public class PressInterpModelComparator implements QuarkusApplication {
 	        List<PressInterpretation> sample = all.stream().limit(SAMPLE_SIZE).toList();
 	        
 	        for (PressInterpretation original : sample) {
-	            Bill bill = memService.get(original.getBillId(), Bill.class).orElse(null);
+	            Bill bill = data.getDataset().get(original.getBillId(), Bill.class).orElse(null);
 	            if (bill == null) continue;
 	
 	            val origin = original.getOrigin();
@@ -133,9 +134,17 @@ public class PressInterpModelComparator implements QuarkusApplication {
     }
     
     protected String buildBillIdentifier(Bill bill) {
-    	return "United States, " + bill.getSession() + "th Congress" + ", " +
+    	String id = "United States, ";
+    	
+    	if (bill.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
+    		id += bill.getSession().getKey() + "th Congress";
+    	} else {
+    		id += "State of " + bill.getSession().getNamespace().getDescription();
+    	}
+    	
+    	return id + ", " +
                 bill.getOriginatingChamber().getName() + "\n" +
-                bill.getType().getName() + " " + bill.getNumber() + " - " + bill.getName() +
+                bill.getType() + " " + bill.getNumber() + " - " + bill.getName() +
                 "\nIntroduced in " + bill.getIntroducedDate();
     }
 
@@ -176,7 +185,7 @@ public class PressInterpModelComparator implements QuarkusApplication {
                 val oid = resp.getCustomData().getOid();
                 val origin = ((CustomOriginData) resp.getCustomData()).getOrigin();
                 val billId = oid.split("-")[0].replace(PressInterpretation.ID_CLASS_PREFIX, Bill.ID_CLASS_PREFIX);
-                var bill = memService.get(billId, Bill.class).get();
+                var bill = data.getDataset().get(billId, Bill.class).get();
 
                 val originalOpt = s3.get(PressInterpretation.generateId(billId, origin), PressInterpretation.class);
                 if (originalOpt.isEmpty()) {

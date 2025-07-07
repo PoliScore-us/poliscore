@@ -2,13 +2,15 @@ package us.poliscore.model;
 
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import us.poliscore.legiscan.view.LegiscanDatasetView;
-import us.poliscore.legiscan.view.LegiscanState;
+import lombok.EqualsAndHashCode;
 
 @Data
 @AllArgsConstructor
+@EqualsAndHashCode(of = {"key", "namespace"})
 public class LegislativeSession {
 	
 	protected LocalDate startDate;
@@ -19,6 +21,7 @@ public class LegislativeSession {
 	
 	protected LegislativeNamespace namespace;
 	
+	@JsonIgnore
 	public boolean isOver() {
 		return LocalDate.now().isAfter(endDate);
 	}

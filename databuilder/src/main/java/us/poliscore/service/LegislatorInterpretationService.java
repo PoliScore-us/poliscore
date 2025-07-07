@@ -2,12 +2,10 @@ package us.poliscore.service;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -20,14 +18,13 @@ import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.IssueStats;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.VoteStatus;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorBillInteraction;
-import us.poliscore.model.legislator.LegislatorInterpretation;
-import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCosponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
@@ -118,9 +115,9 @@ Generate a layman's, concise, three paragraph, {{analysisType}}, highlighting an
 	}
 	
 	// Backfill the interactions until we get to 1000
-	public void backfillInteractionsFromPreviousSession(Legislator leg)
+	public void backfillInteractionsFromPreviousSession(Legislator leg, LegislativeSession prevSession)
 	{
-		val prevLeg = ddb.get(Legislator.generateId(LegislativeNamespace.US_CONGRESS, PoliscoreUtil.CURRENT_SESSION.getNumber() - 1, leg.getBioguideId()), Legislator.class).orElse(null);
+		val prevLeg = ddb.get(Legislator.generateId(prevSession.getNamespace(), prevSession, leg.getBioguideId()), Legislator.class).orElse(null);
 		if (prevLeg == null) return;
 		
 		val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
@@ -291,7 +288,7 @@ Generate a layman's, concise, three paragraph, {{analysisType}}, highlighting an
 		
 		return PROMPT_TEMPLATE
 				.replace("{{letterGrade}}", grade)
-				.replace("{{politicianType}}", leg.getTerms().last().getChamber() == LegislativeChamber.SENATE ? "Senator" : "House Representative")
+				.replace("{{politicianType}}", leg.getTerms().last().getChamber() == LegislativeChamber.UPPER ? "Senator" : "House Representative")
 				.replace("{{fullName}}", leg.getName().getOfficial_full())
 				.replace("{{stats}}", stats.toString())
 				.replace("{{analysisType}}", grade.equals("A") || grade.equals("B") ? "commendation" : (grade.equals("C") || grade.equals("D") ? "mixed analysis" : "harsh critique"))

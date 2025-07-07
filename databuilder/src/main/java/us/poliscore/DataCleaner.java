@@ -14,9 +14,8 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
+import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorService;
-import us.poliscore.service.MemoryObjectService;
-import us.poliscore.service.RollCallService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
@@ -30,10 +29,7 @@ public class DataCleaner implements QuarkusApplication {
 	@Inject
 	private BillInterpretationService billInterpreter;
 	
-	@Inject
-	private RollCallService rollCallService;
-	
-	@Inject private MemoryObjectService memService;
+	@Inject private GovernmentDataService data;
 	
 	@Inject
 	private LocalCachedS3Service s3;
@@ -43,14 +39,12 @@ public class DataCleaner implements QuarkusApplication {
 	
 	protected void process() throws IOException
 	{
-		legService.importLegislators();
-		billService.importBills();
-		rollCallService.importUscVotes();
+		data.importDataset();
 		
 		s3.optimizeExists(BillInterpretation.class);
 		
-		for (var bill : memService.query(Bill.class).stream()
-				.filter(b -> b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION) && billInterpreter.isInterpreted(b.getId())).collect(Collectors.toList()))
+		for (var bill : data.getDataset().query(Bill.class).stream()
+				.filter(b -> b.isIntroducedInSession(data.getSession()) && billInterpreter.isInterpreted(b.getId())).collect(Collectors.toList()))
 		{
 			val interp = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class).get();
 			

@@ -7,7 +7,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import lombok.Data;
 import software.amazon.awssdk.utils.StringUtils;
+import us.poliscore.legiscan.view.LegiscanState;
 import us.poliscore.model.LegislativeChamber;
+import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Party;
 import us.poliscore.model.legislator.Legislator.LegislativeTerm;
 import us.poliscore.model.legislator.Legislator.LegislatorName;
@@ -102,9 +104,9 @@ public class USCLegislatorView {
 		
 		protected String party;
 		
-		public LegislativeTerm convert()
+		public LegislativeTerm convert(LegislativeSession session)
 		{
-			return new LegislativeTerm(start, end, state, district, Party.from(party), "rep".equals(type) ? LegislativeChamber.HOUSE : LegislativeChamber.SENATE);
+			return new LegislativeTerm(session, LegiscanState.fromAbbreviation(state), String.valueOf(district), Party.from(party), "rep".equals(type) ? LegislativeChamber.LOWER : LegislativeChamber.UPPER);
 		}
 		
 	}

@@ -52,12 +52,6 @@ public class S3ImageDatabaseBuilder implements QuarkusApplication {
 	private static final String BUCKET_NAME = "poliscore-prod-public";
 	
 	@Inject
-	private LegislatorService legService;
-	
-	@Inject
-	private MemoryObjectService memService;
-	
-	@Inject
 	private GovernmentDataService data;
 	
 	private S3Client client;
@@ -75,9 +69,9 @@ public class S3ImageDatabaseBuilder implements QuarkusApplication {
 		
 		Log.info("Building list of legislators to fetch. This will take a minute...");
 		
-		val legs = memService.query(Legislator.class).stream()
+		val legs = data.getDataset().query(Legislator.class).stream()
 				.filter(l -> l.getBirthday() == null || l.getBirthday().isAfter(LocalDate.of(1900,1,1)))
-				.filter(l -> l.getTerms().size() > 0 && l.getTerms().last().getStartDate().isAfter(LocalDate.of(1990,1,1)))
+				.filter(l -> l.getTerms().size() > 0 && l.getTerms().last().getSession().getStartDate().isAfter(LocalDate.of(1990,1,1)))
 				.filter(l -> !exists(l))
 				.toList();
 		

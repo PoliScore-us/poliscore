@@ -80,9 +80,9 @@ public class BillArticleRecognizer {
     // Chamber tokens
     private static final Map<LegislativeChamber, List<String>> CHAMBER_TOKENS = new EnumMap<>(LegislativeChamber.class);
     static {
-        CHAMBER_TOKENS.put(LegislativeChamber.HOUSE, Arrays.asList(
+        CHAMBER_TOKENS.put(LegislativeChamber.LOWER, Arrays.asList(
             "house of representatives", "u.s. house", "us house", "house"));
-        CHAMBER_TOKENS.put(LegislativeChamber.SENATE, Arrays.asList(
+        CHAMBER_TOKENS.put(LegislativeChamber.UPPER, Arrays.asList(
             "senate", "u.s. senate", "us senate"));
     }
 
@@ -232,7 +232,7 @@ public class BillArticleRecognizer {
 
     private float scoreTypeNumber(Bill bill, String text) {
         int number = bill.getNumber();
-        CongressionalBillType type = bill.getType();
+        String type = bill.getType();
         return TYPE_TOKENS.getOrDefault(type, Collections.emptyList())
                 .stream()
                 .anyMatch(tok -> Pattern.compile("\\b" + Pattern.quote(tok) + "\\W*" + number + "\\b",

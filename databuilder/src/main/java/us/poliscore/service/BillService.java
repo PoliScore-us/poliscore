@@ -121,53 +121,6 @@ public class BillService {
 //		FileUtils.write(out, PoliscoreUtil.getObjectMapper().writeValueAsString(data), "UTF-8");
 //	}
 	
-	@SneakyThrows
-	public void generateBillWebappIndex() {
-	    final File out = new File(Environment.getDeployedPath(), "../../webapp/src/main/resources/bills.index");
-	    DateTimeFormatter usFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-	    SnowballStemmer stemmer = new englishStemmer();
-
-	    val data = memService.queryAll(Bill.class).stream()
-	        .filter(b -> PoliscoreUtil.SUPPORTED_CONGRESSES.stream().anyMatch(s -> b.isIntroducedInSession(s)) &&
-	                     s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
-	        .map(b -> {
-	            b.setInterpretation(s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).orElseThrow());
-
-	            String displayName = b.getName();
-	            String normalizedTokens = normalize(displayName, stemmer);
-
-	            String label = b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION)
-	                    ? displayName + " (" + b.getType() + " " + b.getNumber() + ")"
-	                    : displayName + " (" + b.getIntroducedDate().format(usFormat) + ")";
-
-	            return Arrays.asList(b.getId(), label, normalizedTokens);
-	        })
-	        .sorted(Comparator.comparing(b -> b.get(1)))
-	        .toList();
-
-	    FileUtils.write(out, PoliscoreUtil.getObjectMapper().writeValueAsString(data), "UTF-8");
-	    Log.info("Generated a bill 'index' of size " + data.size());
-	}
-
-	private static final Set<String> STOPWORDS = Set.of(
-	    "the", "of", "to", "and", "a", "in", "for", "on", "at", "by", "with", "act"
-	);
-
-	private String normalize(String input, SnowballStemmer stemmer) {
-	    return Arrays.stream(input.toLowerCase()
-	            .replaceAll("[^a-z0-9\\s]", " ")   // remove punctuation
-	            .replaceAll("\\s+", " ")           // collapse spaces
-	            .trim()
-	            .split(" "))
-	        .filter(token -> !STOPWORDS.contains(token))
-	        .map(token -> {
-	            stemmer.setCurrent(token);
-	            stemmer.stem();
-	            return stemmer.getCurrent();
-	        })
-	        .collect(Collectors.joining(" "));
-	}
-
 	
 	@SneakyThrows
 	public void dumbAllBills() {

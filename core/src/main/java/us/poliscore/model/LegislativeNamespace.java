@@ -81,8 +81,46 @@ public enum LegislativeNamespace {
 		return of(fullNamespace);
 	}
 	
+	public String toAbbreviation() {
+		return this.getNamespace().split("/")[1].toUpperCase();
+	}
+	
 	public String toString() {
 		return namespace;
+	}
+	
+	public String getDescription() {
+		if (this == US_CONGRESS) {
+			return "Congress";
+		}
+		
+		// Extract the state abbreviation from the namespace, e.g., "us/co" → "co"
+		String abbr = namespace.substring(namespace.lastIndexOf('/') + 1).toUpperCase();
+
+		try {
+			LegiscanState state = LegiscanState.fromAbbreviation(abbr);
+			return capitalizeFully(state.name().replace('_', ' '));
+		} catch (IllegalArgumentException e) {
+			// fallback for special cases like "us/dc"
+			switch (abbr) {
+				case "DC": return "Washington D.C.";
+				default: return abbr;
+			}
+		}
+	}
+
+	// Helper to capitalize e.g., "NORTH_DAKOTA" → "North Dakota"
+	private static String capitalizeFully(String input) {
+		String[] parts = input.split(" ");
+		StringBuilder result = new StringBuilder();
+		for (String part : parts) {
+			if (!part.isEmpty()) {
+				result.append(part.substring(0, 1).toUpperCase());
+				result.append(part.substring(1).toLowerCase());
+				result.append(" ");
+			}
+		}
+		return result.toString().trim();
 	}
 }
 

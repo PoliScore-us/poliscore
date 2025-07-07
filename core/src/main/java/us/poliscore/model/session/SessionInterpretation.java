@@ -22,6 +22,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecon
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.IssueStats;
 import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Party;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.bill.Bill.BillSponsor;
@@ -31,7 +32,7 @@ import us.poliscore.model.dynamodb.DdbDataPage;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.AIInterpretationMetadataConverter;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.LegislatorBillInteractionSetConverterProvider;
 import us.poliscore.model.legislator.Legislator;
-import us.poliscore.model.dynamodb.JacksonAttributeConverter.*;
+import us.poliscore.model.dynamodb.JacksonAttributeConverter.CompressedPartyStatsConverter;
 
 @Data
 @DynamoDbBean
@@ -41,7 +42,7 @@ public class SessionInterpretation implements Persistable {
 	
 	public static final String ID_CLASS_PREFIX = "SIT";
 	
-	protected int session;
+	protected LegislativeSession session;
 	
 //	@Getter(onMethod = @__({ @DynamoDbConvertedBy(PartyStatsMapAttributeConverter.class) }))
 //	protected Map<Party, PartyStats> partyStats = new HashMap<Party, PartyStats>();
@@ -59,15 +60,15 @@ public class SessionInterpretation implements Persistable {
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(AIInterpretationMetadataConverter.class)}))
 	protected AIInterpretationMetadata metadata;
 	
-	public static String generateId(int congress)
+	public static String generateId(LegislativeNamespace namespace, String sessionKey)
 	{
-		return ID_CLASS_PREFIX + "/" + LegislativeNamespace.US_CONGRESS.getNamespace() + "/" + congress;
+		return ID_CLASS_PREFIX + "/" + namespace.getNamespace() + "/" + sessionKey;
 	}
 	
 	@DynamoDbPartitionKey
 	public String getId()
 	{
-		return generateId(session);
+		return generateId(session.getNamespace(), session.getKey());
 	}
 	
 	public void setId(String id) { }
@@ -128,7 +129,7 @@ public class SessionInterpretation implements Persistable {
 		
 		@NonNull
 		@EqualsAndHashCode.Exclude
-		protected CongressionalBillType type;
+		protected String type;
 		
 		@EqualsAndHashCode.Exclude
 		protected LocalDate introducedDate;

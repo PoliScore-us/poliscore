@@ -23,7 +23,6 @@ import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.Environment;
-import us.poliscore.PoliscoreUtil;
 import us.poliscore.entrypoint.batch.BatchBillRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchLegislatorRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchOpenAIResponseImporter;
@@ -39,19 +38,15 @@ import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
 import us.poliscore.model.legislator.LegislatorBillInteraction;
 import us.poliscore.model.legislator.LegislatorInterpretation;
 import us.poliscore.model.press.PressInterpretation;
-import us.poliscore.model.session.SessionInterpretationOld;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
-import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
-import us.poliscore.service.RollCallService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
-import us.poliscore.service.storage.LocalFilePersistenceService;
 
 /**
  * Run this to keep a deployed server up-to-date.
@@ -87,12 +82,6 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	@Inject
 	private BatchOpenAIResponseImporter responseImporter;
-	
-	@Inject
-	private MemoryObjectService memService;
-	
-	@Inject
-	private LocalFilePersistenceService localStore;
 	
 	@Inject
 	private DynamoDbPersistenceService ddb;
@@ -156,7 +145,7 @@ public class DatabaseBuilder implements QuarkusApplication
 		long amount = 0;
 		
 		// This could be optimized by building an "index" for each ddb database
-		for (Bill b : memService.query(Bill.class).stream().filter(b -> b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION) && billInterpreter.isInterpreted(b.getId())).collect(Collectors.toList())) {
+		for (Bill b : data.getDataset().query(Bill.class).stream().filter(b -> b.isIntroducedInSession(data.getSession()) && billInterpreter.isInterpreted(b.getId())).collect(Collectors.toList())) {
 			var dbill = ddb.get(b.getId(), Bill.class).orElse(null);
 			
 			if (dbill == null 
@@ -274,8 +263,8 @@ public class DatabaseBuilder implements QuarkusApplication
 		List<String> legsWithoutInterp = new ArrayList<String>();
 		List<String> legsWithoutSufficientInteractions = new ArrayList<String>();
 		
-		for (var leg : memService.query(Legislator.class).stream()
-				.filter(l -> l.isMemberOfSession(PoliscoreUtil.CURRENT_SESSION)) //  && s3.exists(LegislatorInterpretation.generateId(l.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class)
+		for (var leg : data.getDataset().query(Legislator.class).stream()
+				.filter(l -> l.isMemberOfSession(data.getSession())) //  && s3.exists(LegislatorInterpretation.generateId(l.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class)
 				.collect(Collectors.toList()))
 		{
 			legInterp.updateInteractionsInterp(leg);
@@ -285,15 +274,16 @@ public class DatabaseBuilder implements QuarkusApplication
 //				continue;
 //			}
 			
-			LegislatorInterpretation interp = new LegislatorInterpretation(leg.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber(), OpenAIService.metadata(), null);
-			val interpOp = s3.get(LegislatorInterpretation.generateId(leg.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class);
+			LegislatorInterpretation interp = new LegislatorInterpretation(leg.getId(), data.getSession(), OpenAIService.metadata(), null);
+			val interpOp = s3.get(LegislatorInterpretation.generateId(leg.getId(), data.getSession().getKey(), data.getSession().getNamespace()), LegislatorInterpretation.class);
 			
 			if (interpOp.isPresent()) { interp = interpOp.get(); }
 			
 			// If there exists an interp from a previous session, backfill the interactions until we get to 1000
 			if (legInterp.getInteractionsForInterpretation(leg).size() < 1000) {
 				// If an interpretation from this session doesn't exist, grab one from the previous session.
-				val prevInterpOp = s3.get(LegislatorInterpretation.generateId(leg.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber() - 1), LegislatorInterpretation.class);
+				var previousSession = data.getPreviousSession();
+				val prevInterpOp = s3.get(LegislatorInterpretation.generateId(leg.getId(), previousSession.getKey(), previousSession.getNamespace()), LegislatorInterpretation.class);
 				
 				if (prevInterpOp.isPresent()) {
 					if (StringUtils.isBlank(interp.getShortExplain()))
@@ -301,7 +291,13 @@ public class DatabaseBuilder implements QuarkusApplication
 					if (StringUtils.isBlank(interp.getLongExplain()))
 						interp.setLongExplain(prevInterpOp.get().getLongExplain());
 					
-					val prevLeg = ddb.get(Legislator.generateId(LegislativeNamespace.US_CONGRESS, PoliscoreUtil.CURRENT_SESSION.getNumber() - 1, leg.getBioguideId()), Legislator.class).orElseThrow();
+					String prevLegId;
+					if (previousSession.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+						prevLegId = Legislator.generateId(previousSession.getNamespace(), previousSession, leg.getBioguideId());
+					else
+						prevLegId = Legislator.generateId(previousSession.getNamespace(), previousSession, leg.getLegiscanId());
+					
+					val prevLeg = ddb.get(prevLegId, Legislator.class).orElseThrow();
 					
 					val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
 					while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
@@ -356,22 +352,23 @@ public class DatabaseBuilder implements QuarkusApplication
 					responseImporter.process(f);
 				}
 			}
-		} else {
-			val sit = s3.get(SessionInterpretationOld.generateId(PoliscoreUtil.CURRENT_SESSION.getNumber()), SessionInterpretationOld.class).orElse(null);
-			if (sit != null) {
-				ddb.put(sit);
-			}
-			
-			val sit2 = s3.get(SessionInterpretationOld.generateId(PoliscoreUtil.CURRENT_SESSION.getNumber()-1), SessionInterpretationOld.class).orElse(null);
-			if (sit2 != null) {
-//				var newSit = SessionInterpretationConverter.fromOld(sit2);
-//				
-//				s3.put(newSit);
-//				ddb.put(newSit);
-				
-				ddb.put(sit2);
-			}
 		}
+//		else {
+//			val sit = s3.get(SessionInterpretationOld.generateId(PoliscoreUtil.CURRENT_SESSION.getNumber()), SessionInterpretationOld.class).orElse(null);
+//			if (sit != null) {
+//				ddb.put(sit);
+//			}
+//			
+//			val sit2 = s3.get(SessionInterpretationOld.generateId(PoliscoreUtil.CURRENT_SESSION.getNumber()-1), SessionInterpretationOld.class).orElse(null);
+//			if (sit2 != null) {
+////				var newSit = SessionInterpretationConverter.fromOld(sit2);
+////				
+////				s3.put(newSit);
+////				ddb.put(newSit);
+//				
+//				ddb.put(sit2);
+//			}
+//		}
 	}
 	
 //	public class SessionInterpretationConverter {

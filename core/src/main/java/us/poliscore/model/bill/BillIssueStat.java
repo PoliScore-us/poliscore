@@ -26,9 +26,9 @@ import us.poliscore.model.bill.Bill.BillSponsor;
 public class BillIssueStat implements Persistable {
 	public static final String ID_CLASS_PREFIX = "BIS";
 	
-	public static String getIndexPrimaryKey(TrackedIssue issue)
+	public static String getIndexPrimaryKey(TrackedIssue issue, String sessionKey)
 	{
-		return ID_CLASS_PREFIX + "/" + LegislativeNamespace.US_CONGRESS.getNamespace() + "/" + PoliscoreUtil.CURRENT_SESSION.getNumber() + "/" + issue.name();
+		return ID_CLASS_PREFIX + "/" + PoliscoreUtil.DEPLOYMENT_DATASET.getNamespace().getNamespace() + "/" + sessionKey + "/" + issue.name();
 	}
 	
 	public BillIssueStat(TrackedIssue issue, int impact, Bill bill) {

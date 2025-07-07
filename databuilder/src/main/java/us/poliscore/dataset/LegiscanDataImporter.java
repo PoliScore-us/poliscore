@@ -1,8 +1,10 @@
 package us.poliscore.dataset;
 
 import java.time.LocalDate;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
+import io.quarkus.logging.Log;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -16,14 +18,18 @@ import us.poliscore.legiscan.view.LegiscanChamber;
 import us.poliscore.legiscan.view.LegiscanDatasetView;
 import us.poliscore.legiscan.view.LegiscanPeopleView;
 import us.poliscore.legiscan.view.LegiscanRollCallView;
+import us.poliscore.legiscan.view.LegiscanSessionView;
 import us.poliscore.legiscan.view.LegiscanSponsorView;
 import us.poliscore.legiscan.view.LegiscanState;
 import us.poliscore.legiscan.view.LegiscanStatus;
+import us.poliscore.legiscan.view.LegiscanVoteDetailView;
+import us.poliscore.legiscan.view.LegiscanVoteStatus;
 import us.poliscore.model.CongressionalSession;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Party;
+import us.poliscore.model.VoteStatus;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.Bill.BillSponsor;
 import us.poliscore.model.bill.BillStatus;
@@ -32,12 +38,13 @@ import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislativeTerm;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCosponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
+import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.SecretService;
 
 @ApplicationScoped
 @Priority(1)
-public class LegiscanDataImporter implements DatasetImporter {
+public class LegiscanDataImporter implements DatasetSupplier {
 	
 	@Inject
 	private SecretService secret;
@@ -45,13 +52,17 @@ public class LegiscanDataImporter implements DatasetImporter {
 	@Inject
 	protected LegislatorService lService;
 	
+	protected CachedLegiscanService getLegiscan() {
+		return CachedLegiscanService.builder(secret.getLegiscanSecret()).build();
+	}
+	
 	@Override
 	public PoliscoreDataset importDataset(DatasetReference ref) {
-		CachedLegiscanService legiscan = CachedLegiscanService.builder(secret.getLegiscanSecret()).build();
+		CachedLegiscanService legiscan = getLegiscan();
 		
 		var state = namespaceToState(ref.getNamespace());
 		var cached = legiscan.cacheDataset(state, ref.getYear());
-		var session = sessionForDataset(cached.getDataset());
+		var session = buildSession(cached.getDataset().getSessionId(), cached.getDataset().getState(), cached.getDataset().getYearStart(), cached.getDataset().getYearEnd());
 		
 		PoliscoreDataset dataset = new PoliscoreDataset(session);
 		
@@ -64,7 +75,7 @@ public class LegiscanDataImporter implements DatasetImporter {
 		}
 		
 		for (var vote : cached.getVotes().values()) {
-			importVote(vote, dataset);
+			importRollCall(vote, dataset);
 		}
 		
 		return dataset;
@@ -74,21 +85,37 @@ public class LegiscanDataImporter implements DatasetImporter {
 		return LegiscanState.fromAbbreviation(namespace.toString().replace("us/", ""));
 	}
 	
-	public static LegislativeSession sessionForDataset(LegiscanDatasetView dataset) {
+	public static LegislativeSession buildSession(int sessionId, LegiscanState state, int yearStart, int yearEnd) {
 		String key;
 		LegislativeNamespace namespace;
-		if (dataset.getState().equals(LegiscanState.CONGRESS)) {
-			key = String.valueOf(CongressionalSession.fromYear(dataset.getYearEnd()).getNumber());
+		if (state.equals(LegiscanState.CONGRESS)) {
+			key = String.valueOf(CongressionalSession.fromYear(yearEnd).getNumber());
 			namespace = LegislativeNamespace.US_CONGRESS;
 		} else {
-			key = String.valueOf(dataset.getSessionId());
-			namespace = LegislativeNamespace.fromAbbreviation(dataset.getState().getAbbreviation());
+			key = String.valueOf(sessionId);
+			namespace = LegislativeNamespace.fromAbbreviation(state.getAbbreviation());
 		}
 		
-		var start = LocalDate.of(dataset.getYearStart(), 1, 1);
-		var end = LocalDate.of(dataset.getYearEnd(), 12, 31);
+		var start = LocalDate.of(yearStart, 1, 1);
+		var end = LocalDate.of(yearEnd, 12, 31);
 		
 		return new LegislativeSession(start, end, key, namespace);
+	}
+	
+	@Override
+	public LegislativeSession getPreviousSession(LegislativeSession current) {
+		CachedLegiscanService legiscan = getLegiscan();
+		LegiscanState state = LegiscanState.fromAbbreviation(current.getNamespace().toAbbreviation());
+		
+		LegiscanSessionView previous = null;
+		for (var view : legiscan.getSessionList(state)) {
+			if (view.getYearStart() == current.getStartDate().getYear() && view.getYearEnd() == current.getEndDate().getYear() && !view.isSpecial())
+				return previous == null ? null : buildSession(previous.getSessionId(), previous.getState(), previous.getYearStart(), previous.getYearEnd());
+			
+			previous = view;
+		}
+		
+		return null;
 	}
 	
 	protected void importBill(LegiscanBillView view, PoliscoreDataset dataset) {
@@ -245,9 +272,66 @@ public class LegiscanDataImporter implements DatasetImporter {
 	    return status;
 	}
 
-	protected void importVote(LegiscanRollCallView view, PoliscoreDataset dataset) {
-		TODO();
+	protected void importRollCall(LegiscanRollCallView view, PoliscoreDataset dataset) {
+		for (var vote : view.getVotes()) {
+			importVote(view, vote, dataset);
+		}
 	}
+	
+	protected void importVote(LegiscanRollCallView rollCall, LegiscanVoteDetailView vote, PoliscoreDataset dataset) {
+		Legislator leg;
+		try
+		{
+			leg = dataset.get(Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), vote.getPeopleId()), Legislator.class).orElseThrow();
+		}
+		catch (NoSuchElementException ex)
+		{
+			Log.warn("Could not find legislator with people id " + vote.getPeopleId());
+			return;
+		}
+		
+		Bill bill;
+		try
+		{
+			bill = dataset.query(Bill.class, Bill.getClassStorageBucket(dataset.getSession().getNamespace(), dataset.getSession().getKey())).stream()
+					.filter(b -> b.getLegiscanId() == rollCall.getBillId()).findFirst().get();
+		}
+		catch (NoSuchElementException ex)
+		{
+			Log.warn("Could not find bill with id " + rollCall.getBillId());
+			return;
+		}
+		
+		LegislatorBillVote interaction = new LegislatorBillVote(toVoteStatus(vote.getVote()));
+		interaction.setLegId(leg.getId());
+		interaction.setBillId(bill.getId());
+		interaction.setDate(rollCall.getDate());
+		interaction.setBillName(bill.getName());
+		
+		leg.addBillInteraction(interaction);
+		
+		dataset.put(leg);
+	}
+	
+	public static VoteStatus toVoteStatus(LegiscanVoteStatus legiscanVoteStatus) {
+	    if (legiscanVoteStatus == null) {
+	        throw new IllegalArgumentException("LegiscanVoteStatus cannot be null.");
+	    }
+
+	    switch (legiscanVoteStatus) {
+	        case YEA:
+	            return VoteStatus.AYE;
+	        case NAY:
+	            return VoteStatus.NAY;
+	        case ABSTAIN:
+	            return VoteStatus.PRESENT;
+	        case ABSENT:
+	            return VoteStatus.NOT_VOTING;
+	        default:
+	            throw new IllegalStateException("Unexpected value: " + legiscanVoteStatus);
+	    }
+	}
+
 	
 	protected void importLegislator(LegiscanPeopleView view, PoliscoreDataset dataset) {
 	    if (view == null || StringUtils.isBlank(view.getName())) return;
@@ -284,4 +368,5 @@ public class LegiscanDataImporter implements DatasetImporter {
 	        dataset.put(leg);
 	    }
 	}
+
 }

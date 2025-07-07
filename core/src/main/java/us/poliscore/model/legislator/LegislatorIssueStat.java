@@ -29,9 +29,9 @@ import us.poliscore.model.legislator.Legislator.LegislatorName;
 public class LegislatorIssueStat implements Persistable {
 	public static final String ID_CLASS_PREFIX = "LIS";
 	
-	public static String getIndexPrimaryKey(TrackedIssue issue)
+	public static String getIndexPrimaryKey(TrackedIssue issue, String sessionKey)
 	{
-		return ID_CLASS_PREFIX + "/" + LegislativeNamespace.US_CONGRESS.getNamespace() + "/" + PoliscoreUtil.DEPLOYMENT_DATASET.getSessionKey() + "/" + issue.name();
+		return ID_CLASS_PREFIX + "/" + PoliscoreUtil.DEPLOYMENT_DATASET.getNamespace().getNamespace() + "/" + sessionKey + "/" + issue.name();
 	}
 	
 	public LegislatorIssueStat(TrackedIssue issue, long impact, Legislator leg) {

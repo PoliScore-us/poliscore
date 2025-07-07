@@ -26,7 +26,6 @@ import us.poliscore.ai.BatchOpenAIRequest;
 import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
-import us.poliscore.model.CongressionalSession;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
@@ -34,12 +33,9 @@ import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorBillInteraction;
 import us.poliscore.model.legislator.LegislatorInterpretation;
-import us.poliscore.service.BillService;
+import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorInterpretationService;
-import us.poliscore.service.LegislatorService;
-import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
-import us.poliscore.service.RollCallService;
 import us.poliscore.service.storage.S3PersistenceService;
 
 /**
@@ -53,19 +49,10 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	public static final boolean CHECK_S3_EXISTS = true;
 	
 	@Inject
-	private MemoryObjectService memService;
-	
-	@Inject
 	private S3PersistenceService s3;
 	
 	@Inject
-	private BillService billService;
-	
-	@Inject
-	private LegislatorService legService;
-	
-	@Inject
-	private RollCallService rollCallService;
+	private GovernmentDataService data;
 	
 	@Inject
 	private LegislatorInterpretationService legInterp;
@@ -86,25 +73,17 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	{
 		Log.info("Generating batch request to interpret legislators");
 		
-		PoliscoreUtil.CURRENT_SESSION = CongressionalSession.of(PoliscoreUtil.CURRENT_SESSION.getNumber() - 1);
-		legService.importLegislators();
-		billService.importBills();
-		rollCallService.importUscVotes();
-		
-		PoliscoreUtil.CURRENT_SESSION = CongressionalSession.of(PoliscoreUtil.CURRENT_SESSION.getNumber() + 1);
-		legService.importLegislators();
-		billService.importBills();
-		rollCallService.importUscVotes();
+		data.importDataset();
 		
 		int block = 1;
 		
 //		s3.optimizeExists(LegislatorInterpretation.class);
 		
-		for (Legislator l : memService.query(Legislator.class).stream()
+		for (Legislator l : data.getDataset().query(Legislator.class).stream()
 				.filter(l -> 
 					l.getInteractions().size() > 0
 //					&& (l.getBioguideId().equals("H000273"))
-					&& (!CHECK_S3_EXISTS || !s3.exists(LegislatorInterpretation.generateId(l.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class))
+					&& (!CHECK_S3_EXISTS || !s3.exists(LegislatorInterpretation.generateId(l.getId(), data.getSession().getKey(), data.getSession().getNamespace()), LegislatorInterpretation.class))
 				)
 				.sorted(Comparator.comparing(Legislator::getDate).reversed())
 //				.limit(1)
@@ -125,7 +104,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	
 	protected void interpret(Legislator leg)
 	{
-		legInterp.backfillInteractionsFromPreviousSession(leg);
+		legInterp.backfillInteractionsFromPreviousSession(leg, data.getPreviousSession());
 		
 		if (!legInterp.meetsInterpretationPrereqs(leg))
 		{
@@ -168,7 +147,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		if (includedBills.size() == 0)
 			return;
 		
-		createRequest(LegislatorInterpretation.generateId(leg.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretationService.getAiPrompt(leg, stats.toIssueStats()), String.join("\n", billMsgs));
+		createRequest(LegislatorInterpretation.generateId(leg.getId(), data.getSession().getKey(), data.getSession().getNamespace()), LegislatorInterpretationService.getAiPrompt(leg, stats.toIssueStats()), String.join("\n", billMsgs));
 	}
 
 	private void includeBillsByTopIssues(Legislator leg, DoubleIssueStats stats, List<String> billMsgs, Set<String> includedBills, int amount, boolean ascending) {
@@ -208,7 +187,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		
 		for (val interact : interacts.limit(amount).collect(Collectors.toList()))
 		{
-			val bill = memService.get(interact.getBillId(), Bill.class).orElseThrow();
+			val bill = data.getDataset().get(interact.getBillId(), Bill.class).orElseThrow();
 			
 			String billMsg = "- " + interact.describe() + " \"" + interact.getBillName() + "\" (" + bill.getStatus().getDescription() + "): " + interact.getShortExplain();
 			
@@ -233,7 +212,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		
 		for (val interact : billsByGrade.limit(amount).collect(Collectors.toList()))
 		{
-			val bill = memService.get(interact.getBillId(), Bill.class).orElseThrow();
+			val bill = data.getDataset().get(interact.getBillId(), Bill.class).orElseThrow();
 			val billMsg = "- " + interact.describe() + " \"" + interact.getBillName() + "\" (" + bill.getStatus().getDescription() + "): " + interact.getShortExplain();
 			if ( (String.join("\n", billMsgs) + "\n" + billMsg).length() < OpenAIService.MAX_REQUEST_LENGTH ) {
 				billMsgs.add(billMsg);
@@ -254,7 +233,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		
 		for (val interact : billsByImpact.limit(amount).collect(Collectors.toList()))
 		{
-			val bill = memService.get(interact.getBillId(), Bill.class).orElseThrow();
+			val bill = data.getDataset().get(interact.getBillId(), Bill.class).orElseThrow();
 			val billMsg = "- " + interact.describe() + " \"" + interact.getBillName() + "\" (" + bill.getStatus().getDescription() + "): " + interact.getShortExplain();
 			if ( (String.join("\n", billMsgs) + "\n" + billMsg).length() < OpenAIService.MAX_REQUEST_LENGTH ) {
 				billMsgs.add(billMsg);

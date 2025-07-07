@@ -57,7 +57,7 @@ public class Bill implements Persistable {
 	@JsonIgnore
 	protected transient BillText text;
 	
-	protected LegislativeNamespace namespace = LegislativeNamespace.US_CONGRESS;
+	protected LegislativeNamespace namespace = PoliscoreUtil.DEPLOYMENT_DATASET.getNamespace();
 	
 	protected LegislativeSession session;
 	
@@ -72,6 +72,8 @@ public class Bill implements Persistable {
 	protected int number;
 	
 	protected String name;
+	
+	protected int legiscanId;
 	
 //	protected String statusUrl;
 	
@@ -142,8 +144,8 @@ public class Bill implements Persistable {
 	
 	public void setId(String id) { }
 	
-	public boolean isIntroducedInSession(CongressionalSession session) {
-		return Integer.valueOf(session.getNumber()).equals(this.session);
+	public boolean isIntroducedInSession(LegislativeSession session) {
+		return session.equals(this.session);
 	}
 	
 	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX, Persistable.OBJECT_BY_RATING_ABS_INDEX, Persistable.OBJECT_BY_IMPACT_INDEX, OBJECT_BY_IMPACT_ABS_INDEX, OBJECT_BY_HOT_INDEX }) public String getStorageBucket() {
@@ -182,6 +184,7 @@ public class Bill implements Persistable {
 	{
 		return ID_CLASS_PREFIX + "/" + session.getNamespace().getNamespace() + "/" + session.getKey() + "/" + typeCode.toLowerCase() + "/" + number;
 	}
+	public static String generateId(LegislativeSession session, CongressionalBillType type, int number) { return generateId(session, type.name(), number); }
 	
 	@JsonIgnore public int getImpact(TrackedIssue issue) { return getImpact(issue, DEFAULT_IMPACT_LAW_WEIGHT); };
 	

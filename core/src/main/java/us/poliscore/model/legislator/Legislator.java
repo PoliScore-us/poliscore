@@ -66,8 +66,8 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 	
 	protected int legiscanId;
 	
-	// Senate Id : https://github.com/usgpo/bill-status/issues/241
-//	protected String lisId;
+	// Senate Id (only used in congress) : https://github.com/usgpo/bill-status/issues/241
+	protected String lisId;
 	
 	protected LegislatorInterpretation interpretation;
 	
@@ -120,9 +120,9 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 	public String getId()
 	{
 		if (session.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-			return generateId(LegislativeNamespace.US_CONGRESS, session, bioguideId);
+			return generateId(session.getNamespace(), session, bioguideId);
 		else
-			return generateId(LegislativeNamespace.US_CONGRESS, session, legiscanId);
+			return generateId(session.getNamespace(), session, legiscanId);
 	}
 	
 	public void setId(String id) { }

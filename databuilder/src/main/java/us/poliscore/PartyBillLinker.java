@@ -20,7 +20,7 @@ import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 public class PartyBillLinker {
-	public static void linkPartyBillsSinglePass(PartyInterpretation interp, SessionInterpretation sessionInterp, MemoryObjectService memService, LocalCachedS3Service s3) {
+	public static void linkPartyBillsSinglePass(PartyInterpretation interp, SessionInterpretation sessionInterp, PoliscoreDataset dataset, LocalCachedS3Service s3) {
 	    try {
 	        String exp = interp.getLongExplain();
 	        if (exp == null || exp.isEmpty()) {
@@ -28,7 +28,7 @@ public class PartyBillLinker {
 	        }
 
 	        // 1. Retrieve bills
-	        List<Bill> bills = new ArrayList<Bill>(memService.query(Bill.class));
+	        List<Bill> bills = new ArrayList<Bill>(dataset.query(Bill.class));
 	        
 	        // 2. (Optional) Attach BillInterpretation to each Bill
 	        for (Bill bill : bills) {

@@ -3,6 +3,9 @@ package us.poliscore.model.legislator;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+
+import org.apache.commons.lang3.StringUtils;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -25,7 +28,6 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecon
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 import us.poliscore.model.IssueStats;
-import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.VoteStatus;
@@ -106,14 +108,14 @@ public abstract class LegislatorBillInteraction implements Comparable<Legislator
 	}
 	
 	public static String generatePartitionKey(String legId) {
-		return ID_CLASS_PREFIX + "/" + LegislativeNamespace.US_CONGRESS.getNamespace() + "/"
-				+ legId.replace(Legislator.ID_CLASS_PREFIX + "/", "").replace(LegislativeNamespace.US_CONGRESS.getNamespace() + "/", "");
+		return legId.replace(Legislator.ID_CLASS_PREFIX, ID_CLASS_PREFIX);
 	}
 	
 	public static String generateSortKey(LocalDate date, String billId) {
+		var idParts = Arrays.asList(billId.split("/"));
 		return date.format(DateTimeFormatter.ofPattern("yyyyMMdd"))
 				+ "/"
-				+ billId.replace(Bill.ID_CLASS_PREFIX + "/", "").replace(LegislativeNamespace.US_CONGRESS.getNamespace() + "/", "");
+				+ StringUtils.join(idParts.subList(2, idParts.size()), "/");
 	}
 	
 	@DdbKeyProvider

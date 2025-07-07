@@ -36,10 +36,10 @@ import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.parsing.XMLBillSlicer;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
+import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
-import us.poliscore.service.RollCallService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 @QuarkusMain(name="BatchBillRequestGenerator")
@@ -48,9 +48,6 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	public static final long TOKEN_BLOCK_SIZE = 30000000;
 	
 	public static final boolean CHECK_S3_EXISTS = true;
-	
-	@Inject
-	private MemoryObjectService memService;
 	
 	@Inject
 	private LocalCachedS3Service s3;
@@ -65,10 +62,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	protected PressBillInterpretationRequestGenerator pressBillInterpGenerator;
 	
 	@Inject
-	private LegislatorService legService;
-	
-	@Inject
-	private RollCallService rollCallService;
+	private GovernmentDataService data;
 	
 	private long tokenLen = 0;
 	
@@ -97,8 +91,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		
 		Log.info("Generating batch request to interpret bills");
 		
-		legService.importLegislators();
-		billService.importBills();
+		data.importDataset();
 		
 		int block = 1;
 		
@@ -107,7 +100,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		
 //		List<String> specificFetch = Arrays.asList(Bill.generateId(119, BillType.HR, 2923));
 		
-		for (Bill b : memService.query(Bill.class).stream()
+		for (Bill b : data.getDataset().query(Bill.class).stream()
 //				.filter(b -> specificFetch.contains(b.getId()))
 				.filter(b -> (!CHECK_S3_EXISTS || !billInterpreter.isInterpreted(b.getId()) || (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))))
 				.filter(b -> s3.exists(BillText.generateId(b.getId()), BillText.class))
@@ -205,7 +198,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		writeBlock(block++);
 		
 //		if (totalRequests == 0) {
-//			val mostRecent = memService.query(Bill.class).stream()
+//			val mostRecent = data.getDataset().query(Bill.class).stream()
 //					.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed())
 //					.limit(100)
 //					.filter(b -> (!CHECK_S3_EXISTS || !billInterpreter.isInterpreted(b.getId())))

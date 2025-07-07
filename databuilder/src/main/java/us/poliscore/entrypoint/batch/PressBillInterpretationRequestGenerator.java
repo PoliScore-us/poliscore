@@ -21,8 +21,6 @@ import java.util.stream.Stream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Node;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,14 +48,13 @@ import us.poliscore.model.bill.BillText;
 import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.press.BillArticleRecognizer;
 import us.poliscore.press.GoogleSearchResponse;
-import us.poliscore.press.RedditFetcher;
 import us.poliscore.service.BillService;
+import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PressInterpService;
-import us.poliscore.service.RollCallService;
 import us.poliscore.service.SecretService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
@@ -240,9 +237,6 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	public static String AI_MODEL = "gpt-4.1-mini";
 	
 	@Inject
-	private MemoryObjectService memService;
-	
-	@Inject
 	private LocalFilePersistenceService localStore;
 	
 	@Inject
@@ -258,7 +252,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	private LegislatorService legService;
 	
 	@Inject
-	private RollCallService rollCallService;
+	private GovernmentDataService data;
 	
 	@Inject
 	private LegislatorInterpretationService legInterp;
@@ -300,9 +294,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	{
 		Log.info("Scraping press articles");
 		
-		legService.importLegislators();
-		billService.importBills();
-		rollCallService.importUscVotes();
+		data.importDataset();
 		
 		s3.optimizeExists(BillText.class);
 		s3.optimizeExists(PressInterpretation.class);
@@ -317,11 +309,11 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		// Determine what bills to process //
 		Stream<Bill> bills;
 		if (specificFetch.length > 0) {
-			bills = memService.query(Bill.class).stream().filter(b -> Arrays.asList(specificFetch).contains(b.getId()));
+			bills = data.getDataset().query(Bill.class).stream().filter(b -> Arrays.asList(specificFetch).contains(b.getId()));
 		} else {
-			bills = memService.query(Bill.class).stream().filter(b ->
-				b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION)
-				&& s3.exists(BillText.generateId(b.getId()), BillText.class));
+			bills = data.getDataset().query(Bill.class).stream().filter(b ->
+//				b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION) &&
+				s3.exists(BillText.generateId(b.getId()), BillText.class));
 //				&& b.getIntroducedDate().isBefore(LocalDate.now().minus(10, ChronoUnit.DAYS)) // Must be at least x days old (otherwise there won't be press coverage) - Commented out. If we're going to pass the bill text through AI we might as well scan for press. Ideally this filter criteria would exactly match the bill request generator
 		}
 		
@@ -409,7 +401,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		if (interp != null && LocalDate.now().isBefore(b.getIntroducedDate().plus(19, ChronoUnit.DAYS)) && interp.getLastPressQuery().isAfter(LocalDate.now().minus(10, ChronoUnit.DAYS)) && !Arrays.asList(specificFetch).contains(b.getId())) return;
 		if (interp == null) interp = new BillInterpretation();
 		
-		final String typeAndNumber = b.getType().getName().toUpperCase() + " " + b.getNumber();
+		final String typeAndNumber = b.getType().toUpperCase() + " " + b.getNumber();
 		
 		String query;
 		if (b.getName() == null || StringUtils.isEmpty(b.getName()) || b.getName().toLowerCase().replaceAll("[\\s\\.]+", "").equals(typeAndNumber.toLowerCase().replaceAll("[\\s\\.]+", "")))
@@ -421,7 +413,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		}
 		else
 		{
-			query = b.getType().getName().toUpperCase() + " " + b.getNumber() + " " + b.getName();
+			query = b.getType().toUpperCase() + " " + b.getNumber() + " " + b.getName();
 		}
 		
 	    val encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8);
@@ -526,7 +518,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		String oid = PressInterpretation.generateId(b.getId(), origin);
 		var data = new CustomOriginData(origin, oid);
 		
-		var prompt = PRESS_INTERPRETATION_PROMPT.replace("{{billIdentifier}}", "United States, " + b.getSession() + "th Congress" + ", " + b.getOriginatingChamber().getName() + "\n" + b.getType().getName() + " " + b.getNumber() + " - " + b.getName() + "\nIntroduced in " + b.getIntroducedDate());
+		var prompt = PRESS_INTERPRETATION_PROMPT.replace("{{billIdentifier}}", "United States, " + b.getSession() + "th Congress" + ", " + b.getOriginatingChamber().getName() + "\n" + b.getType() + " " + b.getNumber() + " - " + b.getName() + "\nIntroduced in " + b.getIntroducedDate());
 		
 		String text = "title: " + origin.getTitle() + "\nurl: " + origin.getUrl() + "\n\n";
 		
