@@ -72,7 +72,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	public static final long TOKEN_BLOCK_SIZE = 30000000;
 	
 	private static final String PRESS_INTERPRETATION_PROMPT_TEMPLATE = """
-			You will be given what is suspected, but not guaranteed, to be a press article which contains information about the following United States bill currently in congress.
+			You will be given what is suspected, but not guaranteed, to be a press article which contains information about the following United States bill.
 			{{billIdentifier}}
 
 			In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Short Report:') in your response. Do not include the section instructions in your response. Do not include any special formatting or emojis in your response (raw text only please). If the answer to a chain of thought section is ‘no’, you are to write 'NO_INTERPRETATION’ at the end of the chain of thought section and exit without filling out the rest of the sections.
@@ -88,7 +88,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 			All five of these criteria are NOT required for a bill identity match to be positive, use your best judgement. If a bill identity match was not found, you are to end this section with ‘NO_INTERPRETATION’ and exit.
 			
 			Chain of Thought - Identify Useful Information:
-			In this section you are to determine if the article actually includes any useful or notable information, beyond what can be easily scraped from congress or the bill text. Some examples of useful information are as follows
+			In this section you are to determine if the article actually includes any useful or notable information, beyond what can be easily scraped from government data or the bill text. Some examples of useful information are as follows
 			1. Text that states whether a particular organization supports (or does not support), endorses, or has otherwise influenced or lobbied the bill
 			2. A conversation thread where people are expressing opinions, either positive or negative, or providing insight into the bill
 			3. Any sort of analysis which may give insight into the bill’s predicted impact to society or a subset of society
@@ -96,7 +96,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 			5. An organization saying that they are either scared or excited or some internal feeling they might have about the bill
 			
 			The following does NOT count as useful information
-			1. General ‘legislative updates’ where an organization is describing that a bill has been introduced, without giving any opinion either for or against the bill or offering any additional useful information beyond what can easily be scraped from congress
+			1. General ‘legislative updates’ where an organization is describing that a bill has been introduced, without giving any opinion either for or against the bill or offering any additional useful information beyond what can easily be scraped from government data
 			2. A ‘bill tracker’ page, outlining what the bill is, maybe giving an AI summary, and basic information about the bill
 			
 			‘Legislative update’ articles are tricky! Sometimes they include useful information, sometimes they do not. Use your best judgement. If useful information was not found, you are to end this section with ‘NO_INTERPRETATION’ and exit.
@@ -122,10 +122,10 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	
 	/* This is an older prompt (run on gpt-4o) which many press interpretations were generated. It worked pretty well, but due to cost reasons we want to get off gpt-4o 
 
-	 		You will be given what is suspected, but not guaranteed, to be a press article which contains information about the following United States bill currently in congress.
+	 		You will be given what is suspected, but not guaranteed, to be a press article which contains information about the following United States bill.
 			{{billIdentifier}}
 			
-			The first thing you must determine is if this text offers any interesting or useful analysis, information or an organization's stance about the bill in question. We are looking for information beyond what can be easily scraped from congress, so information such as basic voting information, an introduction date, a bill title, or simply an announcement that a bill was introduced or has passed does NOT count.
+			The first thing you must determine is if this text offers any interesting or useful analysis, information or an organization's stance about the bill in question. We are looking for information beyond what can be easily scraped from government data, so information such as basic voting information, an introduction date, a bill title, or simply an announcement that a bill was introduced or has passed does NOT count.
 			
 			If the provided text is NOT an interpretation of this bill or if the interpretation is of a different bill, you are to immediately respond as 'NO_INTERPRETATION - <reason>' where <reason> is the reason why you don't think it's a valid interpretation for this bill and EXIT.
 			
@@ -408,8 +408,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		{
 			query = typeAndNumber;
 			
-			if (b.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-				query = "Congress " + query;
+			query = b.getNamespace().getDescription() + " " + query;
 		}
 		else
 		{
@@ -518,7 +517,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		String oid = PressInterpretation.generateId(b.getId(), origin);
 		var data = new CustomOriginData(origin, oid);
 		
-		var prompt = PRESS_INTERPRETATION_PROMPT.replace("{{billIdentifier}}", "United States, " + b.getSession() + "th Congress" + ", " + b.getOriginatingChamber().getName() + "\n" + b.getType() + " " + b.getNumber() + " - " + b.getName() + "\nIntroduced in " + b.getIntroducedDate());
+		var prompt = PRESS_INTERPRETATION_PROMPT.replace("{{billIdentifier}}", buildBillIdentifier(b));
 		
 		String text = "title: " + origin.getTitle() + "\nurl: " + origin.getUrl() + "\n\n";
 		
@@ -532,6 +531,21 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		
 		return true;
 	}
+	
+	protected String buildBillIdentifier(Bill bill) {
+    	String id = "United States, ";
+    	
+    	if (bill.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
+    		id += bill.getSession().getKey() + "th Congress";
+    	} else {
+    		id += "State of " + bill.getSession().getNamespace().getDescription();
+    	}
+    	
+    	return id + ", " +
+                bill.getOriginatingChamber().getName() + "\n" +
+                bill.getType() + " " + bill.getNumber() + " - " + bill.getName() +
+                "\nIntroduced in " + bill.getIntroducedDate();
+    }
 	
 	private void createRequest(CustomOriginData data, String sysMsg, String userMsg) {
 		if ((userMsg.length() + sysMsg.length()) > OpenAIService.MAX_GPT4o_REQUEST_LENGTH) {

@@ -14,6 +14,7 @@ import java.util.regex.Pattern;
 
 import lombok.Data;
 import lombok.experimental.UtilityClass;
+import us.poliscore.legiscan.view.LegiscanBillType;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
@@ -65,16 +66,42 @@ public class BillArticleRecognizer {
     );
 
     // BillType tokens
-    private static final Map<CongressionalBillType, List<String>> TYPE_TOKENS = new EnumMap<>(CongressionalBillType.class);
+    private static final Map<String, List<String>> TYPE_TOKENS = new HashMap<>();
     static {
-        TYPE_TOKENS.put(CongressionalBillType.HR,    Arrays.asList("hr", "h.r.", "house bill"));
-        TYPE_TOKENS.put(CongressionalBillType.S,     Arrays.asList("s", "s.", "senate bill"));
-        TYPE_TOKENS.put(CongressionalBillType.SCONRES, Collections.singletonList("s.con.res."));
-        TYPE_TOKENS.put(CongressionalBillType.HRES,  Collections.singletonList("h.res."));
-        TYPE_TOKENS.put(CongressionalBillType.HCONRES,Collections.singletonList("h.con.res."));
-        TYPE_TOKENS.put(CongressionalBillType.SJRES, Collections.singletonList("s.j.res."));
-        TYPE_TOKENS.put(CongressionalBillType.SRES,  Collections.singletonList("s.res."));
-        TYPE_TOKENS.put(CongressionalBillType.HJRES, Collections.singletonList("h.j.res."));
+    	// Congressional bill types
+        TYPE_TOKENS.put(CongressionalBillType.HR.name(), Arrays.asList("hr", "h.r.", "house bill"));
+        TYPE_TOKENS.put(CongressionalBillType.S.name(), Arrays.asList("s", "s.", "senate bill"));
+        TYPE_TOKENS.put(CongressionalBillType.SCONRES.name(), Collections.singletonList("s.con.res."));
+        TYPE_TOKENS.put(CongressionalBillType.HRES.name(), Collections.singletonList("h.res."));
+        TYPE_TOKENS.put(CongressionalBillType.HCONRES.name(),Collections.singletonList("h.con.res."));
+        TYPE_TOKENS.put(CongressionalBillType.SJRES.name(), Collections.singletonList("s.j.res."));
+        TYPE_TOKENS.put(CongressionalBillType.SRES.name(),  Collections.singletonList("s.res."));
+        TYPE_TOKENS.put(CongressionalBillType.HJRES.name(), Collections.singletonList("h.j.res."));
+        
+        // Legiscan/state bill types
+        TYPE_TOKENS.put(LegiscanBillType.BILL.getCode(),    Arrays.asList("hb", "sb", "bill"));
+        TYPE_TOKENS.put(LegiscanBillType.RESOLUTION.getCode(), Arrays.asList("resolution", "hr", "sr"));
+        TYPE_TOKENS.put(LegiscanBillType.CONCURRENT_RESOLUTION.getCode(), Arrays.asList("concurrent resolution", "hcr", "scr"));
+        TYPE_TOKENS.put(LegiscanBillType.JOINT_RESOLUTION.getCode(), Arrays.asList("joint resolution", "hjr", "sjr"));
+        TYPE_TOKENS.put(LegiscanBillType.JOINT_RESOLUTION_CONSTITUTIONAL_AMENDMENT.getCode(), Arrays.asList("constitutional amendment", "joint resolution constitutional amendment"));
+        TYPE_TOKENS.put(LegiscanBillType.EXECUTIVE_ORDER.getCode(), Collections.singletonList("executive order"));
+        TYPE_TOKENS.put(LegiscanBillType.CONSTITUTIONAL_AMENDMENT.getCode(), Arrays.asList("constitutional amendment", "amendment"));
+        TYPE_TOKENS.put(LegiscanBillType.MEMORIAL.getCode(), Collections.singletonList("memorial"));
+        TYPE_TOKENS.put(LegiscanBillType.CLAIM.getCode(), Collections.singletonList("claim"));
+        TYPE_TOKENS.put(LegiscanBillType.COMMENDATION.getCode(), Collections.singletonList("commendation"));
+        TYPE_TOKENS.put(LegiscanBillType.COMMITTEE_STUDY_REQUEST.getCode(), Arrays.asList("committee study request", "csr"));
+        TYPE_TOKENS.put(LegiscanBillType.JOINT_MEMORIAL.getCode(), Collections.singletonList("joint memorial"));
+        TYPE_TOKENS.put(LegiscanBillType.PROCLAMATION.getCode(), Collections.singletonList("proclamation"));
+        TYPE_TOKENS.put(LegiscanBillType.STUDY_REQUEST.getCode(), Collections.singletonList("study request"));
+        TYPE_TOKENS.put(LegiscanBillType.ADDRESS.getCode(), Collections.singletonList("address"));
+        TYPE_TOKENS.put(LegiscanBillType.CONCURRENT_MEMORIAL.getCode(), Collections.singletonList("concurrent memorial"));
+        TYPE_TOKENS.put(LegiscanBillType.INITIATIVE.getCode(), Arrays.asList("initiative", "ballot initiative"));
+        TYPE_TOKENS.put(LegiscanBillType.PETITION.getCode(), Collections.singletonList("petition"));
+        TYPE_TOKENS.put(LegiscanBillType.STUDY_BILL.getCode(), Arrays.asList("study bill", "sb"));
+        TYPE_TOKENS.put(LegiscanBillType.INITIATIVE_PETITION.getCode(), Arrays.asList("initiative petition", "ip"));
+        TYPE_TOKENS.put(LegiscanBillType.REPEAL_BILL.getCode(), Arrays.asList("repeal bill", "rb"));
+        TYPE_TOKENS.put(LegiscanBillType.REMONSTRATION.getCode(), Collections.singletonList("remonstration"));
+        TYPE_TOKENS.put(LegiscanBillType.COMMITTEE_BILL.getCode(), Arrays.asList("committee bill", "cb"));
     }
 
     // Chamber tokens
@@ -84,6 +111,8 @@ public class BillArticleRecognizer {
             "house of representatives", "u.s. house", "us house", "house"));
         CHAMBER_TOKENS.put(LegislativeChamber.UPPER, Arrays.asList(
             "senate", "u.s. senate", "us senate"));
+        CHAMBER_TOKENS.put(LegislativeChamber.JOINT, Arrays.asList(
+                "joint chamber"));
     }
 
     // Political context tokens
@@ -109,6 +138,14 @@ public class BillArticleRecognizer {
         federal.put("congress", 0.8f);
         federal.put("federal", 0.5f);
         NAMESPACE_TOKENS.put(LegislativeNamespace.US_CONGRESS, federal);
+        
+        for (var ns : LegislativeNamespace.values()) {
+        	if (!LegislativeNamespace.US_CONGRESS.equals(ns)) {
+        		Map<String, Float> m = new HashMap<>();
+        		m.put(ns.getDescription(), 1.0f);
+        		NAMESPACE_TOKENS.put(ns, m);
+        	}
+    	}
     }
 
     // Known federal site indicators
@@ -244,7 +281,8 @@ public class BillArticleRecognizer {
     }
 
     private float scoreChamber(Bill bill, String text) {
-        LegislativeChamber cham = CongressionalBillType.getOriginatingChamber(bill.getType());
+        LegislativeChamber cham = bill.getOriginatingChamber();
+        
         return CHAMBER_TOKENS.getOrDefault(cham, Collections.emptyList())
                 .stream()
                 .anyMatch(text::contains)
@@ -253,7 +291,13 @@ public class BillArticleRecognizer {
     }
 
     private float scoreSession(Bill bill, String text) {
-        String pat = bill.getSession() + "(st|nd|rd|th) congress";
+    	String pat;
+    	if (bill.getNamespace() == LegislativeNamespace.US_CONGRESS) {
+    	    pat = bill.getSession().getKey() + "(st|nd|rd|th)? congress";
+    	} else {
+    	    return 0f;
+    	}
+        
         return Pattern.compile(pat, Pattern.CASE_INSENSITIVE)
                 .matcher(text)
                 .find()

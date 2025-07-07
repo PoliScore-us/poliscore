@@ -22,27 +22,27 @@ public class BillGen {
 	// Big transportation bill
 	public static final InputStream btx118hr3935 = BillGen.class.getResourceAsStream("/btx/BILLS-118hr3935enr.xml");
 	
-	public static Bill gen() {
-		val bill = new Bill();
-
-		// TODO : Sponsor and cosponsor
-		bill.setSession(118);
-		bill.setType(CongressionalBillType.HR);
-		bill.setNumber(8580);
-		bill.setName("The Best Bill Ever");
-		bill.setIntroducedDate(LocalDate.now());
-		
-		return bill;
-	}
-	
-	@SneakyThrows
-	public static BillText genTxt(Bill bill, InputStream xml) {
-		val text = new BillText();
-		
-		text.setBillId(bill.getId());
-		text.setLastUpdated(LocalDate.now());
-		text.setXml(IOUtils.toString(xml, "UTF-8"));
-		
-		return text;
-	}
+//	public static Bill gen() {
+//		val bill = new Bill();
+//
+//		// TODO : Sponsor and cosponsor
+//		bill.setSession(118);
+//		bill.setType(CongressionalBillType.HR);
+//		bill.setNumber(8580);
+//		bill.setName("The Best Bill Ever");
+//		bill.setIntroducedDate(LocalDate.now());
+//		
+//		return bill;
+//	}
+//	
+//	@SneakyThrows
+//	public static BillText genTxt(Bill bill, InputStream xml) {
+//		val text = new BillText();
+//		
+//		text.setBillId(bill.getId());
+//		text.setLastUpdated(LocalDate.now());
+//		text.setXml(IOUtils.toString(xml, "UTF-8"));
+//		
+//		return text;
+//	}
 }
