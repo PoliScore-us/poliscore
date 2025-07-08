@@ -30,14 +30,12 @@ import lombok.val;
 import us.poliscore.Environment;
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreUtil;
+import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorInterpretation;
-import us.poliscore.service.BillInterpretationService;
-import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
-import us.poliscore.service.LegislatorService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
@@ -46,6 +44,9 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 @QuarkusMain(name="WebappDataGenerator")
 public class WebappDataGenerator implements QuarkusApplication
 {
+	
+	protected static String WEBAPP_PATH = "../../webapp";
+	
 //	@Inject
 //	private MemoryObjectService memService;
 	
@@ -81,13 +82,26 @@ public class WebappDataGenerator implements QuarkusApplication
 		generateSiteMap(datasets);
 		generateLegislatorWebappIndex(datasets);
 		generateBillWebappIndex(datasets);
-			
+		writeSessionInfo(datasets);
+		
 		Log.info("Webapp Data Generator complete.");
 	}
 	
 	@SneakyThrows
+	private void writeSessionInfo(List<PoliscoreDataset> datasets) {
+		final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/webui/sessions.json");
+		val result = new ArrayList<LegislativeSession>();
+		
+		for (var dataset : datasets) {
+			result.add(dataset.getSession());
+		}
+		
+		FileUtils.write(out, PoliscoreUtil.getObjectMapper().writeValueAsString(result), "UTF-8");
+	}
+	
+	@SneakyThrows
 	private void generateRoutes(List<PoliscoreDataset> datasets) {
-		final File out = new File(Environment.getDeployedPath(), "../../webapp/src/main/webui/routes.txt");
+		final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/webui/routes.txt");
 		val routes = new ArrayList<String>();
 		
 		// Party Stats
@@ -121,7 +135,7 @@ public class WebappDataGenerator implements QuarkusApplication
 	@SneakyThrows
 	private void generateSiteMap(List<PoliscoreDataset> datasets) {
 		final String url = "https://poliscore.us";
-		final File out = new File(Environment.getDeployedPath(), "../../webapp/src/main/webui/src/assets/sitemap.txt");
+		final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/webui/src/assets/sitemap.txt");
 		val routes = new ArrayList<String>();
 		
 		for (var dataset : datasets)
@@ -160,7 +174,7 @@ public class WebappDataGenerator implements QuarkusApplication
 	
 	@SneakyThrows
 	public void generateLegislatorWebappIndex(List<PoliscoreDataset> datasets) {
-	    final File out = new File(Environment.getDeployedPath(), "../../webapp/src/main/resources/legislators.index");
+	    final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/resources/legislators.index");
 	    Map<String, Set<String>> canonToNick = loadNicknameMap(); // canonical → nicknames
 
 	    val uniqueSet = new HashMap<String, Legislator>();
@@ -216,7 +230,7 @@ public class WebappDataGenerator implements QuarkusApplication
 	
 	@SneakyThrows
 	public void generateBillWebappIndex(List<PoliscoreDataset> datasets) {
-	    final File out = new File(Environment.getDeployedPath(), "../../webapp/src/main/resources/bills.index");
+	    final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/resources/bills.index");
 	    DateTimeFormatter usFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 	    SnowballStemmer stemmer = new englishStemmer();
 	    

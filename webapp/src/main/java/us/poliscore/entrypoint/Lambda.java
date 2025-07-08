@@ -35,6 +35,7 @@ import us.poliscore.Page;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.CongressionalSession;
 import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
@@ -66,6 +67,8 @@ public class Lambda {
     
     private static List<List<String>> cachedAllLegs;
     
+    private static List<LegislativeSession> cachedSessions;
+    
     private static Map<String, List<Legislator>> cachedLegislators = new HashMap<String, List<Legislator>>();
     
     private static Map<String, List<Bill>> cachedBills = new HashMap<String, List<Bill>>();
@@ -77,10 +80,14 @@ public class Lambda {
     @GET
     @Path("getSessionStats")
     public SessionInterpretationOld getSessionStats() {
-    	val op = ddb.get(SessionInterpretationOld.generateId(PoliscoreUtil.CURRENT_SESSION.getNumber()), SessionInterpretationOld.class);
+    	val op = ddb.get(SessionInterpretationOld.generateId(deploymentSession().getNamespace(), deploymentSession().getKey()), SessionInterpretationOld.class);
     	
     	if (op.isEmpty()) {
-    		return ddb.get(SessionInterpretationOld.generateId(PoliscoreUtil.CURRENT_SESSION.getNumber() - 1), SessionInterpretationOld.class).orElse(null);
+    		for (var session : getSessions()) {
+    			if (!session.equals(deploymentSession()) && session.getNamespace().equals(deploymentSession().getNamespace())) {
+    				return ddb.get(SessionInterpretationOld.generateId(session.getNamespace(), session.getKey()), SessionInterpretationOld.class).orElse(null);
+    			}
+    		}
     	}
     	
     	return op.orElse(null);
@@ -192,7 +199,7 @@ public class Lambda {
     	var pageSize = _pageSize == null ? 25 : _pageSize;
     	Boolean ascending = _ascending == null ? Boolean.TRUE : _ascending;
     	
-    	Integer year = _year == null ? Integer.valueOf(PoliscoreUtil.DEPLOYMENT_YEAR) : _year;
+    	Integer year = _year == null ? Integer.valueOf(deploymentSession().getEndDate().getYear()) : _year;
     	String storageBucket = Legislator.ID_CLASS_PREFIX + "/" + LegislativeNamespace.US_CONGRESS.getNamespace() + "/" + CongressionalSession.fromYear(year).getNumber();
     	
     	val cacheable = StringUtils.isBlank(startKey) && pageSize == 25 && !index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX) && !index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX);
@@ -200,7 +207,7 @@ public class Lambda {
     	if (cacheable && cachedLegislators.containsKey(cacheKey)) return cachedLegislators.get(cacheKey).stream().map(l -> (Persistable) l).toList();
     	
     	if (index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX) || index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX)) {
-    		storageBucket = LegislatorIssueStat.getIndexPrimaryKey(TrackedIssue.valueOf(sortKey));
+    		storageBucket = LegislatorIssueStat.getIndexPrimaryKey(TrackedIssue.valueOf(sortKey), deploymentSession().getKey());
     		sortKey = null;
     		val legs = ddb.query(LegislatorIssueStat.class, pageSize, index, ascending, startKey, sortKey, storageBucket);
     		return legs.stream().map(l -> (Persistable) l).toList();
@@ -222,7 +229,7 @@ public class Lambda {
     @Path("/getLegislatorPageData")
     public LegislatorPageData getLegislatorPageData(@Context APIGatewayV2HTTPEvent event, @RestQuery("state") String state, @RestQuery("year") Integer _year) {
     	String location = null;
-    	Integer year = _year == null ? Integer.valueOf(PoliscoreUtil.DEPLOYMENT_YEAR) : _year;
+    	Integer year = _year == null ? Integer.valueOf(deploymentSession().getEndDate().getYear()) : _year;
     	
     	if (StringUtils.isNotBlank(state)) {
     		location = state.toUpperCase();
@@ -241,6 +248,20 @@ public class Lambda {
     	val legs = getLegislators(null, index, null, null, location, year);
     	
     	return new LegislatorPageData(location, legs, getAllLegs());
+    }
+    
+    private LegislativeSession deploymentSession() {
+    	return getSessions().get(0);
+    }
+    
+    @SuppressWarnings("unchecked")
+    @SneakyThrows
+    private List<LegislativeSession> getSessions() {
+    	if (cachedSessions == null) {
+    		cachedSessions = PoliscoreUtil.getObjectMapper().readValue(IOUtils.toString(Lambda.class.getResourceAsStream("/sessions.json"), "UTF-8"), List.class);
+    	}
+    	
+    	return cachedSessions;
     }
     
     @SuppressWarnings("unchecked")
@@ -277,7 +298,7 @@ public class Lambda {
     	var pageSize = _pageSize == null ? 25 : _pageSize;
     	Boolean ascending = _ascending == null ? Boolean.TRUE : _ascending;
     	
-    	Integer year = _year == null ? Integer.valueOf(PoliscoreUtil.DEPLOYMENT_YEAR) : _year;
+    	Integer year = _year == null ? Integer.valueOf(deploymentSession().getEndDate().getYear()) : _year;
     	String storageBucket = Bill.ID_CLASS_PREFIX + "/" + LegislativeNamespace.US_CONGRESS.getNamespace() + "/" + CongressionalSession.fromYear(year).getNumber();
     	
     	val cacheable = StringUtils.isBlank(startKey) && pageSize == 25 && StringUtils.isBlank(sortKey) && !index.startsWith(TRACKED_ISSUE_INDEX) && !index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX) && !index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX);
@@ -286,7 +307,7 @@ public class Lambda {
     	
     	List<Bill> bills;
     	if (index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX) || index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX)) {
-    		storageBucket = BillIssueStat.getIndexPrimaryKey(TrackedIssue.valueOf(sortKey));
+    		storageBucket = BillIssueStat.getIndexPrimaryKey(TrackedIssue.valueOf(sortKey), deploymentSession().getKey());
     		sortKey = null;
     		val bii = ddb.query(BillIssueStat.class, pageSize, index, ascending, startKey, sortKey, storageBucket);
     		return bii.stream().map(l -> (Persistable) l).toList();
