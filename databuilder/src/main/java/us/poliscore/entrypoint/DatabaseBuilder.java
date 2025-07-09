@@ -27,6 +27,7 @@ import us.poliscore.entrypoint.batch.BatchBillRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchLegislatorRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchOpenAIResponseImporter;
 import us.poliscore.entrypoint.batch.PressBillInterpretationRequestGenerator;
+import us.poliscore.images.CongressionalLegislatorImageFetcher;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.Persistable;
@@ -61,12 +62,6 @@ public class DatabaseBuilder implements QuarkusApplication
 	public static boolean REINTERPRET_LEGISLATORS = true;
 	
 	public static boolean REINTERPRET_PARTIES = false;
-	
-	@Inject
-	private S3ImageDatabaseBuilder imageBuilder;
-	
-	@Inject
-	private GPOBulkBillTextFetcher billTextFetcher;
 	
 	@Inject
 	private BatchBillRequestGenerator billRequestGenerator;
@@ -114,15 +109,13 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	protected void process() throws IOException
 	{
-		updateUscLegislators();
-		
 		s3.optimizeExists(BillInterpretation.class);
 		s3.optimizeExists(LegislatorInterpretation.class);
 		
 		data.importDataset();
+		data.syncS3LegislatorImages(data.getDataset());
+		data.syncS3BillText(data.getDataset());
 		
-		imageBuilder.process();
-		billTextFetcher.process();
 		syncDdbWithS3();
 		
 		interpretBillPressArticles();
@@ -190,17 +183,6 @@ public class DatabaseBuilder implements QuarkusApplication
 			}
 		}
 		Log.info("Updated " + updated.size() + " bills whose press interpretations were out of date.");
-	}
-	
-	@SneakyThrows
-	private void updateUscLegislators()
-	{
-		Log.info("Updating USC legislators resource files");
-		
-		File dbRes = new File(Environment.getDeployedPath(), "../../databuilder/src/main/resources");
-		
-		FileUtils.copyURLToFile(URI.create("https://unitedstates.github.io/congress-legislators/legislators-current.json").toURL(), new File(dbRes, "legislators-current.json"));
-		FileUtils.copyURLToFile(URI.create("https://unitedstates.github.io/congress-legislators/legislators-historical.json").toURL(), new File(dbRes, "legislators-historical.json"));
 	}
 	
 	@SneakyThrows

@@ -4,11 +4,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
+
+import org.apache.commons.io.FileUtils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -20,8 +23,11 @@ import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
 import software.amazon.awssdk.utils.StringUtils;
+import us.poliscore.Environment;
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreDataset.DatasetReference;
+import us.poliscore.entrypoint.GPOBulkBillTextFetcher;
+import us.poliscore.images.CongressionalLegislatorImageFetcher;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.CongressionalSession;
 import us.poliscore.model.LegislativeChamber;
@@ -44,23 +50,52 @@ import us.poliscore.view.USCRollCallData;
 import us.poliscore.view.USCRollCallData.USCRollCallVote;
 
 @ApplicationScoped
-public class USCDataImporter implements DatasetSupplier {
+public class USCDatasetProvider implements DatasetProvider {
 	
 	public static boolean memorizedRollCall = false;
 	
+	public static boolean updatedLegislatorFiles = false;
+	
 	@Inject
 	protected LegislatorService lService;
+	
+	@Inject
+	private CongressionalLegislatorImageFetcher congressionalImageFetcher;
+	
+	@Inject
+	private GPOBulkBillTextFetcher billTextFetcher;
 	
 	@Override
 	public PoliscoreDataset importDataset(DatasetReference ref) {
 		LegislativeSession session = new LegislativeSession(LocalDate.of(ref.getYear() - 1, 1, 1), LocalDate.of(ref.getYear(), 12, 31), String.valueOf(CongressionalSession.fromYear(ref.getYear()).getNumber()), LegislativeNamespace.US_CONGRESS);
 		PoliscoreDataset dataset = new PoliscoreDataset(session);
 		
+		updateUscLegislators();
 		importUSCLegislators(dataset);
 		importUscBills(dataset);
 		importUscVotes(dataset);
 		
 		return dataset;
+	}
+	
+	@SneakyThrows
+	public void syncS3LegislatorImages(PoliscoreDataset dataset) {
+		congressionalImageFetcher.syncS3LegislatorImages(dataset);
+	}
+	
+	@SneakyThrows
+	private void updateUscLegislators()
+	{
+		if (updatedLegislatorFiles) return;
+		
+		Log.info("Updating USC legislators resource files");
+		
+		File dbRes = new File(Environment.getDeployedPath(), "../../databuilder/src/main/resources");
+		
+		FileUtils.copyURLToFile(URI.create("https://unitedstates.github.io/congress-legislators/legislators-current.json").toURL(), new File(dbRes, "legislators-current.json"));
+		FileUtils.copyURLToFile(URI.create("https://unitedstates.github.io/congress-legislators/legislators-historical.json").toURL(), new File(dbRes, "legislators-historical.json"));
+		
+		updatedLegislatorFiles = true;
 	}
 	
 	@Override
@@ -432,5 +467,10 @@ public class USCDataImporter implements DatasetSupplier {
     	});
     	
     	dataset.put(bill);
+	}
+
+	@Override
+	public void syncS3BillText(PoliscoreDataset dataset) {
+		billTextFetcher.process();
 	}
 }

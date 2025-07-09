@@ -53,7 +53,7 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	@Inject private GovernmentDataService data;
 	
 	@SneakyThrows
-	protected void process()
+	public void process()
 	{
 		val store = new File(PoliscoreUtil.APP_DATA, "bill-text");
 //		FileUtils.deleteQuietly(store);

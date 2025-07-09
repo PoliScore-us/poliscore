@@ -1,13 +1,18 @@
 package us.poliscore.dataset;
 
 import java.time.LocalDate;
+import java.util.Base64;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+
 import io.quarkus.logging.Log;
-import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import lombok.SneakyThrows;
 import lombok.val;
 import software.amazon.awssdk.utils.StringUtils;
 import us.poliscore.PoliscoreDataset;
@@ -15,7 +20,7 @@ import us.poliscore.PoliscoreDataset.DatasetReference;
 import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.legiscan.view.LegiscanBillView;
 import us.poliscore.legiscan.view.LegiscanChamber;
-import us.poliscore.legiscan.view.LegiscanDatasetView;
+import us.poliscore.legiscan.view.LegiscanMimeType;
 import us.poliscore.legiscan.view.LegiscanPeopleView;
 import us.poliscore.legiscan.view.LegiscanRollCallView;
 import us.poliscore.legiscan.view.LegiscanSessionView;
@@ -33,18 +38,20 @@ import us.poliscore.model.VoteStatus;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.Bill.BillSponsor;
 import us.poliscore.model.bill.BillStatus;
+import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislativeTerm;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCosponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
+import us.poliscore.openstates.OpenStatesDatasetAugmentor;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.SecretService;
+import us.poliscore.service.storage.S3PersistenceService;
 
 @ApplicationScoped
-@Priority(1)
-public class LegiscanDataImporter implements DatasetSupplier {
+public class LegiscanDatasetProvider implements DatasetProvider {
 	
 	@Inject
 	private SecretService secret;
@@ -52,14 +59,15 @@ public class LegiscanDataImporter implements DatasetSupplier {
 	@Inject
 	protected LegislatorService lService;
 	
-	protected CachedLegiscanService getLegiscan() {
-		return CachedLegiscanService.builder(secret.getLegiscanSecret()).build();
-	}
+	@Inject
+	protected OpenStatesDatasetAugmentor openstates;
+	
+	@Inject private S3PersistenceService s3;
+	
+	protected CachedLegiscanService legiscan = CachedLegiscanService.builder(secret.getLegiscanSecret()).build();
 	
 	@Override
 	public PoliscoreDataset importDataset(DatasetReference ref) {
-		CachedLegiscanService legiscan = getLegiscan();
-		
 		var state = namespaceToState(ref.getNamespace());
 		var cached = legiscan.cacheDataset(state, ref.getYear());
 		var session = buildSession(cached.getDataset().getSessionId(), cached.getDataset().getState(), cached.getDataset().getYearStart(), cached.getDataset().getYearEnd());
@@ -104,7 +112,6 @@ public class LegiscanDataImporter implements DatasetSupplier {
 	
 	@Override
 	public LegislativeSession getPreviousSession(LegislativeSession current) {
-		CachedLegiscanService legiscan = getLegiscan();
 		LegiscanState state = LegiscanState.fromAbbreviation(current.getNamespace().toAbbreviation());
 		
 		LegiscanSessionView previous = null;
@@ -129,6 +136,7 @@ public class LegiscanDataImporter implements DatasetSupplier {
     	bill.setSponsor(convertSponsor(view.getSponsors().getFirst(), dataset));
     	bill.setCosponsors(view.getSponsors().subList(1, view.getSponsors().size()-1).stream().map(s -> convertSponsor(s, dataset)).collect(Collectors.toList()));
     	bill.setLastActionDate(view.getHistory().getLast().getDate());
+    	bill.setLegiscanId(view.getBillId());
     	
     	if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
     		bill.setType(toCongressionalBillType(view).name());
@@ -367,6 +375,37 @@ public class LegiscanDataImporter implements DatasetSupplier {
 	        leg.setSession(dataset.getSession());
 	        dataset.put(leg);
 	    }
+	}
+
+	@Override
+	public void syncS3LegislatorImages(PoliscoreDataset dataset) {
+		openstates.syncS3LegislatorImages(dataset);
+	}
+	
+	@Override
+	@SneakyThrows
+	public void syncS3BillText(PoliscoreDataset dataset) {
+		int count = 0;
+		
+		for (val bill : dataset.query(Bill.class)) {
+			for (val metadata : legiscan.getBill(bill.getLegiscanId()).getTexts()) {
+				val doc = legiscan.getBillText(metadata.getDocId());
+				
+				if (!doc.getMime().equals(LegiscanMimeType.PDF)) throw new UnsupportedOperationException("Unsupported bill text MIME type [" + doc.getMime().name() + "]");
+				
+				byte[] pdfBytes = Base64.getDecoder().decode(doc.getDoc());
+				
+				try (PDDocument document = Loader.loadPDF(pdfBytes)) {
+		            PDFTextStripper stripper = new PDFTextStripper();
+		            String text = stripper.getText(document);
+
+		            BillText bt = new BillText(bill.getId(), text, doc.getDate());
+					s3.put(bt);
+		        }
+			}
+		}
+		
+		Log.info("Uploaded " + count + " new bill texts to s3 from Legiscan provider.");
 	}
 
 }
