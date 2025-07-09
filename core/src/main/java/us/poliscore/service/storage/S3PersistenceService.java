@@ -11,6 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -23,12 +24,15 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.Persistable;
+import us.poliscore.service.GovernmentDataService;
 
 @ApplicationScoped
 public class S3PersistenceService implements ObjectStorageServiceIF
 {
 	
 	public static final String BUCKET_NAME = "poliscore-archive";
+	
+	@Inject protected GovernmentDataService data;
 	
 	private S3Client client;
 	
@@ -94,7 +98,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	@SneakyThrows
 	public <T extends Persistable> boolean exists(String id, Class<T> clazz)
 	{
-		val idClassPrefix = Persistable.getClassStorageBucket(clazz);
+		val idClassPrefix = Persistable.getClassStorageBucket(clazz, data.getSession().getKey());
 		if (objectsInBucket.containsKey(idClassPrefix)) return objectsInBucket.get(idClassPrefix).contains(id);
 		
 		val key = getKey(id);
@@ -116,23 +120,20 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	
 	@Override
 	public <T extends Persistable> List<T> query(Class<T> clazz) {
-		return query(clazz, Persistable.getClassStorageBucket(clazz));
+		return query(clazz, null, -1, true);
 	}
 	
-	@Override
-	public <T extends Persistable> List<T> query(Class<T> clazz, String storageBucket) {
-		return query(clazz, storageBucket, null, -1, true);
-	}
-	
-	public <T extends Persistable> List<T> query(Class<T> clazz, String storageBucket, String key) {
-		return query(clazz, storageBucket, key, -1, true);
+	public <T extends Persistable> List<T> query(Class<T> clazz, String key) {
+		return query(clazz, key, -1, true);
 	}
 	
 	@SneakyThrows
-	public <T extends Persistable> List<T> query(Class<T> clazz, String storageBucket, String key, int pageSize, boolean ascending)
+	public <T extends Persistable> List<T> query(Class<T> clazz, String key, int pageSize, boolean ascending)
 	{
 	    val keys = new java.util.ArrayList<String>();
 	    String continuationToken = null;
+	    
+	    String storageBucket = Persistable.getClassStorageBucket(clazz, data.getSession().getKey());
 	    
 	    String fullPrefix = storageBucket;
 	    if (StringUtils.isNotBlank(key))
@@ -187,7 +188,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 
 	@SneakyThrows
 	public <T extends Persistable> void optimizeExists(Class<T> clazz) {
-		val storageBucket = Persistable.getClassStorageBucket(clazz);
+		val storageBucket = Persistable.getClassStorageBucket(clazz, data.getSession().getKey());
 		
 		if (objectsInBucket.containsKey(storageBucket)) return;
 		
@@ -213,7 +214,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	
 	@SneakyThrows
 	public <T extends Persistable> void clearExistsOptimize(Class<T> clazz) {
-		val idClassPrefix = Persistable.getClassStorageBucket(clazz);
+		val idClassPrefix = Persistable.getClassStorageBucket(clazz, data.getSession().getKey());
 		
 		objectsInBucket.remove(idClassPrefix);
 	}
@@ -232,7 +233,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 			Log.info("Deleted from S3 " + key);
 			
 			// Update the local cache if optimizeExists has been called before
-			val idClassPrefix = Persistable.getClassStorageBucket(clazz);
+			val idClassPrefix = Persistable.getClassStorageBucket(clazz, data.getSession().getKey());
 			if (objectsInBucket.containsKey(idClassPrefix))
 			{
 				objectsInBucket.get(idClassPrefix).remove(id);

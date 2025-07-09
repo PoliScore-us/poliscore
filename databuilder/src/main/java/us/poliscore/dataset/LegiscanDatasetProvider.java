@@ -53,8 +53,8 @@ import us.poliscore.service.storage.S3PersistenceService;
 @ApplicationScoped
 public class LegiscanDatasetProvider implements DatasetProvider {
 	
-	@Inject
-	private SecretService secret;
+//	@Inject
+//	private SecretService secret;
 	
 	@Inject
 	protected LegislatorService lService;
@@ -64,7 +64,8 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	
 	@Inject private S3PersistenceService s3;
 	
-	protected CachedLegiscanService legiscan = CachedLegiscanService.builder(secret.getLegiscanSecret()).build();
+	@Inject
+	protected CachedLegiscanService legiscan;
 	
 	@Override
 	public PoliscoreDataset importDataset(DatasetReference ref) {
@@ -301,8 +302,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		Bill bill;
 		try
 		{
-			bill = dataset.query(Bill.class, Bill.getClassStorageBucket(dataset.getSession().getNamespace(), dataset.getSession().getKey())).stream()
-					.filter(b -> b.getLegiscanId() == rollCall.getBillId()).findFirst().get();
+			bill = dataset.query(Bill.class).stream().filter(b -> b.getLegiscanId() == rollCall.getBillId()).findFirst().get();
 		}
 		catch (NoSuchElementException ex)
 		{

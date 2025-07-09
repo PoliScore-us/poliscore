@@ -38,6 +38,7 @@ import us.poliscore.model.Persistable;
 import us.poliscore.model.dynamodb.DdbDataPage;
 import us.poliscore.model.dynamodb.DdbKeyProvider;
 import us.poliscore.model.dynamodb.DdbListPage;
+import us.poliscore.service.GovernmentDataService;
 
 @ApplicationScoped
 public class DynamoDbPersistenceService implements ObjectStorageServiceIF
@@ -69,6 +70,8 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 	
 	@Inject
 	DynamoDbClient ddb;
+	
+	@Inject GovernmentDataService data;
 	
 	private Map<Class<?>, BeanTableSchema<?>> schemas  = new HashMap<Class<?>, BeanTableSchema<?>>();
 	
@@ -318,7 +321,6 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 		return query(clazz, -1, null, null, null, null);
 	}
 	
-	@Override
 	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, String storageBucket)
 	{
 		return query(clazz, -1, null, null, null, null, storageBucket);
@@ -328,7 +330,7 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, int pageSize, String index, Boolean ascending, String exclusiveStartKey, String sortKey)
 	{
 		
-		return query(clazz, pageSize, index, ascending, exclusiveStartKey, sortKey, Persistable.getClassStorageBucket(clazz));
+		return query(clazz, pageSize, index, ascending, exclusiveStartKey, sortKey, Persistable.getClassStorageBucket(clazz, data.getSession().getKey()));
 	}
 	
 	@SneakyThrows

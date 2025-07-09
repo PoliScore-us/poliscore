@@ -28,9 +28,9 @@ public class MemoryObjectService implements ObjectStorageServiceIF {
 		return memoryStore.get(id, clazz);
 	}
 	
-	public <T extends Persistable> long count(String idClassPrefix)
+	public <T extends Persistable> long count(Class<T> clazz)
 	{
-		return memoryStore.count(idClassPrefix);
+		return memoryStore.count(clazz);
 	}
 	
 	@Override
@@ -43,17 +43,5 @@ public class MemoryObjectService implements ObjectStorageServiceIF {
 	public <T extends Persistable> List<T> query(Class<T> clazz)
 	{
 		return memoryStore.query(clazz);
-	}
-	
-	@SneakyThrows
-	public <T extends Persistable> List<T> query(Class<T> clazz, String storageBucket)
-	{
-		return memoryStore.query(clazz, storageBucket);
-	}
-	
-	@SneakyThrows
-	public <T extends Persistable> List<T> queryAll(Class<T> clazz)
-	{
-		return memoryStore.queryAll(clazz);
 	}
 }

@@ -107,10 +107,5 @@ public class LocalFilePersistenceService implements ObjectStorageServiceIF
 		
 		throw new UnsupportedOperationException();
 	}
-
-	@Override
-	public <T extends Persistable> List<T> query(Class<T> clazz, String storageBucket) {
-		throw new UnsupportedOperationException();
-	}
 	
 }

@@ -1,5 +1,6 @@
 package us.poliscore.model;
 
+import io.quarkus.logging.Log;
 import lombok.SneakyThrows;
 import us.poliscore.PoliscoreUtil;
 
@@ -30,10 +31,17 @@ public interface Persistable {
 	public void setStorageBucket(String prefix);
 	
 	@SneakyThrows
-	public static String getClassStorageBucket(Class<?> clazz)
+	public static String getClassStorageBucket(Class<?> clazz, String sessionKey)
 	{
-		try { return (String) clazz.getMethod("getClassStorageBucket").invoke(PoliscoreUtil.DEPLOYMENT_SESSION_KEY); } catch (Throwable t) {}
+		try { return (String) clazz.getMethod("getClassStorageBucket", String.class).invoke(null, sessionKey); } catch (Throwable t) { t.printStackTrace(); }
+		try { return (String) clazz.getMethod("getClassStorageBucket").invoke(null); } catch (Throwable t) { }
 		
+		return (String) clazz.getField("ID_CLASS_PREFIX").get(null);
+	}
+	
+	@SneakyThrows
+	public static String getIdClassPrefix(Class<?> clazz)
+	{
 		return (String) clazz.getField("ID_CLASS_PREFIX").get(null);
 	}
 }

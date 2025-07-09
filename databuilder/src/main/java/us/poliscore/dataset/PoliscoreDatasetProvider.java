@@ -2,6 +2,7 @@ package us.poliscore.dataset;
 
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Inject;
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreDataset.DatasetReference;
@@ -9,6 +10,7 @@ import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 
 @Priority(1)
+@Alternative
 @ApplicationScoped
 public class PoliscoreDatasetProvider implements DatasetProvider {
 

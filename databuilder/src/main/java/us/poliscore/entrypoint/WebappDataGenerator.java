@@ -115,14 +115,14 @@ public class WebappDataGenerator implements QuarkusApplication
 			
 			// All legislator routes
 			routes.add("/legislators");
-			dataset.queryAll(Legislator.class).stream()
+			dataset.query(Legislator.class).stream()
 	//			.filter(l -> l.isMemberOfSession(PoliscoreUtil.CURRENT_SESSION)) // && s3.exists(LegislatorInterpretation.generateId(l.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class)
 				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
 				.forEach(l -> routes.add("/legislator/" + l.getBioguideId()));
 			
 			// All bills
 			routes.add("/bills");
-			dataset.queryAll(Bill.class).stream()
+			dataset.query(Bill.class).stream()
 				.filter(b -> // b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION) &&
 						s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
 				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
@@ -156,14 +156,14 @@ public class WebappDataGenerator implements QuarkusApplication
 			
 			// All legislator routes
 			routes.add(url + prefix + "/legislators");
-			dataset.queryAll(Legislator.class).stream()
+			dataset.query(Legislator.class).stream()
 				.filter(l -> l.isMemberOfSession(dataset.getSession())) //  && s3.exists(LegislatorInterpretation.generateId(l.getId(), congress.getNumber()), LegislatorInterpretation.class)
 				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
 				.forEach(l -> routes.add(url + prefix + "/legislator/" + l.getBioguideId()));
 			
 			// All bills
 			routes.add(url + prefix + "/bills");
-			dataset.queryAll(Bill.class).stream()
+			dataset.query(Bill.class).stream()
 				.filter(b -> b.isIntroducedInSession(dataset.getSession()) && s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
 				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
 				.forEach(b -> routes.add(url + prefix + "/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
@@ -181,7 +181,7 @@ public class WebappDataGenerator implements QuarkusApplication
 	    List<List<String>> result = new ArrayList<List<String>>();
 
 	    for (var dataset : datasets) {
-		    dataset.queryAll(Legislator.class).stream()
+		    dataset.query(Legislator.class).stream()
 //		        .filter(l -> PoliscoreUtil.SUPPORTED_CONGRESSES.stream().anyMatch(s -> l.isMemberOfSession(s)))
 		        .forEach(l -> {
 		            if (!uniqueSet.containsKey(l.getId()) ||
@@ -237,7 +237,7 @@ public class WebappDataGenerator implements QuarkusApplication
 	    List<List<String>> result = new ArrayList<List<String>>();
 
 	    for (var dataset : datasets) {
-		    result.addAll(dataset.queryAll(Bill.class).stream()
+		    result.addAll(dataset.query(Bill.class).stream()
 		        .filter(b -> //PoliscoreUtil.SUPPORTED_CONGRESSES.stream().anyMatch(s -> b.isIntroducedInSession(s)) &&
 		                     s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
 		        .map(b -> {

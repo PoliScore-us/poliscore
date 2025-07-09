@@ -9,7 +9,6 @@ import us.poliscore.model.LegislativeSession;
 import us.poliscore.service.storage.MemoryObjectStore;
 
 @Data
-@RequiredArgsConstructor
 @EqualsAndHashCode(callSuper=false)
 public class PoliscoreDataset extends MemoryObjectStore {
 	

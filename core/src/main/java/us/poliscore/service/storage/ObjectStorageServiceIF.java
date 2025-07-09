@@ -22,13 +22,4 @@ public interface ObjectStorageServiceIF
 	 * @return
 	 */
 	public <T extends Persistable> List<T> query(Class<T> clazz);
-	
-	/**
-	 * Queries the objects within the specified storage bucket.
-	 * 
-	 * @param <T>
-	 * @param clazz
-	 * @return
-	 */
-	public <T extends Persistable> List<T> query(Class<T> clazz, String storageBucket);
 }

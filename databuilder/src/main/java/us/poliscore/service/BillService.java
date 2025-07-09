@@ -2,17 +2,12 @@ package us.poliscore.service;
 
 import java.io.File;
 import java.net.URI;
-import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
-import org.tartarus.snowball.SnowballStemmer;
-import org.tartarus.snowball.ext.englishStemmer;
 
 import io.quarkus.logging.Log;
 import jakarta.annotation.Priority;
@@ -50,11 +45,14 @@ public class BillService {
 	@Inject
 	private DynamoDbPersistenceService ddb;
 	
+	@Inject
+	private GovernmentDataService data;
+	
 	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
 	public void populatePressInterps(BillInterpretation interp)
 	{
-		var pressInterps = s3.query(PressInterpretation.class, Persistable.getClassStorageBucket(PressInterpretation.class), interp.getBillId().replace(Bill.ID_CLASS_PREFIX + "/", ""));
+		var pressInterps = s3.query(PressInterpretation.class, interp.getBillId().replace(Bill.ID_CLASS_PREFIX + "/", ""));
 		
 //		pressInterps = pressInterps.stream().filter(i -> i.getBillId().equals(interp.getBillId()) && !InterpretationOrigin.POLISCORE.equals(i.getOrigin()) && !i.isNoInterp()).collect(Collectors.toList());
 		
@@ -88,7 +86,7 @@ public class BillService {
 	
 	public List<PressInterpretation> getAllPressInterps(String billId)
 	{
-		var pressInterps = s3.query(PressInterpretation.class, Persistable.getClassStorageBucket(PressInterpretation.class), billId.replace(Bill.ID_CLASS_PREFIX + "/", ""));
+		var pressInterps = s3.query(PressInterpretation.class, billId.replace(Bill.ID_CLASS_PREFIX + "/", ""));
 		
 		pressInterps = pressInterps.stream().filter(i -> i.getBillId().equals(billId) && !InterpretationOrigin.POLISCORE.equals(i.getOrigin())).collect(Collectors.toList());
 		

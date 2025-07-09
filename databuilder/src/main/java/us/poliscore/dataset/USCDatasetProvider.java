@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
@@ -26,9 +27,9 @@ import software.amazon.awssdk.utils.StringUtils;
 import us.poliscore.Environment;
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreDataset.DatasetReference;
+import us.poliscore.PoliscoreUtil;
 import us.poliscore.entrypoint.GPOBulkBillTextFetcher;
 import us.poliscore.images.CongressionalLegislatorImageFetcher;
-import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.CongressionalSession;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
@@ -107,21 +108,26 @@ public class USCDatasetProvider implements DatasetProvider {
 	@SneakyThrows
 	public void importUSCLegislators(PoliscoreDataset dataset)
 	{
-		if (dataset.query(Legislator.class).size() > 0) return;
+		if (dataset.count(Legislator.class) > 0) return;
 		
 		importUSCLegislator(dataset, "/legislators-current.json");
 		importUSCLegislator(dataset, "/legislators-historical.json");
+		
+		Log.info("Imported " + dataset.count(Legislator.class) + " politicians");
 	}
 
 	private void importUSCLegislator(PoliscoreDataset dataset, String file) throws IOException, JsonProcessingException {
-		int count = 0;
-		
 		ObjectMapper mapper = PoliscoreUtil.getObjectMapper();
 		JsonNode jn = mapper.readTree(LegislatorService.class.getResourceAsStream(file));
 		Iterator<JsonNode> it = jn.elements();
 		while (it.hasNext())
 		{
 			USCLegislatorView view = mapper.treeToValue(it.next(), USCLegislatorView.class);
+			
+			// Skip legislators with terms in historical territories
+	        if (view.getTerms().stream().anyMatch(term -> Set.of("DK", "OL", "PI").contains(term.getState().toUpperCase()))) {
+	            continue;
+	        }
 			
 			Legislator leg = new Legislator();
 			leg.setName(view.getName().convert());
@@ -135,11 +141,8 @@ public class USCDatasetProvider implements DatasetProvider {
 				leg.setSession(dataset.getSession());
 				
 				dataset.put(leg);
-				count++;
 			}
 		}
-		
-		Log.info("Imported " + count + " politicians");
 	}
 	
 	@SneakyThrows

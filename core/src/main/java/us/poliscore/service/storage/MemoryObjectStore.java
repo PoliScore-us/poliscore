@@ -34,9 +34,9 @@ public class MemoryObjectStore implements ObjectStorageServiceIF {
 		}
 	}
 	
-	public <T extends Persistable> long count(String idClassPrefix)
+	public <T extends Persistable> long count(Class<T> clazz)
 	{
-		return memoryStore.keySet().stream().filter(k -> k.startsWith(idClassPrefix)).count();
+		return query(clazz).size();
 	}
 	
 	@Override
@@ -45,23 +45,10 @@ public class MemoryObjectStore implements ObjectStorageServiceIF {
 		return memoryStore.containsKey(id);
 	}
 	
+	@SuppressWarnings("unchecked")
 	@SneakyThrows
 	public <T extends Persistable> List<T> query(Class<T> clazz)
 	{
-		val idClassPrefix = Persistable.getClassStorageBucket(clazz);
-		
-		return memoryStore.values().stream().filter(o -> o.getStorageBucket().equals(idClassPrefix)).map(o -> (T) o).toList();
-	}
-	
-	@SneakyThrows
-	public <T extends Persistable> List<T> query(Class<T> clazz, String storageBucket)
-	{
-		return memoryStore.values().stream().filter(o -> o.getStorageBucket().equals(storageBucket)).map(o -> (T) o).toList();
-	}
-	
-	@SneakyThrows
-	public <T extends Persistable> List<T> queryAll(Class<T> clazz)
-	{
-		return memoryStore.values().stream().filter(o -> clazz.isInstance(o)).map(o -> (T) o).toList();
+		return memoryStore.values().stream().filter(o -> o.getClass().equals(clazz)).map(o -> (T) o).toList();
 	}
 }

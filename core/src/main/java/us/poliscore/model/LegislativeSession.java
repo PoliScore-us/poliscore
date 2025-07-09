@@ -7,10 +7,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 
 @Data
 @AllArgsConstructor
 @EqualsAndHashCode(of = {"key", "namespace"})
+@NoArgsConstructor
+@DynamoDbBean
 public class LegislativeSession {
 	
 	protected LocalDate startDate;

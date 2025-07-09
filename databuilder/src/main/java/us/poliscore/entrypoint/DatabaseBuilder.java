@@ -109,23 +109,23 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	protected void process() throws IOException
 	{
-		s3.optimizeExists(BillInterpretation.class);
-		s3.optimizeExists(LegislatorInterpretation.class);
-		
 		data.importDataset();
 		data.syncS3LegislatorImages(data.getDataset());
 		data.syncS3BillText(data.getDataset());
 		
-		syncDdbWithS3();
+		s3.optimizeExists(BillInterpretation.class);
+		s3.optimizeExists(LegislatorInterpretation.class);
 		
-		interpretBillPressArticles();
-		interpretBills();
-		pressBillInterpGenerator.recordLastPressQueries(); // We want to record that our press query is complete, but only after the bill has been updated and re-interpreted (otherwise we would need to query again if it fails halfway through)
-		
-		interpretLegislators();
-		interpretPartyStats();
-		
-		webappDataGenerator.process();
+//		syncDdbWithS3();
+//		
+//		interpretBillPressArticles();
+//		interpretBills();
+//		pressBillInterpGenerator.recordLastPressQueries(); // We want to record that our press query is complete, but only after the bill has been updated and re-interpreted (otherwise we would need to query again if it fails halfway through)
+//		
+//		interpretLegislators();
+//		interpretPartyStats();
+//		
+//		webappDataGenerator.process();
 		
 		Log.info("Poliscore database build complete.");
 	}
@@ -165,7 +165,7 @@ public class DatabaseBuilder implements QuarkusApplication
 		// TODO : Sort by date and only grab the top x amount
 		Log.info("Syncing press interpretations");
 		Set<Bill> updated = new HashSet<Bill>();
-		for (val pi : s3.query(PressInterpretation.class, Persistable.getClassStorageBucket(PressInterpretation.class))) {
+		for (val pi : s3.query(PressInterpretation.class)) {
 			if (pi.isNoInterp()) continue;
 			
 			var bill = ddb.get(pi.getBillId(), Bill.class).orElse(null);
