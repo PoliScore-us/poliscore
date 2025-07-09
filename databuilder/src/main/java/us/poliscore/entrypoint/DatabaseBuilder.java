@@ -116,16 +116,16 @@ public class DatabaseBuilder implements QuarkusApplication
 		s3.optimizeExists(BillInterpretation.class);
 		s3.optimizeExists(LegislatorInterpretation.class);
 		
-//		syncDdbWithS3();
-//		
-//		interpretBillPressArticles();
-//		interpretBills();
-//		pressBillInterpGenerator.recordLastPressQueries(); // We want to record that our press query is complete, but only after the bill has been updated and re-interpreted (otherwise we would need to query again if it fails halfway through)
-//		
-//		interpretLegislators();
-//		interpretPartyStats();
-//		
-//		webappDataGenerator.process();
+		syncDdbWithS3();
+		
+		interpretBillPressArticles();
+		interpretBills();
+		pressBillInterpGenerator.recordLastPressQueries(); // We want to record that our press query is complete, but only after the bill has been updated and re-interpreted (otherwise we would need to query again if it fails halfway through)
+		
+		interpretLegislators();
+		interpretPartyStats();
+		
+		webappDataGenerator.process();
 		
 		Log.info("Poliscore database build complete.");
 	}

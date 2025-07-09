@@ -12,11 +12,14 @@ import java.util.Optional;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.ImageOutputStream;
 import javax.net.ssl.SSLContext;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContexts;
@@ -60,7 +63,7 @@ private static final String BUCKET_NAME = "poliscore-prod-public";
 		
 		val legs = data.getDataset().query(Legislator.class).stream()
 				.filter(l -> l.getBirthday() == null || l.getBirthday().isAfter(LocalDate.of(1900,1,1)))
-				.filter(l -> l.getTerms().size() > 0 && l.getTerms().last().getSession().getStartDate().isAfter(LocalDate.of(1990,1,1)))
+				.filter(l -> l.getTerms().size() > 0 && l.getTerms().last().getStartDate().isAfter(LocalDate.of(1990,1,1)))
 				.filter(l -> !exists(l))
 				.toList();
 		
@@ -147,6 +150,24 @@ private static final String BUCKET_NAME = "poliscore-prod-public";
 	}
 	
 	@SneakyThrows
+	public static void enforceWebp(byte[] data) {
+	    try (ImageInputStream iis = ImageIO.createImageInputStream(new ByteArrayInputStream(data))) {
+	        Iterator<ImageReader> readers = ImageIO.getImageReaders(iis);
+	        while (readers.hasNext()) {
+	            ImageReader reader = readers.next();
+	            String formatName = reader.getFormatName().toLowerCase();
+	            if (!formatName.contains("webp")) {
+	            	throw new UnsupportedOperationException("Unsupported image type [" + formatName + "]. All images must be in webp format.");
+	            } else {
+	            	return;
+	            }
+	        }
+	    }
+	    
+	    throw new UnsupportedOperationException("Unsupported image type. All images must be in webp format.");
+	}
+	
+	@SneakyThrows
 	protected static Boolean isJPEG(byte[] bytes) throws Exception {
 	    @Cleanup DataInputStream ins = new DataInputStream(new BufferedInputStream(new ByteArrayInputStream(bytes)));
 	    
@@ -159,7 +180,7 @@ private static final String BUCKET_NAME = "poliscore-prod-public";
 		{
 			val resp = getClient().headObject(HeadObjectRequest.builder()
 					.bucket(BUCKET_NAME)
-					.key(leg.getId() + ".jpg")
+					.key(leg.getId() + ".webp")
 					.build());
 			
 			return true;
@@ -173,6 +194,13 @@ private static final String BUCKET_NAME = "poliscore-prod-public";
 	@SneakyThrows
 	protected void upload(byte[] image, String key)
 	{
+		enforceWebp(image);
+		
+		if (!key.endsWith(".webp") && FilenameUtils.getExtension(key).isBlank())
+			key = key + ".webp";
+		else if (!key.endsWith(".webp") && !FilenameUtils.getExtension(key).isBlank())
+			throw new UnsupportedOperationException("Unsupported image extension on key: " + key + ". All images must be in webp format.");
+		
         PutObjectRequest putOb = PutObjectRequest.builder()
                 .bucket(BUCKET_NAME)
                 .key(key)

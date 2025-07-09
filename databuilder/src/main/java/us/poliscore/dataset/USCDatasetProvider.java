@@ -47,6 +47,7 @@ import us.poliscore.service.BillService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.view.USCBillView;
 import us.poliscore.view.USCLegislatorView;
+import us.poliscore.view.USCLegislatorView.USCLegislativeTerm;
 import us.poliscore.view.USCRollCallData;
 import us.poliscore.view.USCRollCallData.USCRollCallVote;
 
@@ -134,7 +135,9 @@ public class USCDatasetProvider implements DatasetProvider {
 			leg.setBioguideId(view.getId().getBioguide());
 			leg.setLisId(view.getId().getLis());
 			leg.setBirthday(view.getBio().getBirthday());
-			leg.setTerms(view.getTerms().stream().map(t -> t.convert(dataset.getSession())).collect(Collectors.toCollection(LegislatorLegislativeTermSortedSet::new)));
+			leg.setTerms(view.getTerms().stream()
+					.map(t -> t.convert())
+					.collect(Collectors.toCollection(LegislatorLegislativeTermSortedSet::new)));
 			
 			if (leg.isMemberOfSession(dataset.getSession()))
 			{

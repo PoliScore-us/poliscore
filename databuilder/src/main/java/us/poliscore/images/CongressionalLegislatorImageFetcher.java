@@ -36,9 +36,42 @@ import us.poliscore.model.legislator.Legislator;
 @QuarkusMain(name="CongressionalLegislatorImageFetcher")
 public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImageFetcher implements QuarkusApplication {
 	
+	// This code was used to patch the 119th session from jpg to webp. We'll keep it around for a minute, in case we want to patch the 118th session or something. But it's really only here in a temporary sense. Once we've fully moved to webp it won't matter anymore.
+//	@SneakyThrows
+//	protected Optional<byte[]> fetchExistingJpgImage(Legislator leg, PoliscoreDataset dataset) {
+//		var httpClient = getHttpClient();
+//		
+//		String url = "https://poliscore-prod-public.s3.us-east-1.amazonaws.com/" + leg.getId() + ".jpg";
+//		val get = new HttpGet(url);
+//		
+//		HttpResponse resp = httpClient.execute(get);
+//		int status = resp.getStatusLine().getStatusCode();
+//
+//        @Cleanup InputStream is = resp.getEntity().getContent();
+//
+//        if (status == 429 || status == 403 || status >= 400) {
+//        	val body = IOUtils.toString(is, "UTF-8");
+//            Log.warn("[" + leg.getBioguideId() + "] Received " + status + " fetching jpg. " + body.substring(0, Math.min(body.length(), 300)));
+//            return Optional.empty();
+//        }
+//
+//        byte[] image = IOUtils.toByteArray(is);
+//        if (!isJPEG(image)) {
+//            Log.warn("[" + leg.getBioguideId() + "] S3 returend invalid image data?");
+//            return Optional.empty();
+//        }
+//        
+//        byte[] webp = convertToWebp(image);
+//
+//        return Optional.of(webp);
+//	}
+	
 	@SneakyThrows
 	@Override
 	protected Optional<byte[]> fetchImage(Legislator leg, PoliscoreDataset dataset) {
+//		var existingJpg = fetchExistingJpgImage(leg, dataset);
+//		if (existingJpg.isPresent()) return existingJpg;
+		
 	    String url = scrapeImageUrlFromMemberPage(leg);
 
 	    final int MAX_RETRIES = 5;

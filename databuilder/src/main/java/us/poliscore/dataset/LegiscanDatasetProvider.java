@@ -357,13 +357,11 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    leg.setBioguideId(view.getBioguideId());
 	    leg.setLegiscanId(view.getPeopleId());
 
-	    // Set birthday with fallback
-	    // TODO : Legiscan doesn't provide birthday...
-//	    LocalDate birthday = PoliscoreUtil.parseDate(view.getBio() != null ? view.getBio().getBirthday() : null);
-//	    leg.setBirthday(birthday);
+	    // Legiscan doesn't actually provide birthday so we're augmenting our dataset later with OpenStates data (which often has birthdays)...
 	    
 	    var term = new LegislativeTerm();
-	    term.setSession(dataset.getSession());
+	    term.setStartDate(dataset.getSession().getStartDate());
+	    term.setEndDate(dataset.getSession().getEndDate());
 	    term.setParty(Party.from(view.getPartyCode()));
 	    term.setState(view.getState());
 	    term.setDistrict(view.getDistrict());

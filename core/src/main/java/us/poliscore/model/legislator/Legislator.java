@@ -162,15 +162,15 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 	{
 		if (this.terms == null || this.terms.size() == 0) return null;
 		
-		return this.terms.stream().filter(t -> t.getSession().getStartDate().isBefore(session.getEndDate()) && t.getSession().getEndDate().isAfter(session.getStartDate())).findFirst().orElse(null);
+		return this.terms.stream().filter(t -> t.getStartDate().isBefore(session.getEndDate()) && t.getEndDate().isAfter(session.getStartDate())).findFirst().orElse(null);
 	}
 	
 	public boolean isMemberOfSession(LegislativeSession session) {
-		if (this.terms == null || this.terms.size() == 0) return false;
+		if (this.terms == null || this.terms.size() == 0 || session == null) return false;
 		
-//		return this.terms.stream().anyMatch(t -> t.getSession().getStartDate().isBefore(session.getEndDate()) && t.getSession().getEndDate().isAfter(session.getStartDate()));
+		return this.terms.stream().anyMatch(t -> t.getStartDate().isBefore(session.getEndDate()) && t.getEndDate().isAfter(session.getStartDate()));
 		
-		return this.terms.stream().anyMatch(t -> t.getSession().equals(session));
+//		return this.terms.stream().anyMatch(t -> t.getStartDate().equals(session.getStartDate() && t.getEndDate().equals(session.getEndDate()));
 	}
 	
 	// Used for congress
@@ -242,7 +242,11 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 	@EqualsAndHashCode
 	public static class LegislativeTerm implements Comparable<LegislativeTerm> {
 		
-		protected LegislativeSession session;
+//		protected LegislativeSession session;
+		
+		protected LocalDate startDate;
+		
+		protected LocalDate endDate;
 		
 		protected LegiscanState state;
 		
@@ -254,7 +258,7 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 
 		@Override
 		public int compareTo(LegislativeTerm o) {
-			return this.session.getStartDate().compareTo(o.session.getStartDate());
+			return this.getStartDate().compareTo(o.getStartDate());
 		}
 		
 	}

@@ -33,7 +33,7 @@ public interface Persistable {
 	@SneakyThrows
 	public static String getClassStorageBucket(Class<?> clazz, String sessionKey)
 	{
-		try { return (String) clazz.getMethod("getClassStorageBucket", String.class).invoke(null, sessionKey); } catch (Throwable t) { t.printStackTrace(); }
+		try { return (String) clazz.getMethod("getClassStorageBucket", String.class).invoke(null, sessionKey); } catch (Throwable t) { }
 		try { return (String) clazz.getMethod("getClassStorageBucket").invoke(null); } catch (Throwable t) { }
 		
 		return (String) clazz.getField("ID_CLASS_PREFIX").get(null);
