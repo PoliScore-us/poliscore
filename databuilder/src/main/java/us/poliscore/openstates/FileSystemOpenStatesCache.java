@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -119,6 +120,7 @@ public class FileSystemOpenStatesCache {
         private long timestamp;
         private long ttl;
 
+        @JsonIgnore
         public boolean isExpired() {
             return ttl > 0 && Instant.now().getEpochSecond() > (timestamp + ttl);
         }

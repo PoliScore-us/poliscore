@@ -2,6 +2,7 @@ package us.poliscore.dataset;
 
 import java.time.LocalDate;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
@@ -27,6 +28,7 @@ import us.poliscore.legiscan.view.LegiscanSessionView;
 import us.poliscore.legiscan.view.LegiscanSponsorView;
 import us.poliscore.legiscan.view.LegiscanState;
 import us.poliscore.legiscan.view.LegiscanStatus;
+import us.poliscore.legiscan.view.LegiscanTextMetadataView;
 import us.poliscore.legiscan.view.LegiscanVoteDetailView;
 import us.poliscore.legiscan.view.LegiscanVoteStatus;
 import us.poliscore.model.CongressionalSession;
@@ -47,7 +49,6 @@ import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSpo
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
 import us.poliscore.openstates.OpenStatesDatasetAugmentor;
 import us.poliscore.service.LegislatorService;
-import us.poliscore.service.SecretService;
 import us.poliscore.service.storage.S3PersistenceService;
 
 @ApplicationScoped
@@ -130,12 +131,13 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		val bill = new Bill();
     	bill.setName(view.getTitle());
     	bill.setSession(dataset.getSession());
-    	bill.setNumber(Integer.parseInt(view.getBillNumber()));
+    	bill.setNumber(Integer.parseInt(view.getBillNumber().replaceAll("[^\\d]", "")));
     	bill.setOriginatingChamber(LegislativeChamber.fromLegiscanChamber(view.getHistory().get(0).getChamber()));
     	bill.setStatus(buildStatus(view, dataset.getSession()));
     	bill.setIntroducedDate(view.getHistory().getFirst().getDate());
     	bill.setSponsor(convertSponsor(view.getSponsors().getFirst(), dataset));
-    	bill.setCosponsors(view.getSponsors().subList(1, view.getSponsors().size()-1).stream().map(s -> convertSponsor(s, dataset)).collect(Collectors.toList()));
+    	if (view.getSponsors().size() > 1)
+    		bill.setCosponsors(view.getSponsors().subList(1, view.getSponsors().size()-1).stream().map(s -> convertSponsor(s, dataset)).collect(Collectors.toList()));
     	bill.setLastActionDate(view.getHistory().getLast().getDate());
     	bill.setLegiscanId(view.getBillId());
     	
@@ -383,25 +385,38 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	@Override
 	@SneakyThrows
 	public void syncS3BillText(PoliscoreDataset dataset) {
+		s3.optimizeExists(BillText.class);
+		
 		int count = 0;
 		
 		for (val bill : dataset.query(Bill.class)) {
-			for (val metadata : legiscan.getBill(bill.getLegiscanId()).getTexts()) {
-				val doc = legiscan.getBillText(metadata.getDocId());
-				
-				if (!doc.getMime().equals(LegiscanMimeType.PDF)) throw new UnsupportedOperationException("Unsupported bill text MIME type [" + doc.getMime().name() + "]");
-				
-				byte[] pdfBytes = Base64.getDecoder().decode(doc.getDoc());
-				
-				try (PDDocument document = Loader.loadPDF(pdfBytes)) {
-		            PDFTextStripper stripper = new PDFTextStripper();
-		            String text = stripper.getText(document);
+			val legiBill = legiscan.getBill(bill.getLegiscanId());
+			if (legiBill.getTexts().size() == 0) continue;
+			
+			// TODO : This won't allow for text updates or amendments
+//			if (s3.exists(BillText.generateId(bill.getId()), BillText.class)) continue;
+			
+			val metadata = legiBill.getTexts().stream().max(Comparator.comparing(LegiscanTextMetadataView::getDate)).get();
+			
+			val doc = legiscan.getBillText(metadata.getDocId());
+			
+			if (!doc.getMime().equals(LegiscanMimeType.PDF)) throw new UnsupportedOperationException("Unsupported bill text MIME type [" + doc.getMime().name() + "]");
+			
+			byte[] pdfBytes = Base64.getDecoder().decode(doc.getDoc());
+			
+			try (PDDocument document = Loader.loadPDF(pdfBytes)) {
+	            PDFTextStripper stripper = new PDFTextStripper();
+	            String text = stripper.getText(document);
 
-		            BillText bt = new BillText(bill.getId(), text, doc.getDate());
-					s3.put(bt);
-		        }
-			}
+	            BillText bt = new BillText(bill.getId(), text, doc.getDate());
+				s3.put(bt);
+				
+				count++;
+	        }
 		}
+		
+		// TODO : This might not be necessary but I can't really remember why its here anymore
+		s3.clearExistsOptimize(BillText.class);
 		
 		Log.info("Uploaded " + count + " new bill texts to s3 from Legiscan provider.");
 	}

@@ -111,6 +111,7 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 					String number = f.getName().replace("BILLS-" + dataset.getSession().getKey() + billType, "").replaceAll("\\D", "");
 					val billId = Bill.generateId(dataset.getSession(), CongressionalBillType.valueOf(billType.toUpperCase()), Integer.parseInt(number));
 					
+					// TODO : This S3 exists check won't work if there's a new version of the bill text.
 					if (!processedBills.contains(billId) && !s3.exists(BillText.generateId(billId), BillText.class))
 					{
 						try

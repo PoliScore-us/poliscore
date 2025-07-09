@@ -21,7 +21,8 @@ public class PoliscoreUtil {
 		APP_DATA.mkdirs();
 	}
 	
-	public static DatasetReference DEPLOYMENT_DATASET = new DatasetReference(LegislativeNamespace.US_CONGRESS, 2026);
+//	public static DatasetReference DEPLOYMENT_DATASET = new DatasetReference(LegislativeNamespace.US_CONGRESS, 2026);
+	public static DatasetReference DEPLOYMENT_DATASET = new DatasetReference(LegislativeNamespace.US_COLORADO, 2025);
 	
 	public static String DEPLOYMENT_SESSION_KEY;
 	

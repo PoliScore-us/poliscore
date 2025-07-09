@@ -2,6 +2,7 @@ package us.poliscore.model.bill;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
@@ -21,7 +22,6 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
 import us.poliscore.PoliscoreUtil;
-import us.poliscore.model.CongressionalSession;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
@@ -81,7 +81,7 @@ public class Bill implements Persistable {
 	
 	protected BillSponsor sponsor;
 	
-	protected List<BillSponsor> cosponsors;
+	protected List<BillSponsor> cosponsors = new ArrayList<BillSponsor>();
 	
 	protected LocalDate introducedDate;
 	

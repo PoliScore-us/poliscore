@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 
@@ -37,7 +38,7 @@ public class OpenStatesDatasetAugmentor extends AbstractLegislatorImageFetcher i
 
 	protected final FileSystemOpenStatesCache cache = new FileSystemOpenStatesCache(
             new java.io.File(System.getProperty("user.home") + "/appdata/poliscore/openstates"),
-            new ObjectMapper(),
+            JsonMapper.builder().findAndAddModules().build(),
             86400 // default TTL 24h
     );
 	
