@@ -62,9 +62,6 @@ public class USCDatasetProvider implements DatasetProvider {
 	public static boolean updatedLegislatorFiles = false;
 	
 	@Inject
-	protected LegislatorService lService;
-	
-	@Inject
 	private CongressionalLegislatorImageFetcher congressionalImageFetcher;
 	
 	@Inject
@@ -72,7 +69,8 @@ public class USCDatasetProvider implements DatasetProvider {
 	
 	@Override
 	public PoliscoreDataset importDataset(DeploymentConfig ref) {
-		LegislativeSession session = new LegislativeSession(LocalDate.of(ref.getYear() - 1, 1, 1), LocalDate.of(ref.getYear(), 12, 31), String.valueOf(CongressionalSession.fromYear(ref.getYear()).getNumber()), LegislativeNamespace.US_CONGRESS);
+		val cses = CongressionalSession.fromYear(ref.getYear());
+		LegislativeSession session = new LegislativeSession(cses.getStartDate(), cses.getEndDate(), String.valueOf(cses.getNumber()), LegislativeNamespace.US_CONGRESS);
 		PoliscoreDataset dataset = new PoliscoreDataset(session);
 		
 		updateUscLegislators();
@@ -105,8 +103,8 @@ public class USCDatasetProvider implements DatasetProvider {
 	
 	@Override
 	public LegislativeSession getPreviousSession(LegislativeSession current) {
-		int endYear = current.getEndDate().getYear() - 2;
-		return new LegislativeSession(LocalDate.of(endYear - 1, 1, 1), LocalDate.of(endYear, 12, 31), String.valueOf(CongressionalSession.fromYear(endYear).getNumber()), LegislativeNamespace.US_CONGRESS);
+		val cses = CongressionalSession.of(Integer.valueOf(current.getCode()) - 1);
+		return new LegislativeSession(cses.getStartDate(), cses.getEndDate(), String.valueOf(cses.getNumber()), LegislativeNamespace.US_CONGRESS);
 	}
 	
 	@SneakyThrows
@@ -441,7 +439,7 @@ public class USCDatasetProvider implements DatasetProvider {
     	
     	if (view.getSponsor() != null && !StringUtils.isBlank(view.getSponsor().getBioguide_id()))
     	{
-			val leg = lService.getById(bill.getSponsor().getLegislatorId());
+			val leg = dataset.get(bill.getSponsor().getLegislatorId(), Legislator.class);
 			
 			if (leg.isPresent()) {
 				LegislatorBillSponsor interaction = new LegislatorBillSponsor();
@@ -457,7 +455,7 @@ public class USCDatasetProvider implements DatasetProvider {
     	
     	bill.getCosponsors().stream().filter(cs -> bill.getSponsor() == null || !bill.getSponsor().getLegislatorId().equals(cs.getLegislatorId())).forEach(cs -> {
     		if (!StringUtils.isBlank(cs.getLegislatorId())) {
-	    		val leg = lService.getById(cs.getLegislatorId());
+	    		val leg = dataset.get(cs.getLegislatorId(), Legislator.class);
 				
 	    		if (leg.isPresent()) {
 					LegislatorBillCosponsor interaction = new LegislatorBillCosponsor();

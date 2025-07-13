@@ -397,7 +397,7 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 		
 		String lastEvaluatedKey = null;
 		
-		while (pageIt.hasNext() && results.size() < pageSize) {
+		while (pageIt.hasNext() && (pageSize == -1 || results.size() < pageSize)) {
 			val page = pageIt.next();
 			
 			results.addAll(page.items());

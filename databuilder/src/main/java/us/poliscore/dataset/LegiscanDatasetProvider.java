@@ -155,7 +155,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
     	
     	if (bill.getSponsor() != null)
     	{
-			val leg = lService.getById(bill.getSponsor().getLegislatorId());
+			val leg = dataset.get(bill.getSponsor().getLegislatorId(), Legislator.class);
 			
 			if (leg.isPresent()) {
 				LegislatorBillSponsor interaction = new LegislatorBillSponsor();
@@ -171,7 +171,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
     	
     	bill.getCosponsors().stream().filter(cs -> bill.getSponsor() == null || !bill.getSponsor().getLegislatorId().equals(cs.getLegislatorId())).forEach(cs -> {
     		if (!StringUtils.isBlank(cs.getLegislatorId())) {
-	    		val leg = lService.getById(cs.getLegislatorId());
+	    		val leg = dataset.get(cs.getLegislatorId(), Legislator.class);
 				
 	    		if (leg.isPresent()) {
 					LegislatorBillCosponsor interaction = new LegislatorBillCosponsor();
@@ -377,7 +377,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    term.setEndDate(dataset.getSession().getEndDate());
 	    term.setParty(Party.from(view.getPartyCode()));
 	    term.setState(view.getState());
-	    term.setDistrict(view.getDistrict());
+	    term.setDistrict(StringUtils.isBlank(view.getDistrict()) ? null : view.getDistrict());
 	    term.setChamber(LegislativeChamber.fromLegiscanRole(view.getRole()));
 	    leg.getTerms().add(term);
 

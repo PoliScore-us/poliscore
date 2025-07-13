@@ -106,7 +106,7 @@ public class USCLegislatorView {
 		
 		public LegislativeTerm convert()
 		{
-			return new LegislativeTerm(start, end, LegiscanState.fromAbbreviation(state), String.valueOf(district), Party.from(party), "rep".equals(type) ? LegislativeChamber.LOWER : LegislativeChamber.UPPER);
+			return new LegislativeTerm(start, end, LegiscanState.fromAbbreviation(state), district == null ? null : String.valueOf(district), Party.from(party), "rep".equals(type) ? LegislativeChamber.LOWER : LegislativeChamber.UPPER);
 		}
 		
 	}

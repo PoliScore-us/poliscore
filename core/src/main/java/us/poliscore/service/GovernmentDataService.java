@@ -21,14 +21,18 @@ public class GovernmentDataService {
 	
 	@Inject private PoliscoreConfigService config;
 	
-	private List<PoliscoreDataset> importedDatasets = new ArrayList<PoliscoreDataset>();
+	private static List<PoliscoreDataset> importedDatasets = new ArrayList<PoliscoreDataset>();
+	
+	private static boolean didImportDatasets = false;
 	
 	public List<PoliscoreDataset> importDatasets() {
-		importedDatasets = new ArrayList<PoliscoreDataset>();
+		if (didImportDatasets) return importedDatasets;
 		
 		for (val cfg : config.getSupportedDeployments()) {
 			importDataset(cfg);
 		}
+		
+		didImportDatasets = true;
 		
 		return importedDatasets;
 	}

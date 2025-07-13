@@ -37,9 +37,6 @@ public class BillService {
 	private LocalCachedS3Service s3;
 	
 	@Inject
-	private MemoryObjectService memService;
-	
-	@Inject
 	protected LegislatorService lService;
 	
 	@Inject
@@ -92,57 +89,6 @@ public class BillService {
 		
 		return pressInterps;
 	}
-	
-//	@SneakyThrows
-//	public void generateBillWebappIndex() {
-//		final File out = new File(Environment.getDeployedPath(), "../../webapp/src/main/resources/bills.index");
-//		
-//		DateTimeFormatter usFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-//		
-//		val data = memService.queryAll(Bill.class).stream()
-//			.filter(b -> PoliscoreUtil.SUPPORTED_CONGRESSES.stream().anyMatch(s -> b.isIntroducedInSession(s)) && s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
-//			.map(b -> {
-//				// The bill name can come from the interpretation so we have to fetch it.
-//				b.setInterpretation(s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).orElseThrow());
-//				
-//				if (b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION)) {
-//					return Arrays.asList(b.getId(), b.getName() + " (" + b.getType().toString() + " " + b.getNumber() + ")");
-//				} else {
-//					return Arrays.asList(b.getId(), b.getName() + " (" + b.getIntroducedDate().format(usFormat) + ")");
-//				}
-//			})
-//			.sorted((a,b) -> a.get(1).compareTo(b.get(1)))
-//			.toList();
-//		
-//		Log.info("Generated a bill 'index' of size " + data.size());
-//		
-//		FileUtils.write(out, PoliscoreUtil.getObjectMapper().writeValueAsString(data), "UTF-8");
-//	}
-	
-	
-	@SneakyThrows
-	public void dumbAllBills() {
-		final File out = new File(Environment.getDeployedPath(), "../../webapp/src/main/resources/allbills.dump");
-		
-		val data = memService.query(Bill.class).stream()
-			.filter(b -> s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
-			.sorted((a,b) -> a.getName().compareTo(b.getName()))
-			.toList();
-		
-		data.forEach(b -> {
-			val interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get();
-			interp.setLongExplain("");
-			interp.setShortExplain(interp.getShortExplain().substring(0, Math.min(600, interp.getShortExplain().length())));
-			b.setInterpretation(interp);
-		});
-		
-		FileUtils.write(out, PoliscoreUtil.getObjectMapper().writeValueAsString(data), "UTF-8");
-	}
-	
-//	protected List<String> parseBillSponsors(String text)
-//	{
-//		return Jsoup.parse(text).select("bill form action action-desc sponsor,cosponsor").stream().map(e -> e.text()).collect(Collectors.toList());
-//	}
     
     protected String generateBillName(String url)
     {
@@ -200,9 +146,4 @@ public class BillService {
     {
     	return s3.exists(BillText.generateId(bill.getId()), BillText.class);
     }
-    
-    public Optional<Bill> getById(String id)
-	{
-		return memService.get(id, Bill.class);
-	}
 }

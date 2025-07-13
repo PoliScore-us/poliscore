@@ -55,28 +55,10 @@ public class PartyInterpretationService {
 			""";
 	
 	@Inject
-	private LocalFilePersistenceService localStore;
-	
-	@Inject
-	private DynamoDbPersistenceService ddb;
-	
-	@Inject
 	private LocalCachedS3Service s3;
 	
 	@Inject
-	private BillService billService;
-	
-	@Inject
-	private BillInterpretationService billInterpreter;
-	
-	@Inject
-	private LegislatorService legService;
-	
-	@Inject
 	private GovernmentDataService data;
-	
-	@Inject
-	private LegislatorInterpretationService legInterp;
 	
 	private List<BatchOpenAIRequest> requests = new ArrayList<BatchOpenAIRequest>();
 	

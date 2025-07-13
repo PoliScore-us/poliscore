@@ -1,17 +1,13 @@
 package us.poliscore;
 
 import java.io.IOException;
-import java.util.stream.Collectors;
 
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.val;
-import us.poliscore.model.IssueStats;
-import us.poliscore.model.TrackedIssue;
-import us.poliscore.model.bill.Bill;
-import us.poliscore.model.bill.BillInterpretation;
+import us.poliscore.model.legislator.Legislator;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
@@ -41,10 +37,15 @@ public class DataCleaner implements QuarkusApplication {
 	{
 		data.importDatasets();
 		
-		s3.optimizeExists(BillInterpretation.class);
-		
+		wipeAllLegislators();
 		
 		System.out.println("Program complete.");
+	}
+	
+	public void wipeAllLegislators() {
+		for (val leg : ddb.query(Legislator.class)) {
+			ddb.delete(leg);
+		}
 	}
 	
 	@Override

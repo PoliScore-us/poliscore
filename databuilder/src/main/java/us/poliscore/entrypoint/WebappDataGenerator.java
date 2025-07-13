@@ -181,8 +181,8 @@ public class WebappDataGenerator implements QuarkusApplication
 		    dataset.query(Legislator.class).stream()
 //		        .filter(l -> PoliscoreUtil.SUPPORTED_CONGRESSES.stream().anyMatch(s -> l.isMemberOfSession(s)))
 		        .forEach(l -> {
-		            if (!uniqueSet.containsKey(l.getId())) {
-		                uniqueSet.put(l.getId(), l);
+		            if (!uniqueSet.containsKey(l.getCode())) {
+		                uniqueSet.put(l.getCode(), l);
 		            }
 		        });
 	

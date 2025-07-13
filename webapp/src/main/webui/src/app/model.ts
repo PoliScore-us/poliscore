@@ -5,7 +5,6 @@ export interface Bill {
   name: string;
   number: number;
   type: string;
-  session: number;
   sponsor: BillSponsor;
   cosponsors: BillSponsor[];
   introducedDate: string;
@@ -93,8 +92,6 @@ export class Legislator {
     name!: LegislatorName;
     id?: string;
     legislatorId?: string;
-    bioguideId?: string;
-    thomasId?: string;
     interpretation?: LegislatorInterpretation;
     interactions?: BillInteraction[];
     terms!: [{

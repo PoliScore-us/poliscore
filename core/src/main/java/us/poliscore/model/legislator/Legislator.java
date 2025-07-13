@@ -12,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.AllArgsConstructor;
@@ -28,6 +29,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecon
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
 import us.poliscore.legiscan.view.LegiscanState;
 import us.poliscore.legiscan.view.LegiscanState.LegiscanStateDeserializer;
+import us.poliscore.legiscan.view.LegiscanState.LegiscanStateSerializer;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
@@ -39,6 +41,7 @@ import us.poliscore.model.dynamodb.IssueStatsMapLongAttributeConverter;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.CompressedLegislatorBillInteractionListConverter;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.LegislatorBillInteractionSetConverterProvider;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.LegislatorLegislativeTermSortedSetConverter;
+import us.poliscore.model.dynamodb.LegiscanStateConverter;
 
 @Data
 @DynamoDbBean
@@ -251,6 +254,8 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 		protected LocalDate endDate;
 		
 		@JsonDeserialize(using = LegiscanStateDeserializer.class)
+		@JsonSerialize(using = LegiscanStateSerializer.class)
+		@Getter(onMethod = @__({ @DynamoDbConvertedBy(LegiscanStateConverter.class) }))
 		protected LegiscanState state;
 		
 		protected String district;
