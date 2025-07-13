@@ -116,6 +116,11 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 			interactionsPrivate2.addAll(list.subList(1000, list.size()));
 	}
 	
+	public void clearInteractions() {
+		interactionsPrivate1.clear();
+		interactionsPrivate2.clear();
+	}
+	
 	@DynamoDbPartitionKey
 	public String getId()
 	{

@@ -28,11 +28,11 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.utils.ImmutableMap;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.AIInterpretationMetadata;
-import us.poliscore.model.bill.BillInterpretationParser;
 import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
 import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionSet;
 import us.poliscore.model.legislator.Legislator.LegislatorLegislativeTermSortedSet;
 import us.poliscore.model.legislator.LegislatorBillInteraction;
+import us.poliscore.model.session.SessionInterpretation.PartyInterpretation;
 import us.poliscore.model.session.SessionInterpretationOld.PartyInterpretationOld;
 
 public class JacksonAttributeConverter <T> implements AttributeConverter<T> {
@@ -178,17 +178,24 @@ public class JacksonAttributeConverter <T> implements AttributeConverter<T> {
     	}
     }
     
-public static class CompressedLegislatorBillInteractionListConverter extends CompressedJacksonAttributeConverter<LegislatorBillInteractionList> {
+    public static class CompressedLegislatorBillInteractionListConverter extends CompressedJacksonAttributeConverter<LegislatorBillInteractionList> {
     	
     	public CompressedLegislatorBillInteractionListConverter() {
     		super(LegislatorBillInteractionList.class);
     	}
     }
     
-    public static class CompressedPartyStatsConverter extends CompressedJacksonAttributeConverter<PartyInterpretationOld> {
+    public static class CompressedPartyStatsConverterOld extends CompressedJacksonAttributeConverter<PartyInterpretationOld> {
+    	
+    	public CompressedPartyStatsConverterOld() {
+    		super(PartyInterpretationOld.class);
+    	}
+    }
+    
+    public static class CompressedPartyStatsConverter extends CompressedJacksonAttributeConverter<PartyInterpretation> {
     	
     	public CompressedPartyStatsConverter() {
-    		super(PartyInterpretationOld.class);
+    		super(PartyInterpretation.class);
     	}
     }
     

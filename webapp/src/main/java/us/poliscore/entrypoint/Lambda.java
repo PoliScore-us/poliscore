@@ -32,7 +32,6 @@ import lombok.val;
 import us.poliscore.LegislatorBillLinker;
 import us.poliscore.LegislatorPageData;
 import us.poliscore.Page;
-import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.CongressionalSession;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
@@ -45,7 +44,7 @@ import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
 import us.poliscore.model.legislator.LegislatorBillInteraction;
 import us.poliscore.model.legislator.LegislatorIssueStat;
-import us.poliscore.model.session.SessionInterpretationOld;
+import us.poliscore.model.session.SessionInterpretation;
 import us.poliscore.service.IpGeolocationService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 
@@ -79,13 +78,13 @@ public class Lambda {
     
     @GET
     @Path("getSessionStats")
-    public SessionInterpretationOld getSessionStats() {
-    	val op = ddb.get(SessionInterpretationOld.generateId(deploymentSession().getNamespace(), deploymentSession().getCode()), SessionInterpretationOld.class);
+    public SessionInterpretation getSessionStats() {
+    	val op = ddb.get(SessionInterpretation.generateId(deploymentSession().getNamespace(), deploymentSession().getCode()), SessionInterpretation.class);
     	
     	if (op.isEmpty()) {
     		for (var session : getSessions()) {
     			if (!session.equals(deploymentSession()) && session.getNamespace().equals(deploymentSession().getNamespace())) {
-    				return ddb.get(SessionInterpretationOld.generateId(session.getNamespace(), session.getCode()), SessionInterpretationOld.class).orElse(null);
+    				return ddb.get(SessionInterpretation.generateId(session.getNamespace(), session.getCode()), SessionInterpretation.class).orElse(null);
     			}
     		}
     	}

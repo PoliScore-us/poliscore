@@ -25,7 +25,7 @@ export class HeaderComponent {
   constructor(public config: ConfigService, private router: Router) { 
     this.year = config.getYear();
 
-    this.removeLatestYear();
+    // this.removeLatestYear();
   }
 
   private removeLatestYear(): void {

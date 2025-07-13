@@ -113,6 +113,7 @@ export class SessionStatsComponent {
 
     if (this.stats == null) {
       this.service.getSessionStats().then(stats => {
+        console.log(stats);
         this.stats = stats;
         this.loading = false;
   

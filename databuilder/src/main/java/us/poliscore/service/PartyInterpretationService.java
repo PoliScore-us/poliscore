@@ -39,10 +39,7 @@ import us.poliscore.model.legislator.LegislatorInterpretation;
 import us.poliscore.model.session.SessionInterpretation;
 import us.poliscore.model.session.SessionInterpretation.PartyBillInteraction;
 import us.poliscore.model.session.SessionInterpretation.PartyInterpretation;
-import us.poliscore.model.session.SessionInterpretationOld;
-import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
-import us.poliscore.service.storage.LocalFilePersistenceService;
 
 @ApplicationScoped
 public class PartyInterpretationService {
@@ -153,7 +150,7 @@ public class PartyInterpretationService {
 				val interp = op.get();
 				val party = l.getParty();
 				
-				l.getInteractions().clear();
+				l.clearInteractions();
 				
 				val t = l.getTerms().last();
 				l.getTerms().clear();
@@ -267,7 +264,7 @@ public class PartyInterpretationService {
 		messages.add(new BatchBillMessage("user", userMsg));
 		
 		requests.add(new BatchOpenAIRequest(
-				new CustomData(SessionInterpretationOld.ID_CLASS_PREFIX + "/" + party.name()),
+				new CustomData(SessionInterpretation.ID_CLASS_PREFIX + "/" + party.name()),
 				new BatchOpenAIBody(messages)
 		));
 	}
