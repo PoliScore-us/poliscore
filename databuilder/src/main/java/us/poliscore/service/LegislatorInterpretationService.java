@@ -13,11 +13,9 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.val;
-import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.IssueStats;
 import us.poliscore.model.LegislativeChamber;
-import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.VoteStatus;
@@ -30,6 +28,7 @@ import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSpo
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
+import us.poliscore.service.storage.ObjectStorageServiceIF;
 
 @ApplicationScoped
 public class LegislatorInterpretationService
@@ -59,23 +58,9 @@ Generate a layman's, concise, three paragraph, {{analysisType}}, highlighting an
 	@Inject
 	private LocalCachedS3Service s3;
 	
-	@Inject
-	private BillService billService;
-	
-	@Inject
-	private BillInterpretationService billInterpreter;
-	
-	@Inject
-	private LegislatorService legService;
-	
-	@Inject
-	private MemoryObjectService memService;
 	
 	@Inject
 	private DynamoDbPersistenceService ddb;
-	
-	@Inject
-	private OpenAIService ai;
 	
 //	public LegislatorInterpretation getOrCreate(String legislatorId)
 //	{
@@ -117,7 +102,7 @@ Generate a layman's, concise, three paragraph, {{analysisType}}, highlighting an
 	// Backfill the interactions until we get to 1000
 	public void backfillInteractionsFromPreviousSession(Legislator leg, LegislativeSession prevSession)
 	{
-		val prevLeg = ddb.get(Legislator.generateId(prevSession.getNamespace(), prevSession, leg.getBioguideId()), Legislator.class).orElse(null);
+		val prevLeg = ddb.get(Legislator.generateId(prevSession.getNamespace(), prevSession, leg.getCode()), Legislator.class).orElse(null);
 		if (prevLeg == null) return;
 		
 		val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
@@ -182,14 +167,14 @@ Generate a layman's, concise, three paragraph, {{analysisType}}, highlighting an
 	/**
 	 * Updates all bill interactions with the latest bill interpretation from S3.
 	 */
-	public void updateInteractionsInterp(Legislator leg)
+	public void updateInteractionsInterp(ObjectStorageServiceIF objStore, Legislator leg)
 	{
 		for (val i : getInteractionsForInterpretation(leg))
 		{
 			val interp = s3.get(BillInterpretation.generateId(i.getBillId(), null), BillInterpretation.class);
 			
 			if (interp.isPresent()) {
-				val bill = memService.get(i.getBillId(), Bill.class).orElseThrow();
+				val bill = objStore.get(i.getBillId(), Bill.class).orElseThrow();
 				bill.setInterpretation(interp.get());
 				
 				i.populate(bill, interp.get());

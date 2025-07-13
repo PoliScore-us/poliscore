@@ -32,9 +32,9 @@ import us.poliscore.model.dynamodb.JacksonAttributeConverter.AIInterpretationMet
 public class PressInterpretation implements Persistable {
 	public static final String ID_CLASS_PREFIX = "PIT";
 	
-	@JsonIgnore
-	@Getter(onMethod_ = {@DynamoDbIgnore})
-	protected transient Bill bill;
+//	@JsonIgnore
+//	@Getter(onMethod_ = {@DynamoDbIgnore})
+//	protected transient Bill bill;
 	
 	protected String genArticleTitle = "";
 	
@@ -76,12 +76,6 @@ public class PressInterpretation implements Persistable {
 	
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return sentiment; }
 	@JsonIgnore public void setRating(int rating) { }
-	
-	public void setBill(Bill bill)
-	{
-		this.bill = bill;
-		billId = bill.getId();
-	}
 	
 	public static String generateId(String billId)
 	{

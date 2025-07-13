@@ -98,7 +98,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	@SneakyThrows
 	public <T extends Persistable> boolean exists(String id, Class<T> clazz)
 	{
-		val idClassPrefix = Persistable.getClassStorageBucket(clazz, data.getSession().getKey());
+		val idClassPrefix = Persistable.getClassStorageBucket(clazz, data.getSession().getNamespace(), data.getSession().getCode());
 		if (objectsInBucket.containsKey(idClassPrefix)) return objectsInBucket.get(idClassPrefix).contains(id);
 		
 		val key = getKey(id);
@@ -133,7 +133,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	    val keys = new java.util.ArrayList<String>();
 	    String continuationToken = null;
 	    
-	    String storageBucket = Persistable.getClassStorageBucket(clazz, data.getSession().getKey());
+	    String storageBucket = Persistable.getClassStorageBucket(clazz, data.getSession().getNamespace(), data.getSession().getCode());
 	    
 	    String fullPrefix = storageBucket;
 	    if (StringUtils.isNotBlank(key))
@@ -188,7 +188,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 
 	@SneakyThrows
 	public <T extends Persistable> void optimizeExists(Class<T> clazz) {
-		val storageBucket = Persistable.getClassStorageBucket(clazz, data.getSession().getKey());
+		val storageBucket = Persistable.getClassStorageBucket(clazz, data.getSession().getNamespace(), data.getSession().getCode());
 		
 		if (objectsInBucket.containsKey(storageBucket)) return;
 		
@@ -214,7 +214,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	
 	@SneakyThrows
 	public <T extends Persistable> void clearExistsOptimize(Class<T> clazz) {
-		val idClassPrefix = Persistable.getClassStorageBucket(clazz, data.getSession().getKey());
+		val idClassPrefix = Persistable.getClassStorageBucket(clazz, data.getSession().getNamespace(), data.getSession().getCode());
 		
 		objectsInBucket.remove(idClassPrefix);
 	}
@@ -233,7 +233,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 			Log.info("Deleted from S3 " + key);
 			
 			// Update the local cache if optimizeExists has been called before
-			val idClassPrefix = Persistable.getClassStorageBucket(clazz, data.getSession().getKey());
+			val idClassPrefix = Persistable.getClassStorageBucket(clazz, data.getSession().getNamespace(), data.getSession().getCode());
 			if (objectsInBucket.containsKey(idClassPrefix))
 			{
 				objectsInBucket.get(idClassPrefix).remove(id);

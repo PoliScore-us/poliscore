@@ -37,7 +37,7 @@ public class LegislatorView {
 	{
 		return new LegislatorView(
 				leg.getName(),
-				leg.getBioguideId(),
+				leg.getCode(),
 				leg.getId(),
 				leg.getBirthday(),
 				leg.getTerms(),

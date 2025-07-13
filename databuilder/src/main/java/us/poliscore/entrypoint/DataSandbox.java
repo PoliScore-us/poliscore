@@ -57,7 +57,7 @@ public class DataSandbox implements QuarkusApplication
 	
 	protected void process() throws IOException
 	{
-		data.importDataset();
+		data.importDatasets();
 		
 		
 //		val sessionStats = new SessionInterpretation();

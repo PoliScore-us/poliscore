@@ -36,6 +36,7 @@ import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorInterpretation;
 import us.poliscore.service.GovernmentDataService;
+import us.poliscore.service.PoliscoreConfigService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
@@ -56,6 +57,8 @@ public class WebappDataGenerator implements QuarkusApplication
 	@Inject
 	private GovernmentDataService data;
 	
+	@Inject private PoliscoreConfigService config;
+	
 	public static final String[] states = new String[] {
 		"KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "MP", "AL", "AK", "AZ", "AR", "AS", "CA", "CO", "CT", "DE", "DC", "FL", "GA", "GU", "HI", "ID", "IL", "IN", "IA", "KS", "OH", "OK", "OR", "PA", "PR", "RI", "SC", "SD", "TN", "TX", "TT", "UT", "VT", "VA", "VI", "WA", "WV", "WI", "WY" 
 	};
@@ -67,18 +70,12 @@ public class WebappDataGenerator implements QuarkusApplication
 	
 	public void process() throws IOException
 	{
-		List<PoliscoreDataset> datasets = new ArrayList<PoliscoreDataset>();
+		List<PoliscoreDataset> datasets = data.importDatasets();
 		
-		for (val ref : PoliscoreUtil.SUPPORTED_DATASETS) {
-			var dataset = data.importDataset(ref);
-			
-			s3.optimizeExists(BillInterpretation.class);
-			s3.optimizeExists(LegislatorInterpretation.class);
-			
-			datasets.add(dataset);
-		}
+		s3.optimizeExists(BillInterpretation.class);
+		s3.optimizeExists(LegislatorInterpretation.class);
 		
-		generateRoutes(datasets);
+		generateRoutes();
 		generateSiteMap(datasets);
 		generateLegislatorWebappIndex(datasets);
 		generateBillWebappIndex(datasets);
@@ -89,7 +86,7 @@ public class WebappDataGenerator implements QuarkusApplication
 	
 	@SneakyThrows
 	private void writeSessionInfo(List<PoliscoreDataset> datasets) {
-		final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/webui/sessions.json");
+		final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/resources/sessions.json");
 		val result = new ArrayList<LegislativeSession>();
 		
 		for (var dataset : datasets) {
@@ -100,34 +97,33 @@ public class WebappDataGenerator implements QuarkusApplication
 	}
 	
 	@SneakyThrows
-	private void generateRoutes(List<PoliscoreDataset> datasets) {
+	private void generateRoutes() {
 		final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/webui/routes.txt");
 		val routes = new ArrayList<String>();
+		val dataset = data.getDataset();
 		
 		// Party Stats
 		routes.add("/congress/democrat");
 		routes.add("/congress/republican");
 		routes.add("/congress/independent");
 		
-		for (var dataset : datasets) {
-			// All states
-	//		Arrays.asList(states).stream().forEach(s -> routes.add("/legislators/state/" + s.toLowerCase()));
-			
-			// All legislator routes
-			routes.add("/legislators");
-			dataset.query(Legislator.class).stream()
-	//			.filter(l -> l.isMemberOfSession(PoliscoreUtil.CURRENT_SESSION)) // && s3.exists(LegislatorInterpretation.generateId(l.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class)
-				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
-				.forEach(l -> routes.add("/legislator/" + l.getBioguideId()));
-			
-			// All bills
-			routes.add("/bills");
-			dataset.query(Bill.class).stream()
-				.filter(b -> // b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION) &&
-						s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
-				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
-				.forEach(b -> routes.add("/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
-		}
+		// All states
+//		Arrays.asList(states).stream().forEach(s -> routes.add("/legislators/state/" + s.toLowerCase()));
+		
+		// All legislator routes
+		routes.add("/legislators");
+		dataset.query(Legislator.class).stream()
+//			.filter(l -> l.isMemberOfSession(PoliscoreUtil.CURRENT_SESSION)) // && s3.exists(LegislatorInterpretation.generateId(l.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class)
+			.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
+			.forEach(l -> routes.add("/legislator/" + l.getCode()));
+		
+		// All bills
+		routes.add("/bills");
+		dataset.query(Bill.class).stream()
+			.filter(b -> // b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION) &&
+					s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
+			.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
+			.forEach(b -> routes.add("/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
 		
 		FileUtils.write(out, String.join("\n", routes), "UTF-8");
 	}
@@ -138,18 +134,19 @@ public class WebappDataGenerator implements QuarkusApplication
 		final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/webui/src/assets/sitemap.txt");
 		val routes = new ArrayList<String>();
 		
+		routes.add(url + "/about");
+		
 		for (var dataset : datasets)
 		{
 //			int lastYearOfSession = 1789 + (congress.getNumber() * 2) - 1;
 			int lastYearOfSession = dataset.getSession().getEndDate().getYear();
 			String prefix = "/" + lastYearOfSession;
-			
-			routes.add(url + prefix + "/about");
+			String state = dataset.getSession().getNamespace().toAbbreviation().toLowerCase().replace("us", "congress");
 			
 			// Party Stats
-			routes.add(url + prefix + "/congress/democrat");
-			routes.add(url + prefix + "/congress/republican");
-			routes.add(url + prefix + "/congress/independent");
+			routes.add(url + prefix + "/" + state + "/democrat");
+			routes.add(url + prefix + "/" + state + "/republican");
+			routes.add(url + prefix + "/" + state + "/independent");
 			
 			// All states
 //			Arrays.asList(states).stream().forEach(s -> routes.add(url + prefix + "/legislators/state/" + s.toLowerCase()));
@@ -159,7 +156,7 @@ public class WebappDataGenerator implements QuarkusApplication
 			dataset.query(Legislator.class).stream()
 				.filter(l -> l.isMemberOfSession(dataset.getSession())) //  && s3.exists(LegislatorInterpretation.generateId(l.getId(), congress.getNumber()), LegislatorInterpretation.class)
 				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
-				.forEach(l -> routes.add(url + prefix + "/legislator/" + l.getBioguideId()));
+				.forEach(l -> routes.add(url + prefix + "/legislator/" + l.getCode()));
 			
 			// All bills
 			routes.add(url + prefix + "/bills");
@@ -184,8 +181,7 @@ public class WebappDataGenerator implements QuarkusApplication
 		    dataset.query(Legislator.class).stream()
 //		        .filter(l -> PoliscoreUtil.SUPPORTED_CONGRESSES.stream().anyMatch(s -> l.isMemberOfSession(s)))
 		        .forEach(l -> {
-		            if (!uniqueSet.containsKey(l.getId()) ||
-		                uniqueSet.get(l.getId()).getSession().getStartDate().isBefore(l.getSession().getStartDate())) {
+		            if (!uniqueSet.containsKey(l.getId())) {
 		                uniqueSet.put(l.getId(), l);
 		            }
 		        });

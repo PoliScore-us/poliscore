@@ -237,25 +237,13 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	public static String AI_MODEL = "gpt-4.1-mini";
 	
 	@Inject
-	private LocalFilePersistenceService localStore;
-	
-	@Inject
-	private DynamoDbPersistenceService ddb;
-	
-	@Inject
 	private LocalCachedS3Service s3;
 	
 	@Inject
 	private BillService billService;
 	
 	@Inject
-	private LegislatorService legService;
-	
-	@Inject
 	private GovernmentDataService data;
-	
-	@Inject
-	private LegislatorInterpretationService legInterp;
 	
 	@Inject
 	private SecretService secretService;
@@ -294,7 +282,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	{
 		Log.info("Scraping press articles");
 		
-		data.importDataset();
+		data.importDatasets();
 		
 		s3.optimizeExists(BillText.class);
 		s3.optimizeExists(PressInterpretation.class);
@@ -535,10 +523,10 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	protected String buildBillIdentifier(Bill bill) {
     	String id = "United States, ";
     	
-    	if (bill.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
-    		id += bill.getSession().getKey() + "th Congress";
+    	if (bill.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
+    		id += bill.getSessionCode() + "th Congress";
     	} else {
-    		id += "State of " + bill.getSession().getNamespace().getDescription();
+    		id += "State of " + bill.getNamespace().getDescription();
     	}
     	
     	return id + ", " +

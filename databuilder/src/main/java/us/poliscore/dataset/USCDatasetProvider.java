@@ -13,20 +13,22 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkus.arc.DefaultBean;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import lombok.SneakyThrows;
 import lombok.val;
-import software.amazon.awssdk.utils.StringUtils;
 import us.poliscore.Environment;
 import us.poliscore.PoliscoreDataset;
-import us.poliscore.PoliscoreDataset.DatasetReference;
+import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.entrypoint.GPOBulkBillTextFetcher;
 import us.poliscore.images.CongressionalLegislatorImageFetcher;
@@ -47,11 +49,12 @@ import us.poliscore.service.BillService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.view.USCBillView;
 import us.poliscore.view.USCLegislatorView;
-import us.poliscore.view.USCLegislatorView.USCLegislativeTerm;
 import us.poliscore.view.USCRollCallData;
 import us.poliscore.view.USCRollCallData.USCRollCallVote;
 
 @ApplicationScoped
+@Named("usc")
+@DefaultBean
 public class USCDatasetProvider implements DatasetProvider {
 	
 	public static boolean memorizedRollCall = false;
@@ -68,7 +71,7 @@ public class USCDatasetProvider implements DatasetProvider {
 	private GPOBulkBillTextFetcher billTextFetcher;
 	
 	@Override
-	public PoliscoreDataset importDataset(DatasetReference ref) {
+	public PoliscoreDataset importDataset(DeploymentConfig ref) {
 		LegislativeSession session = new LegislativeSession(LocalDate.of(ref.getYear() - 1, 1, 1), LocalDate.of(ref.getYear(), 12, 31), String.valueOf(CongressionalSession.fromYear(ref.getYear()).getNumber()), LegislativeNamespace.US_CONGRESS);
 		PoliscoreDataset dataset = new PoliscoreDataset(session);
 		
@@ -131,8 +134,8 @@ public class USCDatasetProvider implements DatasetProvider {
 	        }
 			
 			Legislator leg = new Legislator();
+			leg.setId(Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), view.getId().getBioguide()));
 			leg.setName(view.getName().convert());
-			leg.setBioguideId(view.getId().getBioguide());
 			leg.setLisId(view.getId().getLis());
 			leg.setBirthday(view.getBio().getBirthday());
 			leg.setTerms(view.getTerms().stream()
@@ -141,8 +144,6 @@ public class USCDatasetProvider implements DatasetProvider {
 			
 			if (leg.isMemberOfSession(dataset.getSession()))
 			{
-				leg.setSession(dataset.getSession());
-				
 				dataset.put(leg);
 			}
 		}
@@ -160,7 +161,7 @@ public class USCDatasetProvider implements DatasetProvider {
 				.sorted((a,b) -> a.getName().compareTo(b.getName()))
 				.collect(Collectors.toList()))
 		{
-			Integer congressNum = Integer.valueOf(dataset.getSession().getKey());
+			Integer congressNum = Integer.valueOf(dataset.getSession().getCode());
 			if (!congressNum.equals(Integer.valueOf(fCongress.getName()))) continue;
 			
 			Log.info("Processing " + fCongress.getName() + " congress");
@@ -226,7 +227,7 @@ public class USCDatasetProvider implements DatasetProvider {
 		
 		Bill bill;
 		var billView = rollCall.getBill();
-		var billId = Bill.generateId(dataset.getSession(), CongressionalBillType.valueOf(billView.getType().toUpperCase()).name(), billView.getNumber());
+		var billId = Bill.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), CongressionalBillType.valueOf(billView.getType().toUpperCase()).name(), billView.getNumber());
 		try
 		{
 			bill = dataset.get(billId, Bill.class).orElseThrow();
@@ -259,7 +260,7 @@ public class USCDatasetProvider implements DatasetProvider {
 				.sorted((a,b) -> a.getName().compareTo(b.getName()))
 				.collect(Collectors.toList()))
 		{
-			Integer congressNum = Integer.valueOf(dataset.getSession().getKey());
+			Integer congressNum = Integer.valueOf(dataset.getSession().getCode());
 			if (!congressNum.equals(Integer.valueOf(fCongress.getName()))) continue;
 			
 			Log.info("Processing " + fCongress.getName() + " congress");
@@ -424,16 +425,15 @@ public class USCDatasetProvider implements DatasetProvider {
 	protected void importUscBill(PoliscoreDataset dataset, FileInputStream fos) {
 		val view = PoliscoreUtil.getObjectMapper().readValue(fos, USCBillView.class);
 		
-//		String text = fetchBillText(view.getUrl());
-    	
     	val bill = new Bill();
-//    	bill.setText(text);
-    	bill.setName(view.getBillName());
-    	bill.setSession(dataset.getSession());
+    	
     	bill.setType(CongressionalBillType.valueOf(view.getBill_type().toUpperCase()).name());
     	bill.setNumber(Integer.parseInt(view.getNumber()));
+    	bill.setId(Bill.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), bill.getType(), bill.getNumber()));
+    	
+    	bill.setName(view.getBillName());
+    	bill.setOriginatingChamber(CongressionalBillType.getOriginatingChamber(CongressionalBillType.valueOf(view.getBill_type().toUpperCase())));
     	bill.setStatus(buildStatus(view));
-//    	bill.setStatusUrl(view.getUrl());
     	bill.setIntroducedDate(view.getIntroduced_at());
     	bill.setSponsor(view.getSponsor() == null ? null : view.getSponsor().convert(dataset));
     	bill.setCosponsors(view.getCosponsors().stream().map(s -> s.convert(dataset)).collect(Collectors.toList()));

@@ -12,6 +12,7 @@ import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.Data;
@@ -86,6 +87,8 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 //				.key(Key.builder().partitionValue(obj.getId()).build().primaryKeyMap(getSchema(obj.getClass())))
 				.key(attrMap)
 				.build());
+		
+		Log.info("Deleted from ddb " + obj.getId());
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -321,16 +324,11 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 		return query(clazz, -1, null, null, null, null);
 	}
 	
-	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, String storageBucket)
-	{
-		return query(clazz, -1, null, null, null, null, storageBucket);
-	}
-	
 	@SneakyThrows
 	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, int pageSize, String index, Boolean ascending, String exclusiveStartKey, String sortKey)
 	{
 		
-		return query(clazz, pageSize, index, ascending, exclusiveStartKey, sortKey, Persistable.getClassStorageBucket(clazz, data.getSession().getKey()));
+		return query(clazz, pageSize, index, ascending, exclusiveStartKey, sortKey, Persistable.getClassStorageBucket(clazz, data.getSession().getNamespace(), data.getSession().getCode()));
 	}
 	
 	@SneakyThrows

@@ -39,37 +39,12 @@ public class DataCleaner implements QuarkusApplication {
 	
 	protected void process() throws IOException
 	{
-		data.importDataset();
+		data.importDatasets();
 		
 		s3.optimizeExists(BillInterpretation.class);
 		
-		for (var bill : data.getDataset().query(Bill.class).stream()
-				.filter(b -> b.isIntroducedInSession(data.getSession()) && billInterpreter.isInterpreted(b.getId())).collect(Collectors.toList()))
-		{
-			val interp = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class).get();
-			
-			if (!validateIssueStats(interp.getIssueStats()))
-					System.out.println(bill.getId());
-		}
 		
 		System.out.println("Program complete.");
-	}
-	
-	private boolean validateIssueStats(IssueStats stats) {
-	    int zeroCount = 0;
-	    int totalSet = 0;
-	    for (TrackedIssue issue : TrackedIssue.values()) {
-	        if (issue != TrackedIssue.OverallBenefitToSociety && stats.hasStat(issue)) {
-	            totalSet++;
-	            if (stats.getStat(issue) == 0) zeroCount++;
-	        }
-	    }
-
-	    if (totalSet == TrackedIssue.values().length-1 && zeroCount > 1) {
-	        return false;
-	    }
-	    
-	    return true;
 	}
 	
 	@Override

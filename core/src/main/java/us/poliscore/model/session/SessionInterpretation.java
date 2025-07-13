@@ -68,7 +68,7 @@ public class SessionInterpretation implements Persistable {
 	@DynamoDbPartitionKey
 	public String getId()
 	{
-		return generateId(session.getNamespace(), session.getKey());
+		return generateId(session.getNamespace(), session.getCode());
 	}
 	
 	public void setId(String id) { }

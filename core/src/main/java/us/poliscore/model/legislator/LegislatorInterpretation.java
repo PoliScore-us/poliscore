@@ -47,9 +47,9 @@ public class LegislatorInterpretation implements Persistable
 		
 	}
 	
-	public LegislatorInterpretation(String legislatorId, LegislativeSession session, AIInterpretationMetadata metadata, IssueStats stats)
+	public LegislatorInterpretation(String legislatorId, String sessionCode, LegislativeNamespace namespace, AIInterpretationMetadata metadata, IssueStats stats)
 	{
-		this.id = generateId(legislatorId, session.getKey(), session.getNamespace());
+		this.id = generateId(legislatorId, sessionCode, namespace);
 		this.metadata = metadata;
 		this.issueStats = stats;
 	}

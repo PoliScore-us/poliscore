@@ -12,7 +12,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 
 @Data
 @AllArgsConstructor
-@EqualsAndHashCode(of = {"key", "namespace"})
+@EqualsAndHashCode(of = {"code", "namespace"})
 @NoArgsConstructor
 @DynamoDbBean
 public class LegislativeSession {
@@ -21,7 +21,7 @@ public class LegislativeSession {
 	
 	protected LocalDate endDate;
 	
-	protected String key;
+	protected String code;
 	
 	protected LegislativeNamespace namespace;
 	

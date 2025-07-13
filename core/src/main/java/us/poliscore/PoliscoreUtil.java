@@ -9,7 +9,7 @@ import java.util.function.Predicate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
-import us.poliscore.PoliscoreDataset.DatasetReference;
+import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.model.LegislativeNamespace;
 
 public class PoliscoreUtil {
@@ -21,12 +21,7 @@ public class PoliscoreUtil {
 		APP_DATA.mkdirs();
 	}
 	
-//	public static DatasetReference DEPLOYMENT_DATASET = new DatasetReference(LegislativeNamespace.US_CONGRESS, 2026);
-	public static DatasetReference DEPLOYMENT_DATASET = new DatasetReference(LegislativeNamespace.US_COLORADO, 2025);
-	
 	public static String DEPLOYMENT_SESSION_KEY;
-	
-	public static List<DatasetReference> SUPPORTED_DATASETS = Arrays.asList(DEPLOYMENT_DATASET, new DatasetReference(LegislativeNamespace.US_CONGRESS, 2024));
 	
 	public static List<File> allFilesWhere(File parent, Predicate<File> criteria)
 	{

@@ -22,6 +22,8 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
 import us.poliscore.PoliscoreUtil;
+import us.poliscore.legiscan.view.LegiscanState;
+import us.poliscore.model.ChamberSize;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
@@ -45,10 +47,6 @@ public class Bill implements Persistable {
 	 * "storage buckets". Really only used in DynamoDb at the moment, and is used for querying on the object indexes with objects that exist
 	 * in different congressional sessions.
 	 */
-	public static String getClassStorageBucket(String sessionKey)
-	{
-		return getClassStorageBucket(PoliscoreUtil.DEPLOYMENT_DATASET.getNamespace(), sessionKey);
-	}
 	public static String getClassStorageBucket(LegislativeNamespace namespace, String sessionKey)
 	{
 		return ID_CLASS_PREFIX + "/" + namespace.getNamespace() + "/" + sessionKey;
@@ -57,21 +55,19 @@ public class Bill implements Persistable {
 	@JsonIgnore
 	protected transient BillText text;
 	
-	protected LegislativeNamespace namespace = PoliscoreUtil.DEPLOYMENT_DATASET.getNamespace();
-	
-	protected LegislativeSession session;
-	
 	// Type here is sort of overloaded at this point. If it's congressional data, then it will align with CongressionalBillType.name()
 	// Otherwise if it's a state bill it should align with LegiscanBillType.getCode()
 	protected String type;
+	
+	protected int number;
 	
 	protected LegislativeChamber originatingChamber;
 	
 	protected BillStatus status;
 	
-	protected int number;
-	
 	protected String name;
+	
+	protected String id;
 	
 	protected int legiscanId;
 	
@@ -115,7 +111,7 @@ public class Bill implements Persistable {
 	@DynamoDbIgnore
 	public String getPoliscoreId()
 	{
-		return generateId(session, type, number);
+		return id;
 	}
 	
 //	@JsonIgnore
@@ -142,17 +138,26 @@ public class Bill implements Persistable {
 		return getPoliscoreId();
 	}
 	
-	public void setId(String id) { }
+	public void setId(String id) { this.id = id; }
+	
+	@JsonIgnore
+	@DynamoDbIgnore
+	public LegislativeNamespace getNamespace() {
+		return LegislativeNamespace.of(this.id.split("/")[1] + "/" + this.id.split("/")[2]);
+	}
+	
+	@JsonIgnore
+	@DynamoDbIgnore
+	public String getSessionCode() {
+		return this.id.split("/")[3];
+	}
 	
 	public boolean isIntroducedInSession(LegislativeSession session) {
-		return session.equals(this.session);
+		return session.getCode().equals(getSessionCode()) && this.getNamespace().equals(session.getNamespace());
 	}
 	
 	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX, Persistable.OBJECT_BY_RATING_ABS_INDEX, Persistable.OBJECT_BY_IMPACT_INDEX, OBJECT_BY_IMPACT_ABS_INDEX, OBJECT_BY_HOT_INDEX }) public String getStorageBucket() {
-		if (!StringUtils.isEmpty(this.getId()))
-			return this.getId().substring(0, StringUtils.ordinalIndexOf(getId(), "/", 4));
-		
-		return getClassStorageBucket(PoliscoreUtil.DEPLOYMENT_SESSION_KEY);
+		return this.getId().substring(0, StringUtils.ordinalIndexOf(getId(), "/", 4));
 	}
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 	
@@ -180,11 +185,11 @@ public class Bill implements Persistable {
 	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_HOT_INDEX }) public int getHot() { return (int)(getImpactAbs(TrackedIssue.OverallBenefitToSociety, 1.5d) * Math.exp(-0.02 * ChronoUnit.DAYS.between(getDate(), LocalDate.now()))); }
 	public void setHot(int hot) { }
 	
-	public static String generateId(LegislativeSession session, String typeCode, int number)
+	public static String generateId(LegislativeNamespace namespace, String sessionCode, String typeCode, int number)
 	{
-		return ID_CLASS_PREFIX + "/" + session.getNamespace().getNamespace() + "/" + session.getKey() + "/" + typeCode.toLowerCase() + "/" + number;
+		return ID_CLASS_PREFIX + "/" + namespace.getNamespace() + "/" + sessionCode + "/" + typeCode.toLowerCase() + "/" + number;
 	}
-	public static String generateId(LegislativeSession session, CongressionalBillType type, int number) { return generateId(session, type.name(), number); }
+	public static String generateId(LegislativeNamespace namespace, String sessionKey, CongressionalBillType type, int number) { return generateId(namespace, sessionKey, type.name(), number); }
 	
 	@JsonIgnore public int getImpact(TrackedIssue issue) { return getImpact(issue, DEFAULT_IMPACT_LAW_WEIGHT); };
 	
@@ -212,22 +217,26 @@ public class Bill implements Persistable {
 		return (int) Math.round(statusTerm + ratingTerm + cosponsorTerm ) * sign;
 	}
 	
+	public LegislativeChamber getOriginatingChamber()
+	{
+		if (originatingChamber == null && getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
+			return CongressionalBillType.getOriginatingChamber(CongressionalBillType.valueOf(type));
+		} else {
+			return originatingChamber;
+		}
+	}
+	
 	/*
-	 * A percentage of how much of the chamber has cosponsored the bill. In the house this number is 435. In the senate this is 100.
-	 * TODO : This only holds true for congress
+	 * A percentage of how much of the chamber has cosponsored the bill.
 	 */
 	public float getCosponsorPercent()
 	{
-		float percent;
+		if (getOriginatingChamber() == null) throw new UnsupportedOperationException("Originating chamber is null for " + getId());
 		
-		if (getOriginatingChamber().equals(LegislativeChamber.LOWER))
-		{
-			percent = (float)cosponsors.size() / 435f;
-		}
-		else
-		{
-			percent = (float)cosponsors.size() / 100f;
-		}
+		float percent;
+		float chamberSize = ((float)ChamberSize.getChamberSize(LegiscanState.fromAbbreviation(getNamespace().toAbbreviation()), getOriginatingChamber()));
+		
+		percent = (float)cosponsors.size() / chamberSize;
 		
 		return percent;
 	}

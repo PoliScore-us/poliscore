@@ -1,17 +1,17 @@
 package us.poliscore.dataset;
 
-import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Alternative;
+import jakarta.enterprise.inject.Default;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import us.poliscore.PoliscoreDataset;
-import us.poliscore.PoliscoreDataset.DatasetReference;
+import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 
-@Priority(1)
-@Alternative
 @ApplicationScoped
+@Default
+@Named("poliscore")
 public class PoliscoreDatasetProvider implements DatasetProvider {
 
 	@Inject
@@ -29,7 +29,7 @@ public class PoliscoreDatasetProvider implements DatasetProvider {
 	}
 	
 	@Override
-	public PoliscoreDataset importDataset(DatasetReference ref) {
+	public PoliscoreDataset importDataset(DeploymentConfig ref) {
 		return getProvider(ref.getNamespace()).importDataset(ref);
 	}
 

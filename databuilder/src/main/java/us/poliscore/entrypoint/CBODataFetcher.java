@@ -83,13 +83,13 @@ public class CBODataFetcher implements QuarkusApplication
 	
 	protected void process() throws IOException
 	{
-		data.importDataset();
+		data.importDatasets();
 		
 		if (CHECK_EXISTS) s3.optimizeExists(CBOBillAnalysis.class);
 		
 		long count = 0;
 		
-		val doc = fetchWithRetry("https://www.cbo.gov/rss/" + data.getSession().getKey() + "congress-cost-estimates.xml");
+		val doc = fetchWithRetry("https://www.cbo.gov/rss/" + data.getSession().getCode() + "congress-cost-estimates.xml");
 		
 		for (val element : doc.select("response item")) {
 			if (StringUtils.isBlank(element.child(4).text()) || StringUtils.isBlank(element.child(2).text())) continue;
@@ -97,7 +97,7 @@ public class CBODataFetcher implements QuarkusApplication
 			val billType = getBillType(element.child(4).text());
 			val billNum = getBillNumber(element.child(4).text(), billType);
 			if (billType == null || billNum == null) continue;
-			val billId = Bill.generateId(data.getSession(), billType, billNum);
+			val billId = Bill.generateId(data.getSession().getNamespace(), data.getSession().getCode(), billType, billNum);
 			
 			if (CHECK_EXISTS && s3.exists(CBOBillAnalysis.generateId(billId), CBOBillAnalysis.class)) { count++; continue; }
 			

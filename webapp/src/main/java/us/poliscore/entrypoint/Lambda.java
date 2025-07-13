@@ -80,12 +80,12 @@ public class Lambda {
     @GET
     @Path("getSessionStats")
     public SessionInterpretationOld getSessionStats() {
-    	val op = ddb.get(SessionInterpretationOld.generateId(deploymentSession().getNamespace(), deploymentSession().getKey()), SessionInterpretationOld.class);
+    	val op = ddb.get(SessionInterpretationOld.generateId(deploymentSession().getNamespace(), deploymentSession().getCode()), SessionInterpretationOld.class);
     	
     	if (op.isEmpty()) {
     		for (var session : getSessions()) {
     			if (!session.equals(deploymentSession()) && session.getNamespace().equals(deploymentSession().getNamespace())) {
-    				return ddb.get(SessionInterpretationOld.generateId(session.getNamespace(), session.getKey()), SessionInterpretationOld.class).orElse(null);
+    				return ddb.get(SessionInterpretationOld.generateId(session.getNamespace(), session.getCode()), SessionInterpretationOld.class).orElse(null);
     			}
     		}
     	}
@@ -193,21 +193,22 @@ public class Lambda {
     
     @GET
     @Path("/getLegislators")
-    public List<Persistable> getLegislators(@RestQuery("pageSize") Integer _pageSize, @RestQuery("index") String _index, @RestQuery("ascending") Boolean _ascending, @RestQuery("exclusiveStartKey") String _exclusiveStartKey, @RestQuery String sortKey, @RestQuery("year") Integer _year) {
+    public List<Persistable> getLegislators(@RestQuery("pageSize") Integer _pageSize, @RestQuery("index") String _index, @RestQuery("ascending") Boolean _ascending, @RestQuery("exclusiveStartKey") String _exclusiveStartKey, @RestQuery String sortKey, @RestQuery("year") Integer _year, @RestQuery("namespace") String _namespace) {
     	val index = StringUtils.isNotBlank(_index) ? _index : Persistable.OBJECT_BY_DATE_INDEX;
     	val startKey = _exclusiveStartKey;
     	var pageSize = _pageSize == null ? 25 : _pageSize;
     	Boolean ascending = _ascending == null ? Boolean.TRUE : _ascending;
     	
     	Integer year = _year == null ? Integer.valueOf(deploymentSession().getEndDate().getYear()) : _year;
-    	String storageBucket = Legislator.ID_CLASS_PREFIX + "/" + LegislativeNamespace.US_CONGRESS.getNamespace() + "/" + CongressionalSession.fromYear(year).getNumber();
+    	LegislativeNamespace namespace = StringUtils.isEmpty(_namespace) ? LegislativeNamespace.US_CONGRESS : LegislativeNamespace.of(_namespace);
+    	String storageBucket = Legislator.ID_CLASS_PREFIX + "/" + namespace.getNamespace() + "/" + findSessionCode(namespace, year);
     	
     	val cacheable = StringUtils.isBlank(startKey) && pageSize == 25 && !index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX) && !index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX);
     	val cacheKey = storageBucket + "-" + index + "-" + ascending.toString() + (StringUtils.isBlank(sortKey) ? "" : "-" + sortKey);
     	if (cacheable && cachedLegislators.containsKey(cacheKey)) return cachedLegislators.get(cacheKey).stream().map(l -> (Persistable) l).toList();
     	
     	if (index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX) || index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX)) {
-    		storageBucket = LegislatorIssueStat.getIndexPrimaryKey(TrackedIssue.valueOf(sortKey), deploymentSession().getKey());
+    		storageBucket = LegislatorIssueStat.getIndexPrimaryKey(deploymentSession().getNamespace(), deploymentSession().getCode(), TrackedIssue.valueOf(sortKey));
     		sortKey = null;
     		val legs = ddb.query(LegislatorIssueStat.class, pageSize, index, ascending, startKey, sortKey, storageBucket);
     		return legs.stream().map(l -> (Persistable) l).toList();
@@ -224,12 +225,23 @@ public class Lambda {
     	return legs.stream().map(l -> (Persistable) l).toList();
     }
     
+    private String findSessionCode(LegislativeNamespace namespace, int year) {
+    	val op = getSessions().stream().filter(s -> s.getNamespace().equals(namespace) && s.getEndDate().getYear() == year).findFirst();
+		 
+		 if (op.isPresent()) {
+			 return op.get().getCode();
+		 } else {
+			 return String.valueOf(CongressionalSession.fromYear(year).getNumber());
+		 }
+	}
+    
     @GET
     @SneakyThrows
     @Path("/getLegislatorPageData")
-    public LegislatorPageData getLegislatorPageData(@Context APIGatewayV2HTTPEvent event, @RestQuery("state") String state, @RestQuery("year") Integer _year) {
+    public LegislatorPageData getLegislatorPageData(@Context APIGatewayV2HTTPEvent event, @RestQuery("state") String state, @RestQuery("year") Integer _year, @RestQuery("namespace") String _namespace) {
     	String location = null;
     	Integer year = _year == null ? Integer.valueOf(deploymentSession().getEndDate().getYear()) : _year;
+    	LegislativeNamespace namespace = StringUtils.isEmpty(_namespace) ? LegislativeNamespace.US_CONGRESS : LegislativeNamespace.of(_namespace);
     	
     	if (StringUtils.isNotBlank(state)) {
     		location = state.toUpperCase();
@@ -245,7 +257,7 @@ public class Lambda {
     	
     	String index = (location == null ? null : Persistable.OBJECT_BY_LOCATION_INDEX);
     	
-    	val legs = getLegislators(null, index, null, null, location, year);
+    	val legs = getLegislators(null, index, null, null, location, year, namespace.getNamespace());
     	
     	return new LegislatorPageData(location, legs, getAllLegs());
     }
@@ -258,7 +270,7 @@ public class Lambda {
     @SneakyThrows
     private List<LegislativeSession> getSessions() {
     	if (cachedSessions == null) {
-    		cachedSessions = PoliscoreUtil.getObjectMapper().readValue(IOUtils.toString(Lambda.class.getResourceAsStream("/sessions.json"), "UTF-8"), List.class);
+    		cachedSessions = mapper.readValue(IOUtils.toString(Lambda.class.getResourceAsStream("/sessions.json"), "UTF-8"), new TypeReference<List<LegislativeSession>>() {});
     	}
     	
     	return cachedSessions;
@@ -268,7 +280,7 @@ public class Lambda {
 	@SneakyThrows
     private List<List<String>> getAllLegs() {
     	if (cachedAllLegs == null) {
-    		cachedAllLegs = PoliscoreUtil.getObjectMapper().readValue(IOUtils.toString(Lambda.class.getResourceAsStream("/legislators.index"), "UTF-8"), List.class);
+    		cachedAllLegs = mapper.readValue(IOUtils.toString(Lambda.class.getResourceAsStream("/legislators.index"), "UTF-8"), List.class);
     	}
     	
     	return cachedAllLegs;
@@ -292,14 +304,15 @@ public class Lambda {
     @GET
     @Path("/getBills")
     @SneakyThrows
-    public List<Persistable> getBills(@RestQuery("pageSize") Integer _pageSize, @RestQuery("index") String _index, @RestQuery("ascending") Boolean _ascending, @RestQuery("exclusiveStartKey") String _exclusiveStartKey, @RestQuery String sortKey, @RestQuery("year") Integer _year) {
+    public List<Persistable> getBills(@RestQuery("pageSize") Integer _pageSize, @RestQuery("index") String _index, @RestQuery("ascending") Boolean _ascending, @RestQuery("exclusiveStartKey") String _exclusiveStartKey, @RestQuery String sortKey, @RestQuery("year") Integer _year, @RestQuery("namespace") String _namespace) {
     	val index = StringUtils.isNotBlank(_index) ? _index : Persistable.OBJECT_BY_DATE_INDEX;
     	val startKey = _exclusiveStartKey;
     	var pageSize = _pageSize == null ? 25 : _pageSize;
     	Boolean ascending = _ascending == null ? Boolean.TRUE : _ascending;
     	
     	Integer year = _year == null ? Integer.valueOf(deploymentSession().getEndDate().getYear()) : _year;
-    	String storageBucket = Bill.ID_CLASS_PREFIX + "/" + LegislativeNamespace.US_CONGRESS.getNamespace() + "/" + CongressionalSession.fromYear(year).getNumber();
+    	LegislativeNamespace namespace = StringUtils.isEmpty(_namespace) ? LegislativeNamespace.US_CONGRESS : LegislativeNamespace.of(_namespace);
+    	String storageBucket = Bill.ID_CLASS_PREFIX + "/" + LegislativeNamespace.US_CONGRESS.getNamespace() + "/" + findSessionCode(namespace, year);
     	
     	val cacheable = StringUtils.isBlank(startKey) && pageSize == 25 && StringUtils.isBlank(sortKey) && !index.startsWith(TRACKED_ISSUE_INDEX) && !index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX) && !index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX);
     	val cacheKey = storageBucket + "-" + index + "-" + ascending.toString();
@@ -307,7 +320,7 @@ public class Lambda {
     	
     	List<Bill> bills;
     	if (index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX) || index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX)) {
-    		storageBucket = BillIssueStat.getIndexPrimaryKey(TrackedIssue.valueOf(sortKey), deploymentSession().getKey());
+    		storageBucket = BillIssueStat.getIndexPrimaryKey(namespace, deploymentSession().getCode(), TrackedIssue.valueOf(sortKey));
     		sortKey = null;
     		val bii = ddb.query(BillIssueStat.class, pageSize, index, ascending, startKey, sortKey, storageBucket);
     		return bii.stream().map(l -> (Persistable) l).toList();

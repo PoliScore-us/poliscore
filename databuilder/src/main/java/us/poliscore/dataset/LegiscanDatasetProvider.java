@@ -10,14 +10,16 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 
+import io.quarkus.arc.DefaultBean;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import lombok.SneakyThrows;
 import lombok.val;
 import software.amazon.awssdk.utils.StringUtils;
 import us.poliscore.PoliscoreDataset;
-import us.poliscore.PoliscoreDataset.DatasetReference;
+import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.legiscan.view.LegiscanBillView;
 import us.poliscore.legiscan.view.LegiscanChamber;
@@ -52,6 +54,8 @@ import us.poliscore.service.LegislatorService;
 import us.poliscore.service.storage.S3PersistenceService;
 
 @ApplicationScoped
+@Named("legiscan")
+@DefaultBean
 public class LegiscanDatasetProvider implements DatasetProvider {
 	
 //	@Inject
@@ -69,7 +73,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	protected CachedLegiscanService legiscan;
 	
 	@Override
-	public PoliscoreDataset importDataset(DatasetReference ref) {
+	public PoliscoreDataset importDataset(DeploymentConfig ref) {
 		var state = namespaceToState(ref.getNamespace());
 		var cached = legiscan.cacheDataset(state, ref.getYear());
 		var session = buildSession(cached.getDataset().getSessionId(), cached.getDataset().getState(), cached.getDataset().getYearStart(), cached.getDataset().getYearEnd());
@@ -92,7 +96,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	}
 	
 	public static LegiscanState namespaceToState(LegislativeNamespace namespace) {
-		return LegiscanState.fromAbbreviation(namespace.toString().replace("us/", ""));
+		return LegiscanState.fromAbbreviation(namespace.getNamespace().replace("us/", ""));
 	}
 	
 	public static LegislativeSession buildSession(int sessionId, LegiscanState state, int yearStart, int yearEnd) {
@@ -129,9 +133,15 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	
 	protected void importBill(LegiscanBillView view, PoliscoreDataset dataset) {
 		val bill = new Bill();
-    	bill.setName(view.getTitle());
-    	bill.setSession(dataset.getSession());
-    	bill.setNumber(Integer.parseInt(view.getBillNumber().replaceAll("[^\\d]", "")));
+		
+		bill.setNumber(Integer.parseInt(view.getBillNumber().replaceAll("[^\\d]", "")));
+		if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+    		bill.setType(toCongressionalBillType(view).name());
+    	else
+    		bill.setType(view.getBillType().getCode());
+		bill.setId(Bill.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), bill.getType(), bill.getNumber()));
+		
+		bill.setName(view.getTitle());
     	bill.setOriginatingChamber(LegislativeChamber.fromLegiscanChamber(view.getHistory().get(0).getChamber()));
     	bill.setStatus(buildStatus(view, dataset.getSession()));
     	bill.setIntroducedDate(view.getHistory().getFirst().getDate());
@@ -141,10 +151,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
     	bill.setLastActionDate(view.getHistory().getLast().getDate());
     	bill.setLegiscanId(view.getBillId());
     	
-    	if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-    		bill.setType(toCongressionalBillType(view).name());
-    	else
-    		bill.setType(view.getBillType().getCode());
+    	
     	
     	if (bill.getSponsor() != null)
     	{
@@ -219,7 +226,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
 			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), view.getBioguideId());
 		else
-			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), view.getPeopleId());
+			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), String.valueOf(view.getPeopleId()));
 		
 		var leg = dataset.get(legId, Legislator.class).get();
 		
@@ -293,7 +300,8 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		Legislator leg;
 		try
 		{
-			leg = dataset.get(Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), vote.getPeopleId()), Legislator.class).orElseThrow();
+			// TODO : I don't think this will work for congress (since the congress legislator code is bioguide id not people id) but we don't use legiscan for congress anyway
+			leg = dataset.get(Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), String.valueOf(vote.getPeopleId())), Legislator.class).orElseThrow();
 		}
 		catch (NoSuchElementException ex)
 		{
@@ -347,17 +355,20 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    if (view == null || StringUtils.isBlank(view.getName())) return;
 
 	    val leg = new Legislator();
-
+	    
+	    String legId;
+		if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), view.getBioguideId());
+		else
+			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), String.valueOf(view.getPeopleId()));
+		leg.setId(legId);
+		
 	    // Build and set name
 	    val name = new Legislator.LegislatorName();
 	    name.setFirst(view.getFirstName());
 	    name.setLast(view.getLastName());
 	    name.setOfficial_full(view.getName());
 	    leg.setName(name);
-
-	    // Set various IDs
-	    leg.setBioguideId(view.getBioguideId());
-	    leg.setLegiscanId(view.getPeopleId());
 
 	    // Legiscan doesn't actually provide birthday so we're augmenting our dataset later with OpenStates data (which often has birthdays)...
 	    
@@ -372,7 +383,6 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 
 	    // If active in current session, add to that session
 	    if (leg.isMemberOfSession(dataset.getSession())) {
-	        leg.setSession(dataset.getSession());
 	        dataset.put(leg);
 	    }
 	}

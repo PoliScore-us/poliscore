@@ -1,12 +1,12 @@
 package us.poliscore.dataset;
 
 import us.poliscore.PoliscoreDataset;
-import us.poliscore.PoliscoreDataset.DatasetReference;
+import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.model.LegislativeSession;
 
 public interface DatasetProvider {
 	
-	public PoliscoreDataset importDataset(DatasetReference ref);
+	public PoliscoreDataset importDataset(DeploymentConfig ref);
 	
 	public LegislativeSession getPreviousSession(LegislativeSession current);
 	

@@ -51,13 +51,13 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 //
 //        if (status == 429 || status == 403 || status >= 400) {
 //        	val body = IOUtils.toString(is, "UTF-8");
-//            Log.warn("[" + leg.getBioguideId() + "] Received " + status + " fetching jpg. " + body.substring(0, Math.min(body.length(), 300)));
+//            Log.warn("[" + leg.getCode() + "] Received " + status + " fetching jpg. " + body.substring(0, Math.min(body.length(), 300)));
 //            return Optional.empty();
 //        }
 //
 //        byte[] image = IOUtils.toByteArray(is);
 //        if (!isJPEG(image)) {
-//            Log.warn("[" + leg.getBioguideId() + "] S3 returend invalid image data?");
+//            Log.warn("[" + leg.getCode() + "] S3 returend invalid image data?");
 //            return Optional.empty();
 //        }
 //        
@@ -94,7 +94,7 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 	        @Cleanup InputStream is = resp.getEntity().getContent();
 
 	        if (status == 429 || status == 403) {
-	            Log.warn("[" + leg.getBioguideId() + "] Received " + status + " (rate limit). Waiting " + backoffMs + "ms...");
+	            Log.warn("[" + leg.getCode() + "] Received " + status + " (rate limit). Waiting " + backoffMs + "ms...");
 	            Thread.sleep(backoffMs);
 	            backoffMs = Math.min(backoffMs * 2, 60000); // max 1 minute
 	            continue;
@@ -102,13 +102,13 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 
 	        if (status >= 400) {
 	            val body = IOUtils.toString(is, "UTF-8");
-	            Log.warn("[" + leg.getBioguideId() + "] HTTP " + status + ": " + body.substring(0, Math.min(body.length(), 300)));
+	            Log.warn("[" + leg.getCode() + "] HTTP " + status + ": " + body.substring(0, Math.min(body.length(), 300)));
 	            return Optional.empty(); // don't retry 404s, 500s, etc.
 	        }
 
 	        byte[] image = IOUtils.toByteArray(is);
 	        if (!isJPEG(image)) {
-	            Log.warn("[" + leg.getBioguideId() + "] Invalid image data. Waiting " + backoffMs + "ms...");
+	            Log.warn("[" + leg.getCode() + "] Invalid image data. Waiting " + backoffMs + "ms...");
 	            Thread.sleep(backoffMs);
 	            backoffMs = Math.min(backoffMs * 2, 60000);
 	            continue;
@@ -119,13 +119,13 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 	        return Optional.of(webp);
 	    }
 
-	    Log.warn("[" + leg.getBioguideId() + "] Exceeded retry limit.");
+	    Log.warn("[" + leg.getCode() + "] Exceeded retry limit.");
 	    return Optional.empty();
 	}
 	
 	/**
 	 * The legislator images on congress.gov do not follow a consistent pattern. The most consistent pattern seems to be something like: 
-	 * 		https://www.congress.gov/img/member/" + leg.getBioguideId().toLowerCase() + "_200.jpg
+	 * 		https://www.congress.gov/img/member/" + leg.getCode().toLowerCase() + "_200.jpg
 	 * 
 	 * And this actually works for about 90% or 95% of legislators. The rest of the legislators follow inconsistent naming conventions,
 	 * for example John Peterson (P000263)'s image url is /img/member/h_peterson_john_20073196577_200.jpg.
@@ -138,14 +138,14 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 	 */
 	@SneakyThrows
 	private String scrapeImageUrlFromMemberPage(Legislator leg) {
-	    val fallback = "https://www.congress.gov/img/member/" + leg.getBioguideId().toLowerCase() + "_200.jpg";
+	    val fallback = "https://www.congress.gov/img/member/" + leg.getCode().toLowerCase() + "_200.jpg";
 
 	    val memberUrl = "https://www.congress.gov/member/"
 	        + leg.getName().getFirst().toLowerCase().replace(" ", "-")
 	        + "-"
 	        + leg.getName().getLast().toLowerCase().replace(" ", "-")
 	        + "/"
-	        + leg.getBioguideId();
+	        + leg.getCode();
 
 	    // Reuse the exact SSL setup as before
 	    KeyStore keyStore = KeyStore.getInstance("PKCS12");
@@ -168,7 +168,7 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 	    @Cleanup InputStream is = resp.getEntity().getContent();
 
 	    if (status >= 400) {
-	        Log.warn("[" + leg.getBioguideId() + "] Failed to fetch member page: HTTP " + status);
+	        Log.warn("[" + leg.getCode() + "] Failed to fetch member page: HTTP " + status);
 	        return fallback;
 	    }
 

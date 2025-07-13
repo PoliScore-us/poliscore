@@ -47,5 +47,14 @@ export function descriptionForLegislator(leg: Legislator, small: boolean = false
 
     let term = leg.terms[leg.terms.length - 1];
 
-    return (term.chamber == "SENATE" ? "Senator" : "House") + " (" + convertStateCodeToName(term.state) + ")";
+    let label = term.chamber;
+    if (term.chamber == "UPPER") {
+      label = "Senator";
+    } else if (term.chamber == "LOWER") {
+      label = "House";
+    }
+
+    label += " (" + convertStateCodeToName(term.state) + ")";
+
+    return label;
   }

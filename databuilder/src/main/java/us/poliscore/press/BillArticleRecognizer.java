@@ -293,7 +293,7 @@ public class BillArticleRecognizer {
     private float scoreSession(Bill bill, String text) {
     	String pat;
     	if (bill.getNamespace() == LegislativeNamespace.US_CONGRESS) {
-    	    pat = bill.getSession().getKey() + "(st|nd|rd|th)? congress";
+    	    pat = bill.getSessionCode() + "(st|nd|rd|th)? congress";
     	} else {
     	    return 0f;
     	}

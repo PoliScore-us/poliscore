@@ -82,12 +82,15 @@ public enum LegislativeNamespace {
 	}
 	
 	public String toAbbreviation() {
+		if (this.equals(US_CONGRESS)) return "US";
+		
 		return this.getNamespace().split("/")[1].toUpperCase();
 	}
 	
-	public String toString() {
-		return namespace;
-	}
+	// We can't override it because ddb uses it for serialization for some reason
+//	public String toString() {
+//		return namespace;
+//	}
 	
 	public String getDescription() {
 		if (this == US_CONGRESS) {

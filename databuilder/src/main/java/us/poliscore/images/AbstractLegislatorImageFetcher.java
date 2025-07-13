@@ -80,7 +80,7 @@ private static final String BUCKET_NAME = "poliscore-prod-public";
 			}
 			catch (Throwable t)
 			{
-				Log.warn("Could not find image for congressman " + leg.getName().getOfficial_full() + " " + leg.getBioguideId());
+				Log.warn("Could not find image for congressman " + leg.getName().getOfficial_full() + " " + leg.getCode());
 				t.printStackTrace();
 			}
 		}

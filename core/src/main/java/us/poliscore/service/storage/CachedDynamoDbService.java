@@ -69,10 +69,6 @@ public class CachedDynamoDbService implements ApplicationDataStoreIF
 		return dynamodb.query(clazz);
 	}
 	
-	public <T extends Persistable> List<T> query(Class<T> clazz, String storageBucket) {
-		return dynamodb.query(clazz, storageBucket);
-	}
-	
 	@SneakyThrows
 	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, int pageSize, String index, Boolean ascending, String exclusiveStartKey, String sortKey)
 	{

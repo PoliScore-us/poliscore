@@ -109,7 +109,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	protected void process() throws IOException
 	{
-		data.importDataset();
+		data.importDatasets();
 		data.syncS3LegislatorImages(data.getDataset());
 		data.syncS3BillText(data.getDataset());
 		
@@ -167,6 +167,11 @@ public class DatabaseBuilder implements QuarkusApplication
 		Set<Bill> updated = new HashSet<Bill>();
 		for (val pi : s3.query(PressInterpretation.class)) {
 			if (pi.isNoInterp()) continue;
+			
+			if (pi.getId().contains("null") || pi.getBillId().contains("null")) {
+				s3.delete(pi.getId(), PressInterpretation.class);
+				continue;
+			}
 			
 			var bill = ddb.get(pi.getBillId(), Bill.class).orElse(null);
 			
@@ -249,15 +254,15 @@ public class DatabaseBuilder implements QuarkusApplication
 				.filter(l -> l.isMemberOfSession(data.getSession())) //  && s3.exists(LegislatorInterpretation.generateId(l.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class)
 				.collect(Collectors.toList()))
 		{
-			legInterp.updateInteractionsInterp(leg);
+			legInterp.updateInteractionsInterp(data.getDataset(), leg);
 			
 //			if (leg.getInteractions().size() < 100) {
 //				legsWithoutSufficientInteractions.add(leg.getBioguideId());
 //				continue;
 //			}
 			
-			LegislatorInterpretation interp = new LegislatorInterpretation(leg.getId(), data.getSession(), OpenAIService.metadata(), null);
-			val interpOp = s3.get(LegislatorInterpretation.generateId(leg.getId(), data.getSession().getKey(), data.getSession().getNamespace()), LegislatorInterpretation.class);
+			LegislatorInterpretation interp = new LegislatorInterpretation(leg.getId(), data.getSession().getCode(), data.getSession().getNamespace(), OpenAIService.metadata(), null);
+			val interpOp = s3.get(LegislatorInterpretation.generateId(leg.getId(), data.getSession().getCode(), data.getSession().getNamespace()), LegislatorInterpretation.class);
 			
 			if (interpOp.isPresent()) { interp = interpOp.get(); }
 			
@@ -265,7 +270,7 @@ public class DatabaseBuilder implements QuarkusApplication
 			if (legInterp.getInteractionsForInterpretation(leg).size() < 1000) {
 				// If an interpretation from this session doesn't exist, grab one from the previous session.
 				var previousSession = data.getPreviousSession();
-				val prevInterpOp = s3.get(LegislatorInterpretation.generateId(leg.getId(), previousSession.getKey(), previousSession.getNamespace()), LegislatorInterpretation.class);
+				val prevInterpOp = s3.get(LegislatorInterpretation.generateId(leg.getId(), previousSession.getCode(), previousSession.getNamespace()), LegislatorInterpretation.class);
 				
 				if (prevInterpOp.isPresent()) {
 					if (StringUtils.isBlank(interp.getShortExplain()))
@@ -273,11 +278,7 @@ public class DatabaseBuilder implements QuarkusApplication
 					if (StringUtils.isBlank(interp.getLongExplain()))
 						interp.setLongExplain(prevInterpOp.get().getLongExplain());
 					
-					String prevLegId;
-					if (previousSession.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-						prevLegId = Legislator.generateId(previousSession.getNamespace(), previousSession, leg.getBioguideId());
-					else
-						prevLegId = Legislator.generateId(previousSession.getNamespace(), previousSession, leg.getLegiscanId());
+					String prevLegId = Legislator.generateId(previousSession.getNamespace(), previousSession, leg.getCode());
 					
 					val prevLeg = ddb.get(prevLegId, Legislator.class).orElseThrow();
 					

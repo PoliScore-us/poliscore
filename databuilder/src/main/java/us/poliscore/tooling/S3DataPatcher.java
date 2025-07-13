@@ -35,7 +35,7 @@ public class S3DataPatcher implements QuarkusApplication {
 	
 	protected void process() throws IOException
 	{
-		data.importDataset();
+		data.importDatasets();
 		
 		s3.optimizeExists(BillInterpretation.class);
 		

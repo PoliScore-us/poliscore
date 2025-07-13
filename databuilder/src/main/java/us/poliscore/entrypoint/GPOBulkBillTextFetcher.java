@@ -59,13 +59,13 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 //		FileUtils.deleteQuietly(store);
 		store.mkdirs();
 		
-		data.importDataset();
+		data.importDatasets();
 		
 		s3.optimizeExists(BillText.class);
 		
 		for (var dataset : Arrays.asList(data.getDataset()))
 		{
-			val congressStore = new File(store, dataset.getSession().getKey());
+			val congressStore = new File(store, dataset.getSession().getCode());
 			congressStore.mkdir();
 			
 			for (String billType : FETCH_BILL_TYPE)
@@ -76,11 +76,11 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 				// Download and unzip
 				for (int session : new int[] { 1, 2 })
 				{
-					val url = URL_TEMPLATE.replaceAll("\\{\\{congress\\}\\}", dataset.getSession().getKey())
+					val url = URL_TEMPLATE.replaceAll("\\{\\{congress\\}\\}", dataset.getSession().getCode())
 								.replaceAll("\\{\\{session\\}\\}", String.valueOf(session))
 								.replaceAll("\\{\\{type\\}\\}", String.valueOf(billType));
 					
-					val zip = new File(typeStore, dataset.getSession().getKey() + "-" + billType + ".zip");
+					val zip = new File(typeStore, dataset.getSession().getCode() + "-" + billType + ".zip");
 					
 					// TODO : timestamp code found not working
 					if (zip.exists()) { // && new Date().getTime() - zip.lastModified() > 24 * 60 * 60 * 1000
@@ -108,8 +108,8 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 						.sorted(Comparator.comparing(File::getName).thenComparing((a,b) -> BillTextPublishVersion.parseFromBillTextName(a.getName()).billMaturityCompareTo(BillTextPublishVersion.parseFromBillTextName(b.getName()))))
 						.collect(Collectors.toList()))
 				{
-					String number = f.getName().replace("BILLS-" + dataset.getSession().getKey() + billType, "").replaceAll("\\D", "");
-					val billId = Bill.generateId(dataset.getSession(), CongressionalBillType.valueOf(billType.toUpperCase()), Integer.parseInt(number));
+					String number = f.getName().replace("BILLS-" + dataset.getSession().getCode() + billType, "").replaceAll("\\D", "");
+					val billId = Bill.generateId(data.getSession().getNamespace(), data.getSession().getCode(), CongressionalBillType.valueOf(billType.toUpperCase()), Integer.parseInt(number));
 					
 					// TODO : This S3 exists check won't work if there's a new version of the bill text.
 					if (!processedBills.contains(billId) && !s3.exists(BillText.generateId(billId), BillText.class))
@@ -149,10 +149,10 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	@SneakyThrows
 	public Optional<String> getBillText(Bill bill)
 	{
-		val parent = new File(PoliscoreUtil.APP_DATA, "bill-text/" + bill.getSession() + "/" + bill.getType());
+		val parent = new File(PoliscoreUtil.APP_DATA, "bill-text/" + bill.getSessionCode() + "/" + bill.getType());
 		
 		val text = Arrays.asList(parent.listFiles()).stream()
-				.filter(f -> f.getName().contains(bill.getSession() + bill.getType().toLowerCase() + bill.getNumber()))
+				.filter(f -> f.getName().contains(bill.getSessionCode() + bill.getType().toLowerCase() + bill.getNumber()))
 				.sorted((a,b) -> BillTextPublishVersion.parseFromBillTextName(a.getName()).billMaturityCompareTo(BillTextPublishVersion.parseFromBillTextName(b.getName())))
 				.findFirst();
 		

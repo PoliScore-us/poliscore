@@ -70,7 +70,7 @@ public class PressInterpModelComparator implements QuarkusApplication {
 
     @SneakyThrows
     protected void process() {
-    	data.importDataset();
+    	data.importDatasets();
         
         List<File> responses;
         
@@ -136,10 +136,10 @@ public class PressInterpModelComparator implements QuarkusApplication {
     protected String buildBillIdentifier(Bill bill) {
     	String id = "United States, ";
     	
-    	if (bill.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
-    		id += bill.getSession().getKey() + "th Congress";
+    	if (bill.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
+    		id += bill.getSessionCode() + "th Congress";
     	} else {
-    		id += "State of " + bill.getSession().getNamespace().getDescription();
+    		id += "State of " + bill.getNamespace().getDescription();
     	}
     	
     	return id + ", " +

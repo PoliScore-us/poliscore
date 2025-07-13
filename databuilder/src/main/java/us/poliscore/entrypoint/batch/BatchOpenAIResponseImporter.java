@@ -101,7 +101,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	@SneakyThrows
 	public void process(File input)
 	{
-		data.importDataset();
+		data.importDatasets();
 		
 		Log.info("Importing " + input.getAbsolutePath());
 		
@@ -160,10 +160,10 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		
 //		if (ddb.exists(leg.getId(), Legislator.class)) return;
 		
-		legInterp.updateInteractionsInterp(leg);
+		legInterp.updateInteractionsInterp(data.getAllDataset(), leg);
 		
-		LegislatorInterpretation interp = s3.get(LegislatorInterpretation.generateId(leg.getId(), data.getSession().getKey(), data.getSession().getNamespace()), LegislatorInterpretation.class)
-				.orElse(new LegislatorInterpretation(leg.getId(), leg.getSession(), OpenAIService.metadata(), null));
+		LegislatorInterpretation interp = s3.get(LegislatorInterpretation.generateId(leg.getId(), data.getSession().getCode(), data.getSession().getNamespace()), LegislatorInterpretation.class)
+				.orElse(new LegislatorInterpretation(leg.getId(), leg.getSessionCode(), leg.getNamespace(), OpenAIService.metadata(), null));
 		
 		interp.setHash(legInterp.calculateInterpHashCode(leg));
 		
@@ -227,7 +227,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			billId = dashSplit[0];
 		}
 		
-		val bill = ddb.get(billId, Bill.class).orElseThrow();
+		val bill = data.getDataset().get(billId, Bill.class).orElseThrow();
 		
 		BillInterpretation bi = new BillInterpretation();
 		bi.setBill(bill);
@@ -306,13 +306,11 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			billId = dashSplit[0];
 		}
 		
-		val bill = ddb.get(billId, Bill.class).orElseThrow();
-		
 		PressInterpretation bi = new PressInterpretation();
-		bi.setBill(bill);
+		bi.setBillId(billId);
 		bi.setOrigin(((CustomOriginData) resp.getCustomData()).getOrigin());
 		bi.setMetadata(PressBillInterpretationRequestGenerator.metadata());
-		bi.setId(BillInterpretation.generateId(bill.getId(), bi.getOrigin(), null));
+		bi.setId(BillInterpretation.generateId(billId, bi.getOrigin(), null));
 		
 		var interpText = resp.getResponse().getBody().getChoices().get(0).getMessage().getContent();
 		

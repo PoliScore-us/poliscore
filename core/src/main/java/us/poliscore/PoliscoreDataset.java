@@ -14,7 +14,7 @@ public class PoliscoreDataset extends MemoryObjectStore {
 	
 	@Data
 	@RequiredArgsConstructor
-	public static class DatasetReference {
+	public static class DeploymentConfig {
 		@NonNull
 		protected LegislativeNamespace namespace;
 		

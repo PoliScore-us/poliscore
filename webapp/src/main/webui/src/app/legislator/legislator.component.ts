@@ -282,7 +282,16 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
 
     let term = this.leg.terms[this.leg.terms.length - 1];
 
-    return (term.chamber == "SENATE" ? "Senator" : "House") + " (" + convertStateCodeToName(term.state) + (term.chamber == "HOUSE" ? " District " + term.district : "") + ")";
+    let label = term.chamber;
+    if (term.chamber == "UPPER") {
+      label = "Senator";
+    } else if (term.chamber == "LOWER") {
+      label = "House";
+    }
+
+    label += " (" + convertStateCodeToName(term.state) + (term.chamber == "LOWER" ? " District " + term.district : "") + ")";
+
+    return label;
   }
 
   legPhotoError(leg: any) {

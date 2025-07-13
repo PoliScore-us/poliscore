@@ -1,4 +1,6 @@
 #!/bin/bash
+# Used to set the blue/green deployment target (poliscore1 / poliscore2)
+
 set -euo pipefail
 
 export AWS_PAGER=""

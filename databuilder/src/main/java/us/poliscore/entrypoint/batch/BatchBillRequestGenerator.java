@@ -91,7 +91,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		
 		Log.info("Generating batch request to interpret bills");
 		
-		data.importDataset();
+		data.importDatasets();
 		
 		int block = 1;
 		

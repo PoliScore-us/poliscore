@@ -73,7 +73,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	{
 		Log.info("Generating batch request to interpret legislators");
 		
-		data.importDataset();
+		data.importDatasets();
 		
 		int block = 1;
 		
@@ -83,7 +83,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 				.filter(l -> 
 					l.getInteractions().size() > 0
 //					&& (l.getBioguideId().equals("H000273"))
-					&& (!CHECK_S3_EXISTS || !s3.exists(LegislatorInterpretation.generateId(l.getId(), data.getSession().getKey(), data.getSession().getNamespace()), LegislatorInterpretation.class))
+					&& (!CHECK_S3_EXISTS || !s3.exists(LegislatorInterpretation.generateId(l.getId(), data.getSession().getCode(), data.getSession().getNamespace()), LegislatorInterpretation.class))
 				)
 				.sorted(Comparator.comparing(Legislator::getDate).reversed())
 //				.limit(1)
@@ -113,7 +113,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 			return;
 		}
 		
-		legInterp.updateInteractionsInterp(leg);
+		legInterp.updateInteractionsInterp(data.getAllDataset(), leg);
 		
 		DoubleIssueStats stats = legInterp.calculateAgregateInteractionStats(leg);
 		
@@ -147,7 +147,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		if (includedBills.size() == 0)
 			return;
 		
-		createRequest(LegislatorInterpretation.generateId(leg.getId(), data.getSession().getKey(), data.getSession().getNamespace()), LegislatorInterpretationService.getAiPrompt(leg, stats.toIssueStats()), String.join("\n", billMsgs));
+		createRequest(LegislatorInterpretation.generateId(leg.getId(), data.getSession().getCode(), data.getSession().getNamespace()), LegislatorInterpretationService.getAiPrompt(leg, stats.toIssueStats()), String.join("\n", billMsgs));
 	}
 
 	private void includeBillsByTopIssues(Legislator leg, DoubleIssueStats stats, List<String> billMsgs, Set<String> includedBills, int amount, boolean ascending) {

@@ -88,7 +88,7 @@ public class PartyInterpretationService {
 	
 	public List<File> process() throws IOException
 	{
-		data.importDataset();
+		data.importDatasets();
 		
 		val partyStats = recalculateStats();
 		
@@ -165,7 +165,7 @@ public class PartyInterpretationService {
 			}
 		}
 		for (val l : data.getDataset().query(Legislator.class).stream().filter(leg -> leg.isMemberOfSession(data.getSession())).toList()) {
-			val op = s3.get(LegislatorInterpretation.generateId(l.getId(), sessionStats.getSession().getKey(), sessionStats.getSession().getNamespace()), LegislatorInterpretation.class);
+			val op = s3.get(LegislatorInterpretation.generateId(l.getId(), sessionStats.getSession().getCode(), sessionStats.getSession().getNamespace()), LegislatorInterpretation.class);
 			
 			if (op.isPresent()) {
 				val interp = op.get();
@@ -347,7 +347,7 @@ public class PartyInterpretationService {
 		
 		String sessionName;
 		if (session.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-			sessionName = String.valueOf(session.getKey()) + "th congressional session";
+			sessionName = String.valueOf(session.getCode()) + "th congressional session";
 		else
 			sessionName = String.valueOf(session.getStartDate().getYear()) + "-" + String.valueOf(session.getEndDate().getYear()) + " " + session.getNamespace().getDescription() + " state legislature";
 		
