@@ -3,12 +3,17 @@ package us.poliscore.model;
 import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
+import us.poliscore.model.LegislativeNamespace.*;
 
 @Data
 @AllArgsConstructor
@@ -23,6 +28,9 @@ public class LegislativeSession {
 	
 	protected String code;
 	
+	@JsonSerialize(using = NamespaceSerializer.class)
+	@JsonDeserialize(using = NamespaceDeserializer.class)
+	@Getter(onMethod = @__({ @DynamoDbConvertedBy(NamespaceConverter.class) }))
 	protected LegislativeNamespace namespace;
 	
 	@JsonIgnore

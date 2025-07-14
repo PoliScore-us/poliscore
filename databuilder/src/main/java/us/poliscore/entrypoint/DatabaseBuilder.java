@@ -61,7 +61,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	public static boolean REINTERPRET_LEGISLATORS = true;
 	
-	public static boolean REINTERPRET_PARTIES = true;
+	public static boolean REINTERPRET_PARTIES = false;
 	
 	@Inject
 	private BatchBillRequestGenerator billRequestGenerator;

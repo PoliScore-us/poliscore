@@ -1,5 +1,5 @@
-import { CommonModule } from '@angular/common';
-import { Component, Inject } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { Component, Inject, PLATFORM_ID } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { ConfigService } from '../config.service';
@@ -18,13 +18,19 @@ export class PromoComponent {
   
     public donateBarHidden = true;
   
-    constructor(public config: ConfigService, public dialog: MatDialog, private meta: Meta, private titleService: Title) { }
+    constructor(public config: ConfigService, public dialog: MatDialog, private meta: Meta, private titleService: Title, @Inject(PLATFORM_ID) private platformId: Object) { }
   
     ngOnInit(): void {
       this.updateMetaTags();
       setTimeout(() => {
         this.isPreload = false;
       }, 100);
+
+      if (isPlatformBrowser(this.platformId)) {
+        setTimeout(() => {
+          document.querySelector('#header .content')?.classList.add('visible');
+        }, 100);
+      }
     }
   
     onScroll(e: any) {

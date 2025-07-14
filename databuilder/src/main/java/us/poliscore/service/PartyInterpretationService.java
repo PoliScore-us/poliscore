@@ -103,8 +103,8 @@ public class PartyInterpretationService {
 			mostImpactfulBills.put(party, new PriorityQueue<>(Comparator.comparing(PartyBillInteraction::getImpact).reversed()));
 			worstBills.put(party, new PriorityQueue<>(Comparator.comparing(PartyBillInteraction::getRating)));
 			bestBills.put(party, new PriorityQueue<>(Comparator.comparing(PartyBillInteraction::getRating).reversed()));
-			bestLegislators.put(party, new PriorityQueue<>((a,b) -> (int) (b.getImpact() - a.getImpact())));
-			worstLegislators.put(party, new PriorityQueue<>(Comparator.comparing(Legislator::getImpact)));
+			bestLegislators.put(party, new PriorityQueue<>((a,b) -> (int) (b.getRating() - a.getRating())));
+			worstLegislators.put(party, new PriorityQueue<>(Comparator.comparing(Legislator::getRating)));
 			
 			val bestPartyBillsByIssue = new HashMap<TrackedIssue, PriorityQueue<PartyBillInteraction>>();
 			bestBillsByIssue.put(party, bestPartyBillsByIssue);

@@ -4,7 +4,7 @@ import { Chart, ChartConfiguration, BarController, CategoryScale, LinearScale, B
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { AppService } from '../app.service';
 import { Meta, Title } from '@angular/platform-browser';
-import { Bill, colorForGrade, getBenefitToSocietyIssue, gradeForStats, issueKeyToLabel, issueKeyToLabelSmall, Legislator, SessionStats } from '../model';
+import convertStateCodeToName, { Bill, colorForGrade, getBenefitToSocietyIssue, gradeForStats, issueKeyToLabel, issueKeyToLabelSmall, Legislator, SessionStats } from '../model';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { MatCardModule } from '@angular/material/card'; 
 import { HttpClient } from '@angular/common/http';
@@ -113,7 +113,6 @@ export class SessionStatsComponent {
 
     if (this.stats == null) {
       this.service.getSessionStats().then(stats => {
-        console.log(stats);
         this.stats = stats;
         this.loading = false;
   
@@ -127,11 +126,19 @@ export class SessionStatsComponent {
   }
 
   updateMetaTags(): void {
+    console.log(this.stats!.session);
+    if (this.stats == null) return;
+
     let year = this.config.getYear();
 
-    let pageTitle = this.stats?.session + "th Congress Stats - PoliScore: AI Political Rating Service";
+    let pageTitle = "Stats - PoliScore: AI Political Rating Service";
+    if (this.stats?.session.namespace === 'us/congress')
+      pageTitle = this.stats!.session.code + "th Congress " + pageTitle;
+    else
+      pageTitle = this.stats!.session.endDate.split("-")[0] + " " + convertStateCodeToName(this.stats.session.namespace.split("/")[2]) + " Legislature " + pageTitle;
+
     const pageDescription = this.config.appDescription();
-    const pageUrl = "https://poliscore.us/" + year + "/congress";
+    const pageUrl = "https://poliscore.us/" + year + "/Party";
     const imageUrl = 'https://poliscore.us/' + year + '/images/poliscore-word-whitebg.png';
 
     this.titleService.setTitle(pageTitle);

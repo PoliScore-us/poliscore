@@ -73,13 +73,20 @@ export interface PartyStats extends IssueStats {
 }
 
 export interface SessionStats {
-  session: number;
+  session: Session;
   // partyStats: {
   //   [key: string]: PartyStats;
   // };
   democrat: PartyStats;
   republican: PartyStats;
   independent: PartyStats;
+}
+
+export interface Session {
+  code: string;
+  startDate: string;
+  endDate: string;
+  namespace: string;
 }
 
 export class LegislatorName {
