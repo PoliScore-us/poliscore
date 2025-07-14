@@ -30,6 +30,7 @@ import lombok.val;
 import us.poliscore.Environment;
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreUtil;
+import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
@@ -134,12 +135,15 @@ public class WebappDataGenerator implements QuarkusApplication
 		final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/webui/src/assets/sitemap.txt");
 		val routes = new ArrayList<String>();
 		
-		routes.add(url + "/about");
+//		routes.add(url + "/about");
 		
 		for (var dataset : datasets)
 		{
 //			int lastYearOfSession = 1789 + (congress.getNumber() * 2) - 1;
 			int lastYearOfSession = dataset.getSession().getEndDate().getYear();
+			if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+				lastYearOfSession = lastYearOfSession - 1;
+			
 			String prefix = "/" + lastYearOfSession;
 			String state = dataset.getSession().getNamespace().toAbbreviation().toLowerCase().replace("us", "congress");
 			
@@ -158,12 +162,21 @@ public class WebappDataGenerator implements QuarkusApplication
 				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
 				.forEach(l -> routes.add(url + prefix + "/legislator/" + l.getCode()));
 			
-			// All bills
-			routes.add(url + prefix + "/bills");
-			dataset.query(Bill.class).stream()
-				.filter(b -> b.isIntroducedInSession(dataset.getSession()) && s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
-				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
-				.forEach(b -> routes.add(url + prefix + "/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
+			if (dataset.getSession().getCode().equals("118")) {
+				// All bills
+				routes.add(url + prefix + "/bills");
+				dataset.query(Bill.class).stream()
+					.filter(b -> s3.exists(BillInterpretation.generateId(b.getId(), null).replace("-polisc", ""), BillInterpretation.class))
+					.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
+					.forEach(b -> routes.add(url + prefix + "/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
+			} else {
+				// All bills
+				routes.add(url + prefix + "/bills");
+				dataset.query(Bill.class).stream()
+					.filter(b -> s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
+					.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
+					.forEach(b -> routes.add(url + prefix + "/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
+			}
 		}
 		
 		FileUtils.write(out, String.join("\n", routes), "UTF-8");
