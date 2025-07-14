@@ -143,7 +143,7 @@ public class PressInterpModelComparator implements QuarkusApplication {
     	}
     	
     	return id + ", " +
-                bill.getOriginatingChamber().getName() + "\n" +
+                bill.getOriginatingChamber().getName(bill.getNamespace()) + "\n" +
                 bill.getType() + " " + bill.getNumber() + " - " + bill.getName() +
                 "\nIntroduced in " + bill.getIntroducedDate();
     }

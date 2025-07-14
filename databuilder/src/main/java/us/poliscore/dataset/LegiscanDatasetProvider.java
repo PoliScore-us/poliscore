@@ -243,9 +243,10 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    final LegiscanStatus stat = view.getStatus();
 	    final boolean sessionOver = session.isOver();
 	    final String executor = session.getNamespace() == LegislativeNamespace.US_CONGRESS ? "President" : "Governor";
-
+	    final LegislativeNamespace ns = session.getNamespace();
+	    
 	    if (stat.equals(LegiscanStatus.INTRODUCED)) {
-	        status.setDescription("Introduced in the " + chamber.getName());
+	        status.setDescription("Introduced in the " + chamber.getName(ns));
 	        status.setProgress(0.0f);
 	    } else if (stat.equals(LegiscanStatus.REFER)) {
 	        status.setDescription((sessionOver ? "Died in" : "Referred to") + " Committee");
@@ -257,7 +258,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	        status.setDescription("Committee Report: Do Not Pass Recommendation");
 	        status.setProgress(0.2f);
 	    } else if (stat.equals(LegiscanStatus.ENGROSSED)) {
-	        status.setDescription("Passed in " + chamber.getName() + ", Sent to Second Chamber");
+	        status.setDescription("Passed in " + chamber.getName(ns) + ", Sent to Second Chamber");
 	        status.setProgress(0.4f);
 	    } else if (stat.equals(LegiscanStatus.ENROLLED)) {
 	        status.setDescription("Passed Both Chambers, Sent to " + executor);

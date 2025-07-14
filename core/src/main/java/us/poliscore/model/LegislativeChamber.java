@@ -19,11 +19,32 @@ public enum LegislativeChamber {
 	LOWER("Lower Chamber"),
 	JOINT("Joint Conference");
 	
-	private String name;
+	private String fallbackName;
 	
-	private LegislativeChamber(String name)
+	private LegislativeChamber(String fallbackName)
 	{
-		this.name = name;
+		this.fallbackName = fallbackName;
+	}
+	
+	public String getName(LegislativeNamespace namespace) {
+		if (namespace == null) return fallbackName;
+
+		switch (namespace) {
+			case US_NEBRASKA:
+				return "Legislature"; // Unicameral
+			case US_VIRGINIA:
+			case US_MARYLAND:
+			case US_WEST_VIRGINIA:
+				if (this.equals(LOWER)) return "House of Delegates";
+				break;
+			default:
+				break;
+		}
+
+		if (this.equals(UPPER)) return "Senate";
+		if (this.equals(LOWER)) return "House";
+
+		return fallbackName;
 	}
 	
 	public static LegislativeChamber fromLegiscanRole(LegiscanRole role) {

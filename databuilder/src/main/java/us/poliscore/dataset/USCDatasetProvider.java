@@ -281,16 +281,17 @@ public class USCDatasetProvider implements DatasetProvider {
 		Log.info("Imported " + totalBills + " bills");
 	}
 	
-	public BillStatus buildStatus(USCBillView view) {
+	public BillStatus buildStatus(PoliscoreDataset dataset, USCBillView view) {
 	    BillStatus status = new BillStatus();
 	    status.setSourceStatus(view.getStatus());
 	    
 	    final LegislativeChamber chamber = CongressionalBillType.getOriginatingChamber(CongressionalBillType.valueOf(view.getBill_type().toUpperCase()));
 	    final String stat = view.getStatus().toUpperCase();
 	    final boolean sessionOver = CongressionalSession.of(Integer.parseInt(view.getCongress())).isOver();
-
+	    final LegislativeNamespace ns = dataset.getSession().getNamespace();
+	    
 	    if (stat.equals("INTRODUCED")) {
-	        status.setDescription("Introduced in the " + chamber.getName());
+	        status.setDescription("Introduced in the " + chamber.getName(ns));
 	        status.setProgress(0.0f);
 	    }
 	    else if (stat.equals("REFERRED")) {
@@ -298,7 +299,7 @@ public class USCDatasetProvider implements DatasetProvider {
 	        status.setProgress(0.1f);
 	    }
 	    else if (stat.equals("REPORTED")) {
-	        status.setDescription(sessionOver ? ("Expired Awaiting " + chamber.getName() + " Debate") : ("Awaiting " + chamber.getName() + " Debate"));
+	        status.setDescription(sessionOver ? ("Expired Awaiting " + chamber.getName(ns) + " Debate") : ("Awaiting " + chamber.getName(ns) + " Debate"));
 	        status.setProgress(0.2f);
 	    }
 	    else if (stat.equals("PROV_KILL:SUSPENSIONFAILED")) {
@@ -311,11 +312,11 @@ public class USCDatasetProvider implements DatasetProvider {
 	    }
 	    else if (stat.startsWith("FAIL:ORIGINATING")) {
 	        // e.g., FAIL:ORIGINATING:HOUSE or FAIL:ORIGINATING:SENATE
-	        status.setDescription("Failed " + chamber.getName() + " Vote");
+	        status.setDescription("Failed " + chamber.getName(ns) + " Vote");
 	        status.setProgress(0.3f);
 	    }
 	    else if (stat.equals("PASSED:SIMPLERES")) {
-	        status.setDescription("Simple Resolution Passed in the " + chamber.getName());
+	        status.setDescription("Simple Resolution Passed in the " + chamber.getName(ns));
 	        // For simple resolutions, passing is the end of the road
 	        status.setProgress(1.0f);
 	    }
@@ -431,7 +432,7 @@ public class USCDatasetProvider implements DatasetProvider {
     	
     	bill.setName(view.getBillName());
     	bill.setOriginatingChamber(CongressionalBillType.getOriginatingChamber(CongressionalBillType.valueOf(view.getBill_type().toUpperCase())));
-    	bill.setStatus(buildStatus(view));
+    	bill.setStatus(buildStatus(dataset, view));
     	bill.setIntroducedDate(view.getIntroduced_at());
     	bill.setSponsor(view.getSponsor() == null ? null : view.getSponsor().convert(dataset));
     	bill.setCosponsors(view.getCosponsors().stream().map(s -> s.convert(dataset)).collect(Collectors.toList()));
