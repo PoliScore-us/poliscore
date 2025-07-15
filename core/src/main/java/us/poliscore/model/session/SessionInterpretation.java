@@ -27,7 +27,6 @@ import us.poliscore.model.Party;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.bill.Bill.BillSponsor;
 import us.poliscore.model.bill.BillStatus;
-import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.dynamodb.DdbDataPage;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.AIInterpretationMetadataConverter;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.LegislatorBillInteractionSetConverterProvider;

@@ -163,6 +163,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 				interaction.setBillId(bill.getId());
 				interaction.setDate(bill.getIntroducedDate());
 				interaction.setBillName(bill.getName());
+				interaction.setId(LegislatorBillSponsor.generateId(interaction.getLegId(), interaction.getDate(), interaction.getBillId()));
 				leg.get().addBillInteraction(interaction);
 				
 				dataset.put(leg.get());
@@ -179,6 +180,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 					interaction.setBillId(bill.getId());
 					interaction.setDate(bill.getIntroducedDate());
 					interaction.setBillName(bill.getName());
+					interaction.setId(LegislatorBillCosponsor.generateId(interaction.getLegId(), interaction.getDate(), interaction.getBillId()));
 					leg.get().addBillInteraction(interaction);
 					
 					dataset.put(leg.get());
@@ -224,9 +226,9 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	private BillSponsor convertSponsor(LegiscanSponsorView view, PoliscoreDataset dataset) {
 		String legId;
 		if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), view.getBioguideId());
+			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), view.getBioguideId());
 		else
-			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), String.valueOf(view.getPeopleId()));
+			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), String.valueOf(view.getPeopleId()));
 		
 		var leg = dataset.get(legId, Legislator.class).get();
 		
@@ -302,7 +304,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		try
 		{
 			// TODO : I don't think this will work for congress (since the congress legislator code is bioguide id not people id) but we don't use legiscan for congress anyway
-			leg = dataset.get(Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), String.valueOf(vote.getPeopleId())), Legislator.class).orElseThrow();
+			leg = dataset.get(Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), String.valueOf(vote.getPeopleId())), Legislator.class).orElseThrow();
 		}
 		catch (NoSuchElementException ex)
 		{
@@ -326,6 +328,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		interaction.setBillId(bill.getId());
 		interaction.setDate(rollCall.getDate());
 		interaction.setBillName(bill.getName());
+		interaction.setId(LegislatorBillVote.generateId(interaction.getLegId(), interaction.getDate(), interaction.getBillId()));
 		
 		leg.addBillInteraction(interaction);
 		
@@ -359,9 +362,9 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    
 	    String legId;
 		if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), view.getBioguideId());
+			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), view.getBioguideId());
 		else
-			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), String.valueOf(view.getPeopleId()));
+			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), String.valueOf(view.getPeopleId()));
 		leg.setId(legId);
 		
 	    // Build and set name

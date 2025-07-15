@@ -261,8 +261,8 @@ public class DatabaseBuilder implements QuarkusApplication
 //				continue;
 //			}
 			
-			LegislatorInterpretation interp = new LegislatorInterpretation(leg.getId(), data.getSession().getCode(), data.getSession().getNamespace(), OpenAIService.metadata(), null);
-			val interpOp = s3.get(LegislatorInterpretation.generateId(leg.getId(), data.getSession().getCode(), data.getSession().getNamespace()), LegislatorInterpretation.class);
+			LegislatorInterpretation interp = new LegislatorInterpretation(data.getSession().getNamespace(), data.getSession().getCode(), leg.getCode(), OpenAIService.metadata(), null);
+			val interpOp = s3.get(LegislatorInterpretation.generateId(data.getSession().getNamespace(), data.getSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
 			
 			if (interpOp.isPresent()) { interp = interpOp.get(); }
 			
@@ -270,7 +270,7 @@ public class DatabaseBuilder implements QuarkusApplication
 			if (legInterp.getInteractionsForInterpretation(leg).size() < 1000) {
 				// If an interpretation from this session doesn't exist, grab one from the previous session.
 				var previousSession = data.getPreviousSession();
-				val prevInterpOp = s3.get(LegislatorInterpretation.generateId(leg.getId(), previousSession.getCode(), previousSession.getNamespace()), LegislatorInterpretation.class);
+				val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousSession.getNamespace(), previousSession.getCode(), leg.getCode()), LegislatorInterpretation.class);
 				
 				if (prevInterpOp.isPresent()) {
 					if (StringUtils.isBlank(interp.getShortExplain()))
@@ -278,7 +278,7 @@ public class DatabaseBuilder implements QuarkusApplication
 					if (StringUtils.isBlank(interp.getLongExplain()))
 						interp.setLongExplain(prevInterpOp.get().getLongExplain());
 					
-					String prevLegId = Legislator.generateId(previousSession.getNamespace(), previousSession, leg.getCode());
+					String prevLegId = Legislator.generateId(previousSession.getNamespace(), previousSession.getCode(), leg.getCode());
 					
 					val prevLeg = ddb.get(prevLegId, Legislator.class).orElseThrow();
 					

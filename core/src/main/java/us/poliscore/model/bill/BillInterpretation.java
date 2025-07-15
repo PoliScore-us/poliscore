@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -23,18 +24,41 @@ import us.poliscore.model.AISliceInterpretationMetadata;
 import us.poliscore.model.InterpretationOrigin;
 import us.poliscore.model.IssueStats;
 import us.poliscore.model.Persistable;
+import us.poliscore.model.SessionPersistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.AIInterpretationMetadataConverter;
+import us.poliscore.model.legislator.LegislatorInterpretation;
 import us.poliscore.model.press.PressInterpretation;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @DynamoDbBean
 @RegisterForReflection
 @NoArgsConstructor
 @AllArgsConstructor
-public class BillInterpretation implements Persistable
+public class BillInterpretation extends SessionPersistable
 {
 	public static final String ID_CLASS_PREFIX = "BIT";
+	
+	public static String generateId(String billId, Integer sliceIndex)
+	{
+		return generateId(billId, InterpretationOrigin.POLISCORE, sliceIndex);
+	}
+	
+	public static String generateId(String billId, InterpretationOrigin origin, Integer sliceIndex)
+	{
+		var id = billId.replace(Bill.ID_CLASS_PREFIX, ID_CLASS_PREFIX);
+		
+		if (origin != null)
+			id += "-" + origin.getIdHash();
+		
+		if (sliceIndex != null)
+		{
+			id += "-" + sliceIndex;
+		}
+		
+		return id;
+	}
 	
 	@JsonIgnore
 	@Getter(onMethod_ = {@DynamoDbIgnore})
@@ -53,9 +77,6 @@ public class BillInterpretation implements Persistable
 	protected String longExplain;
 	
 	protected Integer confidence;
-	
-	@NonNull
-	protected String id;
 	
 	@NonNull
 	protected String billId;
@@ -78,12 +99,6 @@ public class BillInterpretation implements Persistable
 		return pressInterps;
 	}
 	
-	@DynamoDbPartitionKey
-	public String getId()
-	{
-		return this.id;
-	}
-	
 	public void setBill(Bill bill)
 	{
 		this.bill = bill;
@@ -103,7 +118,7 @@ public class BillInterpretation implements Persistable
 		}
 	}
 	
-	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX }) public String getStorageBucket() { return ID_CLASS_PREFIX; }
+	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX }) public String getStorageBucket() { return super.getStorageBucket(); }
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 	
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() { return metadata.getDate(); }
@@ -112,24 +127,4 @@ public class BillInterpretation implements Persistable
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return issueStats.getRating(); }
 	@JsonIgnore public Integer getRating(TrackedIssue issue) { return issueStats.getRating(issue); }
 	@JsonIgnore public void setRating(int rating) { }
-	
-	public static String generateId(String billId, Integer sliceIndex)
-	{
-		return generateId(billId, InterpretationOrigin.POLISCORE, sliceIndex);
-	}
-	
-	public static String generateId(String billId, InterpretationOrigin origin, Integer sliceIndex)
-	{
-		var id = billId.replace(Bill.ID_CLASS_PREFIX, ID_CLASS_PREFIX);
-		
-		if (origin != null)
-			id += "-" + origin.getIdHash();
-		
-		if (sliceIndex != null)
-		{
-			id += "-" + sliceIndex;
-		}
-		
-		return id;
-	}
 }

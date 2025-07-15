@@ -102,7 +102,7 @@ Generate a layman's, concise, three paragraph, {{analysisType}}, highlighting an
 	// Backfill the interactions until we get to 1000
 	public void backfillInteractionsFromPreviousSession(Legislator leg, LegislativeSession prevSession)
 	{
-		val prevLeg = ddb.get(Legislator.generateId(prevSession.getNamespace(), prevSession, leg.getCode()), Legislator.class).orElse(null);
+		val prevLeg = ddb.get(Legislator.generateId(prevSession.getNamespace(), prevSession.getCode(), leg.getCode()), Legislator.class).orElse(null);
 		if (prevLeg == null) return;
 		
 		val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();

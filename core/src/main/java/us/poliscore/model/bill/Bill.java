@@ -21,7 +21,6 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnor
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
-import us.poliscore.PoliscoreUtil;
 import us.poliscore.legiscan.view.LegiscanState;
 import us.poliscore.model.ChamberSize;
 import us.poliscore.model.LegislativeChamber;
@@ -29,28 +28,27 @@ import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Party;
 import us.poliscore.model.Persistable;
+import us.poliscore.model.SessionPersistable;
 import us.poliscore.model.TrackedIssue;
+import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislatorName;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
+@NoArgsConstructor
 @DynamoDbBean
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @RegisterForReflection
-public class Bill implements Persistable {
+public class Bill extends SessionPersistable {
 	
 	public static final String ID_CLASS_PREFIX = "BIL";
 	
-	public static final Double DEFAULT_IMPACT_LAW_WEIGHT = 100.0d;
-	
-	/**
-	 * An optional grouping mechanism, beyond the ID_CLASS_PREFIX concept, which allows you to group objects of the same class in different
-	 * "storage buckets". Really only used in DynamoDb at the moment, and is used for querying on the object indexes with objects that exist
-	 * in different congressional sessions.
-	 */
-	public static String getClassStorageBucket(LegislativeNamespace namespace, String sessionKey)
+	public static String generateId(LegislativeNamespace ns, String sessionCode, String typeCode, int number)
 	{
-		return ID_CLASS_PREFIX + "/" + namespace.getNamespace() + "/" + sessionKey;
+		return SessionPersistable.generateId(ID_CLASS_PREFIX, ns, sessionCode, typeCode.toLowerCase() + "/" + number);
 	}
+	public static String generateId(LegislativeNamespace namespace, String sessionKey, CongressionalBillType type, int number) { return generateId(namespace, sessionKey, type.name(), number); }
+	
+	public static final Double DEFAULT_IMPACT_LAW_WEIGHT = 100.0d;
 	
 	@JsonIgnore
 	protected transient BillText text;
@@ -66,8 +64,6 @@ public class Bill implements Persistable {
 	protected BillStatus status;
 	
 	protected String name;
-	
-	protected String id;
 	
 	protected int legiscanId;
 	
@@ -107,13 +103,6 @@ public class Bill implements Persistable {
 		return text;
 	}
 	
-	@JsonIgnore
-	@DynamoDbIgnore
-	public String getPoliscoreId()
-	{
-		return id;
-	}
-	
 //	@JsonIgnore
 //	public String getUSCId()
 //	{
@@ -131,34 +120,11 @@ public class Bill implements Persistable {
 		return name;
 	}
 	
-	@DynamoDbPartitionKey
-	@EqualsAndHashCode.Include
-	public String getId()
-	{
-		return getPoliscoreId();
-	}
-	
-	public void setId(String id) { this.id = id; }
-	
-	@JsonIgnore
-	@DynamoDbIgnore
-	public LegislativeNamespace getNamespace() {
-		return LegislativeNamespace.of(this.id.split("/")[1] + "/" + this.id.split("/")[2]);
-	}
-	
-	@JsonIgnore
-	@DynamoDbIgnore
-	public String getSessionCode() {
-		return this.id.split("/")[3];
-	}
-	
 	public boolean isIntroducedInSession(LegislativeSession session) {
 		return session.getCode().equals(getSessionCode()) && this.getNamespace().equals(session.getNamespace());
 	}
 	
-	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX, Persistable.OBJECT_BY_RATING_ABS_INDEX, Persistable.OBJECT_BY_IMPACT_INDEX, OBJECT_BY_IMPACT_ABS_INDEX, OBJECT_BY_HOT_INDEX }) public String getStorageBucket() {
-		return this.getId().substring(0, StringUtils.ordinalIndexOf(getId(), "/", 4));
-	}
+	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX, Persistable.OBJECT_BY_RATING_ABS_INDEX, Persistable.OBJECT_BY_IMPACT_INDEX, OBJECT_BY_IMPACT_ABS_INDEX, OBJECT_BY_HOT_INDEX }) public String getStorageBucket() { return super.getStorageBucket(); }
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 	
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() {
@@ -184,12 +150,6 @@ public class Bill implements Persistable {
 	
 	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_HOT_INDEX }) public int getHot() { return (int)(getImpactAbs(TrackedIssue.OverallBenefitToSociety, 1.5d) * Math.exp(-0.02 * ChronoUnit.DAYS.between(getDate(), LocalDate.now()))); }
 	public void setHot(int hot) { }
-	
-	public static String generateId(LegislativeNamespace namespace, String sessionCode, String typeCode, int number)
-	{
-		return ID_CLASS_PREFIX + "/" + namespace.getNamespace() + "/" + sessionCode + "/" + typeCode.toLowerCase() + "/" + number;
-	}
-	public static String generateId(LegislativeNamespace namespace, String sessionKey, CongressionalBillType type, int number) { return generateId(namespace, sessionKey, type.name(), number); }
 	
 	@JsonIgnore public int getImpact(TrackedIssue issue) { return getImpact(issue, DEFAULT_IMPACT_LAW_WEIGHT); };
 	

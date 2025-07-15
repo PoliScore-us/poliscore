@@ -31,10 +31,14 @@ public interface Persistable {
 	@SneakyThrows
 	public static String getClassStorageBucket(Class<?> clazz, LegislativeNamespace namespace, String sessionCode)
 	{
-		try { return (String) clazz.getMethod("getClassStorageBucket", LegislativeNamespace.class, String.class).invoke(null, namespace, sessionCode); } catch (Throwable t) { }
-		try { return (String) clazz.getMethod("getClassStorageBucket").invoke(null); } catch (Throwable t) { }
+//		try { return (String) clazz.getMethod("getClassStorageBucket", LegislativeNamespace.class, String.class).invoke(null, namespace, sessionCode); } catch (Throwable t) { }
+//		try { return (String) clazz.getMethod("getClassStorageBucket").invoke(null); } catch (Throwable t) { }
+//		
+//		return (String) clazz.getField("ID_CLASS_PREFIX").get(null);
 		
-		return (String) clazz.getField("ID_CLASS_PREFIX").get(null);
+		String idClassPrefix = (String) clazz.getField("ID_CLASS_PREFIX").get(null);
+		
+		return idClassPrefix + "/" + namespace.getNamespace() + "/" + sessionCode;
 	}
 	
 	@SneakyThrows

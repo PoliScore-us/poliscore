@@ -144,7 +144,7 @@ public class PartyInterpretationService {
 			}
 		}
 		for (val l : data.getDataset().query(Legislator.class).stream().filter(leg -> leg.isMemberOfSession(data.getSession())).toList()) {
-			val op = s3.get(LegislatorInterpretation.generateId(l.getId(), sessionStats.getSession().getCode(), sessionStats.getSession().getNamespace()), LegislatorInterpretation.class);
+			val op = s3.get(LegislatorInterpretation.generateId(sessionStats.getSession().getNamespace(), sessionStats.getSession().getCode(), l.getCode()), LegislatorInterpretation.class);
 			
 			if (op.isPresent()) {
 				val interp = op.get();

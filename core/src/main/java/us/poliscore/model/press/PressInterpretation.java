@@ -20,17 +20,34 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecon
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.InterpretationOrigin;
 import us.poliscore.model.Persistable;
+import us.poliscore.model.SessionPersistable;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.AIInterpretationMetadataConverter;
+import us.poliscore.model.legislator.LegislatorInterpretation;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @DynamoDbBean
 @RegisterForReflection
 @NoArgsConstructor
 @RequiredArgsConstructor
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class PressInterpretation implements Persistable {
+public class PressInterpretation extends SessionPersistable {
 	public static final String ID_CLASS_PREFIX = "PIT";
+	
+	public static String generateId(String billId)
+	{
+		return generateId(billId, InterpretationOrigin.POLISCORE);
+	}
+	
+	public static String generateId(String billId, InterpretationOrigin origin)
+	{
+		var id = billId.replace(Bill.ID_CLASS_PREFIX, ID_CLASS_PREFIX);
+		
+		if (origin != null)
+			id += "-" + origin.getIdHash();
+		
+		return id;
+	}
 	
 //	@JsonIgnore
 //	@Getter(onMethod_ = {@DynamoDbIgnore})
@@ -56,19 +73,11 @@ public class PressInterpretation implements Persistable {
 	@NonNull
 	protected InterpretationOrigin origin;
 	
-	@DynamoDbPartitionKey
-	@EqualsAndHashCode.Include
-	public String getId()
-	{
-		return generateId(billId, origin);
-	}
-	public void setId(String id) {}
-	
 	@NonNull
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(AIInterpretationMetadataConverter.class)}))
 	protected AIInterpretationMetadata metadata;
 	
-	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX }) public String getStorageBucket() { return ID_CLASS_PREFIX; }
+	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX }) public String getStorageBucket() { return super.getStorageBucket(); }
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 	
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() { return metadata.getDate(); }
@@ -76,19 +85,4 @@ public class PressInterpretation implements Persistable {
 	
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return sentiment; }
 	@JsonIgnore public void setRating(int rating) { }
-	
-	public static String generateId(String billId)
-	{
-		return generateId(billId, InterpretationOrigin.POLISCORE);
-	}
-	
-	public static String generateId(String billId, InterpretationOrigin origin)
-	{
-		var id = billId.replace(Bill.ID_CLASS_PREFIX, ID_CLASS_PREFIX);
-		
-		if (origin != null)
-			id += "-" + origin.getIdHash();
-		
-		return id;
-	}
 }

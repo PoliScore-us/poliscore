@@ -35,6 +35,7 @@ import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Party;
 import us.poliscore.model.Persistable;
+import us.poliscore.model.SessionPersistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.dynamodb.DdbDataPage;
 import us.poliscore.model.dynamodb.IssueStatsMapLongAttributeConverter;
@@ -44,27 +45,21 @@ import us.poliscore.model.dynamodb.JacksonAttributeConverter.LegislatorLegislati
 import us.poliscore.model.dynamodb.LegiscanStateConverter;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @DynamoDbBean
 @NoArgsConstructor
 @RegisterForReflection
-public class Legislator implements Persistable, Comparable<Legislator> {
+public class Legislator extends SessionPersistable implements Comparable<Legislator> {
 	
 	public static final String ID_CLASS_PREFIX = "LEG";
 	
-	/**
-	 * An optional grouping mechanism, beyond the ID_CLASS_PREFIX concept, which allows you to group objects of the same class in different
-	 * "storage buckets". Really only used in DynamoDb at the moment, and is used for querying on the object indexes with objects that exist
-	 * in different congressional sessions.
-	 */
-	public static String getClassStorageBucket(LegislativeNamespace namespace, String sessionKey)
+	public static String generateId(LegislativeNamespace ns, String sessionCode, String legislatorCode)
 	{
-		return ID_CLASS_PREFIX + "/" + namespace.getNamespace() + "/" + sessionKey;
+		return SessionPersistable.generateId(ID_CLASS_PREFIX, ns, sessionCode, legislatorCode);
 	}
 	
 	@NonNull
 	protected LegislatorName name;
-	
-	protected String id;
 	
 	// Senate Id (only used in congress) : https://github.com/usgpo/bill-status/issues/241
 	protected String lisId;
@@ -121,32 +116,6 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 		interactionsPrivate2.clear();
 	}
 	
-	@DynamoDbPartitionKey
-	public String getId()
-	{
-		return id;
-	}
-	
-	public void setId(String id) { this.id = id; }
-	
-	@JsonIgnore
-	@DynamoDbIgnore
-	public String getCode() {
-		return Arrays.asList(this.id.split("/")).getLast();
-	}
-	
-	@JsonIgnore
-	@DynamoDbIgnore
-	public LegislativeNamespace getNamespace() {
-		return LegislativeNamespace.of(this.id.split("/")[1] + "/" + this.id.split("/")[2]);
-	}
-	
-	@JsonIgnore
-	@DynamoDbIgnore
-	public String getSessionCode() {
-		return this.id.split("/")[3];
-	}
-	
 	public void addBillInteraction(LegislatorBillInteraction incoming)
 	{
 		var interactions = interactionsPrivate1;
@@ -193,14 +162,7 @@ public class Legislator implements Persistable, Comparable<Legislator> {
 //		return this.terms.stream().anyMatch(t -> t.getStartDate().equals(session.getStartDate() && t.getEndDate().equals(session.getEndDate()));
 	}
 	
-	public static String generateId(LegislativeNamespace ns, LegislativeSession session, String legislatorCode)
-	{
-		return ID_CLASS_PREFIX + "/" + ns.getNamespace() + "/" + session.getCode() + "/" + legislatorCode;
-	}
-	
-	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX, Persistable.OBJECT_BY_RATING_ABS_INDEX, Persistable.OBJECT_BY_LOCATION_INDEX, Persistable.OBJECT_BY_IMPACT_INDEX, Persistable.OBJECT_BY_IMPACT_ABS_INDEX}) public String getStorageBucket() {
-		return this.getId().substring(0, StringUtils.ordinalIndexOf(getId(), "/", 4));
-	}
+	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX, Persistable.OBJECT_BY_RATING_ABS_INDEX, Persistable.OBJECT_BY_LOCATION_INDEX, Persistable.OBJECT_BY_IMPACT_INDEX, Persistable.OBJECT_BY_IMPACT_ABS_INDEX}) public String getStorageBucket() { return super.getStorageBucket(); }
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 	
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() { return birthday; }

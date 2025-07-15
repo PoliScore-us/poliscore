@@ -132,7 +132,7 @@ public class USCDatasetProvider implements DatasetProvider {
 	        }
 			
 			Legislator leg = new Legislator();
-			leg.setId(Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession(), view.getId().getBioguide()));
+			leg.setId(Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), view.getId().getBioguide()));
 			leg.setName(view.getName().convert());
 			leg.setLisId(view.getId().getLis());
 			leg.setBirthday(view.getBio().getBirthday());
@@ -215,7 +215,7 @@ public class USCDatasetProvider implements DatasetProvider {
 			if (vote.getId().length() == 4 && vote.getId().startsWith("S"))
 				leg = dataset.query(Legislator.class).stream().filter(l -> vote.getId().equals(l.getLisId())).findFirst().orElseThrow();
 			else
-				leg = dataset.get(Legislator.generateId(LegislativeNamespace.US_CONGRESS, dataset.getSession(), vote.getId()), Legislator.class).orElseThrow();
+				leg = dataset.get(Legislator.generateId(LegislativeNamespace.US_CONGRESS, dataset.getSession().getCode(), vote.getId()), Legislator.class).orElseThrow();
 		}
 		catch (NoSuchElementException ex)
 		{
@@ -241,6 +241,7 @@ public class USCDatasetProvider implements DatasetProvider {
 		interaction.setBillId(bill.getId());
 		interaction.setDate(rollCall.getDate().toLocalDate());
 		interaction.setBillName(bill.getName());
+		interaction.setId(LegislatorBillVote.generateId(interaction.getLegId(), interaction.getDate(), interaction.getBillId()));
 		
 		leg.addBillInteraction(interaction);
 		
@@ -448,6 +449,7 @@ public class USCDatasetProvider implements DatasetProvider {
 				interaction.setBillId(bill.getId());
 				interaction.setDate(view.getIntroduced_at());
 				interaction.setBillName(bill.getName());
+				interaction.setId(LegislatorBillSponsor.generateId(interaction.getLegId(), interaction.getDate(), interaction.getBillId()));
 				leg.get().addBillInteraction(interaction);
 				
 				dataset.put(leg.get());
@@ -464,6 +466,7 @@ public class USCDatasetProvider implements DatasetProvider {
 					interaction.setBillId(bill.getId());
 					interaction.setDate(view.getIntroduced_at());
 					interaction.setBillName(bill.getName());
+					interaction.setId(LegislatorBillSponsor.generateId(interaction.getLegId(), interaction.getDate(), interaction.getBillId()));
 					leg.get().addBillInteraction(interaction);
 					
 					dataset.put(leg.get());

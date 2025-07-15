@@ -110,7 +110,7 @@ public class USCBillView {
 		
 		public BillSponsor convert(PoliscoreDataset dataset)
 		{
-			var legId = Legislator.generateId(LegislativeNamespace.US_CONGRESS, dataset.getSession(), bioguide_id);
+			var legId = Legislator.generateId(LegislativeNamespace.US_CONGRESS, dataset.getSession().getCode(), bioguide_id);
 			var leg = dataset.get(legId, Legislator.class).get();
 			
 			var sponsor = new BillSponsor(legId, leg.getName());

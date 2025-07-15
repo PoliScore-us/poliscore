@@ -162,8 +162,8 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		
 		legInterp.updateInteractionsInterp(data.getAllDataset(), leg);
 		
-		LegislatorInterpretation interp = s3.get(LegislatorInterpretation.generateId(leg.getId(), data.getSession().getCode(), data.getSession().getNamespace()), LegislatorInterpretation.class)
-				.orElse(new LegislatorInterpretation(leg.getId(), leg.getSessionCode(), leg.getNamespace(), OpenAIService.metadata(), null));
+		LegislatorInterpretation interp = s3.get(LegislatorInterpretation.generateId(data.getSession().getNamespace(), data.getSession().getCode(), leg.getCode()), LegislatorInterpretation.class)
+				.orElse(new LegislatorInterpretation(leg.getNamespace(), leg.getSessionCode(), leg.getCode(), OpenAIService.metadata(), null));
 		
 		interp.setHash(legInterp.calculateInterpHashCode(leg));
 		

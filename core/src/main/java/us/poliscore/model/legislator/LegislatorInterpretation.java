@@ -2,12 +2,15 @@ package us.poliscore.model.legislator;
 
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
@@ -19,20 +22,27 @@ import us.poliscore.model.IssueStats;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Persistable;
+import us.poliscore.model.SessionPersistable;
 import us.poliscore.model.TrackedIssue;
+import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
+import us.poliscore.model.legislator.Legislator.LegislatorLegislativeTermSortedSet;
+import us.poliscore.model.legislator.Legislator.LegislatorName;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @DynamoDbBean
+@NoArgsConstructor
 @RegisterForReflection
-public class LegislatorInterpretation implements Persistable
+public class LegislatorInterpretation extends SessionPersistable
 {
 	public static final String ID_CLASS_PREFIX = "LIT";
 	
-	protected IssueStats issueStats;
+	public static String generateId(LegislativeNamespace ns, String sessionKey, String legislatorCode)
+	{
+		return SessionPersistable.generateId(ID_CLASS_PREFIX, ns, sessionKey, legislatorCode);
+	}
 	
-	@NonNull
-	@Getter(onMethod_ = {@DynamoDbPartitionKey})
-	protected String id;
+	protected IssueStats issueStats;
 	
 	protected AIInterpretationMetadata metadata;
 	
@@ -42,23 +52,11 @@ public class LegislatorInterpretation implements Persistable
 	
 	protected String longExplain;
 	
-	public LegislatorInterpretation()
+	public LegislatorInterpretation(LegislativeNamespace namespace, String sessionKey, String legislatorCode, AIInterpretationMetadata metadata, IssueStats stats)
 	{
-		
-	}
-	
-	public LegislatorInterpretation(String legislatorId, String sessionCode, LegislativeNamespace namespace, AIInterpretationMetadata metadata, IssueStats stats)
-	{
-		this.id = generateId(legislatorId, sessionCode, namespace);
+		this.id = generateId(namespace, sessionKey, legislatorCode);
 		this.metadata = metadata;
 		this.issueStats = stats;
-	}
-	
-	@JsonIgnore
-	@DynamoDbIgnore
-	public String getSession()
-	{
-		return Arrays.asList(this.id.split("/")).get(3);
 	}
 	
 	@JsonIgnore
@@ -68,10 +66,7 @@ public class LegislatorInterpretation implements Persistable
 		return Legislator.ID_CLASS_PREFIX + "/" + Arrays.asList(this.id.split("/")).get(1) + "/" + Arrays.asList(this.id.split("/")).getLast();
 	}
 	
-	public static String generateId(String legislatorId, String sessionKey, LegislativeNamespace namespace) { return ID_CLASS_PREFIX + "/" + namespace.getNamespace() + "/" + sessionKey + "/" + Arrays.asList(legislatorId.split("/")).getLast(); }
-	
-	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX }) public String getStorageBucket() { return ID_CLASS_PREFIX; }
-	
+	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX }) public String getStorageBucket() { return super.getStorageBucket(); }
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 	
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() { return metadata.getDate(); }
