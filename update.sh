@@ -4,10 +4,12 @@ set -e
 set -o pipefail
 set -x
 
+
 START_DIR="$(pwd)"
 USC_DIR="$START_DIR/../../congress"
 
 sudo docker ps
+source ./set-deployment-config.sh
 source ./set-deployment-target.sh
 
 
@@ -17,7 +19,7 @@ python3 -m venv env
 source env/bin/activate
 pip install .
 
-CONGRESS=119
+CONGRESS=$(( (DEPLOYMENT_YEAR - 1789) / 2 + 1 ))
 
 usc-run govinfo --bulkdata=BILLSTATUS --congress=$CONGRESS
 usc-run bills --govtrack --congress=$CONGRESS

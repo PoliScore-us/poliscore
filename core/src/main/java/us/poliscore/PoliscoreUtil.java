@@ -21,8 +21,6 @@ public class PoliscoreUtil {
 		APP_DATA.mkdirs();
 	}
 	
-	public static String DEPLOYMENT_SESSION_KEY;
-	
 	public static List<File> allFilesWhere(File parent, Predicate<File> criteria)
 	{
 		List<File> all = new ArrayList<File>();

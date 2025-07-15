@@ -1,5 +1,6 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { namespace, year } from './app.config';
 
 @Injectable({
   providedIn: 'root'
@@ -21,8 +22,7 @@ export class ConfigService {
     this.congress = this.yearToCongress(this.getYear());
   }
 
-  public getYear(): number
-  {
+  public getYear(): number {
     // if (isPlatformBrowser(this.platformId)) {
     //   const baseHref = document.querySelector('base')?.getAttribute('href') || '/';
     //   const yearMatch = baseHref.match(/^\/(\d{4})\/$/); // Match "/2024/" or similar
@@ -31,7 +31,11 @@ export class ConfigService {
     //   return new Date().getFullYear();
     // }
 
-    return 2026;
+    return year;
+  }
+
+  public getNamespace(): string {
+    return namespace;
   }
 
   public yearToCongressStr(year: string): string

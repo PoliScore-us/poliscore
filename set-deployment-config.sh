@@ -1,17 +1,12 @@
 #!/bin/bash
-# Used to set the deployment namespace and year
+# Used to set the deployment namespace and year. Reads variables from deployment-config.sh
 
-CURRENT_YEAR=$1
-NEXT_YEAR=$2
-PREVIOUS_CONGRESS=$(( (CURRENT_YEAR - 1789) / 2 + 1))
-NEXT_CONGRESS=$(( (NEXT_YEAR - 1789) / 2 + 1 ))
+source ./deployment-config.sh
 
-sed -i '' "s|DEPLOYMENT_YEAR = \"$CURRENT_YEAR\";|DEPLOYMENT_YEAR = \"$NEXT_YEAR\";|g" ./core/src/main/java/us/poliscore/PoliscoreUtil.java
-sed -i '' "s|return $CURRENT_YEAR;|return $NEXT_YEAR;|g" ./webapp/src/main/webui/src/app/config.service.ts
-sed -i '' "s|/$CURRENT_YEAR/|/$NEXT_YEAR/|g" ./webapp/src/main/webui/angular.json
-sed -i '' "s|export YEAR=$CURRENT_YEAR|export YEAR=$NEXT_YEAR|g" ./deploy.sh
-sed -i '' "s|CONGRESS=$PREVIOUS_CONGRESS|CONGRESS=$NEXT_CONGRESS|g" ./update.sh
-echo "MANUAL STEP : Make sure this year is in the list of SUPPORTED_CONGRESSES in PoliScoreUtil"
+sed -i '' "s|export const year: number = [0-9]\+;|export const year: number = $DEPLOYMENT_YEAR;|g" ./webapp/src/main/webui/src/app/app.config.ts
+sed -i '' "s|\"baseHref\": \"/[0-9]\{4\}/\"|\"baseHref\": \"/$DEPLOYMENT_YEAR/\"|g" ./webapp/src/main/webui/angular.json
+sed -i '' "s|export DEPLOYMENT_YEAR=[0-9]\{4\}|export DEPLOYMENT_YEAR=$DEPLOYMENT_YEAR|g" ./deployment-config.sh
+echo "MANUAL STEP : Make sure this year is in the list of SUPPORTED_DEPLOYMENTS in PoliScoreConfigService"
 echo "MANUAL STEP : Don't forget to change the deployment year in the cloudfront routing script"
 echo "MANUAL STEP : Make sure to update the list of supported congresses in the front-end"
 
@@ -38,6 +33,7 @@ DB_PROPS="./databuilder/src/main/resources/application.properties"
 WEB_PROPS="./webapp/src/main/resources/application.properties"
 
 # Update or create properties
-update_property "$DB_PROPS" "quarkus.package.main-class" "us.poliscore.entrypoint.DatabaseBuilder"
-update_property "$DB_PROPS" "ipGeoSecretName" "$IP_GEO_SECRET_NAME"
-update_property "$DB_PROPS" "ddb.table" "$DDB_TABLE"
+update_property "$DB_PROPS" "deployment.year" "$DEPLOYMENT_YEAR"
+update_property "$DB_PROPS" "deployment.namespace" "$DEPLOYMENT_NAMESPACE"
+update_property "$WEB_PROPS" "deployment.year" "$DEPLOYMENT_YEAR"
+update_property "$WEB_PROPS" "deployment.namespace" "$DEPLOYMENT_NAMESPACE"

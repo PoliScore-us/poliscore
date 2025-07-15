@@ -9,6 +9,7 @@ fi
 # Exit on error
 set -e
 
+source ./set-deployment-config.sh
 source ./set-deployment-target.sh
 
 if [[ "$POLISCORE_DEPLOYMENT" != "Poliscore1" && "$POLISCORE_DEPLOYMENT" != "Poliscore2" ]]; then
@@ -19,7 +20,7 @@ fi
 export NODE_OPTIONS="--max-old-space-size=8192"
 export BUCKET_SLOT="${POLISCORE_DEPLOYMENT/Poliscore/}" # extracts 1 or 2
 export BUCKET_NAME="poliscore-website$BUCKET_SLOT"
-export YEAR=2026
+export DEPLOYMENT_YEAR=2026
 
 if [ "${1:-}" != "view" ]; then
   docker ps
@@ -46,9 +47,9 @@ if [ "${1:-}" != "backend" ]; then
 	  sed -i '' "s|https://y5i3jhm7k5vy67elvzly4b3b240kjwlp.lambda-url.us-east-1.on.aws/|$LAMBDA_DEPLOYMENT_URL|g" src/app/app.config.ts
 	fi
   
-  ng build --base-href /$YEAR/
+  ng build --base-href /$DEPLOYMENT_YEAR/
   cd ../../../../
 
-  aws s3 rm s3://$BUCKET_NAME/$YEAR --recursive
-  aws s3 cp webapp/src/main/webui/dist/poliscore/browser s3://$BUCKET_NAME/$YEAR --recursive
+  aws s3 rm s3://$BUCKET_NAME/$DEPLOYMENT_YEAR --recursive
+  aws s3 cp webapp/src/main/webui/dist/poliscore/browser s3://$BUCKET_NAME/$DEPLOYMENT_YEAR --recursive
 fi

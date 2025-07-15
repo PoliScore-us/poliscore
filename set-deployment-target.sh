@@ -51,7 +51,6 @@ DB_PROPS="./databuilder/src/main/resources/application.properties"
 WEB_PROPS="./webapp/src/main/resources/application.properties"
 
 # Update or create properties
-update_property "$DB_PROPS" "quarkus.package.main-class" "us.poliscore.entrypoint.DatabaseBuilder"
 update_property "$DB_PROPS" "ipGeoSecretName" "$IP_GEO_SECRET_NAME"
 update_property "$DB_PROPS" "ddb.table" "$DDB_TABLE"
 

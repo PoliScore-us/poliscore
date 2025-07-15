@@ -65,7 +65,7 @@ public class GovernmentDataService {
 	}
 	
 	public PoliscoreDataset getDeploymentDataset() {
-		return importedDatasets.get(0);
+		return importedDatasets.stream().filter(ds -> ds.isDeployment(config.getDeployment())).findFirst().get();
 	}
 	
 	public PoliscoreCompositeDataset getAllDataset() {

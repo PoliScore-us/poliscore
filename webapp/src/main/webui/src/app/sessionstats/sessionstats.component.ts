@@ -126,7 +126,6 @@ export class SessionStatsComponent {
   }
 
   updateMetaTags(): void {
-    console.log(this.stats!.session);
     if (this.stats == null) return;
 
     let year = this.config.getYear();
