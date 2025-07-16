@@ -110,17 +110,17 @@ public class DatabaseBuilder implements QuarkusApplication
 	protected void process() throws IOException
 	{
 		data.importDatasets();
-//		data.syncS3LegislatorImages(data.getDataset());
-//		data.syncS3BillText(data.getDataset());
+		data.syncS3LegislatorImages(data.getDataset());
+		data.syncS3BillText(data.getDataset());
 		
 		s3.optimizeExists(BillInterpretation.class);
 		s3.optimizeExists(LegislatorInterpretation.class);
 		
-//		syncDdbWithS3();
+		syncDdbWithS3();
 		
-//		interpretBillPressArticles();
-//		interpretBills();
-//		pressBillInterpGenerator.recordLastPressQueries(); // We want to record that our press query is complete, but only after the bill has been updated and re-interpreted (otherwise we would need to query again if it fails halfway through)
+		interpretBillPressArticles();
+		interpretBills();
+		pressBillInterpGenerator.recordLastPressQueries(); // We want to record that our press query is complete, but only after the bill has been updated and re-interpreted (otherwise we would need to query again if it fails halfway through)
 		
 		interpretLegislators();
 		interpretPartyStats();

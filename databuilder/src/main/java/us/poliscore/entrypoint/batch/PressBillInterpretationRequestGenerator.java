@@ -67,8 +67,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	public static final String GOOGLE_CUSTOM_SEARCH_ENGINE_ID = "3564aa93769fe4c0f";
 	
 	// Google's max queries on free tier is 100
-//	public static final int MAX_QUERIES = 2000;
-	public static final int MAX_QUERIES = 20;
+	public static final int MAX_QUERIES = 2000;
 	
 	public static final long TOKEN_BLOCK_SIZE = 30000000;
 	

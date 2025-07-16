@@ -52,6 +52,10 @@ export class PromoComponent {
     clickPrivacyPolicy() {
       this.dialog.open(DisclaimerDialogComponent);
     }
+
+    clickContact() {
+      this.dialog.open(DisclaimerDialogContactUsComponent);
+    }
   
     updateMetaTags(): void {
       let year = this.config.getYear();
@@ -77,26 +81,56 @@ export class PromoComponent {
     }
   }
   
-  @Component({
-    selector: 'disclaimer-dialog',
-    standalone: true,
-    imports: [CommonModule, MatDialogModule, MatButtonModule],
-    template: `
-      <div mat-dialog-content>
-          <p>PoliScore is committed to protecting your privacy. We use Google Analytics with default settings to collect basic, non-personal data such as the pages you visit and the links you click. This data helps us understand how users interact with our website and improve its functionality. We do not collect or store personally identifiable information, nor do we sell or share any data with third parties.</p>
-  
-          <br/>
-          <p>Google Analytics processes this information in accordance with <a href="https://policies.google.com/privacy">their Privacy Policy</a>. If you prefer not to be tracked, you can opt out using the <a href="https://tools.google.com/dlpage/gaoptout/">Google Analytics Opt-Out Browser Add-on</a> or by adjusting your browser settings to block tracking scripts. By using our website, you agree to the terms of this policy.</p>
-      </div>
-      <div mat-dialog-actions align="center">
-        <button mat-button (click)="onClose()">Close</button>
-      </div>
-    `,
-  })
-  export class DisclaimerDialogComponent {
+@Component({
+  selector: 'disclaimer-dialog',
+  standalone: true,
+  imports: [CommonModule, MatDialogModule, MatButtonModule],
+  template: `
+    <div mat-dialog-content>
+        <p>PoliScore is committed to protecting your privacy. We use Google Analytics with default settings to collect basic, non-personal data such as the pages you visit and the links you click. This data helps us understand how users interact with our website and improve its functionality. We do not collect or store personally identifiable information, nor do we sell or share any data with third parties.</p>
+
+        <br/>
+        <p>Google Analytics processes this information in accordance with <a href="https://policies.google.com/privacy">their Privacy Policy</a>. If you prefer not to be tracked, you can opt out using the <a href="https://tools.google.com/dlpage/gaoptout/">Google Analytics Opt-Out Browser Add-on</a> or by adjusting your browser settings to block tracking scripts. By using our website, you agree to the terms of this policy.</p>
+    </div>
+    <div mat-dialog-actions align="center">
+      <button mat-button (click)="onClose()">Close</button>
+    </div>
+  `,
+})
+export class DisclaimerDialogComponent {
     constructor(
       @Inject(MAT_DIALOG_DATA) public data: { large: string, disclaimerComponent: any },
       public dialogRef: MatDialogRef<DisclaimerDialogComponent>
+    ) {}
+  
+    onClose(): void {
+      this.dialogRef.close();
+    }
+}
+
+@Component({
+  selector: 'disclaimer-dialog',
+  standalone: true,
+  imports: [CommonModule, MatDialogModule, MatButtonModule],
+  template: `
+    <div mat-dialog-content>
+        <h1>We want to hear from you!</h1>
+
+        <p>The admins at PoliScore.us can be contacted via the email:</p>
+
+        <p><a href="mailto:contact@poliscore.us">contact&#64;poliscore.us</a></p>
+
+        <p>Don't be afraid to contact us, and if we take a while to respond (or don't respond) please don't be afraid to send us another email to make sure we received it.</p>
+    </div>
+    <div mat-dialog-actions align="center">
+      <button mat-button (click)="onClose()">Close</button>
+    </div>
+  `,
+})
+export class DisclaimerDialogContactUsComponent {
+    constructor(
+      @Inject(MAT_DIALOG_DATA) public data: { large: string, disclaimerComponent: any },
+      public dialogRef: MatDialogRef<DisclaimerDialogContactUsComponent>
     ) {}
   
     onClose(): void {
