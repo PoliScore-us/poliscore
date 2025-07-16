@@ -59,7 +59,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	public static boolean INTERPRET_NEW_BILLS = true;
 	
-	public static boolean REINTERPRET_LEGISLATORS = true;
+	public static boolean REINTERPRET_LEGISLATORS = false;
 	
 	public static boolean REINTERPRET_PARTIES = false;
 	
@@ -110,17 +110,17 @@ public class DatabaseBuilder implements QuarkusApplication
 	protected void process() throws IOException
 	{
 		data.importDatasets();
-		data.syncS3LegislatorImages(data.getDataset());
-		data.syncS3BillText(data.getDataset());
+//		data.syncS3LegislatorImages(data.getDataset());
+//		data.syncS3BillText(data.getDataset());
 		
 		s3.optimizeExists(BillInterpretation.class);
 		s3.optimizeExists(LegislatorInterpretation.class);
 		
-		syncDdbWithS3();
+//		syncDdbWithS3();
 		
-		interpretBillPressArticles();
-		interpretBills();
-		pressBillInterpGenerator.recordLastPressQueries(); // We want to record that our press query is complete, but only after the bill has been updated and re-interpreted (otherwise we would need to query again if it fails halfway through)
+//		interpretBillPressArticles();
+//		interpretBills();
+//		pressBillInterpGenerator.recordLastPressQueries(); // We want to record that our press query is complete, but only after the bill has been updated and re-interpreted (otherwise we would need to query again if it fails halfway through)
 		
 		interpretLegislators();
 		interpretPartyStats();
@@ -270,23 +270,26 @@ public class DatabaseBuilder implements QuarkusApplication
 			if (legInterp.getInteractionsForInterpretation(leg).size() < 1000) {
 				// If an interpretation from this session doesn't exist, grab one from the previous session.
 				var previousSession = data.getPreviousSession();
-				val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousSession.getNamespace(), previousSession.getCode(), leg.getCode()), LegislatorInterpretation.class);
 				
-				if (prevInterpOp.isPresent()) {
-					if (StringUtils.isBlank(interp.getShortExplain()))
-						interp.setShortExplain(prevInterpOp.get().getShortExplain());
-					if (StringUtils.isBlank(interp.getLongExplain()))
-						interp.setLongExplain(prevInterpOp.get().getLongExplain());
+				if (previousSession != null) {
+					val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousSession.getNamespace(), previousSession.getCode(), leg.getCode()), LegislatorInterpretation.class);
 					
-					String prevLegId = Legislator.generateId(previousSession.getNamespace(), previousSession.getCode(), leg.getCode());
-					
-					val prevLeg = ddb.get(prevLegId, Legislator.class).orElseThrow();
-					
-					val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
-					while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
-						val n = prevInteracts.next();
-						if (n.getIssueStats() != null)
-							leg.getInteractionsPrivate1().add(n);
+					if (prevInterpOp.isPresent()) {
+						if (StringUtils.isBlank(interp.getShortExplain()))
+							interp.setShortExplain(prevInterpOp.get().getShortExplain());
+						if (StringUtils.isBlank(interp.getLongExplain()))
+							interp.setLongExplain(prevInterpOp.get().getLongExplain());
+						
+						String prevLegId = Legislator.generateId(previousSession.getNamespace(), previousSession.getCode(), leg.getCode());
+						
+						val prevLeg = ddb.get(prevLegId, Legislator.class).orElseThrow();
+						
+						val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
+						while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
+							val n = prevInteracts.next();
+							if (n.getIssueStats() != null)
+								leg.getInteractionsPrivate1().add(n);
+						}
 					}
 				}
 			}

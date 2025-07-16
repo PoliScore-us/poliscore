@@ -83,6 +83,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		for (var person : cached.getPeople().values()) {
 			importLegislator(person, dataset);
 		}
+		openstates.augmentLegislators(dataset);
 		
 		for (var bill : cached.getBills().values()) {
 			importBill(bill, dataset);
@@ -408,7 +409,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 			if (legiBill.getTexts().size() == 0) continue;
 			
 			// TODO : This won't allow for text updates or amendments
-//			if (s3.exists(BillText.generateId(bill.getId()), BillText.class)) continue;
+			if (s3.exists(BillText.generateId(bill.getId()), BillText.class)) continue;
 			
 			val metadata = legiBill.getTexts().stream().max(Comparator.comparing(LegiscanTextMetadataView::getDate)).get();
 			
@@ -422,7 +423,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	            PDFTextStripper stripper = new PDFTextStripper();
 	            String text = stripper.getText(document);
 
-	            BillText bt = new BillText(bill.getId(), text, doc.getDate());
+	            BillText bt = BillText.factoryFromText(bill.getId(), text, doc.getDate());
 				s3.put(bt);
 				
 				count++;

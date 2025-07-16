@@ -53,6 +53,8 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	
 	public static final String ID_CLASS_PREFIX = "LEG";
 	
+	public static final LocalDate DEFAULT_BIRTHDAY = LocalDate.of(1970, 1, 1);
+	
 	public static String generateId(LegislativeNamespace ns, String sessionCode, String legislatorCode)
 	{
 		return SessionPersistable.generateId(ID_CLASS_PREFIX, ns, sessionCode, legislatorCode);
@@ -67,7 +69,7 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	protected LegislatorInterpretation interpretation;
 	
 	@NonNull
-	protected LocalDate birthday;
+	protected LocalDate birthday = DEFAULT_BIRTHDAY;
 	
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(IssueStatsMapLongAttributeConverter.class) }))
 	public Map<TrackedIssue, Long> impactMap = new HashMap<TrackedIssue, Long>();
@@ -139,8 +141,7 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	}
 	
 	public void setBirthday(LocalDate date) {
-		if (date == null)
-			date = LocalDate.of(1970, 1, 1);
+		if (date == null) return;
 		
 		this.birthday = date;
 	}
@@ -165,7 +166,7 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX, Persistable.OBJECT_BY_RATING_ABS_INDEX, Persistable.OBJECT_BY_LOCATION_INDEX, Persistable.OBJECT_BY_IMPACT_INDEX, Persistable.OBJECT_BY_IMPACT_ABS_INDEX}) public String getStorageBucket() { return super.getStorageBucket(); }
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() { return birthday; }
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() { return birthday == null ? DEFAULT_BIRTHDAY : birthday; }
 	@JsonIgnore public void setDate(LocalDate date) { this.setBirthday(date); }
 	
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return interpretation == null ? -1 : interpretation.getRating(); }

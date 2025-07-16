@@ -14,8 +14,8 @@ import us.poliscore.model.LegislativeNamespace;
 public class PoliscoreConfigService {
 	
 	private static List<DeploymentConfig> SUPPORTED_DEPLOYMENTS = Arrays.asList(
-			new DeploymentConfig(LegislativeNamespace.US_CONGRESS, 2026), new DeploymentConfig(LegislativeNamespace.US_CONGRESS, 2024)
-//			new DeploymentConfig(LegislativeNamespace.US_COLORADO, 2025)
+			new DeploymentConfig(LegislativeNamespace.US_CONGRESS, 2026), new DeploymentConfig(LegislativeNamespace.US_CONGRESS, 2024),
+			new DeploymentConfig(LegislativeNamespace.US_COLORADO, 2025)
 	);
 	
 	@ConfigProperty(name = "deployment.namespace")

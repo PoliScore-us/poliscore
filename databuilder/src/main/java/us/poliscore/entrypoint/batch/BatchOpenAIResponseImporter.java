@@ -43,12 +43,12 @@ import us.poliscore.model.press.PressInterpretationParser;
 import us.poliscore.model.session.SessionInterpretation;
 import us.poliscore.model.session.SessionInterpretation.PartyInterpretation;
 import us.poliscore.model.session.SessionInterpretationOld;
+import us.poliscore.parsing.BillSlicer;
 import us.poliscore.parsing.XMLBillSlicer;
 import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
-import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
 import us.poliscore.service.storage.CachedDynamoDbService;
@@ -242,7 +242,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			val billText = s3.get(BillText.generateId(bill.getId()), BillText.class).orElseThrow();
 			bill.setText(billText);
 			
-			List<BillSlice> slices = new XMLBillSlicer().slice(bill, billText, OpenAIService.MAX_REQUEST_LENGTH);
+			List<BillSlice> slices = BillSlicer.factory(billText).slice(bill, billText, OpenAIService.MAX_REQUEST_LENGTH);
 			
 			bi.setMetadata(OpenAIService.metadata(slices.get(sliceIndex)));
 			bi.setId(BillInterpretation.generateId(billId, bi.getOrigin(), sliceIndex));
@@ -310,7 +310,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		bi.setBillId(billId);
 		bi.setOrigin(((CustomOriginData) resp.getCustomData()).getOrigin());
 		bi.setMetadata(PressBillInterpretationRequestGenerator.metadata());
-		bi.setId(BillInterpretation.generateId(billId, bi.getOrigin(), null));
+		bi.setId(PressInterpretation.generateId(billId, bi.getOrigin()));
 		
 		var interpText = resp.getResponse().getBody().getChoices().get(0).getMessage().getContent();
 		

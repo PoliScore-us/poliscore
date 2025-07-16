@@ -10,78 +10,43 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillSlice;
 import us.poliscore.model.bill.BillText;
 
-/**
- * Abandoned in favour of parsing the bill XML syntax. Challenges present in raw text parsing:
- * 
- * 1. Finding bill sections isn't something that lends itself easily to simple regex, given that "section" could be:
- *   - A listing in the bill table of contents
- *   - A reference to a different bill
- *   - A section header for the current billl
- */
 public class TextBillSlicer implements BillSlicer {
 
-	public boolean containsSectionHeader(String line)
-	{
-		final String lc = line.toLowerCase();
-		
-		return lc.matches(".*section \\d+.*") || lc.matches(".*sec\\. \\d+.*");
-	}
-	
-	@Override
-	public List<BillSlice> slice(Bill bill, BillText text, int maxSectionLength) {
-		final List<BillSlice> sections = new ArrayList<BillSlice>();
-		
-//		try (final Scanner scanner = new Scanner(bill.getText()))
-//		{
-//			StringBuilder cur = new StringBuilder();
-//			StringBuilder prev = null;
-//			
-//			while (scanner.hasNextLine()) {
-//			  String line = scanner.nextLine();
-//			  
-//			  if (prev != null && prev.length() + cur.length() >= OpenAIService.MAX_SECTION_LENGTH)
-//			  {
-//				  sections.add(prev.toString());
-//				  prev = null;
-//			  }
-//			  if (cur.length() >= OpenAIService.MAX_SECTION_LENGTH)
-//			  {
-//				  sections.add(cur.toString());
-//				  cur = new StringBuilder();
-//			  }
-//			  
-//			  if (cur.length() > 0)
-//			  {
-//				  if (containsSectionHeader(line))
-//				  {
-//					  if (prev != null)
-//					  {
-//						  prev = new StringBuilder(prev.toString() + cur.toString());
-//						  cur = new StringBuilder();
-//					  }
-//					  else
-//					  {
-//						  prev = cur;
-//						  cur = new StringBuilder();
-//					  }
-//				  }
-//				  else if (cur.length() + line.length() >= OpenAIService.MAX_SECTION_LENGTH)
-//				  {
-//					  sections.add(cur.toString());
-//					  cur = new StringBuilder();
-//				  }
-//			  }
-//			  
-//			  cur.append(line);
-//			}
-//			
-//			sections.add(cur.toString());
-//		}
-		
-		return sections;
-	}
+    // Overlap in characters between slices for context continuity
+    private static final int OVERLAP_SIZE = 200;
 
-	public static List<String> slice(String text) {
+    // TODO : Slice at natural langauge boundaries (such as the end of a sentence, whatever)
+    @Override
+    public List<BillSlice> slice(Bill bill, BillText text, int maxSectionLength) {
+        final List<BillSlice> slices = new ArrayList<>();
+        final String fullText = text.getText();
+        final int totalLength = fullText.length();
+
+        int start = 0;
+
+        while (start < totalLength) {
+            int end = Math.min(start + maxSectionLength, totalLength);
+            String sectionText = fullText.substring(start, end);
+
+            BillSlice slice = new BillSlice();
+            slice.setBill(bill);
+            slice.setText(sectionText);
+            slice.setStart(String.valueOf(start));
+            slice.setEnd(String.valueOf(end));
+            slices.add(slice);
+
+            // Advance to next slice with overlap, but never go backwards or repeat
+            int nextStart = end - OVERLAP_SIZE;
+            if (nextStart <= start) {
+                nextStart = end; // fallback if overlap is too large
+            }
+            start = nextStart;
+        }
+
+        return slices;
+    }
+
+    public static List<String> sliceRaw(String text) {
 		int aEnd = lastIndexOfRegex(text.substring(0, (text.length() / 2) + 200), "\\s");
 		int bStart = ((text.length() / 2) - 200) + indexOfRegex(text.substring((text.length() / 2) - 200), "\\s") + 1;
 		

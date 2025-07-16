@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
@@ -26,19 +27,16 @@ import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.model.InterpretationOrigin;
-import us.poliscore.model.Persistable;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillSlice;
 import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.press.PressInterpretation;
-import us.poliscore.parsing.XMLBillSlicer;
+import us.poliscore.parsing.BillSlicer;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
-import us.poliscore.service.LegislatorService;
-import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
@@ -105,7 +103,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 				.filter(b -> (!CHECK_S3_EXISTS || !billInterpreter.isInterpreted(b.getId()) || (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))))
 				.filter(b -> s3.exists(BillText.generateId(b.getId()), BillText.class))
 				.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed())
-//				.limit(100)
+				.limit(20)
 				.toList()) {
 			
 			// The press interpreter may have said this bill was dirty, but after the press interps came back, they came back as NO_INTERP. At this point, it's not actually dirty and doesn't need to be interpreted.
@@ -120,19 +118,20 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 			val billText = billService.getBillText(b).orElse(null);
 			b.setText(billText);
 			
-			val userMsg = billInterpreter.getUserMsgForBill(b, b.getText().getXml());
+			val userMsg = billInterpreter.getUserMsgForBill(b, b.getText().getDocument());
 			
 			if (userMsg.length() >= OpenAIService.MAX_REQUEST_LENGTH)
 	    	{
-	    		List<BillSlice> slices = new XMLBillSlicer().slice(b, b.getText(), OpenAIService.MAX_REQUEST_LENGTH - (userMsg.length() - b.getText().getXml().length()));
+	    		List<BillSlice> slices = BillSlicer.factory(b.getText()).slice(b, b.getText(), OpenAIService.MAX_REQUEST_LENGTH - (userMsg.length() - b.getText().getDocument().length()));
 	    		
 	    		if (slices.size() == 0) throw new UnsupportedOperationException("Slicer returned zero slices?");
 	    		else if (slices.size() == 1) {
-	    			b.getText().setXml(slices.get(0).getText());
+	    			if (!StringUtils.isBlank(b.getText().getXml()))
+	    				b.getText().setXml(slices.get(0).getText());
 	    			
 	    			List<BatchBillMessage> messages = new ArrayList<BatchBillMessage>();
 					messages.add(new BatchBillMessage("system", billInterpreter.getPromptForBill(b, false)));
-	    			messages.add(new BatchBillMessage("user", billInterpreter.getUserMsgForBill(b, b.getText().getXml())));
+	    			messages.add(new BatchBillMessage("user", billInterpreter.getUserMsgForBill(b, b.getText().getDocument())));
 	    			
 	    			requests.add(new BatchOpenAIRequest(
 	    					new CustomData(BillInterpretation.generateId(b.getId(), null)),

@@ -59,6 +59,10 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	{
 		val key = getKey(obj.getId());
 		
+		if (key.contains("null")) {
+			throw new UnsupportedOperationException("Your object's id is " + key + "... Really? I don't think so.");
+		}
+		
         PutObjectRequest putOb = PutObjectRequest.builder()
                 .bucket(BUCKET_NAME)
                 .key(key)

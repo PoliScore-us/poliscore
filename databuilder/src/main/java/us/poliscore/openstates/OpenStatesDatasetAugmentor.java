@@ -42,14 +42,17 @@ public class OpenStatesDatasetAugmentor extends AbstractLegislatorImageFetcher i
             86400 // default TTL 24h
     );
 	
-	protected void augmentDataset(PoliscoreDataset dataset) {
+	public void augmentLegislators(PoliscoreDataset dataset) {
 		int augmentCount = 0;
 		
 		for(var leg : dataset.query(Legislator.class)) {
+			if (leg.getBirthday() != null && !leg.getBirthday().equals(Legislator.DEFAULT_BIRTHDAY)) continue;
+			
 			val legData = fetchLegislatorData(leg, dataset).orElse(null);
 			
 			if (legData != null && legData.getBirthDate() != null) {
 				leg.setBirthday(legData.getBirthDate());
+				augmentCount++;
 			}
 		}
 		

@@ -118,7 +118,7 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 						{
 							val date = parseDate(f);
 							
-							BillText bt = new BillText(billId, FileUtils.readFileToString(f, "UTF-8"), date);
+							BillText bt = BillText.factoryFromXml(billId, FileUtils.readFileToString(f, "UTF-8"), date);
 							s3.put(bt);
 						}
 						catch (Throwable t) {

@@ -102,6 +102,7 @@ export class AppService {
         }
 
         params = params.set("year", this.config.getYear());
+        params = params.set("namespace", this.config.getNamespace());
 
         return firstValueFrom(this.http.get<Bill[]>(backendUrl + "/getBills", { params: params }));
     }
@@ -137,6 +138,7 @@ export class AppService {
         }
 
         params = params.set("year", this.config.getYear());
+        params = params.set("namespace", this.config.getNamespace());
 
         return firstValueFrom(this.http.get<Legislator[]>(backendUrl + "/getLegislators", { params: params }));
     }
@@ -149,6 +151,7 @@ export class AppService {
         }
 
         params = params.set("year", this.config.getYear());
+        params = params.set("namespace", this.config.getNamespace());
 
         return firstValueFrom(this.http.get<LegislatorPageData>(backendUrl + "/getLegislatorPageData", { params: params }));
     }

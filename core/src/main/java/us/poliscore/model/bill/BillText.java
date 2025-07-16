@@ -2,25 +2,24 @@ package us.poliscore.model.bill;
 
 import java.time.LocalDate;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.val;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
-import us.poliscore.PoliscoreUtil;
-import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.SessionPersistable;
-import us.poliscore.model.press.PressInterpretation;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@AllArgsConstructor
 @NoArgsConstructor
 @RegisterForReflection
 public class BillText extends SessionPersistable
@@ -32,10 +31,39 @@ public class BillText extends SessionPersistable
 	@NonNull
 	protected String billId;
 	
-	@NonNull
 	protected String xml;
 	
+	protected String text;
+	
 	protected LocalDate lastUpdated;
+	
+	public static BillText factoryFromText(String billId, String text, LocalDate lastUpdated) {
+		val txt = new BillText();
+		txt.billId = billId;
+		txt.text = text;
+		txt.lastUpdated = lastUpdated;
+		txt.id = generateId(billId);
+		return txt;
+	}
+	
+	public static BillText factoryFromXml(String billId, String xml, LocalDate lastUpdated) {
+		val txt = new BillText();
+		txt.billId = billId;
+		txt.xml = xml;
+		txt.lastUpdated = lastUpdated;
+		txt.id = generateId(billId);
+		return txt;
+	}
+	
+	@JsonIgnore
+	@DynamoDbIgnore
+	public String getDocument() {
+		if (StringUtils.isBlank(text) && !StringUtils.isBlank(xml)) {
+			return xml;
+		}
+		
+		return text;
+	}
 	
 	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public String getStorageBucket() { return super.getStorageBucket(); }
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }

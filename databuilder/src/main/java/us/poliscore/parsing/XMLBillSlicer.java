@@ -73,7 +73,7 @@ public class XMLBillSlicer implements BillSlicer {
 		if (text.length() < maxSectionLength) {
 			return Arrays.asList(buildSlice($(node).xpath(), $(node).xpath(), text));
 		} else if (node.getChildNodes().getLength() == 0 && text.length() >= maxSectionLength) {
-			val slices = TextBillSlicer.slice(text);
+			val slices = TextBillSlicer.sliceRaw(text);
 			val list = new ArrayList<BillSlice>();
 			slices.forEach(s -> list.add(buildSlice($(node).xpath(), $(node).xpath(), text)));
 			return list;

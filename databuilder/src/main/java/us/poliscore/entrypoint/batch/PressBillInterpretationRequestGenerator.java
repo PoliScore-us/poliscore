@@ -67,7 +67,8 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	public static final String GOOGLE_CUSTOM_SEARCH_ENGINE_ID = "3564aa93769fe4c0f";
 	
 	// Google's max queries on free tier is 100
-	public static final int MAX_QUERIES = 2000;
+//	public static final int MAX_QUERIES = 2000;
+	public static final int MAX_QUERIES = 20;
 	
 	public static final long TOKEN_BLOCK_SIZE = 30000000;
 	
@@ -389,18 +390,20 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		if (interp != null && LocalDate.now().isBefore(b.getIntroducedDate().plus(19, ChronoUnit.DAYS)) && interp.getLastPressQuery().isAfter(LocalDate.now().minus(10, ChronoUnit.DAYS)) && !Arrays.asList(specificFetch).contains(b.getId())) return;
 		if (interp == null) interp = new BillInterpretation();
 		
-		final String typeAndNumber = b.getType().toUpperCase() + " " + b.getNumber();
+		final String billCode = b.getBillCode();
 		
 		String query;
-		if (b.getName() == null || StringUtils.isEmpty(b.getName()) || b.getName().toLowerCase().replaceAll("[\\s\\.]+", "").equals(typeAndNumber.toLowerCase().replaceAll("[\\s\\.]+", "")))
+		if (b.getName() == null || StringUtils.isEmpty(b.getName()) || b.getName().toLowerCase().replaceAll("[\\s\\.]+", "").equals(billCode.toLowerCase().replaceAll("[\\s\\.]+", "")))
 		{
-			query = typeAndNumber;
-			
-			query = b.getNamespace().getDescription() + " " + query;
+			query = b.getNamespace().getDescription() + " " + billCode;
 		}
 		else
 		{
-			query = b.getType().toUpperCase() + " " + b.getNumber() + " " + b.getName();
+			if (b.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
+				query = billCode + " " + b.getName();
+			} else {
+				query = b.getNamespace().getDescription() + " " + billCode + " " + b.getName();
+			}
 		}
 		
 	    val encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8);
