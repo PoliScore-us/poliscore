@@ -59,9 +59,9 @@ public class SessionInterpretation implements Persistable {
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(AIInterpretationMetadataConverter.class)}))
 	protected AIInterpretationMetadata metadata;
 	
-	public static String generateId(LegislativeNamespace namespace, String sessionKey)
+	public static String generateId(LegislativeNamespace namespace, String sessionCode)
 	{
-		return ID_CLASS_PREFIX + "/" + namespace.getNamespace() + "/" + sessionKey;
+		return ID_CLASS_PREFIX + "/" + namespace.getNamespace() + "/" + sessionCode;
 	}
 	
 	@DynamoDbPartitionKey

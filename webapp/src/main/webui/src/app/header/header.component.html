@@ -12,7 +12,9 @@
               <mat-option value="colorado">Colorado</mat-option>
             </mat-select> -->
 
-            <label class="namespace">Congress</label>
+            <mat-select class="namespace" [(value)]="namespace" [panelClass]="'dropdown-panel'">
+              <mat-option *ngFor="let ns of namespaces" [value]="ns" (click)="onChangeNamespace(ns)">{{ namespaceDisplayLabel(ns) }}</mat-option>
+            </mat-select>
           
             <mat-select class="year" [(value)]="year" [panelClass]="'dropdown-panel'">
               <mat-option *ngFor="let y of years" [value]="y" (click)="onChangeYear(y)">{{ yearDisplayLabel(y) }}</mat-option>

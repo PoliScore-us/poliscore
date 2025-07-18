@@ -83,44 +83,44 @@ public class CBODataFetcher implements QuarkusApplication
 	
 	protected void process() throws IOException
 	{
-		data.importDatasets();
+//		data.importDatasets();
+//		
+//		if (CHECK_EXISTS) s3.optimizeExists(CBOBillAnalysis.class);
+//		
+//		long count = 0;
+//		
+//		val doc = fetchWithRetry("https://www.cbo.gov/rss/" + data.getSession().getCode() + "congress-cost-estimates.xml");
+//		
+//		for (val element : doc.select("response item")) {
+//			if (StringUtils.isBlank(element.child(4).text()) || StringUtils.isBlank(element.child(2).text())) continue;
+//			
+//			val billType = getBillType(element.child(4).text());
+//			val billNum = getBillNumber(element.child(4).text(), billType);
+//			if (billType == null || billNum == null) continue;
+//			val billId = Bill.generateId(data.getSession().getNamespace(), data.getSession().getCode(), billType, billNum);
+//			
+//			if (CHECK_EXISTS && s3.exists(CBOBillAnalysis.generateId(billId), CBOBillAnalysis.class)) { count++; continue; }
+//			
+//			val publication = fetchWithRetry(element.child(2).text());
+//			var summary = publication.select("div#cost-estimate-landing-page article div.field--type-text-with-summary").text();
+//			
+//			if (StringUtils.isBlank(summary) || !summary.contains("would cost")) {
+//				val glanceTable = publication.select("section.summary div.field--name-field-estimate-table table.at-a-glance");
+//				
+//				if (glanceTable.size() == 0 || StringUtils.isBlank(glanceTable.text())) { System.out.println("Summary not available for " + billId + ". Check to make sure it exists at " + element.child(2).text()); continue; }
+//				
+//				summary = glanceTable.outerHtml();
+//			}
+//			
+//			val a = new CBOBillAnalysis();
+//			a.setBillId(billId);
+//			a.setSummary(summary);
+//			s3.put(a);
+//			
+//			count++;
+//		}
 		
-		if (CHECK_EXISTS) s3.optimizeExists(CBOBillAnalysis.class);
-		
-		long count = 0;
-		
-		val doc = fetchWithRetry("https://www.cbo.gov/rss/" + data.getSession().getCode() + "congress-cost-estimates.xml");
-		
-		for (val element : doc.select("response item")) {
-			if (StringUtils.isBlank(element.child(4).text()) || StringUtils.isBlank(element.child(2).text())) continue;
-			
-			val billType = getBillType(element.child(4).text());
-			val billNum = getBillNumber(element.child(4).text(), billType);
-			if (billType == null || billNum == null) continue;
-			val billId = Bill.generateId(data.getSession().getNamespace(), data.getSession().getCode(), billType, billNum);
-			
-			if (CHECK_EXISTS && s3.exists(CBOBillAnalysis.generateId(billId), CBOBillAnalysis.class)) { count++; continue; }
-			
-			val publication = fetchWithRetry(element.child(2).text());
-			var summary = publication.select("div#cost-estimate-landing-page article div.field--type-text-with-summary").text();
-			
-			if (StringUtils.isBlank(summary) || !summary.contains("would cost")) {
-				val glanceTable = publication.select("section.summary div.field--name-field-estimate-table table.at-a-glance");
-				
-				if (glanceTable.size() == 0 || StringUtils.isBlank(glanceTable.text())) { System.out.println("Summary not available for " + billId + ". Check to make sure it exists at " + element.child(2).text()); continue; }
-				
-				summary = glanceTable.outerHtml();
-			}
-			
-			val a = new CBOBillAnalysis();
-			a.setBillId(billId);
-			a.setSummary(summary);
-			s3.put(a);
-			
-			count++;
-		}
-		
-		Log.info("Program complete. " + count + " bills have analysis from the CBO.");
+//		Log.info("Program complete. " + count + " bills have analysis from the CBO.");
 	}
 	
 	private Document fetchWithRetry(String url) {

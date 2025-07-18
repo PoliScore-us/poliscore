@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -321,19 +322,19 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 	@Override
 	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz)
 	{
-		return query(clazz, -1, null, null, null, null);
+		throw new UnsupportedOperationException();
+	}
+	
+	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, String sessionKey)
+	{
+		return query(clazz, sessionKey, -1, null, null, null, null);
 	}
 	
 	@SneakyThrows
-	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, int pageSize, String index, Boolean ascending, String exclusiveStartKey, String sortKey)
+	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, String sessionKey, int pageSize, String index, Boolean ascending, String exclusiveStartKey, String sortKey)
 	{
+		final String storageBucket = Persistable.getClassStorageBucket(clazz, sessionKey);
 		
-		return query(clazz, pageSize, index, ascending, exclusiveStartKey, sortKey, Persistable.getClassStorageBucket(clazz, data.getSession().getNamespace(), data.getSession().getCode()));
-	}
-	
-	@SneakyThrows
-	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, int pageSize, String index, Boolean ascending, String exclusiveStartKey, String sortKey, String storageBucket)
-	{
 		if (StringUtils.isBlank(index)) index = Persistable.OBJECT_BY_DATE_INDEX;
 		if (ascending == null) ascending = Boolean.TRUE;
 		val field = fieldForIndex(index);

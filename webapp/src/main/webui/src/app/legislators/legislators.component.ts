@@ -357,7 +357,7 @@ export class LegislatorsComponent implements OnInit {
   routeTo(leg: Legislator)
   {
     document.getElementById((leg.id ?? leg.legislatorId!))?.classList.add("tran-div");
-    this.router.navigate(['/legislator/' + (leg.id ?? leg.legislatorId!).replace("LEG/us/congress", "")]);
+    this.router.navigate(['/legislator/' + (leg.id ?? leg.legislatorId!).replace("LEG/" + this.config.getNamespace(), "")]);
   }
 
 

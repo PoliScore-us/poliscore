@@ -152,7 +152,7 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.legId = this.route.snapshot.paramMap.get('id') as string;
-    if (!this.legId.startsWith("LEG/us/congress")) {
+    if (!this.legId.startsWith("LEG/" + this.config.getNamespace())) {
       this.legId = this.config.pathToLegislatorId(this.legId);
     }
   
@@ -263,7 +263,7 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
   }
 
   photoForLegislator(): string {
-    return 'https://poliscore-prod-public.s3.amazonaws.com/' + this.leg?.id + '.jpg';
+    return 'https://poliscore-prod-public.s3.amazonaws.com/' + this.leg?.id + '.webp';
   }
 
   gradeForLegislator(): string {
@@ -285,146 +285,145 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
 
     if (namespace === "us/congress") {
       return 'https://www.congress.gov/member/' + this.leg?.name?.first?.toLowerCase()?.replace(' ', '-') + '-' + this.leg?.name?.last?.toLowerCase()?.replace(' ', '-') + '/' + code;
-    } else if (namespace === "us/alabama") {
+    } else if (namespace === "us/al") {
       return 'https://www.legislature.state.al.us/aliswww/ISD/ALRepresentative.aspx?NAME=' + this.leg?.name?.last;
-    } else if (namespace === "us/alaska") {
+    } else if (namespace === "us/ak") {
       return 'http://akleg.gov/legislator.php?id=' + this.leg!.id;
-    } else if (namespace === "us/arizona") {
+    } else if (namespace === "us/az") {
       return 'https://www.azleg.gov/MemberRoster/?body=' + (lastTerm.chamber === 'UPPER' ? 'S' : 'H');
-    } else if (namespace === "us/arkansas") {
+    } else if (namespace === "us/ar") {
       return 'https://www.arkleg.state.ar.us/Legislators/Detail?member=' + this.leg?.name?.last;
-    } else if (namespace === "us/california") {
+    } else if (namespace === "us/ca") {
       return 'https://findyourrep.legislature.ca.gov/';
-    } else if (namespace === "us/colorado") {
+    } else if (namespace === "us/co") {
       return 'https://leg.colorado.gov/legislators/' + this.leg?.name?.first?.toLowerCase() + '-' + this.leg?.name?.last?.toLowerCase();
-    } else if (namespace === "us/connecticut") {
+    } else if (namespace === "us/ct") {
       return 'https://www.cga.ct.gov/asp/menu/cgafindleg.asp';
-    } else if (namespace === "us/delaware") {
+    } else if (namespace === "us/de") {
       return 'https://legis.delaware.gov/Legislator-Detail?personId=' + this.leg!.id;
-    } else if (namespace === "us/florida") {
+    } else if (namespace === "us/fl") {
       if (lastTerm.chamber === 'UPPER') {
         return 'https://www.flsenate.gov/Senators/' + lastTerm.district;
       } else {
         return 'https://www.myfloridahouse.gov/Sections/Representatives/representatives.aspx';
       }
-    } else if (namespace === "us/georgia") {
+    } else if (namespace === "us/ga") {
       return 'https://www.legis.ga.gov/members/' + (lastTerm.chamber === 'UPPER' ? 'senate' : 'house') + '/' + this.leg!.id;
-    } else if (namespace === "us/hawaii") {
+    } else if (namespace === "us/hi") {
       return 'https://www.capitol.hawaii.gov/legislator.aspx?member=' + this.leg?.name?.last;
-    } else if (namespace === "us/idaho") {
+    } else if (namespace === "us/id") {
       return 'https://legislature.idaho.gov/legislators/membership/';
-    } else if (namespace === "us/illinois") {
+    } else if (namespace === "us/il") {
       return 'https://www.ilga.gov/house/Rep.asp?MemberID=' + this.leg!.id;
-    } else if (namespace === "us/indiana") {
+    } else if (namespace === "us/in") {
       return 'https://iga.in.gov/legislative/2024/legislators/' + this.leg!.id;
-    } else if (namespace === "us/iowa") {
+    } else if (namespace === "us/ia") {
       return 'https://www.legis.iowa.gov/legislators/legislator?ga=' + sessionCode + '&personID=' + this.leg!.id;
-    } else if (namespace === "us/kansas") {
+    } else if (namespace === "us/ks") {
       return 'http://www.kslegislature.org/li/b2023_24/members/' + this.leg!.id;
-    } else if (namespace === "us/kentucky") {
+    } else if (namespace === "us/ky") {
       return 'https://legislature.ky.gov/Legislators/' + (lastTerm.chamber === 'UPPER' ? 'senate' : 'house') + '/Pages/default.aspx';
-    } else if (namespace === "us/louisiana") {
+    } else if (namespace === "us/la") {
       return 'https://www.legis.la.gov/legis/FindMyLegislators.aspx';
-    } else if (namespace === "us/maine") {
+    } else if (namespace === "us/me") {
       return 'https://legislature.maine.gov/house/house/MemberProfiles/ListAlphaTown';
-    } else if (namespace === "us/maryland") {
+    } else if (namespace === "us/md") {
       return 'https://mgaleg.maryland.gov/mgawebsite/Members/Index/';
-    } else if (namespace === "us/massachusetts") {
+    } else if (namespace === "us/ma") {
       return 'https://malegislature.gov/Legislators/Members/';
-    } else if (namespace === "us/michigan") {
+    } else if (namespace === "us/mi") {
       return 'https://www.house.mi.gov/all-representatives';
-    } else if (namespace === "us/minnesota") {
+    } else if (namespace === "us/mn") {
       return 'https://www.leg.mn.gov/legdb/';
-    } else if (namespace === "us/mississippi") {
+    } else if (namespace === "us/ms") {
       return 'https://billstatus.ls.state.ms.us/members/';
-    } else if (namespace === "us/missouri") {
+    } else if (namespace === "us/mo") {
       return 'https://house.mo.gov/MemberDetails.aspx?year=' + sessionCode + '&code=' + this.leg!.id;
-    } else if (namespace === "us/montana") {
+    } else if (namespace === "us/mt") {
       return 'https://leg.mt.gov/legislator-information/';
-    } else if (namespace === "us/nebraska") {
+    } else if (namespace === "us/ne") {
       return 'https://nebraskalegislature.gov/senators/senator_find.php';
-    } else if (namespace === "us/nevada") {
+    } else if (namespace === "us/nv") {
       return 'https://www.leg.state.nv.us/App/Legislator/A/Assembly/';
-    } else if (namespace === "us/new_hampshire") {
+    } else if (namespace === "us/nh") {
       return 'https://www.gencourt.state.nh.us/house/members/default.aspx';
-    } else if (namespace === "us/new_jersey") {
+    } else if (namespace === "us/nj") {
       return 'https://www.njleg.state.nj.us/legislative-roster';
-    } else if (namespace === "us/new_mexico") {
+    } else if (namespace === "us/nm") {
       return 'https://www.nmlegis.gov/Members/Legislator_List';
-    } else if (namespace === "us/new_york") {
+    } else if (namespace === "us/ny") {
       return 'https://nyassembly.gov/mem/';
-    } else if (namespace === "us/north_carolina") {
+    } else if (namespace === "us/nc") {
       return 'https://www.ncleg.gov/Members/Biography/';
-    } else if (namespace === "us/north_dakota") {
+    } else if (namespace === "us/nd") {
       if (lastTerm.chamber === 'UPPER') {
         return 'https://www.legis.nd.gov/assembly/67-2021/members/senate';
       } else {
         return 'https://www.legis.nd.gov/assembly/67-2021/members/house';
       }
-    } else if (namespace === "us/ohio") {
+    } else if (namespace === "us/oh") {
       return 'https://www.ohiohouse.gov/members/all';
-    } else if (namespace === "us/oklahoma") {
+    } else if (namespace === "us/ok") {
       return 'https://www.okhouse.gov/Members/';
-    } else if (namespace === "us/oregon") {
+    } else if (namespace === "us/or") {
       return 'https://www.oregonlegislature.gov/legislators-and-staff';
-    } else if (namespace === "us/pennsylvania") {
+    } else if (namespace === "us/pa") {
       return 'https://www.legis.state.pa.us/cfdocs/legis/home/member_information/house_bio.cfm';
-    } else if (namespace === "us/rhode_island") {
+    } else if (namespace === "us/ri") {
       if (lastTerm.chamber === 'UPPER') {
         return 'https://www.rilegislature.gov/senators/';
       } else {
         return 'https://www.rilegislature.gov/representatives/';
       }
-    } else if (namespace === "us/south_carolina") {
+    } else if (namespace === "us/sc") {
       return 'https://www.scstatehouse.gov/member.php?chamber=' + (lastTerm.chamber === 'UPPER' ? 'S' : 'H');
-    } else if (namespace === "us/south_dakota") {
+    } else if (namespace === "us/sd") {
       return 'https://sdlegislature.gov/Legislators/Profile/Session/2024/' + (lastTerm.chamber === 'UPPER' ? 'Upper' : 'Lower');
-    } else if (namespace === "us/tennessee") {
+    } else if (namespace === "us/tn") {
       return 'https://www.capitol.tn.gov/' + (lastTerm.chamber === 'UPPER' ? 'senate' : 'house') + '/members/';
-    } else if (namespace === "us/texas") {
+    } else if (namespace === "us/tx") {
       return 'https://capitol.texas.gov/Members/' + (lastTerm.chamber === 'UPPER' ? 'senate' : 'house') + '.aspx?district=' + lastTerm.district;
-    } else if (namespace === "us/utah") {
+    } else if (namespace === "us/ut") {
       return 'https://le.utah.gov/asp/interim/Main.asp?LegCode=' + this.leg!.id;
-    } else if (namespace === "us/vermont") {
+    } else if (namespace === "us/vt") {
       return 'https://legislature.vermont.gov/people/';
-    } else if (namespace === "us/virginia") {
+    } else if (namespace === "us/va") {
       return 'https://whosmy.virginiageneralassembly.gov/';
-    } else if (namespace === "us/washington") {
+    } else if (namespace === "us/wa") {
       return 'https://app.leg.wa.gov/rosters/Members/';
-    } else if (namespace === "us/washington_dc") {
+    } else if (namespace === "us/dc") {
       return 'https://dccouncil.gov/councilmembers/';
-    } else if (namespace === "us/west_virginia") {
+    } else if (namespace === "us/wv") {
       if (lastTerm.chamber === 'UPPER') {
         return 'https://www.wvlegislature.gov/Senate1/roster.cfm';
       } else {
         return 'https://www.wvlegislature.gov/House/roster.cfm';
       }
-    } else if (namespace === "us/wisconsin") {
+    } else if (namespace === "us/wi") {
       return 'https://docs.legis.wisconsin.gov/2023/legislators/' + (lastTerm.chamber === 'UPPER' ? 'senate' : 'assembly');
-    } else if (namespace === "us/wyoming") {
+    } else if (namespace === "us/wy") {
       return 'https://www.wyoleg.gov/Legislators';
-    } else if (namespace === "us/american_samoa") {
-      // URL structure unknown – may require manual lookup or local government source
-    } else if (namespace === "us/guam") {
+    } else if (namespace === "us/as") {
+      // American Samoa — unknown structure
+    } else if (namespace === "us/gu") {
       if (lastTerm.chamber === 'UPPER') {
         return 'https://www.guamlegislature.com/senators/';
       } else {
         // Guam may not have a lower chamber – fallback to homepage
         return 'https://www.guamlegislature.com/';
       }
-    } else if (namespace === "us/northern_mariana_islands") {
+    } else if (namespace === "us/mp") {
       // URL structure unknown – check NMI legislature portal
-    } else if (namespace === "us/puerto_rico") {
+    } else if (namespace === "us/pr") {
       if (lastTerm.chamber === 'UPPER') {
         return 'https://senado.pr.gov/senators/';
       } else {
         return 'https://www.tucamarapr.org/dnncamara/web/ComposiciondelaCamara.aspx';
       }
-    } else if (namespace === "us/virgin_islands") {
+    } else if (namespace === "us/vi") {
       return 'https://www.legvi.org/senators/';
     }
 
-    // fallback if unknown
     return null;
   }
 
@@ -463,7 +462,7 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
 
   routeToBill(id: string)
   {
-    this.router.navigate(['/bill/' + id.replace("BIL/us/congress", "")]);
+    this.router.navigate(['/bill/' + id.replace("BIL/" + this.config.getNamespace(), "")]);
   }
 
   describeAssociation(association: BillInteraction): string {

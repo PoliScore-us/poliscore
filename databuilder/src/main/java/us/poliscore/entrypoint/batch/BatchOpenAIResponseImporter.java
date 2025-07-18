@@ -101,7 +101,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	@SneakyThrows
 	public void process(File input)
 	{
-		data.importDatasets();
+		data.importAllDatasets();
 		
 		Log.info("Importing " + input.getAbsolutePath());
 		
@@ -156,13 +156,14 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	private void importLegislator(final BatchOpenAIResponse resp) {
 //		if (!resp.getCustomData().contains("D000197")) return;
 		
-		val leg = data.getDataset().get(resp.getCustomData().getOid().replace(LegislatorInterpretation.ID_CLASS_PREFIX, Legislator.ID_CLASS_PREFIX), Legislator.class).orElseThrow();
+		val leg = data.getAllDataset().get(resp.getCustomData().getOid().replace(LegislatorInterpretation.ID_CLASS_PREFIX, Legislator.ID_CLASS_PREFIX), Legislator.class).orElseThrow();
+		val dataset = data.getDataset(leg.getNamespace(), leg.getSessionCode());
 		
 //		if (ddb.exists(leg.getId(), Legislator.class)) return;
 		
 		legInterp.updateInteractionsInterp(data.getAllDataset(), leg);
 		
-		LegislatorInterpretation interp = s3.get(LegislatorInterpretation.generateId(data.getSession().getNamespace(), data.getSession().getCode(), leg.getCode()), LegislatorInterpretation.class)
+		LegislatorInterpretation interp = s3.get(LegislatorInterpretation.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), leg.getCode()), LegislatorInterpretation.class)
 				.orElse(new LegislatorInterpretation(leg.getNamespace(), leg.getSessionCode(), leg.getCode(), OpenAIService.metadata(), null));
 		
 		interp.setHash(legInterp.calculateInterpHashCode(leg));
@@ -191,8 +192,10 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	}
 	
 	private void importParty(final BatchOpenAIResponse resp) {
+		val dataset = data.getDataset(resp.getCustomData().getOid());
+		
 		if (sessionInterp == null) {
-			sessionInterp = partyService.recalculateStats();
+			sessionInterp = partyService.recalculateStats(dataset);
 		}
 		val interpText = resp.getResponse().getBody().getChoices().get(0).getMessage().getContent();
 		
@@ -209,7 +212,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		}
 		
 		partyInterp.setLongExplain(interpText);
-		PartyBillLinker.linkPartyBillsSinglePass(partyInterp, sessionInterp, data.getDataset(), s3);
+		PartyBillLinker.linkPartyBillsSinglePass(partyInterp, sessionInterp, dataset, s3);
 		
 		sessionInterp.setMetadata(OpenAIService.metadata());
 	}
@@ -227,7 +230,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			billId = dashSplit[0];
 		}
 		
-		val bill = data.getDataset().get(billId, Bill.class).orElseThrow();
+		val bill = data.getAllDataset().get(billId, Bill.class).orElseThrow();
 		
 		BillInterpretation bi = new BillInterpretation();
 		bi.setBill(bill);

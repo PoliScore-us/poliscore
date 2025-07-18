@@ -21,6 +21,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.val;
 import us.poliscore.Environment;
+import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.ai.BatchOpenAIRequest;
 import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
@@ -65,26 +66,27 @@ public class PartyInterpretationService {
 	
 	private HashMap<Party, Map<TrackedIssue, PriorityQueue<PartyBillInteraction>>> worstBillsByIssue;
 	
-	public List<File> process() throws IOException
+	public List<File> process(List<PoliscoreDataset> buildDatasets) throws IOException
 	{
-		data.importDatasets();
+		for (val dataset : buildDatasets) {
+			val partyStats = recalculateStats(dataset);
+			
+			// Use AI to generate explanations
+			createRequest(dataset, partyStats.getDemocrat());
+			createRequest(dataset, partyStats.getRepublican());
+			createRequest(dataset, partyStats.getIndependent());
+		}
 		
-		val partyStats = recalculateStats();
-		
-		// Use AI to generate explanations
-		createRequest(partyStats.getDemocrat());
-		createRequest(partyStats.getRepublican());
-		createRequest(partyStats.getIndependent());
 		writeRequests(requests);
 		
 		return writtenFiles;
 	}
 	
-	public SessionInterpretation recalculateStats()
+	public SessionInterpretation recalculateStats(PoliscoreDataset dataset)
 	{
 		// Initialize datastructures //
 		val sessionStats = new SessionInterpretation();
-		sessionStats.setSession(data.getSession());
+		sessionStats.setSession(dataset.getSession());
 		
 		val mostImpactfulBills = new HashMap<Party, PriorityQueue<PartyBillInteraction>>();
 		val leastImpactfulBills = new HashMap<Party, PriorityQueue<PartyBillInteraction>>();
@@ -118,16 +120,16 @@ public class PartyInterpretationService {
 		}
 		
 		// Calculate Stats //
-		for (val b : data.getDataset().query(Bill.class)) {
+		for (val b : dataset.query(Bill.class)) {
 			val op = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class);
 			
 			if (op.isPresent()) {
 				val interp = op.get();
 				b.setInterpretation(interp);
 				
-				val sponsor = data.getDataset().get(b.getSponsor().getId(), Legislator.class).orElseThrow();
+				val sponsor = dataset.get(b.getSponsor().getId(), Legislator.class).orElseThrow();
 				val party = sponsor.getTerms().last().getParty();
-				val partyCosponsors = b.getCosponsors().stream().filter(sp -> data.getDataset().exists(sp.getId(), Legislator.class) && data.getDataset().get(sp.getId(), Legislator.class).get().getParty().equals(party)).toList();
+				val partyCosponsors = b.getCosponsors().stream().filter(sp -> dataset.exists(sp.getId(), Legislator.class) && dataset.get(sp.getId(), Legislator.class).get().getParty().equals(party)).toList();
 						
 				val pbi = new PartyBillInteraction(b.getId(), b.getName(), b.getStatus(), b.getType(), b.getIntroducedDate(), b.getSponsor(), partyCosponsors, b.getRating(), b.getImpact(), interp.getShortExplain());
 				mostImpactfulBills.get(party).add(pbi);
@@ -143,7 +145,7 @@ public class PartyInterpretationService {
 				}
 			}
 		}
-		for (val l : data.getDataset().query(Legislator.class).stream().filter(leg -> leg.isMemberOfSession(data.getSession())).toList()) {
+		for (val l : dataset.query(Legislator.class).stream().filter(leg -> leg.isMemberOfSession(dataset.getSession())).toList()) {
 			val op = s3.get(LegislatorInterpretation.generateId(sessionStats.getSession().getNamespace(), sessionStats.getSession().getCode(), l.getCode()), LegislatorInterpretation.class);
 			
 			if (op.isPresent()) {
@@ -206,7 +208,7 @@ public class PartyInterpretationService {
 		return sessionStats;
 	}
 	
-	private void createRequest(PartyInterpretation interp)
+	private void createRequest(PoliscoreDataset dataset, PartyInterpretation interp)
 	{
 		List<String> msg = new ArrayList<String>();
 		
@@ -239,7 +241,7 @@ public class PartyInterpretationService {
 				msg.add(StringUtils.join(queueTake(10, worstBillsByIssue.get(interp.getParty()).get(issue)).stream().map(i -> i.getShortExplainForInterp()).toArray(), "\n"));
 		}
 		
-		createRequest(interp.getParty(), PartyInterpretationService.getAiPrompt(data.getSession(), interp.getParty(), interp.getStats()), StringUtils.join(msg, "\n"));
+		createRequest(dataset.getSession().getKey(), interp.getParty(), PartyInterpretationService.getAiPrompt(dataset.getSession(), interp.getParty(), interp.getStats()), StringUtils.join(msg, "\n"));
 	}
 	
 	private List<PartyBillInteraction> queueTake(int amt, PriorityQueue<PartyBillInteraction> queue)
@@ -254,7 +256,7 @@ public class PartyInterpretationService {
 		return result;
 	}
 	
-	private void createRequest(Party party, String sysMsg, String userMsg) {
+	private void createRequest(String sessionKey, Party party, String sysMsg, String userMsg) {
 		if (userMsg.length() >= OpenAIService.MAX_REQUEST_LENGTH) {
 			throw new RuntimeException("Max user message length exceeded on " + party.getName() + " (" + userMsg.length() + " > " + OpenAIService.MAX_REQUEST_LENGTH);
 		}
@@ -264,7 +266,7 @@ public class PartyInterpretationService {
 		messages.add(new BatchBillMessage("user", userMsg));
 		
 		requests.add(new BatchOpenAIRequest(
-				new CustomData(SessionInterpretation.ID_CLASS_PREFIX + "/" + party.name()),
+				new CustomData(SessionInterpretation.ID_CLASS_PREFIX + "/" + sessionKey + "/" + party.name()),
 				new BatchOpenAIBody(messages)
 		));
 	}

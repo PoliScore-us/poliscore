@@ -38,4 +38,13 @@ public class LegislativeSession {
 		return LocalDate.now().isAfter(endDate);
 	}
 	
+	@JsonIgnore
+	public String getKey() {
+		return namespace.getNamespace() + "/" + code;
+	}
+
+	public boolean isYearWithin(int year) {
+		return startDate.getYear() <= year && endDate.getYear() >= year; 
+	}
+	
 }

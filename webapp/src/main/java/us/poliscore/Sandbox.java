@@ -94,7 +94,7 @@ public class Sandbox implements QuarkusApplication
 //		System.out.println(PoliscoreUtil.getObjectMapper().valueToTree(leg));
 		
 		
-		val out = getLegislatorPageData();
+//		val out = getLegislatorPageData();
 		
 		
 //		String sourceIp = "71.56.241.71";
@@ -139,7 +139,7 @@ public class Sandbox implements QuarkusApplication
 		
 		
     	
-    	System.out.println(PoliscoreUtil.getObjectMapper().valueToTree(out));
+//    	System.out.println(PoliscoreUtil.getObjectMapper().valueToTree(out));
 //		System.out.println(out);
 		
 		
@@ -228,38 +228,38 @@ public class Sandbox implements QuarkusApplication
     			.collect(Collectors.toList());
     }
 	
-	public List<Bill> getBills(@RestQuery("pageSize") Integer _pageSize, @RestQuery("index") String _index, @RestQuery("ascending") Boolean _ascending, @RestQuery("exclusiveStartKey") String _exclusiveStartKey, @RestQuery String sortKey) {
-		val index = StringUtils.isNotBlank(_index) ? _index : Persistable.OBJECT_BY_DATE_INDEX;
-    	val startKey = _exclusiveStartKey;
-    	var pageSize = _pageSize == null ? 25 : _pageSize;
-    	Boolean ascending = _ascending == null ? Boolean.TRUE : _ascending;
-    	
-    	List<Bill> bills;
-//    	if (index.startsWith(Lambda.TRACKED_ISSUE_INDEX)) {
-//    		val issue = TrackedIssue.valueOf(index.replace(Lambda.TRACKED_ISSUE_INDEX, ""));
-//    		bills = Lambda.getBillsDump().stream()
-//    				.filter(b -> b.getInterpretation().getIssueStats().hasStat(issue))
-//    				.sorted((a,b) -> Integer.valueOf(b.getInterpretation().getIssueStats().getStat(issue)).compareTo(a.getInterpretation().getIssueStats().getStat(issue)))
-//    				.toList();
-//    	} else {
-    		bills = ddb.query(Bill.class, pageSize, index, ascending, startKey, sortKey);
-//    	}
-    	
-    	return bills;
-    }
+//	public List<Bill> getBills(@RestQuery("pageSize") Integer _pageSize, @RestQuery("index") String _index, @RestQuery("ascending") Boolean _ascending, @RestQuery("exclusiveStartKey") String _exclusiveStartKey, @RestQuery String sortKey) {
+//		val index = StringUtils.isNotBlank(_index) ? _index : Persistable.OBJECT_BY_DATE_INDEX;
+//    	val startKey = _exclusiveStartKey;
+//    	var pageSize = _pageSize == null ? 25 : _pageSize;
+//    	Boolean ascending = _ascending == null ? Boolean.TRUE : _ascending;
+//    	
+//    	List<Bill> bills;
+////    	if (index.startsWith(Lambda.TRACKED_ISSUE_INDEX)) {
+////    		val issue = TrackedIssue.valueOf(index.replace(Lambda.TRACKED_ISSUE_INDEX, ""));
+////    		bills = Lambda.getBillsDump().stream()
+////    				.filter(b -> b.getInterpretation().getIssueStats().hasStat(issue))
+////    				.sorted((a,b) -> Integer.valueOf(b.getInterpretation().getIssueStats().getStat(issue)).compareTo(a.getInterpretation().getIssueStats().getStat(issue)))
+////    				.toList();
+////    	} else {
+//    		bills = ddb.query(Bill.class, pageSize, index, ascending, startKey, sortKey);
+////    	}
+//    	
+//    	return bills;
+//    }
 	
-	public List<Legislator> getLegislators(Integer _pageSize, String _index, Boolean _ascending, String _exclusiveStartKey, String sortKey) {
-    	val index = StringUtils.isNotBlank(_index) ? _index : Persistable.OBJECT_BY_DATE_INDEX;
-    	val startKey = _exclusiveStartKey;
-    	var pageSize = _pageSize == null ? 25 : _pageSize;
-    	Boolean ascending = _ascending == null ? Boolean.TRUE : _ascending;
-    	
-    	val legs = ddb.query(Legislator.class, pageSize, index, ascending, startKey, sortKey);
-    	
-    	legs.forEach(l -> l.setInteractions(new LegislatorBillInteractionList()));
-    	
-    	return legs;
-    }
+//	public List<Legislator> getLegislators(Integer _pageSize, String _index, Boolean _ascending, String _exclusiveStartKey, String sortKey) {
+//    	val index = StringUtils.isNotBlank(_index) ? _index : Persistable.OBJECT_BY_DATE_INDEX;
+//    	val startKey = _exclusiveStartKey;
+//    	var pageSize = _pageSize == null ? 25 : _pageSize;
+//    	Boolean ascending = _ascending == null ? Boolean.TRUE : _ascending;
+//    	
+//    	val legs = ddb.query(Legislator.class, pageSize, index, ascending, startKey, sortKey);
+//    	
+//    	legs.forEach(l -> l.setInteractions(new LegislatorBillInteractionList()));
+//    	
+//    	return legs;
+//    }
 	
 	@SneakyThrows
 	public List<List<String>> getLegislatorPageData() {

@@ -35,7 +35,7 @@ public class DataCleaner implements QuarkusApplication {
 	
 	protected void process() throws IOException
 	{
-		data.importDatasets();
+		data.importAllDatasets();
 		
 		wipeAllLegislators();
 		
@@ -43,9 +43,9 @@ public class DataCleaner implements QuarkusApplication {
 	}
 	
 	public void wipeAllLegislators() {
-		for (val leg : ddb.query(Legislator.class)) {
-			ddb.delete(leg);
-		}
+//		for (val leg : ddb.query(Legislator.class)) {
+//			ddb.delete(leg);
+//		}
 	}
 	
 	@Override

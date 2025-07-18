@@ -35,36 +35,36 @@ public class S3DataPatcher implements QuarkusApplication {
 	
 	protected void process() throws IOException
 	{
-		data.importDatasets();
+		data.importAllDatasets();
 		
-		s3.optimizeExists(BillInterpretation.class);
+//		s3.optimizeExists(BillInterpretation.class);
+//		
+//		long count = 0;
+//		
+//		for (var bill : data.getWorkingDataset().query(Bill.class).stream()
+//				.filter(b -> b.isIntroducedInSession(data.getSession()) && s3.exists(BillInterpretation.generateId(b.getId(), null, null), BillInterpretation.class)).collect(Collectors.toList()))
+//		{
+//			val interp = s3.get(BillInterpretation.generateId(bill.getId(), null, null), BillInterpretation.class).get();
+//			
+//			interp.setOrigin(InterpretationOrigin.POLISCORE);
+//			interp.setId(BillInterpretation.generateId(interp.getBillId(), interp.getOrigin(), null));
+//			
+//			for (int i = 0; i < interp.getSliceInterpretations().size(); ++i)
+//			{
+//				var slice = interp.getSliceInterpretations().get(i);
+//				slice.setOrigin(InterpretationOrigin.POLISCORE);
+//				slice.setId(BillInterpretation.generateId(slice.getBillId(), slice.getOrigin(), i));
+//				s3.put(slice);
+//				
+//				count++;
+//			}
+//			
+//			s3.put(interp);
+//			
+//			count++;
+//		}
 		
-		long count = 0;
-		
-		for (var bill : data.getDataset().query(Bill.class).stream()
-				.filter(b -> b.isIntroducedInSession(data.getSession()) && s3.exists(BillInterpretation.generateId(b.getId(), null, null), BillInterpretation.class)).collect(Collectors.toList()))
-		{
-			val interp = s3.get(BillInterpretation.generateId(bill.getId(), null, null), BillInterpretation.class).get();
-			
-			interp.setOrigin(InterpretationOrigin.POLISCORE);
-			interp.setId(BillInterpretation.generateId(interp.getBillId(), interp.getOrigin(), null));
-			
-			for (int i = 0; i < interp.getSliceInterpretations().size(); ++i)
-			{
-				var slice = interp.getSliceInterpretations().get(i);
-				slice.setOrigin(InterpretationOrigin.POLISCORE);
-				slice.setId(BillInterpretation.generateId(slice.getBillId(), slice.getOrigin(), i));
-				s3.put(slice);
-				
-				count++;
-			}
-			
-			s3.put(interp);
-			
-			count++;
-		}
-		
-		System.out.println("Program complete. Patched " + count + " interpretations");
+//		System.out.println("Program complete. Patched " + count + " interpretations");
 	}
 	
 	@Override

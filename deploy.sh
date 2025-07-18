@@ -20,7 +20,6 @@ fi
 export NODE_OPTIONS="--max-old-space-size=8192"
 export BUCKET_SLOT="${POLISCORE_DEPLOYMENT/Poliscore/}" # extracts 1 or 2
 export BUCKET_NAME="poliscore-website$BUCKET_SLOT"
-export DEPLOYMENT_YEAR=2026
 
 if [ "${1:-}" != "view" ]; then
   docker ps
@@ -34,6 +33,11 @@ if [ "${1:-}" != "view" ]; then
   cd cdk
   cdk deploy --require-approval never
   cd ..
+  
+  echo "Lambda Deployment complete:"
+	echo "  Bucket: $BUCKET_NAME"
+	echo "  Namespace: $DEPLOYMENT_NAMESPACE"
+	echo "  Year: $DEPLOYMENT_YEAR"
 fi
 
 if [ "${1:-}" != "backend" ]; then
@@ -49,7 +53,19 @@ if [ "${1:-}" != "backend" ]; then
   
   ng build --base-href /$DEPLOYMENT_YEAR/
   cd ../../../../
+  
+  DEPLOYMENT_STATE="${DEPLOYMENT_NAMESPACE#us/}"
 
+  # TODO : Get rid of me after an initial deploy
   aws s3 rm s3://$BUCKET_NAME/$DEPLOYMENT_YEAR --recursive
-  aws s3 cp webapp/src/main/webui/dist/poliscore/browser s3://$BUCKET_NAME/$DEPLOYMENT_YEAR --recursive
+
+  aws s3 rm s3://$BUCKET_NAME/$DEPLOYMENT_YEAR/$DEPLOYMENT_STATE --recursive
+  aws s3 cp webapp/src/main/webui/dist/poliscore/browser s3://$BUCKET_NAME/$DEPLOYMENT_YEAR/$DEPLOYMENT_STATE --recursive
+  
+  echo "S3 Deployment complete:"
+	echo "  Bucket: $BUCKET_NAME"
+	echo "  Namespace: $DEPLOYMENT_NAMESPACE"
+	echo "  State: $DEPLOYMENT_STATE"
+	echo "  Year: $DEPLOYMENT_YEAR"
+	  
 fi

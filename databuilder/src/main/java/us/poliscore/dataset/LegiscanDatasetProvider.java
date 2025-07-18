@@ -20,6 +20,7 @@ import lombok.val;
 import software.amazon.awssdk.utils.StringUtils;
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreDataset.DeploymentConfig;
+import us.poliscore.images.StateLegislatorImageFetcher;
 import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.legiscan.view.LegiscanBillView;
 import us.poliscore.legiscan.view.LegiscanChamber;
@@ -64,8 +65,8 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	@Inject
 	protected LegislatorService lService;
 	
-	@Inject
-	protected OpenStatesDatasetAugmentor openstates;
+	@Inject protected OpenStatesDatasetAugmentor openstates;
+	@Inject protected StateLegislatorImageFetcher stateImageFetcher;
 	
 	@Inject private S3PersistenceService s3;
 	
@@ -252,7 +253,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	        status.setDescription("Introduced in the " + chamber.getName(ns));
 	        status.setProgress(0.0f);
 	    } else if (stat.equals(LegiscanStatus.REFER)) {
-	        status.setDescription((sessionOver ? "Died in" : "Referred to") + " Committee");
+	        status.setDescription((sessionOver ? "Died in " : "Referred to ") + " Committee");
 	        status.setProgress(0.1f);
 	    } else if (stat.equals(LegiscanStatus.REPORT_PASS)) {
 	        status.setDescription("Committee Report: Pass Recommendation");
@@ -267,7 +268,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	        status.setDescription("Passed Both Chambers, Sent to " + executor);
 	        status.setProgress(0.7f);
 	    } else if (stat.equals(LegiscanStatus.PASSED)) {
-	        status.setDescription("Bill Passed Both Chambers, " + (sessionOver ? "Killed by " : "Sent to") + executor);
+	        status.setDescription("Bill Passed Both Chambers, " + (sessionOver ? "Killed by " : "Sent to ") + executor);
 	        status.setProgress(0.8f);
 	    } else if (stat.equals(LegiscanStatus.VETOED)) {
 	        status.setDescription("Vetoed by " + executor);
@@ -380,7 +381,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    var term = new LegislativeTerm();
 	    term.setStartDate(dataset.getSession().getStartDate());
 	    term.setEndDate(dataset.getSession().getEndDate());
-	    term.setParty(Party.from(view.getPartyCode()));
+	    term.setParty(Party.from(view.getParty().name()));
 	    term.setState(view.getState());
 	    term.setDistrict(StringUtils.isBlank(view.getDistrict()) ? null : view.getDistrict());
 	    term.setChamber(LegislativeChamber.fromLegiscanRole(view.getRole()));
@@ -395,12 +396,13 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	@Override
 	public void syncS3LegislatorImages(PoliscoreDataset dataset) {
 		openstates.syncS3LegislatorImages(dataset);
+		stateImageFetcher.syncS3LegislatorImages(dataset);
 	}
 	
 	@Override
 	@SneakyThrows
 	public void syncS3BillText(PoliscoreDataset dataset) {
-		s3.optimizeExists(BillText.class);
+		s3.optimizeExists(BillText.class, dataset.getSession().getKey());
 		
 		int count = 0;
 		
@@ -431,7 +433,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		}
 		
 		// TODO : This might not be necessary but I can't really remember why its here anymore
-		s3.clearExistsOptimize(BillText.class);
+		s3.clearExistsOptimize(BillText.class, dataset.getSession().getKey());
 		
 		Log.info("Uploaded " + count + " new bill texts to s3 from Legiscan provider.");
 	}

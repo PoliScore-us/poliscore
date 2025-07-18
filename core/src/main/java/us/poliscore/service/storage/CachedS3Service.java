@@ -57,12 +57,8 @@ public class CachedS3Service implements ApplicationDataStoreIF
 		throw new UnsupportedOperationException();
 	}
 	
-	public <T extends Persistable> List<T> query(Class<T> clazz, String storageBucket) {
-		throw new UnsupportedOperationException();
-	}
-	
-	public <T extends Persistable> void optimizeExists(Class<T> clazz) {
-		s3.optimizeExists(clazz);
+	public <T extends Persistable> void optimizeExists(Class<T> clazz, String sessionKey) {
+		s3.optimizeExists(clazz, sessionKey);
 	}
 	
 }

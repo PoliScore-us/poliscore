@@ -2,7 +2,6 @@ package us.poliscore.entrypoint;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -12,7 +11,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import io.quarkus.logging.Log;
@@ -22,14 +20,12 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
-import us.poliscore.Environment;
+import us.poliscore.PoliscoreDataset;
 import us.poliscore.entrypoint.batch.BatchBillRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchLegislatorRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchOpenAIResponseImporter;
 import us.poliscore.entrypoint.batch.PressBillInterpretationRequestGenerator;
-import us.poliscore.images.CongressionalLegislatorImageFetcher;
 import us.poliscore.model.DoubleIssueStats;
-import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
@@ -59,7 +55,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	public static boolean INTERPRET_NEW_BILLS = true;
 	
-	public static boolean REINTERPRET_LEGISLATORS = false;
+	public static boolean REINTERPRET_LEGISLATORS = true;
 	
 	public static boolean REINTERPRET_PARTIES = false;
 	
@@ -109,21 +105,26 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	protected void process() throws IOException
 	{
-		data.importDatasets();
-		data.syncS3LegislatorImages(data.getDataset());
-		data.syncS3BillText(data.getDataset());
+		data.importAllDatasets();
 		
-		s3.optimizeExists(BillInterpretation.class);
-		s3.optimizeExists(LegislatorInterpretation.class);
+		val buildDatasets = data.getBuildDatasets();
 		
-		syncDdbWithS3();
+		for (val dataset : buildDatasets) {
+			data.syncS3LegislatorImages(dataset);
+			data.syncS3BillText(dataset);
+			
+			s3.optimizeExists(BillInterpretation.class, dataset.getSession().getKey());
+			s3.optimizeExists(LegislatorInterpretation.class, dataset.getSession().getKey());
+			
+			syncDdbWithS3(dataset);
+		}
 		
-		interpretBillPressArticles();
-		interpretBills();
+		interpretBillPressArticles(buildDatasets);
+		interpretBills(buildDatasets);
 		pressBillInterpGenerator.recordLastPressQueries(); // We want to record that our press query is complete, but only after the bill has been updated and re-interpreted (otherwise we would need to query again if it fails halfway through)
 		
-		interpretLegislators();
-		interpretPartyStats();
+		interpretLegislators(buildDatasets);
+		interpretPartyStats(buildDatasets);
 		
 		webappDataGenerator.process();
 		
@@ -131,14 +132,14 @@ public class DatabaseBuilder implements QuarkusApplication
 	}
 	
 	@SneakyThrows
-	private void syncDdbWithS3()
+	private void syncDdbWithS3(PoliscoreDataset dataset)
 	{
 		Log.info("Making sure that our ddb database is up-to-date with what exists on s3.");
 		
 		long amount = 0;
 		
 		// This could be optimized by building an "index" for each ddb database
-		for (Bill b : data.getDataset().query(Bill.class).stream().filter(b -> b.isIntroducedInSession(data.getSession()) && billInterpreter.isInterpreted(b.getId())).collect(Collectors.toList())) {
+		for (Bill b : dataset.query(Bill.class).stream().filter(b -> billInterpreter.isInterpreted(b.getId())).collect(Collectors.toList())) {
 			var dbill = ddb.get(b.getId(), Bill.class).orElse(null);
 			
 			if (dbill == null 
@@ -156,7 +157,7 @@ public class DatabaseBuilder implements QuarkusApplication
 		Log.info("Decaying hot values");
 		
 		// Decay first x hot values //
-		for (Bill b : ddb.query(Bill.class, 1000, Persistable.OBJECT_BY_HOT_INDEX, false, null, null))
+		for (Bill b : ddb.query(Bill.class, dataset.getSession().getKey(), 1000, Persistable.OBJECT_BY_HOT_INDEX, false, null, null))
 		{
 			ddb.put(b);
 		}
@@ -165,7 +166,7 @@ public class DatabaseBuilder implements QuarkusApplication
 		// TODO : Sort by date and only grab the top x amount
 		Log.info("Syncing press interpretations");
 		Set<Bill> updated = new HashSet<Bill>();
-		for (val pi : s3.query(PressInterpretation.class)) {
+		for (val pi : s3.query(PressInterpretation.class, dataset.getSession().getKey())) {
 			if (pi.isNoInterp()) continue;
 			
 			if (pi.getId().contains("null") || pi.getBillId().contains("null")) {
@@ -191,9 +192,9 @@ public class DatabaseBuilder implements QuarkusApplication
 	}
 	
 	@SneakyThrows
-	private void interpretBillPressArticles() {
+	private void interpretBillPressArticles(List<PoliscoreDataset> buildDatasets) {
 		if (INTERPRET_PRESS_BILLS) {
-			List<File> requests = pressBillInterpGenerator.process();
+			List<File> requests = pressBillInterpGenerator.process(buildDatasets);
 			
 			if (requests.size() > 0) {
 				List<File> responses = openAi.processBatch(requests);
@@ -205,10 +206,10 @@ public class DatabaseBuilder implements QuarkusApplication
 		}
 	}
 	
-	private void interpretBills() { interpretBills(false); }
-	@SneakyThrows private void interpretBills(boolean isRecursive) {
+	private void interpretBills(List<PoliscoreDataset> buildDatasets) { interpretBills(buildDatasets, false); }
+	@SneakyThrows private void interpretBills(List<PoliscoreDataset> buildDatasets, boolean isRecursive) {
 		if (INTERPRET_NEW_BILLS) {
-			List<File> requests = billRequestGenerator.process(!isRecursive);
+			List<File> requests = billRequestGenerator.process(buildDatasets, !isRecursive);
 			
 			if (requests.size() > 0) {
 				List<File> responses = openAi.processBatch(requests);
@@ -218,15 +219,15 @@ public class DatabaseBuilder implements QuarkusApplication
 				}
 				
 				if (!isRecursive)
-					interpretBills(true);
+					interpretBills(buildDatasets, true);
 			}
 		}
 	}
 	
 	@SneakyThrows
-	private void interpretLegislators() {
+	private void interpretLegislators(List<PoliscoreDataset> buildDatasets) {
 		if (REINTERPRET_LEGISLATORS) {
-			List<File> requests = legislatorRequestGenerator.process();
+			List<File> requests = legislatorRequestGenerator.process(buildDatasets);
 		
 			if (requests.size() > 0) {
 				List<File> responses = openAi.processBatch(requests);
@@ -237,39 +238,40 @@ public class DatabaseBuilder implements QuarkusApplication
 			}
 		}
 		
-		recalculateLegislators();
+		for(val dataset : buildDatasets)
+			recalculateLegislators(dataset);
 	}
 	
 	/**
 	 * Recalculates all legislator stats and bill interactions without actually re-interpreting their activity. Saves on AI interpretation costs while
 	 * still allowing stats and interactions to remain up-to-date.
 	 */
-	private void recalculateLegislators() {
+	private void recalculateLegislators(PoliscoreDataset dataset) {
 		Log.info("Recalculating legislators");
 		
 		List<String> legsWithoutInterp = new ArrayList<String>();
 		List<String> legsWithoutSufficientInteractions = new ArrayList<String>();
 		
-		for (var leg : data.getDataset().query(Legislator.class).stream()
-				.filter(l -> l.isMemberOfSession(data.getSession())) //  && s3.exists(LegislatorInterpretation.generateId(l.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class)
+		for (var leg : dataset.query(Legislator.class).stream()
+//				.filter(l -> l.isMemberOfSession(data.getSession())) //  && s3.exists(LegislatorInterpretation.generateId(l.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class)
 				.collect(Collectors.toList()))
 		{
-			legInterp.updateInteractionsInterp(data.getDataset(), leg);
+			legInterp.updateInteractionsInterp(dataset, leg);
 			
 //			if (leg.getInteractions().size() < 100) {
 //				legsWithoutSufficientInteractions.add(leg.getBioguideId());
 //				continue;
 //			}
 			
-			LegislatorInterpretation interp = new LegislatorInterpretation(data.getSession().getNamespace(), data.getSession().getCode(), leg.getCode(), OpenAIService.metadata(), null);
-			val interpOp = s3.get(LegislatorInterpretation.generateId(data.getSession().getNamespace(), data.getSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
+			LegislatorInterpretation interp = new LegislatorInterpretation(dataset.getSession().getNamespace(), dataset.getSession().getCode(), leg.getCode(), OpenAIService.metadata(), null);
+			val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
 			
 			if (interpOp.isPresent()) { interp = interpOp.get(); }
 			
 			// If there exists an interp from a previous session, backfill the interactions until we get to 1000
 			if (legInterp.getInteractionsForInterpretation(leg).size() < 1000) {
 				// If an interpretation from this session doesn't exist, grab one from the previous session.
-				var previousSession = data.getPreviousSession();
+				var previousSession = data.getPreviousSession(dataset.getSession());
 				
 				if (previousSession != null) {
 					val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousSession.getNamespace(), previousSession.getCode(), leg.getCode()), LegislatorInterpretation.class);
@@ -327,9 +329,9 @@ public class DatabaseBuilder implements QuarkusApplication
 	}
 	
 	@SneakyThrows
-	private void interpretPartyStats() {
+	private void interpretPartyStats(List<PoliscoreDataset> buildDatasets) {
 		if (REINTERPRET_PARTIES) {
-			List<File> requests = partyInterpreter.process();
+			List<File> requests = partyInterpreter.process(buildDatasets);
 			
 			if (requests.size() > 0) {
 				List<File> responses = openAi.processBatch(requests);

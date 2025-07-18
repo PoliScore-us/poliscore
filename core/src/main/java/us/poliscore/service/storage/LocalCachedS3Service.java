@@ -67,20 +67,24 @@ public class LocalCachedS3Service implements ApplicationDataStoreIF
 		return s3.query(clazz);
 	}
 	
-	public <T extends Persistable> List<T> query(Class<T> clazz, String key) {
-		return s3.query(clazz, key, -1, true);
+	public <T extends Persistable> List<T> query(Class<T> clazz, String sessionKey) {
+		return s3.query(clazz, sessionKey);
 	}
 	
-	public <T extends Persistable> List<T> query(Class<T> clazz, String key, int pageSize, boolean ascending) {
-		return s3.query(clazz, key, pageSize, ascending);
+	public <T extends Persistable> List<T> query(Class<T> clazz, String sessionKey, String objectKey) {
+		return s3.query(clazz, sessionKey, objectKey, -1, true);
 	}
 	
-	public <T extends Persistable> void optimizeExists(Class<T> clazz) {
-		s3.optimizeExists(clazz);
+	public <T extends Persistable> List<T> query(Class<T> clazz, String sessionKey, String objectKey, int pageSize, boolean ascending) {
+		return s3.query(clazz, sessionKey, objectKey, pageSize, ascending);
 	}
 	
-	public <T extends Persistable> void clearExistsOptimize(Class<T> clazz) {
-		s3.clearExistsOptimize(clazz);
+	public <T extends Persistable> void optimizeExists(Class<T> clazz, String sessionKey) {
+		s3.optimizeExists(clazz, sessionKey);
+	}
+	
+	public <T extends Persistable> void clearExistsOptimize(Class<T> clazz, String sessionKey) {
+		s3.clearExistsOptimize(clazz, sessionKey);
 	}
 	
 	public <T extends Persistable> void delete(String id, Class<T> clazz)

@@ -16,6 +16,7 @@ import lombok.val;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.IssueStats;
 import us.poliscore.model.LegislativeChamber;
+import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.VoteStatus;
@@ -39,7 +40,7 @@ public class LegislatorInterpretationService
 //	private static final String PROMPT_TEMPLATE = "The provided text is a summary of the last {{time_period}} of legislative history of United States Legislator {{full_name}}. Please generate a concise (single paragraph) critique of this history, evaluating the performance, highlighting any specific accomplishments or alarming behaviour and pointing out major focuses and priorities of the legislator. In your critique, please attempt to reference concrete, notable and specific text of the summarized bills where possible.";
 	
 	private static final String PROMPT_TEMPLATE = """
-You are part of a U.S. non-partisan oversight committee which has graded the recent legislative performance of {{politicianType}} {{fullName}}. This legislator has received the following policy area grades (scores range from -100 to 100):
+You are part of a U.S. non-partisan oversight committee which has graded the recent legislative performance of {{namespace}} {{politicianType}} {{fullName}}. This legislator has received the following policy area grades (scores range from -100 to 100):
 
 {{stats}}
 
@@ -102,6 +103,8 @@ Generate a layman's, concise, three paragraph, {{analysisType}}, highlighting an
 	// Backfill the interactions until we get to 1000
 	public void backfillInteractionsFromPreviousSession(Legislator leg, LegislativeSession prevSession)
 	{
+		if (prevSession == null) return;
+		
 		val prevLeg = ddb.get(Legislator.generateId(prevSession.getNamespace(), prevSession.getCode(), leg.getCode()), Legislator.class).orElse(null);
 		if (prevLeg == null) return;
 		
@@ -271,7 +274,14 @@ Generate a layman's, concise, three paragraph, {{analysisType}}, highlighting an
 	public static String getAiPrompt(Legislator leg, IssueStats stats) {
 		val grade = stats.getLetterGrade();
 		
+		String ns = "";
+		if (leg.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+			ns = "Congressional";
+		else
+			ns = leg.getNamespace().getDescription() + " State";
+		
 		return PROMPT_TEMPLATE
+				.replace("{{namespace}}", ns)
 				.replace("{{letterGrade}}", grade)
 				.replace("{{politicianType}}", leg.getTerms().last().getChamber() == LegislativeChamber.UPPER ? "Senator" : "House Representative")
 				.replace("{{fullName}}", leg.getName().getOfficial_full())

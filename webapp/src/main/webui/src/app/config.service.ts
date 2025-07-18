@@ -6,7 +6,8 @@ import { namespace, year } from './app.config';
   providedIn: 'root'
 })
 export class ConfigService {
-  private congress: number;
+  // private congress: number;
+  private currentSessionCode: string;
 
   // constructor(@Inject(PLATFORM_ID) private platformId: Object) {
   //   if (isPlatformBrowser(this.platformId)) {
@@ -19,7 +20,8 @@ export class ConfigService {
   // }
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {
-    this.congress = this.yearToCongress(this.getYear());
+    // this.congress = this.yearToCongress(this.getYear());
+    this.currentSessionCode = "2173"; // TODO
   }
 
   public getYear(): number {
@@ -54,6 +56,32 @@ export class ConfigService {
     return (congress - 1) * 2 + 1789 + 1;
   }
 
+  public sessionCodeToYear(sessionCode: string, namespace: string): number {
+    var year = this.getYear();
+
+    if (namespace === "us/congress")
+      year = this.congressToYear(parseInt(sessionCode));
+    else
+      year = this.getYear(); // TODO : Converting a state session code to a year?
+
+    return year;
+  }
+
+  public yearToSessionCode(year: number, namespace: string): string {
+    var sessionCode: string = this.currentSessionCode;
+
+    if (namespace === "us/congress")
+      sessionCode = String(this.yearToCongress(year));
+    else
+      sessionCode = this.currentSessionCode; // TODO
+
+    return sessionCode;
+  }
+
+  public getCurrentSessionCode(): string {
+    return this.currentSessionCode;
+  }
+
   public appDescription(): string
   {
     return "PoliScore uses AI to 'grade' bills and produce statistics which are aggregated up to legislators. This results in comprehensive performance metrics for congress which are rooted in policy.";
@@ -66,15 +94,16 @@ export class ConfigService {
 
   public billIdToAbsolutePath(billId: string): string
   {
-    var billSession = parseInt(billId.split("/")[3]);
-    var year = this.congressToYear(billSession);
+    var sessionCode = billId.split("/")[3];
+    var namespace = billId.split("/")[1] + "/" + billId.split("/")[2];
+    var year = this.sessionCodeToYear(sessionCode, namespace);
 
-    return "/" + year + "/bill/" +  billId.replace('BIL/us/congress/' + billSession + '/', '');
+    return "/" + year + "/bill/" +  billId.replace('BIL/' + this.getNamespace() + '/' + sessionCode + '/', '');
   }
 
   public pathToBillId(path: string): string
   {
-    return "BIL/us/congress/" + this.congress + "/" + path;
+    return "BIL/" + this.getNamespace() + "/" + this.getCurrentSessionCode() + "/" + path;
   }
 
   // public legislatorIdToPath(legislatorId: string): string
@@ -84,8 +113,9 @@ export class ConfigService {
 
   public legislatorIdToAbsolutePath(legislatorId: string): string
   {
-    var session = parseInt(legislatorId.split("/")[3]);
-    var year = this.congressToYear(session);
+    var sessionCode = legislatorId.split("/")[3];
+    var namespace = legislatorId.split("/")[1] + "/" + legislatorId.split("/")[2];
+    var year = this.sessionCodeToYear(sessionCode, namespace);
     var bioguideId = legislatorId.split("/")[4];
 
     return "/" + year + "/legislator/" + bioguideId;
@@ -93,6 +123,6 @@ export class ConfigService {
 
   public pathToLegislatorId(path: string): string
   {
-    return "LEG/us/congress/" + this.congress + "/" + path;
+    return "LEG/" + this.getNamespace() + "/" + this.getCurrentSessionCode() + "/" + path;
   }
 }

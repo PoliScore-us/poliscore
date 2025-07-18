@@ -70,9 +70,9 @@ public class CachedDynamoDbService implements ApplicationDataStoreIF
 	}
 	
 	@SneakyThrows
-	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, int pageSize, String index, Boolean ascending, String exclusiveStartKey, String sortKey)
+	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, String sessionKey, int pageSize, String index, Boolean ascending, String exclusiveStartKey, String sortKey)
 	{
-		val list = dynamodb.query(clazz, pageSize, index, ascending, exclusiveStartKey, sortKey);
+		val list = dynamodb.query(clazz, sessionKey, pageSize, index, ascending, exclusiveStartKey, sortKey);
 		
 		for (T obj : list) {
 			memory.put(mapper.treeToValue(mapper.valueToTree(obj), clazz));

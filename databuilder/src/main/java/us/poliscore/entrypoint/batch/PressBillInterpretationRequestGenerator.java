@@ -33,6 +33,7 @@ import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.Environment;
+import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.ai.BatchOpenAIRequest;
 import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
@@ -250,6 +251,8 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	
 	@Inject PressInterpService pressService;
 	
+	private int block;
+	
 	private long tokenLen = 0;
 	
 	private long totalRequests = 0;
@@ -278,31 +281,43 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	}
 	
 	@SneakyThrows
-	public List<File> process()
+	public List<File> process(List<PoliscoreDataset> buildDatasets)
 	{
 		Log.info("Scraping press articles");
 		
-		data.importDatasets();
+		for (val dataset : buildDatasets) {
+			s3.optimizeExists(BillText.class, dataset.getSession().getKey());
+			s3.optimizeExists(PressInterpretation.class, dataset.getSession().getKey());
+			s3.optimizeExists(BillInterpretation.class, dataset.getSession().getKey());
+		}
 		
-		s3.optimizeExists(BillText.class);
-		s3.optimizeExists(PressInterpretation.class);
-		s3.optimizeExists(BillInterpretation.class);
-		
-		int block = 1;
+		block = 1;
 		tokenLen = 0;
 		totalRequests = 0;
 		requests = new ArrayList<BatchOpenAIRequest>();
 		writtenFiles = new ArrayList<File>();
 		
+		for (val dataset : buildDatasets) {
+			processDataset(dataset, block);
+		}
+		
+		writeBlock(block++);
+		
+		Log.info("Press scraper complete. Executed " + totalQueries + " Google search queries and generated " + totalRequests + " AI requests.");
+		
+		return writtenFiles;
+	}
+
+	private void processDataset(PoliscoreDataset dataset, int block) throws IOException {
 		// Determine what bills to process //
 		Stream<Bill> bills;
 		if (specificFetch.length > 0) {
-			bills = data.getDataset().query(Bill.class).stream().filter(b -> Arrays.asList(specificFetch).contains(b.getId()));
+			bills = dataset.query(Bill.class).stream().filter(b -> Arrays.asList(specificFetch).contains(b.getId()));
 		} else {
-			bills = data.getDataset().query(Bill.class).stream().filter(b ->
-//				b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION) &&
+			bills = dataset.query(Bill.class).stream().filter(b ->
+//						b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION) &&
 				s3.exists(BillText.generateId(b.getId()), BillText.class));
-//				&& b.getIntroducedDate().isBefore(LocalDate.now().minus(10, ChronoUnit.DAYS)) // Must be at least x days old (otherwise there won't be press coverage) - Commented out. If we're going to pass the bill text through AI we might as well scan for press. Ideally this filter criteria would exactly match the bill request generator
+//						&& b.getIntroducedDate().isBefore(LocalDate.now().minus(10, ChronoUnit.DAYS)) // Must be at least x days old (otherwise there won't be press coverage) - Commented out. If we're going to pass the bill text through AI we might as well scan for press. Ideally this filter criteria would exactly match the bill request generator
 		}
 		
 		int remainingBillsCount = 0;
@@ -342,13 +357,8 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 //		processOrigin(b, new InterpretationOrigin("https://www.asha.org/news/2025/congress-extends-medicare-telehealth-authority-through-september/", "Congress Extends Medicare Telehealth Authority Through September"));
 //		processOrigin(b, new InterpretationOrigin("https://www.aamc.org/news/press-releases/aamc-statement-passage-full-year-continuing-resolution", "Medicare Telehealth Flexibilities Extended, but Without Promise of Permanent Solution"));
 		
-		writeBlock(block++);
-		
-		Log.info(remainingBillsCount + " bills remaining to process");
-		
-		Log.info("Press scraper complete. Executed " + totalQueries + " Google search queries and generated " + totalRequests + " AI requests.");
-		
-		return writtenFiles;
+		if (remainingBillsCount > 0)
+			Log.info(remainingBillsCount + " bills remaining to process in dataset " + dataset.getSession().getKey());
 	}
 	
 	public void deleteExisting(Bill b)
@@ -635,7 +645,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	
 	@Override
     public int run(String... args) throws Exception {
-        process();
+        process(data.getBuildDatasets());
         
         Quarkus.waitForExit();
         return 0;

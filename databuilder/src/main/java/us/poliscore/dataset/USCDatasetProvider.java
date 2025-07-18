@@ -479,6 +479,6 @@ public class USCDatasetProvider implements DatasetProvider {
 
 	@Override
 	public void syncS3BillText(PoliscoreDataset dataset) {
-		billTextFetcher.process();
+		billTextFetcher.process(dataset);
 	}
 }

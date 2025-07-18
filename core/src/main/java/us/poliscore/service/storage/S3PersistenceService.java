@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 
 import io.quarkus.logging.Log;
@@ -23,6 +24,7 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import us.poliscore.PoliscoreUtil;
+import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Persistable;
 import us.poliscore.service.GovernmentDataService;
 
@@ -38,9 +40,14 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	
 	private static HashMap<String, Set<String>> objectsInBucket = new HashMap<String, Set<String>>();
 	
-	protected String getKey(String id)
+	protected String getObjectKey(String id)
 	{
 		return id + ".json";
+	}
+	
+	protected String getSessionKey(String id)
+	{
+		return id.split("/")[1] + "/" + id.split("/")[2] + "/" + id.split("/")[3];
 	}
 	
 	private S3Client getClient()
@@ -57,7 +64,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	@SneakyThrows
 	public void put(Persistable obj)
 	{
-		val key = getKey(obj.getId());
+		val key = getObjectKey(obj.getId());
 		
 		if (key.contains("null")) {
 			throw new UnsupportedOperationException("Your object's id is " + key + "... Really? I don't think so.");
@@ -76,7 +83,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	@SneakyThrows
 	public <T extends Persistable> Optional<T> get(String id, Class<T> clazz)
 	{
-		val key = getKey(id);
+		val key = getObjectKey(id);
 		
         GetObjectRequest req = GetObjectRequest.builder()
                 .bucket(BUCKET_NAME)
@@ -102,10 +109,12 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	@SneakyThrows
 	public <T extends Persistable> boolean exists(String id, Class<T> clazz)
 	{
-		val idClassPrefix = Persistable.getClassStorageBucket(clazz, data.getSession().getNamespace(), data.getSession().getCode());
+		String sessionKey = getSessionKey(id);
+		
+		val idClassPrefix = Persistable.getClassStorageBucket(clazz, sessionKey);
 		if (objectsInBucket.containsKey(idClassPrefix)) return objectsInBucket.get(idClassPrefix).contains(id);
 		
-		val key = getKey(id);
+		val key = getObjectKey(id);
 		
 		try
 		{
@@ -124,24 +133,30 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	
 	@Override
 	public <T extends Persistable> List<T> query(Class<T> clazz) {
-		return query(clazz, null, -1, true);
+//		return query(clazz, sessionKey, null, -1, true);
+		
+		throw new NotImplementedException("You want to query all objects across all legislative sessions? Really?");
 	}
 	
-	public <T extends Persistable> List<T> query(Class<T> clazz, String key) {
-		return query(clazz, key, -1, true);
+	public <T extends Persistable> List<T> query(Class<T> clazz, String sessionKey) {
+		return query(clazz, sessionKey, null, -1, true);
+	}
+	
+	public <T extends Persistable> List<T> query(Class<T> clazz, String sessionKey, String objectKey) {
+		return query(clazz, objectKey, sessionKey, -1, true);
 	}
 	
 	@SneakyThrows
-	public <T extends Persistable> List<T> query(Class<T> clazz, String key, int pageSize, boolean ascending)
+	public <T extends Persistable> List<T> query(Class<T> clazz, String sessionKey, String objectKey, int pageSize, boolean ascending)
 	{
 	    val keys = new java.util.ArrayList<String>();
 	    String continuationToken = null;
 	    
-	    String storageBucket = Persistable.getClassStorageBucket(clazz, data.getSession().getNamespace(), data.getSession().getCode());
+	    String storageBucket = Persistable.getClassStorageBucket(clazz, sessionKey);
 	    
 	    String fullPrefix = storageBucket;
-	    if (StringUtils.isNotBlank(key))
-	    	fullPrefix = storageBucket + "/" + key;
+	    if (StringUtils.isNotBlank(objectKey))
+	    	fullPrefix = storageBucket + "/" + objectKey;
 
 	    // First: collect all matching keys
 	    do {
@@ -191,8 +206,8 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	}
 
 	@SneakyThrows
-	public <T extends Persistable> void optimizeExists(Class<T> clazz) {
-		val storageBucket = Persistable.getClassStorageBucket(clazz, data.getSession().getNamespace(), data.getSession().getCode());
+	public <T extends Persistable> void optimizeExists(Class<T> clazz, String sessionKey) {
+		val storageBucket = Persistable.getClassStorageBucket(clazz, sessionKey);
 		
 		if (objectsInBucket.containsKey(storageBucket)) return;
 		
@@ -217,8 +232,8 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	}
 	
 	@SneakyThrows
-	public <T extends Persistable> void clearExistsOptimize(Class<T> clazz) {
-		val idClassPrefix = Persistable.getClassStorageBucket(clazz, data.getSession().getNamespace(), data.getSession().getCode());
+	public <T extends Persistable> void clearExistsOptimize(Class<T> clazz, String sessionKey) {
+		val idClassPrefix = Persistable.getClassStorageBucket(clazz, sessionKey);
 		
 		objectsInBucket.remove(idClassPrefix);
 	}
@@ -226,7 +241,8 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	@SneakyThrows
 	public <T extends Persistable> void delete(String id, Class<T> clazz)
 	{
-		val key = getKey(id);
+		String sessionKey = this.getSessionKey(id);
+		val key = getObjectKey(id);
 		
 		try
 		{
@@ -237,7 +253,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 			Log.info("Deleted from S3 " + key);
 			
 			// Update the local cache if optimizeExists has been called before
-			val idClassPrefix = Persistable.getClassStorageBucket(clazz, data.getSession().getNamespace(), data.getSession().getCode());
+			val idClassPrefix = Persistable.getClassStorageBucket(clazz, sessionKey);
 			if (objectsInBucket.containsKey(idClassPrefix))
 			{
 				objectsInBucket.get(idClassPrefix).remove(id);

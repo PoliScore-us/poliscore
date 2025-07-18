@@ -21,6 +21,7 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.val;
 import us.poliscore.Environment;
+import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.ai.BatchOpenAIRequest;
 import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
@@ -77,10 +78,10 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	}
 	
 	public List<File> process() throws IOException {
-		return process(true);
+		return process(data.getBuildDatasets(), true);
 	}
 	
-	public List<File> process(boolean includePressDirtyBills) throws IOException
+	public List<File> process(List<PoliscoreDataset> buildDatasets, boolean includePressDirtyBills) throws IOException
 	{
 		tokenLen = 0;
 		totalRequests = 0;
@@ -89,16 +90,29 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		
 		Log.info("Generating batch request to interpret bills");
 		
-		data.importDatasets();
+		data.importAllDatasets();
 		
 		int block = 1;
 		
-		s3.optimizeExists(BillInterpretation.class);
-		s3.optimizeExists(BillText.class);
+		for(val dataset : buildDatasets) {
+			s3.optimizeExists(BillInterpretation.class, dataset.getSession().getKey());
+			s3.optimizeExists(BillText.class, dataset.getSession().getKey());
+		}
 		
+		for(val dataset : buildDatasets)
+			processDataset(dataset, includePressDirtyBills, block);
+		
+		writeBlock(block++);
+		
+		Log.info("Batch bill request generator complete. Generated " + totalRequests + " requests.");
+		
+		return writtenFiles;
+	}
+
+	private void processDataset(PoliscoreDataset dataset, boolean includePressDirtyBills, int block) throws IOException {
 //		List<String> specificFetch = Arrays.asList(Bill.generateId(119, BillType.HR, 2923));
 		
-		for (Bill b : data.getDataset().query(Bill.class).stream()
+		for (Bill b : dataset.query(Bill.class).stream()
 //				.filter(b -> specificFetch.contains(b.getId()))
 				.filter(b -> (!CHECK_S3_EXISTS || !billInterpreter.isInterpreted(b.getId()) || (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))))
 				.filter(b -> s3.exists(BillText.generateId(b.getId()), BillText.class))
@@ -109,7 +123,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 			if (CHECK_S3_EXISTS && billInterpreter.isInterpreted(b.getId()) && includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b)) {
 				val interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).orElseThrow();
 				
-				var s3PressInterps = s3.query(PressInterpretation.class, interp.getBillId().replace(Bill.ID_CLASS_PREFIX + "/", "")).stream().filter(i -> !InterpretationOrigin.POLISCORE.equals(i.getOrigin()) && !i.isNoInterp()).collect(Collectors.toList());
+				var s3PressInterps = s3.query(PressInterpretation.class, dataset.getSession().getKey(), interp.getBillId().replace(Bill.ID_CLASS_PREFIX + "/", "")).stream().filter(i -> !InterpretationOrigin.POLISCORE.equals(i.getOrigin()) && !i.isNoInterp()).collect(Collectors.toList());
 				
 				if (!s3PressInterps.stream().anyMatch(s3pi -> !interp.getPressInterps().contains(s3pi))) continue;
 			}
@@ -193,8 +207,6 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 			}
 		};
 		
-		writeBlock(block++);
-		
 //		if (totalRequests == 0) {
 //			val mostRecent = data.getDataset().query(Bill.class).stream()
 //					.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed())
@@ -206,10 +218,6 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 //			
 //			Log.info(mostRecent);
 //		}
-		
-		Log.info("Batch bill request generator complete. Generated " + totalRequests + " requests.");
-		
-		return writtenFiles;
 	}
 	
 	private void createRequest(String oid, String sysMsg, String userMsg) {

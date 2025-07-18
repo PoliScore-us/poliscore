@@ -50,7 +50,10 @@ private static final String BUCKET_NAME = "poliscore-prod-public";
 	protected GovernmentDataService data;
 	
 	protected void syncS3LegislatorImages() {
-		syncS3LegislatorImages(data.getDataset());
+		data.importAllDatasets();
+		
+		for(val dataset : data.getBuildDatasets())
+			syncS3LegislatorImages(dataset);
 	}
 	
 	@SneakyThrows
@@ -61,7 +64,7 @@ private static final String BUCKET_NAME = "poliscore-prod-public";
 		
 		Log.info("Building list of legislators to fetch. This will take a minute...");
 		
-		val legs = data.getDataset().query(Legislator.class).stream()
+		val legs = dataset.query(Legislator.class).stream()
 				.filter(l -> l.getBirthday() == null || l.getBirthday().isAfter(LocalDate.of(1900,1,1)))
 				.filter(l -> l.getTerms().size() > 0 && l.getTerms().last().getStartDate().isAfter(LocalDate.of(1990,1,1)))
 				.filter(l -> !exists(l))

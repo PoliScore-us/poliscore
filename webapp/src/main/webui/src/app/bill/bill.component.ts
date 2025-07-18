@@ -88,7 +88,7 @@ export class BillComponent implements OnInit {
       this.isSmallScreen = window.innerWidth < 600;
 
     this.billId = (this.route.snapshot.paramMap.get('id') as string);
-    if (!this.billId.startsWith("BIL/us/congress")) {
+    if (!this.billId.startsWith("BIL/" + this.config.getNamespace())) {
       this.billId = this.config.pathToBillId(this.billId);
     }
 
