@@ -56,9 +56,9 @@ export const routes: Routes = [
   { path: 'bills', component: BillsComponent, data: { animation: 'billsPage' } },
   { path: 'bills/:index/:ascending', component: BillsComponent, data: { animation: 'billsPage' } },
   { matcher: idPathMatcher("bill"), component: BillComponent, data: { animation: 'billPage' } },
-  { path: 'congress', component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
-  { path: 'congress/:party', component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
-  { path: 'congress/:party/:sort', component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
+  { path: 'party', component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
+  { path: 'party/:party', component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
+  { path: 'party/:party/:sort', component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
 
   { path: "about", redirectTo: "", pathMatch: "full" }
   // { path: 'about', component: PromoComponent, title: "About - PoliScore: AI Political Rating Service", data: { animation: 'about' } }

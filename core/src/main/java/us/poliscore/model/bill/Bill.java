@@ -208,15 +208,6 @@ public class Bill extends SessionPersistable {
 		
 		return percent;
 	}
-
-	
-	public static CongressionalBillType billTypeFromId(String poliscoreId) {
-		return CongressionalBillType.fromName(poliscoreId.split("/")[4]);
-	}
-	
-	public static int billNumberFromId(String poliscoreId) {
-		return Integer.valueOf(poliscoreId.split("/")[5]);
-	}
 	
 	@Data
 	@DynamoDbBean

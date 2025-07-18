@@ -6,6 +6,7 @@ import java.util.ArrayList;
 
 import org.apache.commons.io.FileUtils;
 
+import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
@@ -21,7 +22,7 @@ import us.poliscore.model.legislator.Legislator;
 import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
-@QuarkusMain(name="WebappDataGenerator")
+@QuarkusMain(name="WebappRoutesGenerator")
 public class WebappRoutesGenerator implements QuarkusApplication {
 	
 	@Inject private GovernmentDataService data;
@@ -32,6 +33,8 @@ public class WebappRoutesGenerator implements QuarkusApplication {
 	public void process(PoliscoreDataset dataset) throws IOException
 	{
 		generateRoutes(dataset);
+		
+		Log.info("Successfully generated webapp routes for session " + dataset.getSession().getDescription());
 	}
 	
 	@SneakyThrows
@@ -40,9 +43,11 @@ public class WebappRoutesGenerator implements QuarkusApplication {
 		val routes = new ArrayList<String>();
 		
 		// Party Stats
-		routes.add("/congress/democrat");
-		routes.add("/congress/republican");
-		routes.add("/congress/independent");
+		routes.add("/party/democrat");
+		routes.add("/party/republican");
+		
+		if (dataset.hasIndependentPartyMembers())
+			routes.add("/party/independent");
 		
 		// All states
 //		Arrays.asList(states).stream().forEach(s -> routes.add("/legislators/state/" + s.toLowerCase()));
@@ -66,7 +71,7 @@ public class WebappRoutesGenerator implements QuarkusApplication {
 	}
 	
 	public static void main(String[] args) {
-		Quarkus.run(WebappDataGenerator.class, args);
+		Quarkus.run(WebappRoutesGenerator.class, args);
 		Quarkus.asyncExit(0);
 	}
 	

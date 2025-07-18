@@ -21,6 +21,9 @@ export class AppService {
     getSessionStats(): Promise<SessionStats | undefined> {
         let params: HttpParams = new HttpParams();
 
+        params = params.set("year", this.config.getYear());
+        params = params.set("namespace", this.config.getNamespace());
+
         return firstValueFrom(this.http.get<SessionStats>(backendUrl + "/getSessionStats", { params: params }));
     }
 

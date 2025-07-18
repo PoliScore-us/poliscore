@@ -85,14 +85,14 @@ public class WebappDataGenerator implements QuarkusApplication
 	
 	@SneakyThrows
 	private void writeSessionInfo(List<PoliscoreDataset> datasets) {
-		final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/resources/sessions.json");
 		val result = new ArrayList<LegislativeSession>();
 		
 		for (var dataset : datasets) {
 			result.add(dataset.getSession());
 		}
 		
-		FileUtils.write(out, PoliscoreUtil.getObjectMapper().writeValueAsString(result), "UTF-8");
+		FileUtils.write(new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/resources/sessions.json"), PoliscoreUtil.getObjectMapper().writeValueAsString(result), "UTF-8");
+		FileUtils.write(new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/webui/src/assets/sessions.json"), PoliscoreUtil.getObjectMapper().writeValueAsString(result), "UTF-8");
 	}
 	
 	@SneakyThrows
@@ -114,9 +114,11 @@ public class WebappDataGenerator implements QuarkusApplication
 			String state = dataset.getSession().getNamespace().toAbbreviation().toLowerCase().replace("us", "congress");
 			
 			// Party Stats
-			routes.add(url + prefix + "/" + state + "/democrat");
-			routes.add(url + prefix + "/" + state + "/republican");
-			routes.add(url + prefix + "/" + state + "/independent");
+			routes.add(url + prefix + "/party/democrat");
+			routes.add(url + prefix + "/party/republican");
+			
+			if (dataset.hasIndependentPartyMembers())
+				routes.add(url + prefix + "/" + state + "/independent");
 			
 			// All states
 //			Arrays.asList(states).stream().forEach(s -> routes.add(url + prefix + "/legislators/state/" + s.toLowerCase()));

@@ -134,7 +134,7 @@ export class SessionStatsComponent {
     if (this.stats?.session.namespace === 'us/congress')
       pageTitle = this.stats!.session.code + "th Congress " + pageTitle;
     else
-      pageTitle = this.stats!.session.endDate.split("-")[0] + " " + convertStateCodeToName(this.stats.session.namespace.split("/")[2]) + " Legislature " + pageTitle;
+      pageTitle = (this.stats!.session.endDate as any as string).split("-")[0] + " " + convertStateCodeToName(this.stats.session.namespace.split("/")[1]) + " Legislature " + pageTitle;
 
     const pageDescription = this.config.appDescription();
     const pageUrl = "https://poliscore.us/" + year + "/Party";

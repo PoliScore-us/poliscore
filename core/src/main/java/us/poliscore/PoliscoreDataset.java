@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import us.poliscore.model.CongressionalSession;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
+import us.poliscore.model.Party;
+import us.poliscore.model.legislator.Legislator;
 import us.poliscore.service.storage.MemoryObjectStore;
 
 @Data
@@ -26,19 +28,8 @@ public class PoliscoreDataset extends MemoryObjectStore {
 	@NonNull
 	protected LegislativeSession session;
 	
-	public boolean isDeployment(DeploymentConfig deployment) {
-		if (!this.session.getNamespace().equals(deployment.getNamespace())) {
-			return false;
-		}
-		if (deployment.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
-			// Normalize year to session number match
-			var targetSession = CongressionalSession.fromYear(deployment.getYear());
-			var thisSession = CongressionalSession.of(Integer.parseInt(this.session.getCode()));
-			return thisSession.equals(targetSession);
-		} else {
-			// Fall back to year-based match for states
-			return deployment.getYear().equals(this.session.getEndDate().getYear());
-		}
+	public boolean hasIndependentPartyMembers() {
+		return query(Legislator.class).stream().filter(l -> l.getParty().equals(Party.INDEPENDENT)).count() > 0;
 	}
 
 	

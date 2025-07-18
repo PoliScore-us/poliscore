@@ -1,6 +1,5 @@
-/congress/democrat
-/congress/republican
-/congress/independent
+/party/democrat
+/party/republican
 /legislators
 /legislator/23962
 /legislator/20140

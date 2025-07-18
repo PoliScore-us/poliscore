@@ -79,7 +79,7 @@ public class Lambda {
     
     @GET
     @Path("getSessionStats")
-    public SessionInterpretation getSessionStats(String nsKey, int year) {
+    public SessionInterpretation getSessionStats(@NonNull @RestQuery("namespace") String nsKey, @RestQuery int year) {
     	val namespace = LegislativeNamespace.of(nsKey);
     	val session = lookupSession(namespace, year);
     	

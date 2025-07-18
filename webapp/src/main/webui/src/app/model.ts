@@ -1,3 +1,4 @@
+import { namespace } from "./app.config";
 
 export interface Bill {
   impact: number;
@@ -84,9 +85,10 @@ export interface SessionStats {
 
 export interface Session {
   code: string;
-  startDate: string;
-  endDate: string;
+  startDate: number[];
+  endDate: number[];
   namespace: string;
+  description: string;
 }
 
 export class LegislatorName {
@@ -223,7 +225,8 @@ export function gradeForRating(rating: number): string {
   else if (rating >= 15 && rating < 30) return "C";
   else if (rating >= 0 && rating < 15) return "D";
   else if (rating < 0) return "F";
-  else return "?";
+
+  return "?";
 }
 
 export function colorForGrade(grade: string): string

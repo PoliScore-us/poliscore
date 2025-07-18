@@ -1,6 +1,8 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { namespace, year } from './app.config';
+import sessionsData from '../assets/sessions.json';
+import { Session } from './model';
 
 @Injectable({
   providedIn: 'root'
@@ -8,6 +10,8 @@ import { namespace, year } from './app.config';
 export class ConfigService {
   // private congress: number;
   private currentSessionCode: string;
+
+  private sessions: Session[] = sessionsData;
 
   // constructor(@Inject(PLATFORM_ID) private platformId: Object) {
   //   if (isPlatformBrowser(this.platformId)) {
@@ -21,7 +25,7 @@ export class ConfigService {
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {
     // this.congress = this.yearToCongress(this.getYear());
-    this.currentSessionCode = "2173"; // TODO
+    this.currentSessionCode = this.lookupSession(this.getNamespace(), this.getYear())!.code;
   }
 
   public getYear(): number {
@@ -67,15 +71,12 @@ export class ConfigService {
     return year;
   }
 
-  public yearToSessionCode(year: number, namespace: string): string {
-    var sessionCode: string = this.currentSessionCode;
-
-    if (namespace === "us/congress")
-      sessionCode = String(this.yearToCongress(year));
-    else
-      sessionCode = this.currentSessionCode; // TODO
-
-    return sessionCode;
+  public lookupSession(namespace: string, year: number): Session | undefined {
+    return this.sessions.find(session =>
+        session.namespace === namespace &&
+        year >= session.startDate[0] &&
+        year <= session.endDate[0]
+    );
   }
 
   public getCurrentSessionCode(): string {

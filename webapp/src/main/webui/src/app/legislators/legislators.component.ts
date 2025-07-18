@@ -40,6 +40,8 @@ export class LegislatorsComponent implements OnInit {
   
   myLocation?: string;
 
+  public namespace: string = "";
+
   public hasMoreContent: boolean = true;
 
   public isRequestingData: boolean = false;
@@ -60,6 +62,7 @@ export class LegislatorsComponent implements OnInit {
 
   ngOnInit(): void {
     this.updateMetaTags();
+    this.namespace = this.config.getNamespace();
 
     // We want all calls to 'fetchLegislatorPageData' wrapped in 'isPlatformBrowser' because fetchLegislatorPageData
     // resolves the user's ip to a state location and returns personalized data (which we don't want cached in SSG).
@@ -344,8 +347,13 @@ export class LegislatorsComponent implements OnInit {
       let hasntChangedUrl = (this.router.url == "" || this.router.url == "/" || this.router.url == "/legislators");
 
       if (state == null && !routeParams && hasntChangedUrl) {
-        this.router.navigate([], { fragment: `index=state&location=${this.myLocation.toLowerCase()}` });
+        
         // this.router.navigate(['/legislators/state/' + this.myLocation.toLowerCase()]);
+
+        if (this.namespace === 'us/congress' && this.page.index === 'ObjectsByLocation')
+          this.router.navigate([], { fragment: `index=state&location=${this.myLocation.toLowerCase()}` });
+        else
+          this.router.navigate([], { fragment: `index=byratingabs&order=descending` });
       }
     }).finally(() => {
       if (!routeParams) {

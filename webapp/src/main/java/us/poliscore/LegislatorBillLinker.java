@@ -1,5 +1,6 @@
 package us.poliscore;
 
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -48,8 +49,8 @@ public class LegislatorBillLinker {
 	            String url = linkForBill(interact.getBillId());
 
 	            // 4. Construct a readable form of the bill ID (e.g. "H.R.-1234" or "S.-201")
-	            String typeName = Bill.billTypeFromId(interact.getBillId()).getName(); // e.g. "H.R."
-	            String billNumber = String.valueOf(Bill.billNumberFromId(interact.getBillId()));       // e.g. "1234"
+	            String typeName = interact.getBillId().split("/")[4]; // e.g. "H.R."
+	            String billNumber = interact.getBillId().split("/")[5];       // e.g. "1234"
 	            String altBillId = typeName + "-" + billNumber;
 
 	            // 5. Register both the normalized bill name and the altBillId in our dictionary
@@ -102,10 +103,17 @@ public class LegislatorBillLinker {
 	
 	public static String linkForBill(String id)
 	{
-		val billSession = Integer.valueOf(id.split("/")[3]);
-		val deploymentYear = (billSession - 1) * 2 + 1789 + 1;
+		int year = LocalDate.now().getYear();
 		
-		return "/" + deploymentYear + "/bill/" + id.substring(StringUtils.ordinalIndexOf(id, "/", 4) + 1);
+		val namespace = LegislativeNamespace.of(id.split("/")[1] + "/" + id.split("/")[2]);
+		if (namespace.equals(LegislativeNamespace.US_CONGRESS)) {
+			val sessionCode = Integer.valueOf(id.split("/")[3]);
+			year = (sessionCode - 1) * 2 + 1789 + 1;
+		} else {
+			// TODO : Detecting deployment year for state level bills
+		}
+		
+		return "/" + year + "/bill/" + id.substring(StringUtils.ordinalIndexOf(id, "/", 4) + 1);
 	}
 
 	/**

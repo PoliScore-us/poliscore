@@ -8,7 +8,6 @@ set -x
 START_DIR="$(pwd)"
 
 sudo docker ps
-source ./set-deployment-config.sh
 source ./set-deployment-target.sh
 
 if [ "$DEPLOYMENT_NAMESPACE" == "us/congress" ]; then
@@ -42,7 +41,6 @@ cd databuilder
 mvn exec:java \
   -Dquarkus.devservices.enabled=false \
   -Dquarkus.launch.devmode=false \
-  -Dvertx.options.warningExceptionTime=-1 \
   -Dtest-containers.disabled=true \
 2>&1
 

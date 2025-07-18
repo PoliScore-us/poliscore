@@ -69,12 +69,16 @@ public class PartyInterpretationService {
 	public List<File> process(List<PoliscoreDataset> buildDatasets) throws IOException
 	{
 		for (val dataset : buildDatasets) {
-			val partyStats = recalculateStats(dataset);
+			val hasIndependent = dataset.hasIndependentPartyMembers();
+					
+			val partyStats = recalculateStats(dataset, hasIndependent);
 			
 			// Use AI to generate explanations
 			createRequest(dataset, partyStats.getDemocrat());
 			createRequest(dataset, partyStats.getRepublican());
-			createRequest(dataset, partyStats.getIndependent());
+			
+			if (hasIndependent)
+				createRequest(dataset, partyStats.getIndependent());
 		}
 		
 		writeRequests(requests);
@@ -82,7 +86,11 @@ public class PartyInterpretationService {
 		return writtenFiles;
 	}
 	
-	public SessionInterpretation recalculateStats(PoliscoreDataset dataset)
+	public SessionInterpretation recalculateStats(PoliscoreDataset dataset) {
+		return recalculateStats(dataset, dataset.hasIndependentPartyMembers());
+	}
+	
+	public SessionInterpretation recalculateStats(PoliscoreDataset dataset, boolean hasIndependent)
 	{
 		// Initialize datastructures //
 		val sessionStats = new SessionInterpretation();
@@ -99,6 +107,8 @@ public class PartyInterpretationService {
 		val worstLegislators = new HashMap<Party, PriorityQueue<Legislator>>();
 		val bestLegislators = new HashMap<Party, PriorityQueue<Legislator>>();
 		for(val party : Party.values()) {
+			if (!hasIndependent && party.equals(Party.INDEPENDENT)) continue;
+			
 			doublePartyStats.put(party, new DoubleIssueStats());
 			
 			leastImpactfulBills.put(party, new PriorityQueue<>(Comparator.comparing(PartyBillInteraction::getImpact)));
@@ -145,7 +155,7 @@ public class PartyInterpretationService {
 				}
 			}
 		}
-		for (val l : dataset.query(Legislator.class).stream().filter(leg -> leg.isMemberOfSession(dataset.getSession())).toList()) {
+		for (val l : dataset.query(Legislator.class)) {
 			val op = s3.get(LegislatorInterpretation.generateId(sessionStats.getSession().getNamespace(), sessionStats.getSession().getCode(), l.getCode()), LegislatorInterpretation.class);
 			
 			if (op.isPresent()) {
@@ -171,6 +181,8 @@ public class PartyInterpretationService {
 		// Build persistant data //
 		val partyStats = new HashMap<Party, PartyInterpretation>();
 		for(val party : Party.values()) {
+			if (!hasIndependent && party.equals(Party.INDEPENDENT)) continue;
+			
 			val ps = new PartyInterpretation();
 			
 			var stats = doublePartyStats.get(party);
@@ -193,7 +205,9 @@ public class PartyInterpretationService {
 		
 		sessionStats.setDemocrat(partyStats.get(Party.DEMOCRAT));
 		sessionStats.setRepublican(partyStats.get(Party.REPUBLICAN));
-		sessionStats.setIndependent(partyStats.get(Party.INDEPENDENT));
+		
+		if (hasIndependent)
+			sessionStats.setIndependent(partyStats.get(Party.INDEPENDENT));
 		
 		sessionStats.setMetadata(OpenAIService.metadata());
 		

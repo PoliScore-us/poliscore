@@ -60,10 +60,10 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 @QuarkusMain(name="BatchOpenAIResponseImporter")
 public class BatchOpenAIResponseImporter implements QuarkusApplication
 {
-	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/unprocessed.jsonl";
+//	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/unprocessed.jsonl";
 	
 //	 All Legislators (August 21st)
-//	public static final String INPUT = "/Users/rrowlands/Downloads/batch_P8Wsivj5pgknA2QPVrK9KZJI_output.jsonl";
+	public static final String INPUT = "/Users/rrowlands/Downloads/batch_68791d017b748190ace32f2812983ff9_output.jsonl";
 	
 	// All Legislators (Aug 5th) 
 //	public static final String INPUT = "/Users/rrowlands/Downloads/batch_tUs6UH4XIsYDBjIhbX4Ni9Sq_output.jsonl";
@@ -156,8 +156,8 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	private void importLegislator(final BatchOpenAIResponse resp) {
 //		if (!resp.getCustomData().contains("D000197")) return;
 		
-		val leg = data.getAllDataset().get(resp.getCustomData().getOid().replace(LegislatorInterpretation.ID_CLASS_PREFIX, Legislator.ID_CLASS_PREFIX), Legislator.class).orElseThrow();
-		val dataset = data.getDataset(leg.getNamespace(), leg.getSessionCode());
+		val dataset = data.getDataset(resp.getCustomData().getOid());
+		val leg = dataset.get(resp.getCustomData().getOid().replace(LegislatorInterpretation.ID_CLASS_PREFIX, Legislator.ID_CLASS_PREFIX), Legislator.class).orElseThrow();
 		
 //		if (ddb.exists(leg.getId(), Legislator.class)) return;
 		
@@ -230,7 +230,8 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			billId = dashSplit[0];
 		}
 		
-		val bill = data.getAllDataset().get(billId, Bill.class).orElseThrow();
+		val dataset = data.getDataset(billId);
+		val bill = dataset.get(billId, Bill.class).orElseThrow();
 		
 		BillInterpretation bi = new BillInterpretation();
 		bi.setBill(bill);

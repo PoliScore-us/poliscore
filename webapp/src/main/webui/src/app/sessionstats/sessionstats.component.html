@@ -17,14 +17,14 @@
 
         <div class="content-section vertical-layout">
             <div class="col-left horizontal-layout party-selector">
-                <button *ngIf="party !== 'DEMOCRAT'" mat-raised-button [routerLink]="'/congress/democrat'"><span>Democrat</span></button>
-                <button *ngIf="party === 'DEMOCRAT'" mat-button [routerLink]="'/congress/democrat'"><span>Democrat</span></button>
+                <button *ngIf="party !== 'DEMOCRAT'" mat-raised-button [routerLink]="'/party/democrat'"><span>Democrat</span></button>
+                <button *ngIf="party === 'DEMOCRAT'" mat-button [routerLink]="'/party/democrat'"><span>Democrat</span></button>
 
-                <button *ngIf="party !== 'REPUBLICAN'" mat-raised-button [routerLink]="'/congress/republican'"><span>Republican</span></button>
-                <button *ngIf="party === 'REPUBLICAN'" mat-button [routerLink]="'/congress/republican'"><span>Republican</span></button>
+                <button *ngIf="party !== 'REPUBLICAN'" mat-raised-button [routerLink]="'/party/republican'"><span>Republican</span></button>
+                <button *ngIf="party === 'REPUBLICAN'" mat-button [routerLink]="'/party/republican'"><span>Republican</span></button>
 
-                <button *ngIf="party !== 'INDEPENDENT'" mat-raised-button [routerLink]="'/congress/independent'"><span>Independent</span></button>
-                <button *ngIf="party === 'INDEPENDENT'" mat-button [routerLink]="'/congress/independent'"><span>Independent</span></button>
+                <button *ngIf="stats && stats.independent && party !== 'INDEPENDENT'" mat-raised-button [routerLink]="'/party/independent'"><span>Independent</span></button>
+                <button *ngIf="stats && stats.independent && party === 'INDEPENDENT'" mat-button [routerLink]="'/party/independent'"><span>Independent</span></button>
             </div>
         </div>
 
@@ -85,7 +85,7 @@
             <mat-card *ngFor="let leg of getData()" class="legs" appearance="outlined">
                 <a [href]="config.legislatorIdToAbsolutePath(leg.id)">
                     <div class="left">
-                        <img *ngIf="!leg.photoError" [src]="'https://poliscore-prod-public.s3.amazonaws.com/' + leg.id + '.jpg'" (error)="leg.photoError = true;" >
+                        <img *ngIf="!leg.photoError" [src]="'https://poliscore-prod-public.s3.amazonaws.com/' + leg.id + '.webp'" (error)="leg.photoError = true;" >
                         <img *ngIf="leg.photoError" src="https://poliscore-prod-public.s3.amazonaws.com/LEG/leg-photo-missing.png" alt=“Name”>
                     </div>
                     <div class="right">

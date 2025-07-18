@@ -124,11 +124,7 @@ public class PartyBillLinker {
 	 * from your Bill ID (depending on how your code is structured).
 	 */
 	public static String buildReadableBillId(Bill bill) {
-	    String id = bill.getId();
-	    // For example:
-	    val typeName  = Bill.billTypeFromId(id).getName();  // e.g. "H.R." or "S."
-	    val billNum   = Bill.billNumberFromId(id);          // e.g. "1234"
-	    return typeName + "-" + billNum;
+	    return bill.getType() + "-" + bill.getNumber();
 	}
 
 	public static String linkForBill(String id)

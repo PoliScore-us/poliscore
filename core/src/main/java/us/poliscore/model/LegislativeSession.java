@@ -47,4 +47,8 @@ public class LegislativeSession {
 		return startDate.getYear() <= year && endDate.getYear() >= year; 
 	}
 	
+	public String getDescription() {
+		return namespace.getDescription() + " " + startDate.getYear() + "-" + endDate.getYear() + " (" + code + ")";
+	}
+	
 }

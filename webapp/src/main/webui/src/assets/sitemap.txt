@@ -1,5 +1,5 @@
-https://poliscore.us/2026/congress/democrat
-https://poliscore.us/2026/congress/republican
+https://poliscore.us/2026/party/democrat
+https://poliscore.us/2026/party/republican
 https://poliscore.us/2026/congress/independent
 https://poliscore.us/2026/legislators
 https://poliscore.us/2026/legislator/G000386
@@ -7057,8 +7057,8 @@ https://poliscore.us/2026/bill/sjres/61
 https://poliscore.us/2026/bill/sjres/62
 https://poliscore.us/2026/bill/hjres/105
 https://poliscore.us/2026/bill/hjres/104
-https://poliscore.us/2024/congress/democrat
-https://poliscore.us/2024/congress/republican
+https://poliscore.us/2024/party/democrat
+https://poliscore.us/2024/party/republican
 https://poliscore.us/2024/congress/independent
 https://poliscore.us/2024/legislators
 https://poliscore.us/2024/legislator/F000062
@@ -23586,9 +23586,8 @@ https://poliscore.us/2024/bill/s/5639
 https://poliscore.us/2024/bill/s/5646
 https://poliscore.us/2024/bill/hr/10545
 https://poliscore.us/2024/bill/s/5649
-https://poliscore.us/2025/co/democrat
-https://poliscore.us/2025/co/republican
-https://poliscore.us/2025/co/independent
+https://poliscore.us/2025/party/democrat
+https://poliscore.us/2025/party/republican
 https://poliscore.us/2025/legislators
 https://poliscore.us/2025/legislator/23962
 https://poliscore.us/2025/legislator/20140

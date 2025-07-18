@@ -44,6 +44,10 @@ public class OpenAIService {
 	
 	public static final int PROMPT_VERSION = 0;
 	
+	// If a batch is sent with a number of requests less than or equal to this number we will not use the batch api and process it immediately.
+	// This is because the OpenAI Batch API has been known to take forever or even fail to process.
+	public static final int IMMEDIATE_PROCESS_THRESHOLD = 5;
+	
 	public static int MAX_REQUEST_LENGTH = 3500000;
 	public static int MAX_GPT4o_REQUEST_LENGTH = 490000; // GPT-4o context window in tokens is 128,000, which is 500k string length.
 	
@@ -120,7 +124,7 @@ public class OpenAIService {
 	 */
 	@SneakyThrows
 	public List<File> processBatch(List<File> files) {
-		if (files.size() == 1 && Files.lines(files.get(0).toPath()).count() <= 3) return processBatchImmediately(files);
+		if (files.size() == 1 && Files.lines(files.get(0).toPath()).count() <= IMMEDIATE_PROCESS_THRESHOLD) return processBatchImmediately(files);
 		
 		OpenAiService service = new OpenAiService(secret.getOpenAISecret(), Duration.ofSeconds(600));
 		
