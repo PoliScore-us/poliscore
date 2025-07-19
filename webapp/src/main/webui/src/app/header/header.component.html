@@ -26,7 +26,7 @@
                <button *ngIf="legislators" mat-raised-button [routerLink]="'/legislators'"><a [routerLink]="'/legislators'" class="unstyled"><span>Legislators</span></a></button>
                <button *ngIf="bills" mat-raised-button [routerLink]="'/bills'"><a [routerLink]="'/bills'" class="unstyled"><span>Bills</span></a></button>
                <button *ngIf="congress" mat-raised-button [routerLink]="'/party'"><a [routerLink]="'/party'" class="unstyled"><span>Party Stats</span></a></button>
-               <button *ngIf="about" mat-raised-button [routerLink]="'/about'" class="about-button"><a [routerLink]="'/about'" class="unstyled"><span>About</span></a></button>
+               <button *ngIf="about" mat-raised-button class="about-button" [routerLink]="'/'"><a href="/" class="unstyled"><span>About</span></a></button>
            </div>
        </div>
    </div>

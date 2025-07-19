@@ -97,9 +97,9 @@ export class ConfigService {
   {
     var sessionCode = billId.split("/")[3];
     var namespace = billId.split("/")[1] + "/" + billId.split("/")[2];
-    var year = this.sessionCodeToYear(sessionCode, namespace);
+    var year = String(this.sessionCodeToYear(sessionCode, namespace));
 
-    return "/" + year + "/bill/" +  billId.replace('BIL/' + this.getNamespace() + '/' + sessionCode + '/', '');
+    return this.routePath(namespace, year, "bill/" +  billId.replace('BIL/' + this.getNamespace() + '/' + sessionCode + '/', ''));
   }
 
   public pathToBillId(path: string): string
@@ -116,14 +116,22 @@ export class ConfigService {
   {
     var sessionCode = legislatorId.split("/")[3];
     var namespace = legislatorId.split("/")[1] + "/" + legislatorId.split("/")[2];
-    var year = this.sessionCodeToYear(sessionCode, namespace);
+    var year: string = String(this.sessionCodeToYear(sessionCode, namespace));
     var bioguideId = legislatorId.split("/")[4];
 
-    return "/" + year + "/legislator/" + bioguideId;
+    return this.routePath(namespace, year, "legislator/" + bioguideId);
   }
 
   public pathToLegislatorId(path: string): string
   {
     return "LEG/" + this.getNamespace() + "/" + this.getCurrentSessionCode() + "/" + path;
+  }
+
+  public routePath(namespace: string, year: string, path: string) {
+    if (namespace === "us/congress") {
+      return "/" + year + "/" + path;
+    } else {
+      return "/" + year + "/" + namespace.split("/")[1] + "/" + path;
+    }
   }
 }

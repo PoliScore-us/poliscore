@@ -57,7 +57,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	public static boolean REINTERPRET_LEGISLATORS = true;
 	
-	public static boolean REINTERPRET_PARTIES = true;
+	public static boolean REINTERPRET_PARTIES = false;
 	
 	@Inject
 	private BatchBillRequestGenerator billRequestGenerator;
@@ -110,20 +110,20 @@ public class DatabaseBuilder implements QuarkusApplication
 		val buildDatasets = data.getBuildDatasets();
 		
 		for (val dataset : buildDatasets) {
-//			data.syncS3LegislatorImages(dataset);
-//			data.syncS3BillText(dataset);
+			data.syncS3LegislatorImages(dataset);
+			data.syncS3BillText(dataset);
 			
 			s3.optimizeExists(BillInterpretation.class, dataset.getSession().getKey());
 			s3.optimizeExists(LegislatorInterpretation.class, dataset.getSession().getKey());
 			
-//			syncDdbWithS3(dataset);
+			syncDdbWithS3(dataset);
 		}
 		
-//		interpretBillPressArticles(buildDatasets);
-//		interpretBills(buildDatasets);
-//		pressBillInterpGenerator.recordLastPressQueries(); // We want to record that our press query is complete, but only after the bill has been updated and re-interpreted (otherwise we would need to query again if it fails halfway through)
+		interpretBillPressArticles(buildDatasets);
+		interpretBills(buildDatasets);
+		pressBillInterpGenerator.recordLastPressQueries(); // We want to record that our press query is complete, but only after the bill has been updated and re-interpreted (otherwise we would need to query again if it fails halfway through)
 		
-//		interpretLegislators(buildDatasets);
+		interpretLegislators(buildDatasets);
 		interpretPartyStats(buildDatasets);
 		
 		webappDataGenerator.process();

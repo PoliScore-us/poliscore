@@ -17,6 +17,7 @@ export interface Bill {
   confidence?: number;
   hot?: number;
   shortExplain?: string;
+  originatingChamber?: string;
   status: { description: string, progress: number, sourceStatus: string };
 }
 

@@ -112,7 +112,7 @@ public class Lambda {
 //    		if (_ascending == null && leg.getInterpretation().getRating() < 0)
 //    			ascending = Boolean.TRUE;
     		
-    		LegislatorBillLinker.linkInterpBills(leg);
+    		LegislatorBillLinker.linkInterpBills(leg, getSessions());
     		
     		var page = filterInteractions(leg, index, sortKey, pageSize, ascending, exclusiveStartKey);
     		
@@ -214,7 +214,7 @@ public class Lambda {
     	if (index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX) || index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX)) {
     		storageBucket = LegislatorIssueStat.getIndexPrimaryKey(session.getNamespace(), session.getCode(), TrackedIssue.valueOf(sortKey));
     		sortKey = null;
-    		val legs = ddb.query(LegislatorIssueStat.class, session.getKey(), pageSize, index, ascending, startKey, sortKey);
+    		val legs = ddb.query(LegislatorIssueStat.class, pageSize, index, ascending, startKey, sortKey, storageBucket);
     		return legs.stream().map(l -> (Persistable) l).toList();
     	}
     	
@@ -317,7 +317,7 @@ public class Lambda {
     	if (index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX) || index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX)) {
     		storageBucket = BillIssueStat.getIndexPrimaryKey(namespace, session.getCode(), TrackedIssue.valueOf(sortKey));
     		sortKey = null;
-    		val bii = ddb.query(BillIssueStat.class, session.getKey(), pageSize, index, ascending, startKey, sortKey);
+    		val bii = ddb.query(BillIssueStat.class, pageSize, index, ascending, startKey, sortKey, storageBucket);
     		return bii.stream().map(l -> (Persistable) l).toList();
     	} else {
     		bills = ddb.query(Bill.class, session.getKey(), pageSize, index, ascending, startKey, sortKey);

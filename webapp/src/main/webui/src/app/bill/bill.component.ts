@@ -133,119 +133,122 @@ export class BillComponent implements OnInit {
 
     if (namespace === "us/congress") {
       return 'https://www.congress.gov/bill/' + sessionCode + '-congress/' + this.getCongressGovBillType() + '/' + this.bill.number;
-    } else if (namespace === "us/alabama") {
+    } else if (namespace === "us/al") {
       return 'https://alisondb.legislature.state.al.us/Alison/Legislation/ViewLegislation.aspx?OID=' + this.bill.id;
-    } else if (namespace === "us/alaska") {
+    } else if (namespace === "us/ak") {
       return 'http://www.akleg.gov/basis/Bill/Detail/' + sessionCode + '/' + billSlug;
-    } else if (namespace === "us/arizona") {
+    } else if (namespace === "us/az") {
       return 'https://apps.azleg.gov/BillStatus/BillOverview/' + billSlug;
-    } else if (namespace === "us/arkansas") {
+    } else if (namespace === "us/ar") {
       return 'https://www.arkleg.state.ar.us/Bills/Detail?id=' + this.bill.id;
-    } else if (namespace === "us/california") {
+    } else if (namespace === "us/ca") {
       return 'https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=' + sessionCode + billSlug.toLowerCase();
-    } else if (namespace === "us/colorado") {
-      return 'https://leg.colorado.gov/bills/' + billSlug.toLowerCase();
-    } else if (namespace === "us/connecticut") {
+    } else if (namespace === "us/co") {
+      let yearCode = this.bill.introducedDate.split("-")[0].substring(2);
+      let chamberCode = this.bill.originatingChamber?.toLowerCase() == "lower" ? "H" : "S";
+      let coloradoSlug = chamberCode + this.bill.type + yearCode + "-" + this.bill.number;
+      return 'https://leg.colorado.gov/bills/' + coloradoSlug.toLowerCase();
+    } else if (namespace === "us/ct") {
       return 'https://www.cga.ct.gov/asp/cgabillstatus/cgabillstatus.asp?selBillType=Bill&bill_num=' + billSlug;
-    } else if (namespace === "us/delaware") {
+    } else if (namespace === "us/de") {
       return 'https://legis.delaware.gov/BillDetail?LegislationId=' + this.bill.id;
-    } else if (namespace === "us/florida") {
+    } else if (namespace === "us/fl") {
       return 'https://www.flsenate.gov/Session/Bill/2024/' + billSlug;
-    } else if (namespace === "us/georgia") {
+    } else if (namespace === "us/ga") {
       return 'https://www.legis.ga.gov/legislation/' + this.bill.id;
-    } else if (namespace === "us/hawaii") {
+    } else if (namespace === "us/hi") {
       const type = this.bill.type.match(/[A-Z]+/)?.[0];
       const number = this.bill.number;
       return 'https://www.capitol.hawaii.gov/measure_indiv.aspx?billtype=' + type + '&billnumber=' + number + '&year=' + sessionCode;
-    } else if (namespace === "us/idaho") {
+    } else if (namespace === "us/id") {
       return 'https://legislature.idaho.gov/sessioninfo/billbookmark/?yr=' + sessionCode + '&bn=' + billSlug;
-    } else if (namespace === "us/illinois") {
+    } else if (namespace === "us/il") {
       return 'https://ilga.gov/legislation/BillStatus.asp?DocNum=' + this.bill.number + '&GA=' + sessionCode;
-    } else if (namespace === "us/indiana") {
+    } else if (namespace === "us/in") {
       return 'https://iga.in.gov/legislative/' + sessionCode + '/bills/' + billSlug.toLowerCase();
-    } else if (namespace === "us/iowa") {
+    } else if (namespace === "us/ia") {
       return 'https://www.legis.iowa.gov/legislation/BillBook?ga=' + sessionCode + '&ba=' + billSlug.toUpperCase();
-    } else if (namespace === "us/kansas") {
+    } else if (namespace === "us/ks") {
       return 'http://kslegislature.org/li/b' + sessionCode + '/bills/' + billSlug.toLowerCase() + '/';
-    } else if (namespace === "us/kentucky") {
+    } else if (namespace === "us/ky") {
       return 'https://apps.legislature.ky.gov/record/' + sessionCode + '/' + billSlug.toLowerCase() + '.html';
-    } else if (namespace === "us/louisiana") {
+    } else if (namespace === "us/la") {
       return 'https://legis.la.gov/Legis/BillInfo.aspx?i=' + this.bill.id;
-    } else if (namespace === "us/maine") {
+    } else if (namespace === "us/me") {
       return 'https://legislature.maine.gov/LawMakerWeb/summary.asp?ID=' + this.bill.id;
-    } else if (namespace === "us/maryland") {
+    } else if (namespace === "us/md") {
       return 'https://mgaleg.maryland.gov/mgawebsite/Legislation/Details/' + billSlug.toUpperCase();
-    } else if (namespace === "us/massachusetts") {
+    } else if (namespace === "us/ma") {
       return 'https://malegislature.gov/Bills/' + sessionCode + '/' + billSlug.toUpperCase();
-    } else if (namespace === "us/michigan") {
+    } else if (namespace === "us/mi") {
       return 'https://legislature.mi.gov/documents/' + sessionCode + '-' + (Number(sessionCode) + 1) + '/billhtm/' + billSlug.toUpperCase() + '.htm';
-    } else if (namespace === "us/minnesota") {
+    } else if (namespace === "us/mn") {
       return 'https://www.revisor.mn.gov/bills/text.php?number=' + billSlug.toUpperCase();
-    } else if (namespace === "us/mississippi") {
+    } else if (namespace === "us/ms") {
       return 'http://billstatus.ls.state.ms.us/2024/pdf/history/' + billSlug.charAt(0).toUpperCase() + '/' + billSlug.toUpperCase() + '.xml';
-    } else if (namespace === "us/missouri") {
+    } else if (namespace === "us/mo") {
       return 'https://house.mo.gov/Bill.aspx?bill=' + billSlug.toUpperCase() + '&year=' + sessionCode + '&code=R';
-    } else if (namespace === "us/montana") {
+    } else if (namespace === "us/mt") {
       return 'https://leg.mt.gov/bills/' + sessionCode + '/billhtml/' + billSlug.toLowerCase() + '.htm';
-    } else if (namespace === "us/nebraska") {
+    } else if (namespace === "us/ne") {
       return 'https://nebraskalegislature.gov/bills/view_bill.php?DocumentID=' + this.bill.id;
-    } else if (namespace === "us/nevada") {
+    } else if (namespace === "us/nv") {
       return 'https://www.leg.state.nv.us/App/NELIS/REL/' + sessionCode + '/' + billSlug.toUpperCase();
-    } else if (namespace === "us/new_hampshire") {
+    } else if (namespace === "us/nh") {
       return 'https://www.gencourt.state.nh.us/bill_status/billinfo.aspx?id=' + this.bill.id;
-    } else if (namespace === "us/new_jersey") {
+    } else if (namespace === "us/nj") {
       return 'https://www.njleg.state.nj.us/bill-search/' + billSlug.toUpperCase();
-    } else if (namespace === "us/new_mexico") {
+    } else if (namespace === "us/nm") {
       return 'https://www.nmlegis.gov/Legislation/Legislation?Chamber=H&LegType=B&LegNo=' + this.bill.number + '&year=' + sessionCode;
-    } else if (namespace === "us/new_york") {
+    } else if (namespace === "us/ny") {
       return 'https://nyassembly.gov/leg/?default_fld=&bn=' + billSlug.toUpperCase();
-    } else if (namespace === "us/north_carolina") {
+    } else if (namespace === "us/nc") {
       return 'https://www.ncleg.gov/BillLookup/' + billSlug.toUpperCase();
-    } else if (namespace === "us/north_dakota") {
+    } else if (namespace === "us/nd") {
       return 'https://www.ndlegis.gov/assembly/' + sessionCode + '/bill/' + billSlug.toLowerCase();
-    } else if (namespace === "us/ohio") {
+    } else if (namespace === "us/oh") {
       return 'https://www.legislature.ohio.gov/legislation/legislation-summary?id=' + this.bill.id;
-    } else if (namespace === "us/oklahoma") {
+    } else if (namespace === "us/ok") {
       return 'http://www.oklegislature.gov/BillInfo.aspx?Bill=' + billSlug.toUpperCase();
-    } else if (namespace === "us/oregon") {
+    } else if (namespace === "us/or") {
       return 'https://olis.oregonlegislature.gov/liz/' + sessionCode + '/Measures/Overview/' + billSlug.toUpperCase();
-    } else if (namespace === "us/pennsylvania") {
+    } else if (namespace === "us/pa") {
       return 'https://www.legis.state.pa.us/cfdocs/billinfo/billinfo.cfm?syear=' + sessionCode + '&body=' + billSlug.charAt(0) + '&type=B&bn=' + this.bill.number;
-    } else if (namespace === "us/rhode_island") {
+    } else if (namespace === "us/ri") {
       return 'https://status.rilegislature.gov/bills/' + sessionCode + '/' + billSlug.toUpperCase();
-    } else if (namespace === "us/south_carolina") {
+    } else if (namespace === "us/sc") {
       return 'https://www.scstatehouse.gov/billsearch.php?billnumbers=' + billSlug.toUpperCase();
-    } else if (namespace === "us/south_dakota") {
+    } else if (namespace === "us/sd") {
       return 'https://sdlegislature.gov/Session/Bills/' + billSlug.toUpperCase();
-    } else if (namespace === "us/tennessee") {
+    } else if (namespace === "us/tn") {
       return 'https://wapp.capitol.tn.gov/apps/BillInfo/default.aspx?BillNumber=' + billSlug.toUpperCase();
-    } else if (namespace === "us/texas") {
+    } else if (namespace === "us/tx") {
       return 'https://capitol.texas.gov/BillLookup/History.aspx?LegSess=' + sessionCode + '&Bill=' + billSlug.toUpperCase();
-    } else if (namespace === "us/utah") {
+    } else if (namespace === "us/ut") {
       return 'https://le.utah.gov/~' + sessionCode + '/bills/static/' + billSlug.toUpperCase() + '.html';
-    } else if (namespace === "us/vermont") {
+    } else if (namespace === "us/vt") {
       return 'https://legislature.vermont.gov/bill/status/' + billSlug.toUpperCase();
-    } else if (namespace === "us/virginia") {
+    } else if (namespace === "us/va") {
       return 'https://lis.virginia.gov/cgi-bin/legp604.exe?' + sessionCode + '+' + billSlug.toUpperCase();
-    } else if (namespace === "us/washington") {
+    } else if (namespace === "us/wa") {
       return 'https://app.leg.wa.gov/billsummary?BillNumber=' + this.bill.number + '&Year=' + sessionCode;
-    } else if (namespace === "us/washington_dc") {
+    } else if (namespace === "us/dc") {
       return 'https://lims.dccouncil.gov/Legislation/' + billSlug.toUpperCase();
-    } else if (namespace === "us/west_virginia") {
+    } else if (namespace === "us/wv") {
       return 'https://www.wvlegislature.gov/Bill_Status/bills_history.cfm?INPUT=' + billSlug.toUpperCase();
-    } else if (namespace === "us/wisconsin") {
+    } else if (namespace === "us/wi") {
       return 'https://docs.legis.wisconsin.gov/' + sessionCode + '/proposals/' + billSlug.toLowerCase();
-    } else if (namespace === "us/wyoming") {
+    } else if (namespace === "us/wy") {
       return 'https://www.wyoleg.gov/Legislation/' + sessionCode + '/' + billSlug.toUpperCase();
-    } else if (namespace === "us/american_samoa") {
-      // URL structure unknown – may require local government portal
-    } else if (namespace === "us/guam") {
+    } else if (namespace === "us/as") {
+      // American Samoa – unknown URL
+    } else if (namespace === "us/gu") {
       return 'https://www.guamlegislature.com/bills/';
-    } else if (namespace === "us/northern_mariana_islands") {
-      // Unknown – check local legislative site
-    } else if (namespace === "us/puerto_rico") {
+    } else if (namespace === "us/mp") {
+      // Northern Mariana Islands – unknown
+    } else if (namespace === "us/pr") {
       return 'https://sutra.oslpr.org/osl/esutracav/Buscar.aspx?RC=' + billSlug.toUpperCase();
-    } else if (namespace === "us/virgin_islands") {
+    } else if (namespace === "us/vi") {
       return 'https://www.legvi.org/bill-tracking/';
     }
 

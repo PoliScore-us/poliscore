@@ -119,8 +119,6 @@ export class DisclaimerDialogComponent {
         <p>The admins at PoliScore.us can be contacted via the email:</p>
 
         <p><a href="mailto:contact@poliscore.us">contact&#64;poliscore.us</a></p>
-
-        <p>Don't be afraid to contact us, and if we take a while to respond (or don't respond) please don't be afraid to send us another email to make sure we received it.</p>
     </div>
     <div mat-dialog-actions align="center">
       <button mat-button (click)="onClose()">Close</button>

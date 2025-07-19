@@ -94,9 +94,9 @@ export class HeaderComponent {
 
     // TODO : Way too hardcoded over here but a year for one namespace might not be relevant for a year for a different namespace
     if (ns === 'us/congress') {
-      newUrl = "/2026";
+      newUrl = "/2026/legislators";
     } else {
-      newUrl = "/2025/" + ns.split("/")[1];
+      newUrl = "/2025/" + ns.split("/")[1] + "/legislators";
     }
 
     // Navigate to the new URL

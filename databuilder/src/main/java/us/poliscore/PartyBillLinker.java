@@ -1,5 +1,6 @@
 package us.poliscore;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,11 +13,12 @@ import org.apache.commons.lang3.StringUtils;
 
 import io.quarkus.logging.Log;
 import lombok.val;
+import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.session.SessionInterpretation;
 import us.poliscore.model.session.SessionInterpretation.PartyInterpretation;
-import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 public class PartyBillLinker {
@@ -83,7 +85,7 @@ public class PartyBillLinker {
 	            
 	            if (matchedBill != null) {
 	                // Build the actual URL
-	                String linkUrl = linkForBill(matchedBill.getId());
+	                String linkUrl = linkForBill(matchedBill.getId(), dataset.getSession());
 	                // We want to display the official Bill name (or your choice)
 	                String linkText = normalizeBillName(matchedBill.getName());
 
@@ -127,12 +129,21 @@ public class PartyBillLinker {
 	    return bill.getType() + "-" + bill.getNumber();
 	}
 
-	public static String linkForBill(String id)
+	public static String linkForBill(String id, LegislativeSession session)
 	{
-		val billSession = Integer.valueOf(id.split("/")[3]);
-		val deploymentYear = (billSession - 1) * 2 + 1789 + 1;
+		int year = LocalDate.now().getYear();
 		
-		return "/" + deploymentYear + "/bill/" + id.substring(StringUtils.ordinalIndexOf(id, "/", 4) + 1);
+		val namespace = LegislativeNamespace.of(id.split("/")[1] + "/" + id.split("/")[2]);
+		if (namespace.equals(LegislativeNamespace.US_CONGRESS)) {
+			val sessionCode = Integer.valueOf(id.split("/")[3]);
+			year = (sessionCode - 1) * 2 + 1789 + 1;
+			
+			return "/" + year + "/bill/" + id.substring(StringUtils.ordinalIndexOf(id, "/", 4) + 1);
+		} else {
+			year = session.getEndDate().getYear();
+			
+			return "/" + year + "/" + id.split("/")[2] + "/bill/" + id.substring(StringUtils.ordinalIndexOf(id, "/", 4) + 1);
+		}
 	}
 
 }

@@ -52,6 +52,7 @@ DEPLOY_BACKEND() {
 DEPLOY_VIEW() {
   if [ "${1:-}" != "backend" ]; then
     source ./configure-webapp-session.sh
+    DEPLOYMENT_STATE="${DEPLOYMENT_NAMESPACE#us/}"
 
     cd webapp/src/main/webui
 
@@ -63,10 +64,13 @@ DEPLOY_VIEW() {
       sed -i '' "s|https://y5i3jhm7k5vy67elvzly4b3b240kjwlp.lambda-url.us-east-1.on.aws/|$LAMBDA_DEPLOYMENT_URL|g" src/app/app.config.ts
     fi
 
-    ng build --base-href /$DEPLOYMENT_YEAR/
+	if [ "$DEPLOYMENT_NAMESPACE" == "us/congress" ]; then
+      ng build --base-href /$DEPLOYMENT_YEAR/
+    else
+      ng build --base-href /$DEPLOYMENT_YEAR/$DEPLOYMENT_STATE/
+    fi
+    
     cd ../../../../
-
-    DEPLOYMENT_STATE="${DEPLOYMENT_NAMESPACE#us/}"
 
     aws s3 rm s3://$BUCKET_NAME/$DEPLOYMENT_YEAR/$DEPLOYMENT_STATE --recursive || true
     aws s3 cp webapp/src/main/webui/dist/poliscore/browser s3://$BUCKET_NAME/$DEPLOYMENT_YEAR/$DEPLOYMENT_STATE --recursive

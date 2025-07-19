@@ -113,12 +113,16 @@ public class WebappDataGenerator implements QuarkusApplication
 			String prefix = "/" + lastYearOfSession;
 			String state = dataset.getSession().getNamespace().toAbbreviation().toLowerCase().replace("us", "congress");
 			
+			if (!dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+				prefix = prefix + "/" + state;
+			final String finalPrefix = prefix;
+			
 			// Party Stats
 			routes.add(url + prefix + "/party/democrat");
 			routes.add(url + prefix + "/party/republican");
 			
 			if (dataset.hasIndependentPartyMembers())
-				routes.add(url + prefix + "/" + state + "/independent");
+				routes.add(url + prefix + "/party/independent");
 			
 			// All states
 //			Arrays.asList(states).stream().forEach(s -> routes.add(url + prefix + "/legislators/state/" + s.toLowerCase()));
@@ -128,7 +132,7 @@ public class WebappDataGenerator implements QuarkusApplication
 			dataset.query(Legislator.class).stream()
 				.filter(l -> l.isMemberOfSession(dataset.getSession())) //  && s3.exists(LegislatorInterpretation.generateId(l.getId(), congress.getNumber()), LegislatorInterpretation.class)
 				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
-				.forEach(l -> routes.add(url + prefix + "/legislator/" + l.getCode()));
+				.forEach(l -> routes.add(url + finalPrefix + "/legislator/" + l.getCode()));
 			
 			if (dataset.getSession().getCode().equals("118")) {
 				// All bills
@@ -136,14 +140,14 @@ public class WebappDataGenerator implements QuarkusApplication
 				dataset.query(Bill.class).stream()
 					.filter(b -> s3.exists(BillInterpretation.generateId(b.getId(), null).replace("-polisc", ""), BillInterpretation.class))
 					.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
-					.forEach(b -> routes.add(url + prefix + "/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
+					.forEach(b -> routes.add(url + finalPrefix + "/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
 			} else {
 				// All bills
 				routes.add(url + prefix + "/bills");
 				dataset.query(Bill.class).stream()
 					.filter(b -> s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
 					.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
-					.forEach(b -> routes.add(url + prefix + "/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
+					.forEach(b -> routes.add(url + finalPrefix + "/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
 			}
 		}
 		
@@ -156,8 +160,6 @@ public class WebappDataGenerator implements QuarkusApplication
 	    Map<String, Set<String>> canonToNick = loadNicknameMap(); // canonical → nicknames
 
 	    val uniqueSet = new HashMap<String, Legislator>();
-	    List<List<String>> result = new ArrayList<List<String>>();
-
 	    for (var dataset : datasets) {
 		    dataset.query(Legislator.class).stream()
 //		        .filter(l -> PoliscoreUtil.SUPPORTED_CONGRESSES.stream().anyMatch(s -> l.isMemberOfSession(s)))
@@ -166,20 +168,21 @@ public class WebappDataGenerator implements QuarkusApplication
 		                uniqueSet.put(l.getCode(), l);
 		            }
 		        });
-	
-		    result.addAll(uniqueSet.values().stream().map(l -> {
-		        String fullName = l.getName().getOfficial_full();
-		        String canonFirst = fullName.split("\\s+")[0].toLowerCase();
-		        String aliasTokens = fullName.toLowerCase();
-	
-		        Set<String> nicknames = canonToNick.getOrDefault(canonFirst, Set.of());
-		        for (String nick : nicknames) {
-		            aliasTokens += " " + nick;
-		        }
-	
-		        return Arrays.asList(l.getId(), fullName, aliasTokens);
-		    }).sorted(Comparator.comparing(a -> a.get(1))).toList());
 	    }
+	    
+	    List<List<String>> result = new ArrayList<List<String>>();
+	    result.addAll(uniqueSet.values().stream().map(l -> {
+	        String fullName = l.getName().getOfficial_full();
+	        String canonFirst = fullName.split("\\s+")[0].toLowerCase();
+	        String aliasTokens = fullName.toLowerCase();
+
+	        Set<String> nicknames = canonToNick.getOrDefault(canonFirst, Set.of());
+	        for (String nick : nicknames) {
+	            aliasTokens += " " + nick;
+	        }
+
+	        return Arrays.asList(l.getId(), fullName, aliasTokens);
+	    }).sorted(Comparator.comparing(a -> a.get(1))).toList());
 
 	    FileUtils.write(out, PoliscoreUtil.getObjectMapper().writeValueAsString(result), "UTF-8");
 	}

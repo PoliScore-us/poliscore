@@ -1,6 +1,8 @@
 #!/bin/bash
 # Used to set the deployment namespace and year.
 
+set -e
+set -x
 
 # Validate or assign namespace
 if [ -z "$DEPLOYMENT_NAMESPACE" ]; then
@@ -22,6 +24,8 @@ if [ -z "$DEPLOYMENT_YEAR" ]; then
   fi
 fi
 
+DEPLOYMENT_STATE="${DEPLOYMENT_NAMESPACE#us/}"
+
 cd databuilder
 mvn compile exec:java \
   -Dexec.mainClass=us.poliscore.entrypoint.WebappRoutesGenerator \
@@ -39,4 +43,9 @@ else
   sed -i "s|export const year: number = .*;|export const year: number = $DEPLOYMENT_YEAR;|g" ./webapp/src/main/webui/src/app/app.config.ts
 fi
 sed -i '' "s|export const namespace: string = \".*\";|export const namespace: string = \"$DEPLOYMENT_NAMESPACE\";|g" ./webapp/src/main/webui/src/app/app.config.ts
-sed -i '' "s|\"baseHref\": \"/[0-9]\{4\}/\"|\"baseHref\": \"/$DEPLOYMENT_YEAR/\"|g" ./webapp/src/main/webui/angular.json
+
+if [[ "$DEPLOYMENT_NAMESPACE" == "us/congress" ]]; then
+  sed -i '' "s|\"baseHref\": \"/[0-9]\{4\}/.*\"|\"baseHref\": \"/$DEPLOYMENT_YEAR/\"|g" ./webapp/src/main/webui/angular.json
+else
+  sed -i '' "s|\"baseHref\": \"/[0-9]\{4\}/.*\"|\"baseHref\": \"/$DEPLOYMENT_YEAR/$DEPLOYMENT_STATE/\"|g" ./webapp/src/main/webui/angular.json
+fi

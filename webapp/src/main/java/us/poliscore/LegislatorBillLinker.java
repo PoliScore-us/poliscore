@@ -14,12 +14,12 @@ import org.apache.commons.lang3.StringUtils;
 import io.quarkus.logging.Log;
 import lombok.val;
 import us.poliscore.model.LegislativeNamespace;
-import us.poliscore.model.bill.Bill;
+import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorBillInteraction;
 
 public class LegislatorBillLinker {
-	public static void linkInterpBills(Legislator leg) {
+	public static void linkInterpBills(Legislator leg, List<LegislativeSession> sessions) {
 	    try {
 	        // Grab the text to process
 	        String exp = leg.getInterpretation().getLongExplain();
@@ -46,7 +46,7 @@ public class LegislatorBillLinker {
 	            String normalizedName = normalizeBillName(rawBillName);
 
 	            // 3. Build the link URL
-	            String url = linkForBill(interact.getBillId());
+	            String url = linkForBill(interact.getBillId(), sessions);
 
 	            // 4. Construct a readable form of the bill ID (e.g. "H.R.-1234" or "S.-201")
 	            String typeName = interact.getBillId().split("/")[4]; // e.g. "H.R."
@@ -101,7 +101,7 @@ public class LegislatorBillLinker {
 	    }
 	}
 	
-	public static String linkForBill(String id)
+	public static String linkForBill(String id, List<LegislativeSession> sessions)
 	{
 		int year = LocalDate.now().getYear();
 		
@@ -109,11 +109,14 @@ public class LegislatorBillLinker {
 		if (namespace.equals(LegislativeNamespace.US_CONGRESS)) {
 			val sessionCode = Integer.valueOf(id.split("/")[3]);
 			year = (sessionCode - 1) * 2 + 1789 + 1;
+			
+			return "/" + year + "/bill/" + id.substring(StringUtils.ordinalIndexOf(id, "/", 4) + 1);
 		} else {
-			// TODO : Detecting deployment year for state level bills
+			val session = sessions.stream().filter(s -> s.getCode().equals(id.split("/")[3])).findAny().get();
+			year = session.getEndDate().getYear();
+			
+			return "/" + year + "/" + id.split("/")[2] + "/bill/" + id.substring(StringUtils.ordinalIndexOf(id, "/", 4) + 1);
 		}
-		
-		return "/" + year + "/bill/" + id.substring(StringUtils.ordinalIndexOf(id, "/", 4) + 1);
 	}
 
 	/**
