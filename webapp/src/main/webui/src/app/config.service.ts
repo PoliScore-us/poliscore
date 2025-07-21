@@ -66,7 +66,10 @@ export class ConfigService {
     if (namespace === "us/congress")
       year = this.congressToYear(parseInt(sessionCode));
     else
-      year = this.getYear(); // TODO : Converting a state session code to a year?
+      year = this.sessions.find(session =>
+            session.namespace === namespace &&
+            sessionCode === session.code
+        )!.endDate[0];
 
     return year;
   }
