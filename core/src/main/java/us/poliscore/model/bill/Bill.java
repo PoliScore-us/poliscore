@@ -120,14 +120,6 @@ public class Bill extends SessionPersistable {
 		return name;
 	}
 	
-	public String getBillCode() {
-		if (getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
-			return getType().toUpperCase() + " " + getNumber();
-		} else {
-			return originatingChamber == LegislativeChamber.UPPER ? "S" : "H" + getType().toUpperCase() + " " + getNumber();
-		}
-	}
-	
 	public boolean isIntroducedInSession(LegislativeSession session) {
 		return session.getCode().equals(getSessionCode()) && this.getNamespace().equals(session.getNamespace());
 	}

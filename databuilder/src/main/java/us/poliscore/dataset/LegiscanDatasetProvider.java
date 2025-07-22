@@ -133,18 +133,33 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		return null;
 	}
 	
+	protected String getChamberCode(LegislativeChamber chamber) {
+		if (chamber.equals(LegislativeChamber.UPPER)) {
+			return "S";
+		} else if (chamber.equals(LegislativeChamber.LOWER)) {
+			return "H";
+		} else if (chamber.equals(LegislativeChamber.JOINT)) {
+			return "J";
+		} else {
+			throw new UnsupportedOperationException("Unsupported chamber: " + chamber.name());
+		}
+	}
+	
 	protected void importBill(LegiscanBillView view, PoliscoreDataset dataset) {
 		val bill = new Bill();
 		
 		bill.setNumber(Integer.parseInt(view.getBillNumber().replaceAll("[^\\d]", "")));
+		
+		bill.setOriginatingChamber(LegislativeChamber.fromLegiscanChamber(view.getHistory().get(0).getChamber()));
+		
 		if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
     		bill.setType(toCongressionalBillType(view).name());
     	else
-    		bill.setType(view.getBillType().getCode());
+    		bill.setType(getChamberCode(bill.getOriginatingChamber()) + view.getBillType().getCode());
+		
 		bill.setId(Bill.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), bill.getType(), bill.getNumber()));
 		
 		bill.setName(view.getTitle());
-    	bill.setOriginatingChamber(LegislativeChamber.fromLegiscanChamber(view.getHistory().get(0).getChamber()));
     	bill.setStatus(buildStatus(view, dataset.getSession()));
     	bill.setIntroducedDate(view.getHistory().getFirst().getDate());
     	bill.setSponsor(convertSponsor(view.getSponsors().getFirst(), dataset));

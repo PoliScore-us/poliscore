@@ -134,11 +134,11 @@
 								<li><a href="https://www.technologyreview.com/2023/08/07/1077324/ai-language-models-are-rife-with-political-biases/">https://www.technologyreview.com/2023/08/07/1077324/ai-language-models-are-rife-with-political-biases/</a></li>
 							</ol>
 
-                            <p>In fact, I would claim that PoliScore is one of the leading research projects into the study of political bias in AI: all you have to do is look at our <a href="/2026/congress">"Party Stats"</a> page and you will see that both parties are not rated exactly 50/50 by AI, it has preferences in the policy decisions being made by the political parties.</p>
+                            <p>In fact, I would claim that PoliScore is one of the leading research projects into the study of political bias in AI: all you have to do is look at our <a href="/2026/party">"Party Stats"</a> page and you will see that both parties are not rated exactly 50/50 by AI, it has preferences in the policy decisions being made by the political parties.</p>
 
                             <p>This is where we simply leave the question as an exercise to the reader. Do you believe that AI, when asked to grade bills in a non-partisan manner, is correct in determining what policy produces the largest "Overall Benefit To Society"? Or do you think bias has somehow made its way into AI, despite Open AI's best efforts? What does it actually mean to be non-partisan?</p>
 
-							<!-- <p>Most AI models these days have a slight leaning towards left-ist policy, and you can see this manifested in the ratings on PoliScore: Democrats do tend to score a little better than Republicans on average (<a href="/congress">see party stats for more information</a>)</p> -->
+							<!-- <p>Most AI models these days have a slight leaning towards left-ist policy, and you can see this manifested in the ratings on PoliScore: Democrats do tend to score a little better than Republicans on average (<a href="/party">see party stats for more information</a>)</p> -->
 
 							<!--<p>These AI models are somehow taking sides on issues like abortion, environmental policy, immigration, etc; and it's happening deep within their corpus. As it turns out, the opinions AI is taking appear to be aligned with the majority of public and scientific opinion.</p>
 
@@ -234,7 +234,7 @@
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="how-it-works">How Does It Work?</a></h3>
-							<p>It all starts with bill interpretations. For every bill in the congressional session, AI was fed the entire bill text, and then asked to predict the impact the bill would have to society, if it were passed, written as a number from -100 (harmful) to 100 (beneficial). This provides the foundation for our "performance metrics", and we then expand the concept by applying it to a list of policy areas (i.e. healthcare, environment, housing, etc.). This gives a simplified breakdown of how AI is predicting the impact to society, broken down by sector, and is incredibly useful for bills with more mixed or complex impacts.</p>
+							<p>It all starts with bill interpretations. For every bill in the legislative session, AI was fed the entire bill text, and then asked to predict the impact the bill would have to society, if it were passed, written as a number from -100 (harmful) to 100 (beneficial). This provides the foundation for our "performance metrics", and we then expand the concept by applying it to a list of policy areas (i.e. healthcare, environment, housing, etc.). This gives a simplified breakdown of how AI is predicting the impact to society, broken down by sector, and is incredibly useful for bills with more mixed or complex impacts.</p>
 							<p>Next comes legislator interpretations. Legislator metrics are produced from a weighted average of the last ~1000 bill interactions. These metrics are then fed to AI, along with some bill summaries, and AI is then asked to produce a critique of their recent legislative history. At a conceptual level, these legislator metrics represent the legislator's predicted impact to society, as estimated by AI, if all their legislation were able to be enacted as is.</p>
 						</div>
 					</section>
@@ -313,11 +313,11 @@
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="bill-scoring">Specifics on Bill Scoring</a></h3>
 
-							<p>The current data loaded on this website is all bills (excluding SCONRES, HCONRES, HRES, SRES) of the selected US congressional session. Bill status data and legislator data was fetched using the <a href="https://github.com/unitedstates/congress">open source Github USC</a> project.</p>
+							<p>The current data loaded on this website is all bills (excluding SCONRES, HCONRES, HRES, SRES) of the selected US legislative session. Bill status data and legislator data was fetched using the <a href="https://github.com/unitedstates/congress">open source Github USC</a> project. State-level data was fetched (primarily) using our <a href="https://github.com/poliscore-us/legiscan">open-source Legiscan Java integration</a>.</p>
 
 							<p style="text-indent: 0;">Bill text was split into sections and interpreted using AI with the following prompt:</p>
 
-							<div class="prompt">You will be given the text of a United States bill currently in congress. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Stats:') in your response. Do not include the section instructions in your response.
+							<div class="prompt">You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Stats:') in your response. Do not include the section instructions in your response.
 								<br/><br/>
 
 								Stats:<br/>

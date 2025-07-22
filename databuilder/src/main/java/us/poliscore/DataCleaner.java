@@ -7,7 +7,8 @@ import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.val;
-import us.poliscore.model.legislator.Legislator;
+import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.model.bill.Bill;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
@@ -37,7 +38,8 @@ public class DataCleaner implements QuarkusApplication {
 	{
 		data.importAllDatasets();
 		
-		wipeAllLegislators();
+		val co = data.getDataset(LegislativeNamespace.US_COLORADO, 2025);
+		wipeAllBills(co);
 		
 		System.out.println("Program complete.");
 	}
@@ -46,6 +48,12 @@ public class DataCleaner implements QuarkusApplication {
 //		for (val leg : ddb.query(Legislator.class)) {
 //			ddb.delete(leg);
 //		}
+	}
+	
+	public void wipeAllBills(PoliscoreDataset dataset) {
+		for (val bill : ddb.query(Bill.class, dataset.getSession().getKey())) {
+			ddb.delete(bill);
+		}
 	}
 	
 	@Override

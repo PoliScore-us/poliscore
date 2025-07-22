@@ -123,7 +123,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 			if (CHECK_S3_EXISTS && billInterpreter.isInterpreted(b.getId()) && includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b)) {
 				val interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).orElseThrow();
 				
-				var s3PressInterps = s3.query(PressInterpretation.class, dataset.getSession().getKey(), interp.getBillId().substring(StringUtils.ordinalIndexOf(interp.getBillId(), "/", 4)+1)).stream().filter(i -> !InterpretationOrigin.POLISCORE.equals(i.getOrigin()) && !i.isNoInterp()).collect(Collectors.toList());
+				var s3PressInterps = billService.getPressInterps(interp.getBillId());
 				
 				if (!s3PressInterps.stream().anyMatch(s3pi -> !interp.getPressInterps().contains(s3pi))) continue;
 			}

@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import io.quarkus.logging.Log;
 import jakarta.annotation.Priority;
@@ -81,13 +82,18 @@ public class BillService {
 		}
 	}
 	
-	public List<PressInterpretation> getAllPressInterps(String billId)
+	public List<PressInterpretation> getPressInterps(String billId) {
+		return getPressInterps(billId, true);
+	}
+	
+	public List<PressInterpretation> getPressInterps(String billId, boolean excludeNoInterps)
 	{
-		var pressInterps = s3.query(PressInterpretation.class, billId.replace(Bill.ID_CLASS_PREFIX + "/", ""));
+		String sessionKey = billId.substring(StringUtils.ordinalIndexOf(billId, "/", 1)+1, StringUtils.ordinalIndexOf(billId, "/", 4));
+		String objectKey = billId.substring(StringUtils.ordinalIndexOf(billId, "/", 4)+1);
 		
-		pressInterps = pressInterps.stream().filter(i -> i.getBillId().equals(billId) && !InterpretationOrigin.POLISCORE.equals(i.getOrigin())).collect(Collectors.toList());
+		var s3PressInterps = s3.query(PressInterpretation.class, sessionKey, objectKey).stream().filter(i -> !InterpretationOrigin.POLISCORE.equals(i.getOrigin()) && (!excludeNoInterps || !i.isNoInterp())).collect(Collectors.toList());
 		
-		return pressInterps;
+		return s3PressInterps;
 	}
     
     protected String generateBillName(String url)

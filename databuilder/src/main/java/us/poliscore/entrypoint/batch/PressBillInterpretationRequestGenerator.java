@@ -363,7 +363,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	
 	public void deleteExisting(Bill b)
 	{
-		var pressInterps = billService.getAllPressInterps(b.getId());
+		var pressInterps = billService.getPressInterps(b.getId(), false);
 		
 		for (val interp : pressInterps)
 		{
@@ -399,7 +399,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		if (interp != null && LocalDate.now().isBefore(b.getIntroducedDate().plus(19, ChronoUnit.DAYS)) && interp.getLastPressQuery().isAfter(LocalDate.now().minus(10, ChronoUnit.DAYS)) && !Arrays.asList(specificFetch).contains(b.getId())) return;
 		if (interp == null) interp = new BillInterpretation();
 		
-		final String billCode = b.getBillCode();
+		final String billCode = b.getCode().replace("/", " ");
 		
 		String query;
 		if (b.getName() == null || StringUtils.isEmpty(b.getName()) || b.getName().toLowerCase().replaceAll("[\\s\\.]+", "").equals(billCode.toLowerCase().replaceAll("[\\s\\.]+", "")))

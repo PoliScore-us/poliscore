@@ -44,7 +44,7 @@ abstract public class SessionPersistable implements Persistable {
 	@JsonIgnore
 	@DynamoDbIgnore
 	public String getCode() {
-		return Arrays.asList(this.id.split("/")).getLast();
+		return this.id.substring(StringUtils.ordinalIndexOf(this.id, "/", 4) + 1);
 	}
 	
 	@JsonIgnore

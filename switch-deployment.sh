@@ -59,5 +59,7 @@ update_distribution() {
 update_distribution "$DISTRIBUTION_1" "poliscore.us"
 update_distribution "$DISTRIBUTION_2" "www.poliscore.us"
 
+./set-deployment-target.sh
+
 echo "CloudFront distributions updated successfully."
 
