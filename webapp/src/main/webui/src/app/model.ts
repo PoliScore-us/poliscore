@@ -11,6 +11,7 @@ export interface Bill {
   introducedDate: string;
   lastActionDate: string;
   id?: string;
+  officialUrl?: string;
   billId?: string;
   interpretation: BillInterpretation;
   rating?: number;

@@ -71,6 +71,9 @@ public class Bill extends SessionPersistable {
 	
 //	protected String textUrl;
 	
+	// Url to the official bill (i.e. congress or the state website)
+	protected String officialUrl;
+	
 	protected BillSponsor sponsor;
 	
 	protected List<BillSponsor> cosponsors = new ArrayList<BillSponsor>();

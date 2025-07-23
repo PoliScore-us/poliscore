@@ -168,6 +168,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
     		bill.setCosponsors(view.getSponsors().subList(1, view.getSponsors().size()-1).stream().map(s -> convertSponsor(s, dataset)).collect(Collectors.toList()));
     	bill.setLastActionDate(view.getHistory().getLast().getDate());
     	bill.setLegiscanId(view.getBillId());
+    	bill.setOfficialUrl(view.getStateLink());
     	
     	
     	

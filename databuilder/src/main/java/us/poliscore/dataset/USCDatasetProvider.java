@@ -438,6 +438,7 @@ public class USCDatasetProvider implements DatasetProvider {
     	bill.setSponsor(view.getSponsor() == null ? null : view.getSponsor().convert(dataset));
     	bill.setCosponsors(view.getCosponsors().stream().map(s -> s.convert(dataset)).collect(Collectors.toList()));
     	bill.setLastActionDate(view.getLastActionDate());
+    	bill.setOfficialUrl("https://www.congress.gov/bill/" + dataset.getSession().getCode() + "-congress/" + getCongressGovBillType(bill) + "/" + bill.getNumber());
     	
     	if (view.getSponsor() != null && !StringUtils.isBlank(view.getSponsor().getBioguide_id()))
     	{
@@ -476,6 +477,20 @@ public class USCDatasetProvider implements DatasetProvider {
     	
     	dataset.put(bill);
 	}
+	
+	protected String getCongressGovBillType(Bill bill) {
+	    if (bill.getType().equals("SJRES")) {
+	      return "senate-joint-resolution";
+	    } else if (bill.getType().equals("HR")) {
+	      return "house-bill";
+	    } else if (bill.getType().equals("HJRES")) {
+	        return "house-joint-resolution";
+	    } else if (bill.getType().equals("S")) {
+	        return "senate-bill";
+	    } else {
+	      return "";
+	    }
+	  }
 
 	@Override
 	public void syncS3BillText(PoliscoreDataset dataset) {
