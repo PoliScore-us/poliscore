@@ -22,6 +22,7 @@ import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.images.StateLegislatorImageFetcher;
 import us.poliscore.legiscan.service.CachedLegiscanService;
+import us.poliscore.legiscan.view.LegiscanBillType;
 import us.poliscore.legiscan.view.LegiscanBillView;
 import us.poliscore.legiscan.view.LegiscanChamber;
 import us.poliscore.legiscan.view.LegiscanMimeType;
@@ -280,11 +281,11 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	        status.setDescription("Passed in " + chamber.getName(ns) + ", Sent to Second Chamber");
 	        status.setProgress(0.4f);
 	    } else if (stat.equals(LegiscanStatus.ENROLLED)) {
-	        status.setDescription("Passed Both Chambers, Sent to " + executor);
+	        status.setDescription("Passed Both Chambers, " + (sessionOver ? "Killed by " : "Sent to ") + executor);
 	        status.setProgress(0.7f);
 	    } else if (stat.equals(LegiscanStatus.PASSED)) {
-	        status.setDescription("Bill Passed Both Chambers, " + (sessionOver ? "Killed by " : "Sent to ") + executor);
-	        status.setProgress(0.8f);
+	        status.setDescription(view.getBillType().equals(LegiscanBillType.BILL) ? "Law" : "Passed");
+	        status.setProgress(1.0f);
 	    } else if (stat.equals(LegiscanStatus.VETOED)) {
 	        status.setDescription("Vetoed by " + executor);
 	        status.setProgress(0.9f);
@@ -292,7 +293,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	        status.setDescription("Veto Overridden");
 	        status.setProgress(1.0f);
 	    } else if (stat.equals(LegiscanStatus.CHAPTERED)) {
-	        status.setDescription("Law");
+	        status.setDescription(view.getBillType().equals(LegiscanBillType.BILL) ? "Law" : "Chaptered");
 	        status.setProgress(1.0f);
 	    } else if (stat.equals(LegiscanStatus.FAILED)) {
 	        status.setDescription("Bill Failed");

@@ -145,8 +145,7 @@ export class BillComponent implements OnInit {
       return 'https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=' + sessionCode + billSlug.toLowerCase();
     } else if (namespace === "us/co") {
       let yearCode = this.bill.introducedDate.split("-")[0].substring(2);
-      let chamberCode = this.bill.originatingChamber?.toLowerCase() == "lower" ? "H" : "S";
-      let coloradoSlug = chamberCode + this.bill.type + yearCode + "-" + this.bill.number;
+      let coloradoSlug = this.bill.type + yearCode + "-" + this.bill.number;
       return 'https://leg.colorado.gov/bills/' + coloradoSlug.toLowerCase();
     } else if (namespace === "us/ct") {
       return 'https://www.cga.ct.gov/asp/cgabillstatus/cgabillstatus.asp?selBillType=Bill&bill_num=' + billSlug;

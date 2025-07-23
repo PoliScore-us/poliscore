@@ -124,3 +124,4 @@ else
   done
 fi
 
+echo "You may now test at: d1q121pqch444h.cloudfront.net"
