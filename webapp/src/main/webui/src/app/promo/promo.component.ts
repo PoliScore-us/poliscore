@@ -29,6 +29,7 @@ export class PromoComponent {
       if (isPlatformBrowser(this.platformId)) {
         setTimeout(() => {
           document.querySelector('#header .content')?.classList.add('visible');
+          document.querySelectorAll('#header button')?.forEach(el => el.classList.add('visible'));
         }, 100);
       }
     }

@@ -741,7 +741,7 @@ input, select, textarea {
 		-webkit-transform: translateY(0);
 		-ms-transform: translateY(0);
 		transform: translateY(0);
-		opacity: 1;
+		opacity: 0;
 	}
 
 		#header button {
@@ -753,6 +753,10 @@ input, select, textarea {
 			-webkit-transition-delay: 0.75s;
 			-ms-transition-delay: 0.75s;
 			transition-delay: 0.75s;
+			opacity: 0;
+		}
+
+		#header button.visible {
 			opacity: 1;
 		}
 	
