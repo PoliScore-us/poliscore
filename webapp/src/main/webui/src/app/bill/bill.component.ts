@@ -257,8 +257,9 @@ export class BillComponent implements OnInit {
 
   updateMetaTags(): void {
     let billId = this.bill?.id ?? this.bill?.billId!;
-    let billSession = parseInt(billId.split("/")[3]);
-    let year = this.config.congressToYear(billSession);
+    let billSession = billId.split("/")[3];
+    let namespace = billId.split("/")[1] + "/" + billId.split("/")[2];
+    let year = this.config.sessionCodeToYear(billSession, namespace);
 
     const pageTitle = this.bill!.name + " - Bill - PoliScore: AI Political Rating Service";
     const pageDescription = this.gradeForBill() + " (" + this.bill?.cosponsors.length + " cosponsors) - " + this.bill!.interpretation.shortExplain!.replace(/[\r\n]/g, '');
@@ -311,10 +312,24 @@ export class BillComponent implements OnInit {
     return this.bill!.cosponsors.length + " cosponsor" + plural;
   }
 
+  public getCosponsorPartyPercent(): string {
+    if (!this.bill || this.bill.cosponsors.length === 0) return "";
+
+    const total = this.bill.cosponsors.length;
+    const dem = this.bill.cosponsors.filter(cs => cs.party === "DEMOCRAT").length;
+    const repub = this.bill.cosponsors.filter(cs => cs.party === "REPUBLICAN").length;
+
+    if (dem > repub) {
+        return `(${Math.round((dem / total) * 100)}% democrat)`;
+    } else {
+        return `(${Math.round((repub / total) * 100)}% republican)`;
+    }
+  }
+
   public getCosponsorLarge() {
     var plural = (this.bill!.cosponsors.length > 1 ? "s" : "");
 
-    return "Cosponsor" + plural + ":\n\n" + this.bill?.cosponsors.map(s => "- <a href='" + this.config.legislatorIdToAbsolutePath(s.legislatorId) + "'>" + s.name.official_full + "</a>").join("\n");
+    return "Cosponsor" + plural + ":\n\n" + this.bill?.cosponsors.map(s => "- <a href='" + this.config.legislatorIdToAbsolutePath(s.legislatorId) + "'>" + s.name.official_full + " (" + s.party.substring(0,1) + ")" + "</a>").join("\n");
   }
 
   getDisplayedColumns(): string[] {

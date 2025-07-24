@@ -41,6 +41,7 @@
                                 <div class="title-left">
                                     <p style="font: 400 24px/32px Roboto,sans-serif; margin-bottom: 4px;" [ngStyle]="{'color': colorForGrade(gradeForBill())}">{{gradeForBill()}}</p>
                                     <disclaimer [small]="getCosponsorSmall()" [large]="getCosponsorLarge()" [positionBelow]="true"></disclaimer>
+                                    <p style="font-size: 0.8em; margin-top: -15px;">{{ getCosponsorPartyPercent() }}</p>
                                 </div>
                                 <div class="title-right">
                                     <div class="">{{bill.type + " " + bill.number}}</div>
@@ -52,7 +53,7 @@
                                     <h1 class="card-title" [matTooltip]="bill.name"><a [href]="officialUrlForBill()">{{getBillName()}}</a></h1>
                                     <h2 *ngIf="bill.interpretation && bill.interpretation.genBillTitle && bill.interpretation.genBillTitle !== bill.name" class="official-bill-title">{{ bill.name }}</h2>
                                       
-                                    <h3 class="card-subtitle">Sponsor: <a [href]="config.legislatorIdToAbsolutePath(bill.sponsor.legislatorId)">{{bill.sponsor.name.official_full}}</a></h3>
+                                    <h3 class="card-subtitle">Sponsor: <a [href]="config.legislatorIdToAbsolutePath(bill.sponsor.legislatorId)">{{bill.sponsor.name.official_full + " (" + bill.sponsor.party.substring(0,1) + ")"}}</a></h3>
                                 </div>
                             </div>
                             
@@ -68,11 +69,12 @@
                                     <div class="title-left">
                                         <p style="font: 400 24px/32px Roboto,sans-serif; margin-bottom: 4px;" [ngStyle]="{'color': colorForGrade(gradeForBill())}">{{gradeForBill()}}</p>
                                         <disclaimer [small]="getCosponsorSmall()" [large]="getCosponsorLarge()" [positionBelow]="true"></disclaimer>
+                                        <p style="font-size: 0.8em; margin-top: -15px;">{{ getCosponsorPartyPercent() }}</p>
                                     </div>
                                     <div class="title-middle">
                                         <h1 class="card-title" [matTooltip]="getBillTooltip()" matTooltipClass="bill-tooltip"><a [href]="officialUrlForBill()">{{getBillName()}}</a></h1>
                                         <h2 *ngIf="bill.interpretation && bill.interpretation.genBillTitle && bill.interpretation.genBillTitle !== bill.name" class="official-bill-title">{{ bill.name }}</h2>
-                                        <h3 class="card-subtitle">Sponsor: <a [href]="config.legislatorIdToAbsolutePath(bill.sponsor.legislatorId)">{{bill.sponsor.name.official_full}}</a></h3>
+                                        <h3 class="card-subtitle">Sponsor: <a [href]="config.legislatorIdToAbsolutePath(bill.sponsor.legislatorId)">{{bill.sponsor.name.official_full + " (" + bill.sponsor.party.substring(0,1) + ")"}}</a></h3>
                                     </div>
                                     <div class="title-right">
                                         <div class="">{{bill.type + " " + bill.number}}</div>

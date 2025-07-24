@@ -151,7 +151,21 @@ public class SessionInterpretation implements Persistable {
 		@DynamoDbIgnore
 		@JsonIgnore
 		public String getShortExplainForInterp() {
-			return "- " + this.name + " (" + billStatus.getDescription() + ") (" + (cosponsors.size()) + " cosponsors" + ")" + ": " + this.shortExplain;
+			return "- " + this.name + " (" + billStatus.getDescription() + ") (" + (cosponsors.size()) + " cosponsors" + getCosponsorPartyDescription() + ")" + ": " + this.shortExplain;
+		}
+		
+		protected String getCosponsorPartyDescription() {
+			if (cosponsors.size() == 0) return "";
+			
+			float total = (float) cosponsors.size();
+			float dem = (float) cosponsors.stream().filter(cs -> cs.getParty().equals(Party.DEMOCRAT)).count();
+			float repub = (float) cosponsors.stream().filter(cs -> cs.getParty().equals(Party.REPUBLICAN)).count();
+			
+			if (dem > repub) {
+				return ", " + Math.round((dem / total)*100f) + " percent democrat";
+			} else {
+				return ", " + Math.round((repub / total)*100f) + " percent republican";
+			}
 		}
 		
 		@DynamoDbIgnore

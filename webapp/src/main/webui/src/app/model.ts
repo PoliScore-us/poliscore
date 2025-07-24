@@ -52,6 +52,7 @@ export interface BillMetadata {
 export interface BillSponsor {
   name: LegislatorName;
   legislatorId: string;
+  party: string;
 }
 
 export interface BillInteraction {
