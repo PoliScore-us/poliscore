@@ -103,7 +103,6 @@ export class LegislatorsComponent implements OnInit {
               }
     
               this.page.ascending = routeAscending === "ascending";
-              console.log(this.legs);
               // this.legs = undefined;
               this.fetchData();
               routeParams = true;
@@ -331,11 +330,20 @@ export class LegislatorsComponent implements OnInit {
       }
 
       this.allLegislators = data.allLegislators;
-      this.searchOptions = data.allLegislators.concat(states.map(s => ["STATE/" + s[1], s[0], ""])).map(([id, name, alias]) => ({
-        id,
-        name,
-        alias
-      }));
+
+      if (this.namespace === "us/congress") {
+        this.searchOptions = data.allLegislators.concat(states.map(s => ["STATE/" + s[1], s[0], ""])).map(([id, name, alias]) => ({
+          id,
+          name,
+          alias
+        }));
+      } else {
+        this.searchOptions = data.allLegislators.map(([id, name, alias]) => ({
+          id,
+          name,
+          alias
+        }));
+      }
 
       this.fuse = new Fuse(this.searchOptions, {
         keys: ['name', 'alias'],

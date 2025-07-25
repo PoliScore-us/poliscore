@@ -43,9 +43,8 @@ export function descriptionForLegislator(leg: Legislator, small: boolean = false
 
   export function subtitleForLegislator(leg: Legislator): string
   {
-    // return subtitleForStats(leg.interpretation?.issueStats!);
-
     let term = leg.terms[leg.terms.length - 1];
+    let namespace = leg.id?.split("/")[1] + "/" + leg.id?.split("/")[2];
 
     let label = term.chamber;
     if (term.chamber == "UPPER") {
@@ -54,7 +53,10 @@ export function descriptionForLegislator(leg: Legislator, small: boolean = false
       label = "House";
     }
 
-    label += " (" + convertStateCodeToName(term.state) + ")";
+    if (namespace === "us/congress")
+      label += " (" + convertStateCodeToName(term.state) + ")";
+    else if (term.chamber === "LOWER")
+      label += " (District " + term.district + ")";
 
     return label;
   }

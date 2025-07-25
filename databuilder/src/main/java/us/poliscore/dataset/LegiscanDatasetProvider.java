@@ -85,7 +85,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		for (var person : cached.getPeople().values()) {
 			importLegislator(person, dataset);
 		}
-		openstates.augmentLegislators(dataset);
+//		openstates.augmentLegislators(dataset);
 		
 		for (var bill : cached.getBills().values()) {
 			importBill(bill, dataset);
@@ -412,7 +412,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 
 	@Override
 	public void syncS3LegislatorImages(PoliscoreDataset dataset) {
-		openstates.syncS3LegislatorImages(dataset);
+//		openstates.syncS3LegislatorImages(dataset);
 		stateImageFetcher.syncS3LegislatorImages(dataset);
 	}
 	

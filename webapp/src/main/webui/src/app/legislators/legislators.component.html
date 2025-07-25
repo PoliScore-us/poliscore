@@ -32,7 +32,7 @@
                 </div>
 
                 <input *ngIf="allLegislators.length > 0" class="searchbox" type="text"
-                    placeholder="Search for legislator or state"
+                    [placeholder]="this.namespace === 'us/congress' ? 'Search for legislator or state' : 'Search for legislator'"
                     aria-label="Number"
                     matInput
                     [formControl]="myControl"

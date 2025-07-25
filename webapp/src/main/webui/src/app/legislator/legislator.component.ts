@@ -441,7 +441,14 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
       label = "House";
     }
 
-    label += " (" + convertStateCodeToName(term.state) + (term.chamber == "LOWER" ? " District " + term.district : "") + ")";
+    let extra: string[] = [];
+    if (this.config.getNamespace() === "us/congress")
+      extra.push(convertStateCodeToName(term.state));
+    if (term.chamber == "LOWER")
+      extra.push("District " + term.district);
+
+    if (extra.length > 0)
+      label += " (" + extra.join(" ") + ")";
 
     return label;
   }

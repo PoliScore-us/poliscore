@@ -419,11 +419,11 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	    
 	    boolean generatedRequest = false;
 
-	    generatedRequest = fetchAndProcessSearchResults(b, encodedQuery, 1) || generatedRequest;
+	    generatedRequest = fetchAndProcessSearchResults(b, interp, encodedQuery, 1) || generatedRequest;
 	    
 	    // Fetch an extra page for laws
 	    if (b.getStatus().getProgress() == 1.0f)
-	    	generatedRequest = fetchAndProcessSearchResults(b, encodedQuery, 11) || generatedRequest;
+	    	generatedRequest = fetchAndProcessSearchResults(b, interp, encodedQuery, 11) || generatedRequest;
 	    
 	    if (generatedRequest)
 	    	dirtyBills.add(b);
@@ -446,7 +446,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	}
 
 	@SneakyThrows
-	private boolean fetchAndProcessSearchResults(Bill b, String encodedQuery, int startIndex) {
+	private boolean fetchAndProcessSearchResults(Bill b, BillInterpretation interp, String encodedQuery, int startIndex) {
 		if (totalQueries >= MAX_QUERIES) return false;
 		
 		Log.info("Performing google search for press articles [" + encodedQuery + "]");
@@ -472,7 +472,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 				{
 					val origin = new InterpretationOrigin(item.getLink(), item.getTitle());
 					
-					generatedRequest = processOrigin(b, origin) || generatedRequest;
+					generatedRequest = processOrigin(b, interp, origin) || generatedRequest;
 				}
 	        } catch (Exception e) {
 	            Log.warn("General error connecting to " + item.getLink() + ": " + e.getMessage());
@@ -484,9 +484,14 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	    return generatedRequest;
 	}
 	
-	private boolean processOrigin(Bill b, InterpretationOrigin origin)
+	private boolean processOrigin(Bill b, BillInterpretation interp, InterpretationOrigin origin)
 	{
-		if (!FORCE_REINTERPRET && s3.exists(PressInterpretation.generateId(b.getId(), origin), PressInterpretation.class)) return false;
+		if (!FORCE_REINTERPRET && s3.exists(PressInterpretation.generateId(b.getId(), origin), PressInterpretation.class)) {
+			if (!interp.hasPressInterp(origin))
+				dirtyBills.add(b);
+			
+			return false;
+		}
 		
 		String articleText = pressService.fetchArticleText(origin);
 		

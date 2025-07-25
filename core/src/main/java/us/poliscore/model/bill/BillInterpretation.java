@@ -127,4 +127,8 @@ public class BillInterpretation extends SessionPersistable
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return issueStats.getRating(); }
 	@JsonIgnore public Integer getRating(TrackedIssue issue) { return issueStats.getRating(issue); }
 	@JsonIgnore public void setRating(int rating) { }
+
+	public boolean hasPressInterp(InterpretationOrigin origin) {
+		return this.pressInterps.stream().filter(p -> p.getOrigin().equals(origin) && !p.isNoInterp()).count() > 0;
+	}
 }

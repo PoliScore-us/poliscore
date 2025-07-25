@@ -221,6 +221,9 @@ public class BillArticleRecognizer {
     	if (article.length() < 1000)
     		return 0f;
     	
+    	if (article.contains("Quiver Quantitative"))
+    		return 0f;
+    	
     	String u = url.toLowerCase(Locale.ROOT);
         for (String bad : URL_BLACKLIST) {
             if (u.contains(bad)) {
