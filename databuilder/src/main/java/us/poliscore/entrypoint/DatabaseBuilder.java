@@ -145,7 +145,8 @@ public class DatabaseBuilder implements QuarkusApplication
 			
 			if (dbill == null 
 			    || !Objects.equals(dbill.getStatus(), b.getStatus()) 
-			    || !Objects.equals(dbill.getLastActionDate(), b.getLastActionDate())) {
+			    || !Objects.equals(dbill.getLastActionDate(), b.getLastActionDate())
+			    || !Objects.equals(dbill.getName(), b.getName())) {
 			    
 			    val interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get();
 			    billService.ddbPersist(b, interp);

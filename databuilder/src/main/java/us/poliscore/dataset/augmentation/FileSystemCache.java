@@ -1,10 +1,9 @@
-package us.poliscore.openstates;
+package us.poliscore.dataset.augmentation;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -17,15 +16,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-public class FileSystemOpenStatesCache {
+public class FileSystemCache<T> {
 
-    private static final Logger LOGGER = Logger.getLogger(FileSystemOpenStatesCache.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(FileSystemCache.class.getName());
 
     private final File baseDir;
     private final ObjectMapper objectMapper;
     private final int defaultTtlSecs;
 
-    public FileSystemOpenStatesCache(File baseDir, ObjectMapper objectMapper, int defaultTtlSecs) {
+    public FileSystemCache(File baseDir, ObjectMapper objectMapper, int defaultTtlSecs) {
         this.baseDir = baseDir;
         this.objectMapper = objectMapper;
         this.defaultTtlSecs = defaultTtlSecs;
@@ -35,7 +34,7 @@ public class FileSystemOpenStatesCache {
         }
     }
 
-    public FileSystemOpenStatesCache(File baseDir, ObjectMapper objectMapper) {
+    public FileSystemCache(File baseDir, ObjectMapper objectMapper) {
         this(baseDir, objectMapper, 0);
     }
 
@@ -44,11 +43,9 @@ public class FileSystemOpenStatesCache {
         return new File(baseDir, filename);
     }
 
-    public Optional<List<OpenStatesLegislatorData>> getOrExpire(String key) {
+    public <U extends T> Optional<U> getOrExpire(String key, TypeReference<U> typeRef) {
         File file = resolvePath(key);
-        if (!file.exists()) {
-            return Optional.empty();
-        }
+        if (!file.exists()) return Optional.empty();
 
         try {
             byte[] data = Files.readAllBytes(file.toPath());
@@ -60,7 +57,7 @@ public class FileSystemOpenStatesCache {
                 return Optional.empty();
             }
 
-            List<OpenStatesLegislatorData> value = objectMapper.convertValue(entry.getValue(), new TypeReference<>() {});
+            U value = objectMapper.convertValue(entry.getValue(), typeRef);
             return Optional.of(value);
 
         } catch (Exception e) {
@@ -69,11 +66,41 @@ public class FileSystemOpenStatesCache {
         }
     }
 
-    public void put(String key, List<OpenStatesLegislatorData> value) {
+    public <U extends T> Optional<U> peek(String key, TypeReference<U> typeRef) {
+        File file = resolvePath(key);
+        if (!file.exists()) return Optional.empty();
+
+        try {
+            byte[] data = Files.readAllBytes(file.toPath());
+            CachedEntry entry = objectMapper.readValue(data, CachedEntry.class);
+
+            U value = objectMapper.convertValue(entry.getValue(), typeRef);
+            return Optional.of(value);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to read cache for key: " + key, e);
+            return Optional.empty();
+        }
+    }
+    
+    public Optional<CachedEntry> peekEntry(String key) {
+        File file = resolvePath(key);
+        if (!file.exists()) return Optional.empty();
+
+        try {
+            byte[] data = Files.readAllBytes(file.toPath());
+            CachedEntry entry = objectMapper.readValue(data, CachedEntry.class);
+            return Optional.of(entry);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to read cache entry for key: " + key, e);
+            return Optional.empty();
+        }
+    }
+
+    public void put(String key, T value) {
         put(key, value, defaultTtlSecs);
     }
 
-    public void put(String key, List<OpenStatesLegislatorData> value, long ttlSecs) {
+    public void put(String key, T value, long ttlSecs) {
         File file = resolvePath(key);
         file.getParentFile().mkdirs();
         try {
@@ -81,22 +108,6 @@ public class FileSystemOpenStatesCache {
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(file, entry);
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Failed to write cache for key: " + key, e);
-        }
-    }
-
-    public Optional<CachedEntry> peek(String key) {
-        File file = resolvePath(key);
-        if (!file.exists()) {
-            return Optional.empty();
-        }
-
-        try {
-            byte[] data = Files.readAllBytes(file.toPath());
-            CachedEntry entry = objectMapper.readValue(data, CachedEntry.class);
-            return Optional.of(entry);
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to read cache for key: " + key, e);
-            return Optional.empty();
         }
     }
 
@@ -125,4 +136,4 @@ public class FileSystemOpenStatesCache {
             return ttl > 0 && Instant.now().getEpochSecond() > (timestamp + ttl);
         }
     }
-}  
+}

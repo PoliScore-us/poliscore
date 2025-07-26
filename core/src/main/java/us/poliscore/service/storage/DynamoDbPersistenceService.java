@@ -105,6 +105,8 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 	@SneakyThrows
 	public <T extends Persistable> void put(T obj)
 	{
+		Persistable.validate(obj);
+		
 //		val table = ((DynamoDbTable<T>) ddbe.table(TABLE_NAME, getSchema(obj.getClass())));
 		
 		Map<String, Map<String, AttributeValue>> pages = new HashMap<String, Map<String, AttributeValue>>();

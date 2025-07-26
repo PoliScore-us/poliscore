@@ -11,6 +11,6 @@ export const appConfig: ApplicationConfig = {
   providers: [provideRouter(routes), provideAnimations(), provideAnimationsAsync(), provideClientHydration(), provideHttpClient(withFetch())]
 };
 
-export const backendUrl: string = "https://y5i3jhm7k5vy67elvzly4b3b240kjwlp.lambda-url.us-east-1.on.aws/";
+export const backendUrl: string = "https://5hta4jxn7q6cfcyxnvz4qmkyli0tambn.lambda-url.us-east-1.on.aws/";
 export const year: number = 2025;
 export const namespace: string = "us/co";

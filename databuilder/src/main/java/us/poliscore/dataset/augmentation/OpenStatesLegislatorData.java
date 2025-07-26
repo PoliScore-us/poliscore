@@ -1,4 +1,4 @@
-package us.poliscore.openstates;
+package us.poliscore.dataset.augmentation;
 
 import java.time.LocalDate;
 

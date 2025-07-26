@@ -1,6 +1,9 @@
 package us.poliscore.model;
 
+import java.util.Objects;
+
 import lombok.SneakyThrows;
+import lombok.val;
 
 public interface Persistable {
 	
@@ -44,5 +47,14 @@ public interface Persistable {
 	public static String getIdClassPrefix(Class<?> clazz)
 	{
 		return (String) clazz.getField("ID_CLASS_PREFIX").get(null);
+	}
+	
+	public static void validate(Persistable p) {
+		if (p.getId() == null)
+			throw new UnsupportedOperationException("Persistable's id field is required.");
+		
+		val expectedPrefix = getIdClassPrefix(p.getClass());
+		if (!Objects.equals(expectedPrefix, p.getId().split("/")[0]))
+			throw new UnsupportedOperationException("Object's id class prefix does not match expected value.");
 	}
 }

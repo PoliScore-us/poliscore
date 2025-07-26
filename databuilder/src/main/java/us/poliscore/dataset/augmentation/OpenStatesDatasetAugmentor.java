@@ -1,4 +1,4 @@
-package us.poliscore.openstates;
+package us.poliscore.dataset.augmentation;
 
 import java.io.InputStreamReader;
 import java.net.URL;
@@ -6,7 +6,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
@@ -17,7 +17,6 @@ import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
-import jakarta.enterprise.context.ApplicationScoped;
 import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -36,7 +35,7 @@ import us.poliscore.model.legislator.Legislator;
 @QuarkusMain(name="OpenStatesDatasetAugmentor")
 public class OpenStatesDatasetAugmentor extends AbstractLegislatorImageFetcher implements QuarkusApplication {
 
-	protected final FileSystemOpenStatesCache cache = new FileSystemOpenStatesCache(
+	protected final FileSystemCache<List<OpenStatesLegislatorData>> cache = new FileSystemCache<List<OpenStatesLegislatorData>>(
             new java.io.File(System.getProperty("user.home") + "/appdata/poliscore/openstates"),
             JsonMapper.builder().findAndAddModules().build(),
             86400 // default TTL 24h
@@ -60,39 +59,49 @@ public class OpenStatesDatasetAugmentor extends AbstractLegislatorImageFetcher i
 	}
 
     @SneakyThrows
-    public List<OpenStatesLegislatorData> fetchOpenStatesData(PoliscoreDataset dataset) {
+    public Optional<List<OpenStatesLegislatorData>> fetchOpenStatesData(PoliscoreDataset dataset) {
         String abbr = dataset.getSession().getNamespace().toAbbreviation().toLowerCase();
         String cacheKey = "people/current/" + abbr;
 
-        Optional<List<OpenStatesLegislatorData>> cached = cache.getOrExpire(cacheKey);
-        if (cached.isPresent()) return cached.get();
+        val metadata = cache.peekEntry(cacheKey);
+        val cached = cache.peek(cacheKey, new TypeReference<>() {});
+        if (cached.isPresent() && !metadata.get().isExpired()) return cached;
 
-        String csvUrl = "https://data.openstates.org/people/current/" + abbr + ".csv";
-
-        RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
-                .handle(Exception.class)
-                .withBackoff(Duration.ofSeconds(1), Duration.ofSeconds(5))
-                .withMaxAttempts(3)
-                .onRetry(e -> Log.warn("Retrying fetch from OpenStates: " + e.getLastException().getMessage()))
-                .build();
-
-        List<OpenStatesLegislatorData> data = Failsafe.with(retryPolicy).get(() -> {
-            @Cleanup InputStreamReader reader = new InputStreamReader(new URL(csvUrl).openStream());
-            CsvToBean<OpenStatesLegislatorData> csvToBean = new CsvToBeanBuilder<OpenStatesLegislatorData>(reader)
-                    .withType(OpenStatesLegislatorData.class)
-                    .withIgnoreLeadingWhiteSpace(true)
-                    .build();
-            return csvToBean.parse();
-        });
-
-        cache.put(cacheKey, data);
-        return data;
+        try {
+	        String csvUrl = "https://data.openstates.org/people/current/" + abbr + ".csv";
+	
+	        RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
+	                .handle(Exception.class)
+	                .withBackoff(Duration.ofSeconds(1), Duration.ofSeconds(5))
+	                .withMaxAttempts(3)
+	                .onRetry(e -> Log.warn("Retrying fetch from OpenStates: " + e.getLastException().getMessage()))
+	                .build();
+	
+	        List<OpenStatesLegislatorData> data = Failsafe.with(retryPolicy).get(() -> {
+	            @Cleanup InputStreamReader reader = new InputStreamReader(new URL(csvUrl).openStream());
+	            CsvToBean<OpenStatesLegislatorData> csvToBean = new CsvToBeanBuilder<OpenStatesLegislatorData>(reader)
+	                    .withType(OpenStatesLegislatorData.class)
+	                    .withIgnoreLeadingWhiteSpace(true)
+	                    .build();
+	            return csvToBean.parse();
+	        });
+	
+	        cache.put(cacheKey, data);
+	        
+	        return Optional.of(data);
+        }
+        catch (Throwable t) {
+        	return cached;
+        }
     }
     
     public Optional<OpenStatesLegislatorData> fetchLegislatorData(Legislator leg, PoliscoreDataset dataset) {
-    	List<OpenStatesLegislatorData> allData = fetchOpenStatesData(dataset);
-
-        Optional<OpenStatesLegislatorData> match = allData.stream()
+    	Optional<List<OpenStatesLegislatorData>> allData = fetchOpenStatesData(dataset);
+    	
+    	if (allData.isEmpty())
+    		return Optional.empty();
+    	
+        Optional<OpenStatesLegislatorData> match = allData.get().stream()
                 .filter(l -> l.getFamilyName() != null && l.getGivenName() != null)
                 .filter(l -> l.getFamilyName().trim().equalsIgnoreCase(leg.getName().getLast())
                           && l.getGivenName().trim().equalsIgnoreCase(leg.getName().getFirst()))

@@ -214,10 +214,11 @@ public class WebappDataGenerator implements QuarkusApplication
 	    DateTimeFormatter usFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 	    SnowballStemmer stemmer = new englishStemmer();
 	    
-	    List<List<String>> result = new ArrayList<List<String>>();
+	    Map<String, List<List<String>>> result = new HashMap<String, List<List<String>>>();
 
 	    for (var dataset : datasets) {
-		    result.addAll(dataset.query(Bill.class).stream()
+	    	List<List<String>> datasetList = new ArrayList<List<String>>();
+	    	datasetList.addAll(dataset.query(Bill.class).stream()
 		        .filter(b -> //PoliscoreUtil.SUPPORTED_CONGRESSES.stream().anyMatch(s -> b.isIntroducedInSession(s)) &&
 		                     s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
 		        .map(b -> {
@@ -234,6 +235,7 @@ public class WebappDataGenerator implements QuarkusApplication
 		        })
 		        .sorted(Comparator.comparing(b -> b.get(1)))
 		        .toList());
+	    	result.put(dataset.getSession().getNamespace().getNamespace(), datasetList);
 	    }
 
 	    FileUtils.write(out, PoliscoreUtil.getObjectMapper().writeValueAsString(result), "UTF-8");

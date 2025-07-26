@@ -118,10 +118,10 @@
 	    <version>1.18.1</version>
 	</dependency>
     <dependency>
-      <groupId>io.github.lambdua</groupId>
-      <artifactId>service</artifactId>
-      <version>0.20.7</version>
-    </dependency>
+	  <groupId>com.openai</groupId>
+	  <artifactId>openai-java</artifactId>
+	  <version>2.19.1</version>
+	</dependency>
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-secretsmanager</artifactId>

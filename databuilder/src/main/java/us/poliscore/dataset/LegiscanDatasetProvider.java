@@ -20,6 +20,7 @@ import lombok.val;
 import software.amazon.awssdk.utils.StringUtils;
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreDataset.DeploymentConfig;
+import us.poliscore.dataset.augmentation.PoliscoreDatasetAugmentor;
 import us.poliscore.images.StateLegislatorImageFetcher;
 import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.legiscan.view.LegiscanBillType;
@@ -51,7 +52,6 @@ import us.poliscore.model.legislator.Legislator.LegislativeTerm;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCosponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
-import us.poliscore.openstates.OpenStatesDatasetAugmentor;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.storage.S3PersistenceService;
 
@@ -66,7 +66,8 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	@Inject
 	protected LegislatorService lService;
 	
-	@Inject protected OpenStatesDatasetAugmentor openstates;
+//	@Inject protected OpenStatesDatasetAugmentor openstates;
+	@Inject protected PoliscoreDatasetAugmentor psLegScraper;
 	@Inject protected StateLegislatorImageFetcher stateImageFetcher;
 	
 	@Inject private S3PersistenceService s3;
@@ -85,7 +86,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		for (var person : cached.getPeople().values()) {
 			importLegislator(person, dataset);
 		}
-//		openstates.augmentLegislators(dataset);
+		psLegScraper.augmentLegislators(dataset);
 		
 		for (var bill : cached.getBills().values()) {
 			importBill(bill, dataset);
@@ -378,6 +379,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    if (view == null || StringUtils.isBlank(view.getName())) return;
 
 	    val leg = new Legislator();
+	    leg.setLegiscanId(view.getPeopleId());
 	    
 	    String legId;
 		if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
@@ -403,7 +405,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    term.setDistrict(StringUtils.isBlank(view.getDistrict()) ? null : view.getDistrict());
 	    term.setChamber(LegislativeChamber.fromLegiscanRole(view.getRole()));
 	    leg.getTerms().add(term);
-
+	    
 	    // If active in current session, add to that session
 	    if (leg.isMemberOfSession(dataset.getSession())) {
 	        dataset.put(leg);

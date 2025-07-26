@@ -75,7 +75,7 @@ public class Lambda {
     
     private static List<Bill> allBillsDump;
     
-    private static List<List<String>> allBillsIndex;
+    private static Map<String,List<List<String>>> allBillsIndex;
     
     @GET
     @Path("getSessionStats")
@@ -342,17 +342,17 @@ public class Lambda {
     
     @SuppressWarnings("unchecked")
     @SneakyThrows
-    public List<List<String>> getBillsIndex() {
+    public List<List<String>> getBillsIndex(String namespace) {
     	if (allBillsIndex == null) {
-    		allBillsIndex = mapper.readValue(IOUtils.toString(Lambda.class.getResourceAsStream("/bills.index"), "UTF-8"), List.class);
+    		allBillsIndex = mapper.readValue(IOUtils.toString(Lambda.class.getResourceAsStream("/bills.index"), "UTF-8"), Map.class);
     	}
     	
-    	return allBillsIndex;
+    	return allBillsIndex.get(namespace);
     }
     
     @GET
     @Path("/queryBills")
-    public List<List<String>> queryBills(@RestQuery("text") String text) {
+    public List<List<String>> queryBills(@RestQuery("text") String text, @RestQuery("namespace") String namespace) {
     	SnowballStemmer stemmer = new englishStemmer();
 
         // Normalize query to tokens
@@ -372,11 +372,11 @@ public class Lambda {
         // Also check if query looks like a bill type + number
         String normalizedBillRef = normalizeBillRef(text);  // e.g., "hr123"
 
-        List<List<String>> bills = new ArrayList<>(getBillsIndex());
+        List<List<String>> bills = new ArrayList<>(getBillsIndex(namespace));
 
         return bills.stream()
             .filter(bill -> {
-                String billId = bill.get(0);       // us/congress/117/hr/123
+                String billId = bill.get(0);       // bil/us/congress/117/hr/123
                 String stemmedTokens = bill.get(2);
 
                 boolean matchesTokens = queryTokens.stream().allMatch(stemmedTokens::contains);

@@ -41,6 +41,10 @@ public class GovernmentDataService {
 		return importedDatasets;
 	}
 	
+	public PoliscoreDataset importDataset(LegislativeNamespace namespace, int year) {
+		return importDataset(new DeploymentConfig(namespace, year));
+	}
+	
 	public PoliscoreDataset importDataset(DeploymentConfig ref) {
 		// If it's already been imported, just return it
 		for (val dataset : importedDatasets) {

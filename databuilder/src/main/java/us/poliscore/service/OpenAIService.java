@@ -3,6 +3,7 @@ package us.poliscore.service;
 import java.io.File;
 import java.net.SocketTimeoutException;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -11,17 +12,25 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import com.theokanning.openai.batch.Batch;
-import com.theokanning.openai.batch.BatchRequest;
-import com.theokanning.openai.completion.chat.ChatCompletionChoice;
-import com.theokanning.openai.completion.chat.ChatCompletionRequest;
-import com.theokanning.openai.completion.chat.ChatCompletionResult;
-import com.theokanning.openai.completion.chat.ChatMessage;
-import com.theokanning.openai.completion.chat.SystemMessage;
-import com.theokanning.openai.completion.chat.UserMessage;
-import com.theokanning.openai.service.OpenAiService;
+import com.openai.client.OpenAIClient;
+import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.models.batches.Batch;
+import com.openai.models.batches.Batch.Status;
+import com.openai.models.batches.BatchCreateParams;
+import com.openai.models.batches.BatchCreateParams.CompletionWindow;
+import com.openai.models.batches.BatchCreateParams.Endpoint;
+import com.openai.models.beta.realtime.ResponseCreateEvent;
+import com.openai.models.files.FileCreateParams;
+import com.openai.models.files.FilePurpose;
+import com.openai.models.responses.Response;
+import com.openai.models.responses.ResponseCreateParams;
+import com.openai.models.responses.ResponseStatus;
+import com.openai.models.responses.Tool;
+import com.openai.models.responses.WebSearchTool;
+import com.openai.models.responses.WebSearchTool.Type;
 
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
@@ -51,7 +60,7 @@ public class OpenAIService {
 	public static int MAX_REQUEST_LENGTH = 3500000;
 	public static int MAX_GPT4o_REQUEST_LENGTH = 490000; // GPT-4o context window in tokens is 128,000, which is 500k string length.
 	
-	public static final int MAX_OUTPUT_TOKENS = 3000;
+	public static final int MAX_OUTPUT_TOKENS = 300000;
 	
 	public static final int WAIT_BETWEEN_CALLS = 60; // in seconds
 	
@@ -87,36 +96,44 @@ public class OpenAIService {
 			Thread.sleep(ChronoUnit.SECONDS.between(LocalDateTime.now(), nextCallTime) * 1000);
 		}
 		
-		OpenAiService service = new OpenAiService(secret.getOpenAISecret(), Duration.ofSeconds(600));
+		OpenAIClient client = OpenAIOkHttpClient.builder().apiKey(secret.getOpenAISecret()).build();
+		
+		val paramBuilder = ResponseCreateParams.builder()
+				.instructions(systemMsg)
+		        .input(userMsg)
+		        .model(StringUtils.defaultIfEmpty(model, MODEL))
+		        .maxOutputTokens(MAX_OUTPUT_TOKENS);
+		
+		if (!model.equals("o3-deep-research"))
+			paramBuilder.temperature(0.0d); // We don't want randomness. Give us predictability and accuracy
+		else
+			paramBuilder.tools(List.of(
+			        Tool.ofWebSearch(WebSearchTool.builder().type(Type.WEB_SEARCH_PREVIEW).build())
+			        ));
+			
+		val params = paramBuilder.build();
+		
+		System.out.println("Sending request to open ai with message size " + userMsg.length());
+		Response response = client.responses().create(params);
     	
-    	List<ChatMessage> msgs = new ArrayList<ChatMessage>();
-    	msgs.add(new SystemMessage(systemMsg));
-    	msgs.add(new UserMessage(userMsg));
-    	
-    	ChatCompletionRequest completionRequest = ChatCompletionRequest.builder()
-    			.messages(msgs)
-    			.n(1)
-    			.temperature(0.0d) // We don't want randomness. Give us predictability and accuracy
-    			.maxTokens(MAX_OUTPUT_TOKENS)
-    	        .model(StringUtils.defaultIfEmpty(model, MODEL))
-    	        .build();
-    	
-    	System.out.println("Sending request to open ai with message size " + userMsg.length());
-    	
-    	ChatCompletionResult result = service.createChatCompletion(completionRequest);
-    	
-    	ChatCompletionChoice choice = result.getChoices().get(0);
-    	
-    	String out = choice.getMessage().getContent();
-    	
-    	if (!"stop".equals(choice.getFinishReason()))
+    	if (response.error().isPresent())
     	{
-    		out += ". FINISH_REASON: " + choice.getFinishReason();
+    		throw new RuntimeException("OpenAI encountered an error while processing request. " + response.error().get().message());
+    	}
+    	
+    	if (!response.status().get().equals(ResponseStatus.COMPLETED)) {
+    		throw new RuntimeException("OpenAI's response status was not equal to completed. " + response.status().get());
     	}
     	
     	nextCallTime = LocalDateTime.now().plusSeconds(Math.round(((double)userMsg.length() / (double)OpenAIService.MAX_REQUEST_LENGTH) * (double)WAIT_BETWEEN_CALLS)).plusSeconds(2);
     	
-    	return out;
+    	return response.output().stream()
+    			.filter(r -> r.message().isPresent())
+    			.map(r -> r.message().get().content().stream()
+    					.filter(c -> c.outputText().isPresent())
+    					.map(c -> c.outputText().get().text())
+    					.reduce("",(a,b) -> a + b))
+    			.reduce("", (a,b) -> a + b);
     }
 	
 	/**
@@ -126,7 +143,7 @@ public class OpenAIService {
 	public List<File> processBatch(List<File> files) {
 		if (files.size() == 1 && Files.lines(files.get(0).toPath()).count() <= IMMEDIATE_PROCESS_THRESHOLD) return processBatchImmediately(files);
 		
-		OpenAiService service = new OpenAiService(secret.getOpenAISecret(), Duration.ofSeconds(600));
+		OpenAIClient client = OpenAIOkHttpClient.builder().apiKey(secret.getOpenAISecret()).build();
 		
 		final List<Batch> batches = new ArrayList<Batch>();
 		final List<File> responseFiles = new ArrayList<File>();
@@ -134,13 +151,20 @@ public class OpenAIService {
 		for (File f : files) {
 			Log.info("Sending request batch file to OpenAI [" + f.getAbsolutePath() + "]");
 			
-			val f2 = service.uploadFile("batch", f.getAbsolutePath());
+			String fileId = client.files().create(
+				    FileCreateParams.builder()
+				      .file(f.toPath())
+				      .purpose(FilePurpose.BATCH)
+				      .build()
+				).id();
 			
-			batches.add(service.createBatch(BatchRequest.builder()
-					.inputFileId(f2.getId())
-					.endpoint("/v1/chat/completions")
-					.completionWindow("24h")
-					.build()));
+			Batch batch = client.batches().create(BatchCreateParams.builder()
+				    .inputFileId(fileId)
+				    .endpoint(Endpoint.V1_RESPONSES)
+				    .completionWindow(CompletionWindow._24H)
+				    .build());
+			
+			batches.add(batch);
 		}
 		
 		Log.info("Awaiting OpenAI to process our batch files (this will take a while)...");
@@ -160,14 +184,14 @@ public class OpenAIService {
 				    .onRetry(e -> Log.warn("Retrying due to timeout..."))
 				    .onFailure(e -> Log.error("Retries exhausted", e.getException()))
 				    .build();
-
-				Batch b2 = Failsafe.with(retryPolicy).get(() -> service.retrieveBatch(b.getId()));
 				
-				if (b2.getStatus().equals("completed") && StringUtils.isNotEmpty(b2.getOutputFileId())) {
-					val body = service.retrieveFileContent(b2.getOutputFileId());
+				Batch b2 = Failsafe.with(retryPolicy).get(() -> client.batches().retrieve(b.id()));
+				
+				if (b2.status().equals(Status.COMPLETED) && b2.outputFileId().isPresent()) {
+					val body = client.files().content(b2.outputFileId().get());
 					
-					val f = new File(Environment.getDeployedPath(), b2.getOutputFileId() + ".jsonl");
-					FileUtils.writeByteArrayToFile(f, body.bytes());
+					val f = new File(Environment.getDeployedPath(), b2.outputFileId() + ".jsonl");
+					Files.copy(body.body(), f.toPath(), StandardCopyOption.REPLACE_EXISTING);
 					responseFiles.add(f);
 					
 					it.remove();

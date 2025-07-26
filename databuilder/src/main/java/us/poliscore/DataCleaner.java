@@ -9,6 +9,8 @@ import jakarta.inject.Inject;
 import lombok.val;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
+import us.poliscore.model.bill.BillInterpretation;
+import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
@@ -38,8 +40,16 @@ public class DataCleaner implements QuarkusApplication {
 	{
 		data.importAllDatasets();
 		
-		val co = data.getDataset(LegislativeNamespace.US_COLORADO, 2025);
-		wipeAllBills(co);
+//		val co = data.getDataset(LegislativeNamespace.US_COLORADO, 2025);
+//		wipeAllBills(co);
+		
+		val congress = data.getDataset(LegislativeNamespace.US_CONGRESS, 2026);
+		
+		val obbb = congress.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", CongressionalBillType.HR, 1), Bill.class).get();
+		
+		val interp = s3.get(BillInterpretation.generateId(obbb.getId(), null), BillInterpretation.class).get();
+		
+		System.out.println(interp.getGenBillTitle());
 		
 		System.out.println("Program complete.");
 	}

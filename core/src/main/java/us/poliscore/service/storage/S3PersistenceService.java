@@ -64,6 +64,8 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	@SneakyThrows
 	public void put(Persistable obj)
 	{
+		Persistable.validate(obj);
+		
 		val key = getObjectKey(obj.getId());
 		
 		if (key.contains("null")) {

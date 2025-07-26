@@ -136,6 +136,7 @@ public class USCDatasetProvider implements DatasetProvider {
 			leg.setName(view.getName().convert());
 			leg.setLisId(view.getId().getLis());
 			leg.setBirthday(view.getBio().getBirthday());
+			leg.setOfficialUrl("https://www.congress.gov/member/" + leg.getName().getFirst().toLowerCase().replace(" ", "-") + "-" + leg.getName().getLast().toLowerCase().replace(" ", "-") + '/' + leg.getCode());
 			leg.setTerms(view.getTerms().stream()
 					.map(t -> t.convert())
 					.collect(Collectors.toCollection(LegislatorLegislativeTermSortedSet::new)));

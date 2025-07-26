@@ -63,13 +63,18 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	@NonNull
 	protected LegislatorName name;
 	
+	// Url to the official bill (i.e. congress or the state website)
+	protected String officialUrl;
+	
 	// Senate Id (only used in congress) : https://github.com/usgpo/bill-status/issues/241
 	protected String lisId;
 	
 	protected LegislatorInterpretation interpretation;
 	
-	@NonNull
-	protected LocalDate birthday = DEFAULT_BIRTHDAY;
+	@Getter(onMethod = @__({ @JsonIgnore, @DynamoDbIgnore }))
+	protected Integer legiscanId;
+	
+	protected LocalDate birthday = null;
 	
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(IssueStatsMapLongAttributeConverter.class) }))
 	public Map<TrackedIssue, Long> impactMap = new HashMap<TrackedIssue, Long>();
