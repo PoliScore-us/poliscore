@@ -111,7 +111,7 @@ export class Legislator {
       startDate: string,
       endDate: string,
       state: string,
-      district: number,
+      district: string,
       party: string,
       url: string,
     }];
@@ -120,6 +120,7 @@ export class Legislator {
     impact!: number;
     impactAbs!: number;
     hot!: number;
+    officialUrl?: string;
 }
 
 export interface LegislatorPageData {

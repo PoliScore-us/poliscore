@@ -40,7 +40,7 @@
                                 <div class="title-row-small">
                                 <div class="title-left">
                                     <p style="font: 400 24px/32px Roboto,sans-serif; margin-bottom: 4px;" [ngStyle]="{'color': colorForGrade(gradeForBill())}">{{gradeForBill()}}</p>
-                                    <disclaimer [small]="getCosponsorSmall()" [large]="getCosponsorLarge()" [positionBelow]="true"></disclaimer>
+                                    <disclaimer *ngIf="bill.cosponsors.length > 0" [small]="getCosponsorSmall()" [large]="getCosponsorLarge()" [positionBelow]="true"></disclaimer>
                                     <p style="font-size: 0.8em; margin-top: -15px;">{{ getCosponsorPartyPercent() }}</p>
                                 </div>
                                 <div class="title-right">
@@ -68,7 +68,7 @@
                                 <div class="title-row-big">
                                     <div class="title-left">
                                         <p style="font: 400 24px/32px Roboto,sans-serif; margin-bottom: 4px;" [ngStyle]="{'color': colorForGrade(gradeForBill())}">{{gradeForBill()}}</p>
-                                        <disclaimer [small]="getCosponsorSmall()" [large]="getCosponsorLarge()" [positionBelow]="true"></disclaimer>
+                                        <disclaimer *ngIf="bill.cosponsors.length > 0" [small]="getCosponsorSmall()" [large]="getCosponsorLarge()" [positionBelow]="true"></disclaimer>
                                         <p style="font-size: 0.8em; margin-top: -15px;">{{ getCosponsorPartyPercent() }}</p>
                                     </div>
                                     <div class="title-middle">

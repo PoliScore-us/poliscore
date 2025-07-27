@@ -75,6 +75,20 @@ mat-card {
     transition: opacity 0.3s ease-out, transform 0.3s ease-out;
 }
 
+.loading-card {
+    height: 50px;
+    width: 100%;
+    margin: 0;
+}
+
+.loading {
+    width: 15px;
+	aspect-ratio: 1;
+	border-radius: 50%;
+	animation: l5 1s infinite linear alternate;
+    margin: auto;
+}
+
 .breadcrumb {
     position: relative;
 }

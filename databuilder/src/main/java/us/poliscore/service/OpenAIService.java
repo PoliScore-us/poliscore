@@ -60,7 +60,7 @@ public class OpenAIService {
 	public static int MAX_REQUEST_LENGTH = 3500000;
 	public static int MAX_GPT4o_REQUEST_LENGTH = 490000; // GPT-4o context window in tokens is 128,000, which is 500k string length.
 	
-	public static final int MAX_OUTPUT_TOKENS = 300000;
+	public static final int MAX_OUTPUT_TOKENS = 10000; // Max supported tokens for gpt-4.1 is 32768
 	
 	public static final int WAIT_BETWEEN_CALLS = 60; // in seconds
 	
@@ -160,7 +160,7 @@ public class OpenAIService {
 			
 			Batch batch = client.batches().create(BatchCreateParams.builder()
 				    .inputFileId(fileId)
-				    .endpoint(Endpoint.V1_RESPONSES)
+				    .endpoint(Endpoint.V1_CHAT_COMPLETIONS)
 				    .completionWindow(CompletionWindow._24H)
 				    .build());
 			

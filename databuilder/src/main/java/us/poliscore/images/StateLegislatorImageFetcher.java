@@ -44,7 +44,8 @@ public class StateLegislatorImageFetcher extends AbstractLegislatorImageFetcher 
 	@SneakyThrows
 	@Override
 	protected Optional<byte[]> fetchImage(Legislator leg, PoliscoreDataset dataset) {
-		val memberUrl = getOfficialUrl(leg, dataset);
+//		val memberUrl = getOfficialUrl(leg, dataset);
+		val memberUrl = leg.getOfficialUrl();
 	    if (memberUrl == null) return null;
 	    
 	    String url = scrapeImageUrlFromMemberPage(memberUrl, leg, dataset);
@@ -168,15 +169,15 @@ public class StateLegislatorImageFetcher extends AbstractLegislatorImageFetcher 
 	    return url;
 	}
 	
-	protected String getOfficialUrl(Legislator leg, PoliscoreDataset dataset) {
-		val op = s3.get(leg.getId(), PoliscoreScrapedLegislatorData.class);
-		
-		if (op.isPresent()) {
-			return op.get().getOfficialUrl();
-		}
-		
-		return null;
-	}
+//	protected String getOfficialUrl(Legislator leg, PoliscoreDataset dataset) {
+//		val op = s3.get(leg.getId(), PoliscoreScrapedLegislatorData.class);
+//		
+//		if (op.isPresent()) {
+//			return op.get().getOfficialUrl();
+//		}
+//		
+//		return null;
+//	}
 	
 	public static void main(String[] args) {
 		Quarkus.run(StateLegislatorImageFetcher.class, args);

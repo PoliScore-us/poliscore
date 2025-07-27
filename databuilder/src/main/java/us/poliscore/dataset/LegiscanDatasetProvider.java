@@ -66,7 +66,6 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	@Inject
 	protected LegislatorService lService;
 	
-//	@Inject protected OpenStatesDatasetAugmentor openstates;
 	@Inject protected PoliscoreDatasetAugmentor psLegScraper;
 	@Inject protected StateLegislatorImageFetcher stateImageFetcher;
 	

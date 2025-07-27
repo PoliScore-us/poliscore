@@ -56,7 +56,18 @@ export function descriptionForLegislator(leg: Legislator, small: boolean = false
     if (namespace === "us/congress")
       label += " (" + convertStateCodeToName(term.state) + ")";
     else if (term.chamber === "LOWER")
-      label += " (District " + term.district + ")";
+      label += " (District " + getDistrictLabel(leg) + ")";
 
     return label;
+  }
+
+  export function getDistrictLabel(leg: Legislator) {
+    let term = leg.terms[leg.terms.length - 1];
+    let namespace = leg.id?.split("/")[1] + "/" + leg.id?.split("/")[2];
+
+    if (namespace === "us/co") {
+      return term.district.replace("HD-0", "").replace("SD-0", "").replace("HD-", "").replace("SD-", "");
+    }
+
+    return term.district;
   }

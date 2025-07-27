@@ -103,7 +103,11 @@
                         </div>
                     </div>
 
-                    <table mat-table [dataSource]="billData" class="bill-history-table mat-elevation-z8" [ngClass]="{ 'non-safari': isNonSafari() }" >
+                    <mat-card *ngIf="isRequestingData" class="loading-card vertical-layout" appearance="outlined">
+                        <div class="loading">
+                        </div>
+                    </mat-card>
+                    <table *ngIf="!isRequestingData" mat-table [dataSource]="billData" class="bill-history-table mat-elevation-z8" [ngClass]="{ 'non-safari': isNonSafari() }" >
 
                         <!--- Note that these columns can be defined in any order.
                             The actual rendered columns are set as a property on the row definition" -->

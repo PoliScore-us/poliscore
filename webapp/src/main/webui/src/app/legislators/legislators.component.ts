@@ -53,8 +53,8 @@ export class LegislatorsComponent implements OnInit {
   issueMap = issueMap;
 
   public page: Page = {
-    index: "ObjectsByLocation",
-    ascending: true,
+    index: "ObjectsByRating",
+    ascending: false,
     pageSize: 25
   };
 

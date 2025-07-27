@@ -16,6 +16,7 @@ import { HeaderComponent } from '../header/header.component';
 import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu'; 
+import { getDistrictLabel } from '../legislators';
 
 /*
 const floatingLabelsPlugin = {
@@ -277,6 +278,7 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
 
   officialUrlForLegislator() {
     if (this.leg == null) return null;
+    if (this.leg.officialUrl != null) return this.leg.officialUrl;
 
     let namespace = this.leg!.id?.split("/")[1] + "/" + this.leg!.id?.split("/")[2];
     let sessionCode = this.leg!.id?.split("/")[3];
@@ -445,7 +447,7 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
     if (this.config.getNamespace() === "us/congress")
       extra.push(convertStateCodeToName(term.state));
     if (term.chamber == "LOWER")
-      extra.push("District " + term.district);
+      extra.push("District " + getDistrictLabel(this.leg));
 
     if (extra.length > 0)
       label += " (" + extra.join(" ") + ")";
@@ -578,6 +580,8 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
     this.isRequestingData = true;
 
     this.page.exclusiveStartKey = this.leg!.interactions!.length - 1;
+
+    this.billData = [];
 
     this.service.getLegislatorInteractions(this.legId!, this.page).then(page => {
       this.leg!.interactions!.push(...page.data[0]);

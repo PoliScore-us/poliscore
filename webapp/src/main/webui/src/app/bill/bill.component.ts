@@ -304,7 +304,7 @@ export class BillComponent implements OnInit {
   colorForGrade(grade: string): string { return colorForGrade(this.gradeForBill()); }
 
   public getCosponsorSmall() {
-    var plural = (this.bill!.cosponsors.length > 1 ? "s" : "");
+    var plural = (this.bill!.cosponsors.length == 1 ? "" : "s");
 
     // if (this.bill!.cosponsors.length <= 2)
     //   return "Cosponsor" + plural + ": " + this.bill?.cosponsors.map(s => s.name).join(", ");
