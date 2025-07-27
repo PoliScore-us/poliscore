@@ -113,6 +113,7 @@ export class AppService {
     queryBills(text: string): Observable<[string,string][]> {
         let params: HttpParams = new HttpParams();
         params = params.set("text", text);
+        params = params.set("namespace", this.config.getNamespace());
 
         return this.http.get<[string,string][]>(backendUrl + "/queryBills", { params: params });
     }
