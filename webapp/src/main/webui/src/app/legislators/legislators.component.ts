@@ -53,7 +53,7 @@ export class LegislatorsComponent implements OnInit {
   issueMap = issueMap;
 
   public page: Page = {
-    index: "ObjectsByRating",
+    index: "ObjectsByLocation",
     ascending: false,
     pageSize: 25
   };
@@ -63,6 +63,10 @@ export class LegislatorsComponent implements OnInit {
   ngOnInit(): void {
     this.updateMetaTags();
     this.namespace = this.config.getNamespace();
+
+    if (this.namespace !== 'us/congress') {
+      this.page.index = "ObjectsByRating";
+    }
 
     // We want all calls to 'fetchLegislatorPageData' wrapped in 'isPlatformBrowser' because fetchLegislatorPageData
     // resolves the user's ip to a state location and returns personalized data (which we don't want cached in SSG).
@@ -134,6 +138,8 @@ export class LegislatorsComponent implements OnInit {
     let pageTitle = "Legislators - PoliScore: AI Political Rating Service";
     if (this.myLocation != null && this.page != null && this.page.index === 'ObjectsByLocation')
       pageTitle = convertStateCodeToName(this.myLocation.toUpperCase()) + " Legislators - PoliScore: AI Political Rating Service"
+    if (this.namespace != null && this.namespace.length > 0 && this.namespace !== 'us/congress')
+      pageTitle = convertStateCodeToName(this.namespace.split("/")[1]) + " State Legislators - PoliScore: AI Political Rating Service";
 
     const pageDescription = this.config.appDescription();
     const pageUrl = "https://poliscore.us/" + year + "/legislators";

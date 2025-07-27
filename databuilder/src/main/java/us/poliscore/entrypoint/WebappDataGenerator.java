@@ -217,7 +217,7 @@ public class WebappDataGenerator implements QuarkusApplication
 	    Map<String, List<List<String>>> result = new HashMap<String, List<List<String>>>();
 
 	    for (var dataset : datasets) {
-	    	List<List<String>> datasetList = new ArrayList<List<String>>();
+	    	List<List<String>> datasetList = result.getOrDefault(dataset.getSession().getNamespace().getNamespace(), new ArrayList<List<String>>());
 	    	datasetList.addAll(dataset.query(Bill.class).stream()
 		        .filter(b -> //PoliscoreUtil.SUPPORTED_CONGRESSES.stream().anyMatch(s -> b.isIntroducedInSession(s)) &&
 		                     s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
