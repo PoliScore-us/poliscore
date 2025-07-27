@@ -36,8 +36,8 @@ import us.poliscore.service.storage.S3PersistenceService;
 public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	
 	public static final String BIRTHDAY_LOOKUP_SYSTEM_PROMPT =
-		    "You are an expert researcher with access to google searches. " +
-		    "Your mission is to perform google searches and find the birthday for every legislator from a specific U.S. state (a complete list will be provided), and return the results as a JSON array of JSON objects." +
+		    "You are an expert researcher with access to web searches. " +
+		    "Your mission is to perform web searches and find the birthday for every legislator from a specific U.S. state (a complete list will be provided), and return the results as a JSON array of JSON objects." +
 		    "The format of your JSON response will be as follows: [{'name': '<full name, exactly as given to you>', 'birthday': 'YYYY-MM-DD'}] " +
 		    "Each JSON object should contain the legislator's full name (exactly as you have been provided) and birthday in ISO format (YYYY-MM-DD). " +
 		    "If a birthday cannot be found, return 'UNKNOWN' for that entry. " +
@@ -55,6 +55,11 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	@Inject
 	protected OpenAIService openai;
 	
+	@Inject
+	protected OpenStatesDatasetAugmentor openstates;
+	
+	public static boolean isManualRun = false;
+	
 	public void augmentLegislators(PoliscoreDataset dataset) {
 		for (Legislator leg : dataset.query(Legislator.class)) {
 			val addendum = s3.get(PoliscoreScrapedLegislatorData.generateId(leg.getId()), PoliscoreScrapedLegislatorData.class);
@@ -65,8 +70,9 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 				
 				if (addendum.get().getBirthday() != null)
 					leg.setBirthday(addendum.get().getBirthday());
-			} else {
-				leg.setOfficialUrl(null);
+			} else if (!isManualRun) {
+				leg.setOfficialUrl(guessOfficialUrl(leg, dataset, null));
+				leg.setBirthday(Legislator.DEFAULT_BIRTHDAY);
 			}
 		}
 	}
@@ -81,7 +87,62 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	
 	public void fetchData(PoliscoreDataset dataset) {
 		fetchOfficalUrls(dataset);
-		openAiDeepResearch(dataset);
+		fetchFromOpenStates(dataset);
+		
+		// Unfortunately this costs like $10 to find 3 or 4 birthdays so not super cost effective at the moment. Cool idea though.
+//		openAiDeepResearch(dataset);
+	}
+	
+	public void fetchFromOpenStates(PoliscoreDataset dataset) {
+		if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS)) return;
+		
+		int success = 0;
+		int skipped = 0;
+		
+		Log.info("Building list of legislators to fetch. This will take a minute...");
+		
+		val legs = dataset.query(Legislator.class).stream()
+				.filter(l -> l.getBirthday() == null)
+				.toList();
+		
+		if (legs.size() == 0) {
+			Log.info("No legislators missing birthday.");
+			return;
+		}
+		
+		Log.info("About to fetch birthday for " + legs.size() + " legislators.");
+		
+		for (Legislator leg : legs)	{
+			try
+			{
+				val op = openstates.fetchLegislatorData(leg, dataset);
+				
+				if (op.isPresent() && op.get().getBirthDate() != null) {
+					val scraped = new PoliscoreScrapedLegislatorData();
+	                scraped.setId(PoliscoreScrapedLegislatorData.generateId(leg.getId()));
+	                scraped.setBirthday(op.get().getBirthDate());
+	                
+					val existing = s3.get(PoliscoreScrapedLegislatorData.generateId(leg.getId()), PoliscoreScrapedLegislatorData.class);
+					
+					if (existing.isPresent()) {
+						scraped.setOfficialUrl(existing.get().getOfficialUrl());
+					}
+					
+					s3.put(scraped);
+					
+					success++;
+				} else {
+					skipped++;
+				}
+			}
+			catch (Throwable t)
+			{
+				Log.warn("Error fetching data for " + leg.getName().getOfficial_full() + " " + leg.getCode(), t);
+				t.printStackTrace();
+			}
+		}
+		
+		Log.info("Successfully fetched data for " + success + " legislators. Skipped " + skipped);
 	}
 	
 	public void fetchOfficalUrls(PoliscoreDataset dataset) {
@@ -114,7 +175,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 			}
 			catch (Throwable t)
 			{
-				Log.warn("Could not find image for congressman " + leg.getName().getOfficial_full() + " " + leg.getCode());
+				Log.warn("Error fetching data for " + leg.getName().getOfficial_full() + " " + leg.getCode(), t);
 				t.printStackTrace();
 			}
 		}
@@ -212,8 +273,6 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 
 	                s3.put(scraped);
 	                updated++;
-
-	                Log.info("Set and persisted birthday for " + fullName + ": " + parsedDate);
 	            } catch (Exception e) {
 	                skipped++;
 	                Log.warn("Failed to parse or persist birthday for " + fullName + ": " + birthdayStr, e);
@@ -404,6 +463,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	@Override
     public int run(String... args) throws Exception {
 		
+		isManualRun = true;
 		fetchData();
         
         Quarkus.waitForExit();
