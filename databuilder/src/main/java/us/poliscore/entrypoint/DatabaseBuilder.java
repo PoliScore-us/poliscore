@@ -211,7 +211,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	private void interpretBills(List<PoliscoreDataset> buildDatasets) { interpretBills(buildDatasets, false); }
 	@SneakyThrows private void interpretBills(List<PoliscoreDataset> buildDatasets, boolean isRecursive) {
 		if (INTERPRET_NEW_BILLS) {
-			List<File> requests = billRequestGenerator.process(buildDatasets, !isRecursive);
+			List<File> requests = billRequestGenerator.process(buildDatasets, isRecursive);
 			
 			if (requests.size() > 0) {
 				List<File> responses = openAi.processBatch(requests);

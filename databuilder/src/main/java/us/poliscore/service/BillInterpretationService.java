@@ -130,16 +130,19 @@ public class BillInterpretationService {
 //		
 //		return userMsg;
 		
-		var userMsg = "Press Coverage:\n";
-		userMsg += "The following articles were pulled from a basic Google search for this bill and were included to provide additional context for the interpretation. Their inclusion does not represent an endorsement. Often a Google search for a bill will reveal key legislative stakeholders, so view these articles with a skeptical eye. We want to prioritize what's best for all of America, not necessarily a few key stakeholders.\n\n";
-		
+		String userMsg = "";
 		
 		var pressInterps = billService.getPressInterps(bill.getId());
 		
-		for (var interp : pressInterps)
-		{
-			userMsg += interp.getAuthor() + "(" + interp.getOrigin().getUrl() + ") - " + interp.getOrigin().getTitle() + ":\n";
-			userMsg += interp.getLongExplain() + "\n\n";
+		if (pressInterps.size() > 0) {
+			userMsg = "Press Coverage:\n";
+			userMsg += "The following articles were pulled from a basic Google search for this bill and were included to provide additional context for the interpretation. Their inclusion does not represent an endorsement. Often a Google search for a bill will reveal key legislative stakeholders, so view these articles with a skeptical eye. We want to prioritize what's best for all of America, not necessarily a few key stakeholders.\n\n";
+			
+			for (var interp : pressInterps)
+			{
+				userMsg += interp.getAuthor() + "(" + interp.getOrigin().getUrl() + ") - " + interp.getOrigin().getTitle() + ":\n";
+				userMsg += interp.getLongExplain() + "\n\n";
+			}
 		}
 		
 		userMsg += "Bill Text:\n";

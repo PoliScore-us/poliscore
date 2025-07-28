@@ -1,7 +1,7 @@
 import { Component, HostListener, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { AppService } from '../app.service';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { Bill, BillInterpretation, colorForGrade, getBenefitToSocietyIssue, gradeForRating, gradeForStats, issueKeyToLabel, issueKeyToLabelSmall, PressInterpretation } from '../model';
+import convertStateCodeToName, { Bill, BillInterpretation, colorForGrade, getBenefitToSocietyIssue, gradeForRating, gradeForStats, issueKeyToLabel, issueKeyToLabelSmall, PressInterpretation } from '../model';
 import { MatCardModule } from '@angular/material/card';
 import { CommonModule, isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { HttpClient, HttpHandler } from '@angular/common/http';
@@ -261,7 +261,10 @@ export class BillComponent implements OnInit {
     let namespace = billId.split("/")[1] + "/" + billId.split("/")[2];
     let year = this.config.sessionCodeToYear(billSession, namespace);
 
-    const pageTitle = this.bill!.name + " - Bill - PoliScore: AI Political Rating Service";
+    let pageTitle = this.bill!.name + " - Bill - PoliScore: AI Political Rating Service";
+    if (this.config.getNamespace() != null && this.config.getNamespace().length > 0 && this.config.getNamespace() !== 'us/congress')
+            pageTitle = this.bill!.name + " - " + convertStateCodeToName(this.config.getNamespace().split("/")[1]) + " State Bill - PoliScore: AI Political Rating Service";
+
     const pageDescription = this.gradeForBill() + " (" + this.bill?.cosponsors.length + " cosponsors) - " + this.bill!.interpretation.shortExplain!.replace(/[\r\n]/g, '');
     const pageUrl = `https://poliscore.us` + this.config.billIdToAbsolutePath(billId);
     const imageUrl = 'https://poliscore.us/' + year + '/images/billonly.png';

@@ -49,7 +49,7 @@ public class OpenAIService {
 	
 	public static final String PROVIDER = "openai";
 	
-	public static final String MODEL = "gpt-4.1";
+	public static final String MODEL = "o3";
 	
 	public static final int PROMPT_VERSION = 0;
 	
@@ -98,18 +98,20 @@ public class OpenAIService {
 		
 		OpenAIClient client = OpenAIOkHttpClient.builder().apiKey(secret.getOpenAISecret()).build();
 		
+		String _model = StringUtils.defaultIfEmpty(model, MODEL);
+		
 		val paramBuilder = ResponseCreateParams.builder()
 				.instructions(systemMsg)
 		        .input(userMsg)
-		        .model(StringUtils.defaultIfEmpty(model, MODEL))
+		        .model(_model)
 		        .maxOutputTokens(MAX_OUTPUT_TOKENS);
 		
-		if (!model.equals("o3-deep-research"))
-			paramBuilder.temperature(0.0d); // We don't want randomness. Give us predictability and accuracy
-		else
+		if (_model.equals("o3-deep-research") || _model.equals("o3"))
 			paramBuilder.tools(List.of(
 			        Tool.ofWebSearch(WebSearchTool.builder().type(Type.WEB_SEARCH_PREVIEW).build())
 			        ));
+		else
+			paramBuilder.temperature(0.0d); // We don't want randomness. Give us predictability and accuracy
 			
 		val params = paramBuilder.build();
 		

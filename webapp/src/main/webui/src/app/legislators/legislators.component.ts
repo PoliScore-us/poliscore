@@ -340,13 +340,13 @@ export class LegislatorsComponent implements OnInit {
       if (this.namespace === "us/congress") {
         this.searchOptions = data.allLegislators.concat(states.map(s => ["STATE/" + s[1], s[0], ""])).map(([id, name, alias]) => ({
           id,
-          name,
+          name: name + this.namespaceLabelForSearchOption(id),
           alias
         }));
       } else {
         this.searchOptions = data.allLegislators.map(([id, name, alias]) => ({
           id,
-          name,
+          name: name + this.namespaceLabelForSearchOption(id),
           alias
         }));
       }
@@ -374,6 +374,16 @@ export class LegislatorsComponent implements OnInit {
         this.isRequestingData = false;
       }
     });
+  }
+
+  namespaceLabelForSearchOption(id: string): string {
+    if (id == null || id.length == 0 || id.startsWith("STATE")) return "";
+
+    let optionNamespace = id.split("/")[1] + "/" + id.split("/")[2];
+
+    let nsLabel = convertStateCodeToName(id.split("/")[2]) + (optionNamespace === this.namespace || optionNamespace === 'us/congress' ? "" : " State");
+
+    return optionNamespace === this.namespace ? "" : " (" + nsLabel + ")";
   }
 
   routeTo(leg: Legislator)

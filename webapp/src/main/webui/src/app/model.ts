@@ -346,6 +346,8 @@ export const issueMap = {
   };
 
 export default function convertStateCodeToName(input: string): string {
+  if (input === "congress") return "Congress";
+
   const toAbbr = input.length !== 2;
 
   // So happy that Canada and the US have distinct abbreviations

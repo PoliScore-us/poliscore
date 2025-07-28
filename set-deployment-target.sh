@@ -57,6 +57,17 @@ update_property "$DB_PROPS" "ddb.table" "$DDB_TABLE"
 update_property "$WEB_PROPS" "ipGeoSecretName" "$IP_GEO_SECRET_NAME"
 update_property "$WEB_PROPS" "ddb.table" "$DDB_TABLE"
 
+# Update webapp properties
+pushd webapp/src/main/webui
+if [ "$POLISCORE_DEPLOYMENT" == "Poliscore1" ]; then
+  sed -i '' "s|https://5hta4jxn7q6cfcyxnvz4qmkyli0tambn.lambda-url.us-east-1.on.aws/|$LAMBDA_DEPLOYMENT_URL|g" src/app/app.config.ts
+fi
+
+if [ "$POLISCORE_DEPLOYMENT" == "Poliscore2" ]; then
+  sed -i '' "s|https://y5i3jhm7k5vy67elvzly4b3b240kjwlp.lambda-url.us-east-1.on.aws/|$LAMBDA_DEPLOYMENT_URL|g" src/app/app.config.ts
+fi
+popd
+
 # Print what was set
 echo "✅ Environment variables set:"
 echo "  DDB_TABLE=$DDB_TABLE"
