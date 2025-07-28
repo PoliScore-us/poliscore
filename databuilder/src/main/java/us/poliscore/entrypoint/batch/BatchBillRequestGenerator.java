@@ -27,14 +27,12 @@ import us.poliscore.ai.BatchOpenAIRequest;
 import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
-import us.poliscore.model.InterpretationOrigin;
-import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.ai.OpenAIModel;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillSlice;
 import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.CongressionalBillType;
-import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.parsing.BillSlicer;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
@@ -51,6 +49,8 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 //	public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_COLORADO, "2173", "sb", 114));
 	
 	public static final boolean CHECK_S3_EXISTS = specificFetch == null;
+	
+	public static final OpenAIModel billProcessModel = OpenAIService.DEFAULT_MODEL;
 	
 	@Inject
 	private LocalCachedS3Service s3;
@@ -144,9 +144,9 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 			
 			val userMsg = billInterpreter.getUserMsgForBill(b, b.getText().getDocument());
 			
-			if (userMsg.length() >= OpenAIService.MAX_REQUEST_LENGTH)
+			if (userMsg.length() >= billProcessModel.getContextWindowStringLength())
 	    	{
-	    		List<BillSlice> slices = BillSlicer.factory(b.getText()).slice(b, b.getText(), OpenAIService.MAX_REQUEST_LENGTH - (userMsg.length() - b.getText().getDocument().length()));
+	    		List<BillSlice> slices = BillSlicer.factory(b.getText()).slice(b, b.getText(), billProcessModel.getContextWindowStringLength() - (userMsg.length() - b.getText().getDocument().length()));
 	    		
 	    		if (slices.size() == 0) throw new UnsupportedOperationException("Slicer returned zero slices?");
 	    		else if (slices.size() == 1) {
@@ -154,7 +154,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	    				b.getText().setXml(slices.get(0).getText());
 	    			
 	    			List<BatchBillMessage> messages = new ArrayList<BatchBillMessage>();
-					messages.add(new BatchBillMessage("system", billInterpreter.getPromptForBill(b, false)));
+					messages.add(new BatchBillMessage("system", billInterpreter.getPromptForBill(b, false, false)));
 	    			messages.add(new BatchBillMessage("user", billInterpreter.getUserMsgForBill(b, b.getText().getDocument())));
 	    			
 	    			requests.add(new BatchOpenAIRequest(
@@ -193,7 +193,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	            		
 	            		if (CHECK_S3_EXISTS && billInterpreter.isInterpreted(oid)) { continue; }
 	            		
-	            		if (String.join("\n", summaries).length() > OpenAIService.MAX_REQUEST_LENGTH) {
+	            		if (String.join("\n", summaries).length() > billProcessModel.getContextWindowStringLength()) {
 	            			summaries = new ArrayList<String>();
 	            			for (int i = 0; i < slices.size(); ++i)
 		            		{
@@ -205,12 +205,12 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		            		}
 	            		}
 	            		
-		    			createRequest(oid, billInterpreter.getPromptForBill(b, true), billInterpreter.getUserMsgForBill(b, String.join("\n", summaries)));
+		    			createRequest(oid, billInterpreter.getPromptForBill(b, true, false), billInterpreter.getUserMsgForBill(b, String.join("\n", summaries)));
 	        		}
 	    		}
 	    	}
 			else {
-    			createRequest(BillInterpretation.generateId(b.getId(), null), billInterpreter.getPromptForBill(b, false), userMsg);
+    			createRequest(BillInterpretation.generateId(b.getId(), null), billInterpreter.getPromptForBill(b, false, false), userMsg);
 			}
 			
 			if (tokenLen >= TOKEN_BLOCK_SIZE) {
@@ -232,8 +232,8 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	}
 	
 	private void createRequest(String oid, String sysMsg, String userMsg) {
-		if (userMsg.length() >= OpenAIService.MAX_REQUEST_LENGTH) {
-			throw new RuntimeException("Max user message length exceeded on " + oid + " (" + userMsg.length() + " > " + OpenAIService.MAX_REQUEST_LENGTH);
+		if (userMsg.length() >= billProcessModel.getContextWindowStringLength()) {
+			throw new RuntimeException("Max user message length exceeded on " + oid + " (" + userMsg.length() + " > " + billProcessModel.getContextWindowStringLength());
 		}
 		
 		List<BatchBillMessage> messages = new ArrayList<BatchBillMessage>();

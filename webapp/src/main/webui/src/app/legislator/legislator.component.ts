@@ -69,6 +69,8 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
 
   public isRequestingData: boolean = false;
 
+  public hideInteractions: boolean = false;
+
   public hasValidInterp: boolean = false;
 
   private hasMoreData: boolean = true;
@@ -583,14 +585,13 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
 
     this.page.exclusiveStartKey = this.leg!.interactions!.length - 1;
 
-    this.billData = [];
-
     this.service.getLegislatorInteractions(this.legId!, this.page).then(page => {
       this.leg!.interactions!.push(...page.data[0]);
       this.refreshBillData();
       this.hasMoreData = page.hasMoreData;
     }).finally(() => {
       this.isRequestingData = false;
+      this.hideInteractions = false;
     });
   }
 
@@ -637,6 +638,7 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
     this.router.navigate([], { fragment: `sort=${routeIndex}&ascending=${this.page.ascending}`, queryParamsHandling: 'merge', });
   
     // Fetch new interactions
+    this.hideInteractions = true;
     this.fetchInteractions();
   
     if (event && menuTrigger) {

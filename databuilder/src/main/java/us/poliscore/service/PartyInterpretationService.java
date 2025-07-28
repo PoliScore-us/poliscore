@@ -27,6 +27,7 @@ import us.poliscore.ai.BatchOpenAIRequest;
 import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
+import us.poliscore.ai.OpenAIModel;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.IssueStats;
 import us.poliscore.model.LegislativeNamespace;
@@ -51,6 +52,8 @@ public class PartyInterpretationService {
 			
 			Based on these scores, this party has received the overall letter grade: {{letterGrade}}. You will be given summaries of bills this party has introduced within this session, sorted by two different scoring and sorting mechanisms: rating and impact. Rating was calculated by directly sorting the bills based on the \"Overall Benefit to Society\" metric. Impact is a metric which factors in rating, number of cosponsors, and how far the bill made it through the legislative process (i.e. laws are more important than bills). Highest and lowest rated bills can be useful for knowing what the extremes of the party are up to, versus impact is useful for knowing what the party actually found coalitions around. Please generate a layman's, concise, five paragraph, {{analysisType}}. Begin your first paragraph by focusing on higher level goals, highlighting any {{behavior}}, identifying trends, and pointing out major focuses and priorities of the party. Your next three paragraphs will attempt to explain why the party received the scores they did in the following policy areas: [{{highlightPolicyAreas}}] and should reference specific bill titles (in quotes). Do not include the party's policy area grade scores and do not mention their letter grade in your summary.
 			""";
+	
+	public static final OpenAIModel partyInterpModel = OpenAIService.DEFAULT_MODEL;
 	
 	@Inject
 	private LocalCachedS3Service s3;
@@ -271,8 +274,8 @@ public class PartyInterpretationService {
 	}
 	
 	private void createRequest(String sessionKey, Party party, String sysMsg, String userMsg) {
-		if (userMsg.length() >= OpenAIService.MAX_REQUEST_LENGTH) {
-			throw new RuntimeException("Max user message length exceeded on " + party.getName() + " (" + userMsg.length() + " > " + OpenAIService.MAX_REQUEST_LENGTH);
+		if (userMsg.length() >= partyInterpModel.getContextWindowStringLength()) {
+			throw new RuntimeException("Max user message length exceeded on " + party.getName() + " (" + userMsg.length() + " > " + partyInterpModel.getContextWindowStringLength());
 		}
 		
 		List<BatchBillMessage> messages = new ArrayList<BatchBillMessage>();

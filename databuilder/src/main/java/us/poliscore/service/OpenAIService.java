@@ -12,7 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import com.openai.client.OpenAIClient;
@@ -22,7 +22,6 @@ import com.openai.models.batches.Batch.Status;
 import com.openai.models.batches.BatchCreateParams;
 import com.openai.models.batches.BatchCreateParams.CompletionWindow;
 import com.openai.models.batches.BatchCreateParams.Endpoint;
-import com.openai.models.beta.realtime.ResponseCreateEvent;
 import com.openai.models.files.FileCreateParams;
 import com.openai.models.files.FilePurpose;
 import com.openai.models.responses.Response;
@@ -40,6 +39,7 @@ import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.Environment;
+import us.poliscore.ai.OpenAIModel;
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.AISliceInterpretationMetadata;
 import us.poliscore.model.bill.BillSlice;
@@ -49,18 +49,13 @@ public class OpenAIService {
 	
 	public static final String PROVIDER = "openai";
 	
-	public static final String MODEL = "o3";
+	public static final OpenAIModel DEFAULT_MODEL = OpenAIModel.o3;
 	
 	public static final int PROMPT_VERSION = 0;
 	
 	// If a batch is sent with a number of requests less than or equal to this number we will not use the batch api and process it immediately.
 	// This is because the OpenAI Batch API has been known to take forever or even fail to process.
 	public static final int IMMEDIATE_PROCESS_THRESHOLD = 5;
-	
-	public static int MAX_REQUEST_LENGTH = 3500000;
-	public static int MAX_GPT4o_REQUEST_LENGTH = 490000; // GPT-4o context window in tokens is 128,000, which is 500k string length.
-	
-	public static final int MAX_OUTPUT_TOKENS = 10000; // Max supported tokens for gpt-4.1 is 32768
 	
 	public static final int WAIT_BETWEEN_CALLS = 60; // in seconds
 	
@@ -71,20 +66,20 @@ public class OpenAIService {
 	
 	public static AIInterpretationMetadata metadata()
 	{
-		return AIInterpretationMetadata.construct(PROVIDER, MODEL, PROMPT_VERSION);
+		return AIInterpretationMetadata.construct(PROVIDER, DEFAULT_MODEL.getId(), PROMPT_VERSION);
 	}
 	
 	public static AIInterpretationMetadata metadata(BillSlice slice)
 	{
-		return AISliceInterpretationMetadata.construct(PROVIDER, MODEL, PROMPT_VERSION, slice);
+		return AISliceInterpretationMetadata.construct(PROVIDER, DEFAULT_MODEL.getId(), PROMPT_VERSION, slice);
 	}
 	
 	public String chat(String systemMsg, String userMsg) { return this.chat(systemMsg, userMsg, null); }
 	
 	@SneakyThrows
-	public String chat(String systemMsg, String userMsg, String model)
+	public String chat(String systemMsg, String userMsg, OpenAIModel model)
     {
-		if (userMsg.length() > OpenAIService.MAX_REQUEST_LENGTH) {
+		if (userMsg.length() > model.getContextWindowTokens()) {
 			throw new IndexOutOfBoundsException();
 		}
 		if (StringUtils.isEmpty(systemMsg) || StringUtils.isEmpty(userMsg)) {
@@ -98,19 +93,20 @@ public class OpenAIService {
 		
 		OpenAIClient client = OpenAIOkHttpClient.builder().apiKey(secret.getOpenAISecret()).build();
 		
-		String _model = StringUtils.defaultIfEmpty(model, MODEL);
+		OpenAIModel _model = ObjectUtils.defaultIfNull(model, DEFAULT_MODEL);
 		
 		val paramBuilder = ResponseCreateParams.builder()
 				.instructions(systemMsg)
 		        .input(userMsg)
-		        .model(_model)
-		        .maxOutputTokens(MAX_OUTPUT_TOKENS);
+		        .model(_model.getId())
+		        .maxOutputTokens(_model.getMaxOutputTokens());
 		
-		if (_model.equals("o3-deep-research") || _model.equals("o3"))
+		if (_model.isSupportsSearch())
 			paramBuilder.tools(List.of(
 			        Tool.ofWebSearch(WebSearchTool.builder().type(Type.WEB_SEARCH_PREVIEW).build())
 			        ));
-		else
+		
+		if (_model.isSupportsTemperature())
 			paramBuilder.temperature(0.0d); // We don't want randomness. Give us predictability and accuracy
 			
 		val params = paramBuilder.build();
@@ -127,7 +123,7 @@ public class OpenAIService {
     		throw new RuntimeException("OpenAI's response status was not equal to completed. " + response.status().get());
     	}
     	
-    	nextCallTime = LocalDateTime.now().plusSeconds(Math.round(((double)userMsg.length() / (double)OpenAIService.MAX_REQUEST_LENGTH) * (double)WAIT_BETWEEN_CALLS)).plusSeconds(2);
+    	nextCallTime = LocalDateTime.now().plusSeconds(Math.round(((double)userMsg.length() / (double)_model.getContextWindowTokens()) * (double)WAIT_BETWEEN_CALLS)).plusSeconds(2);
     	
     	return response.output().stream()
     			.filter(r -> r.message().isPresent())
@@ -268,14 +264,14 @@ public class OpenAIService {
 
 				val customId = node.path("custom_id").asText(null);
 
-				String assistantResponse = chat(systemMsg, userMsg, model);
+				String assistantResponse = chat(systemMsg, userMsg, OpenAIModel.fromString(model));
 
 				// Build the "body" part (chat completion result)
 				val responseNode = objectMapper.createObjectNode();
 				responseNode.put("id", "chatcmpl-" + java.util.UUID.randomUUID());
 				responseNode.put("object", "chat.completion");
 				responseNode.put("created", System.currentTimeMillis() / 1000);
-				responseNode.put("model", StringUtils.defaultIfEmpty(model, MODEL));
+				responseNode.put("model", StringUtils.defaultIfEmpty(model, DEFAULT_MODEL.getId()));
 
 				val choicesArray = objectMapper.createArrayNode();
 				val choice = objectMapper.createObjectNode();

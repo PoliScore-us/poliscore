@@ -39,6 +39,7 @@ import us.poliscore.ai.BatchOpenAIRequest;
 import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
+import us.poliscore.ai.OpenAIModel;
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.InterpretationOrigin;
 import us.poliscore.model.LegislativeNamespace;
@@ -235,7 +236,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		PRESS_INTERPRETATION_PROMPT = PRESS_INTERPRETATION_PROMPT_TEMPLATE.replaceFirst("\\{issuesList\\}", issues);
 	}
 	
-	public static String AI_MODEL = "gpt-4.1-mini";
+	public static final OpenAIModel interpModel = OpenAIModel.GPT41mini;
 	
 	@Inject
 	private LocalCachedS3Service s3;
@@ -277,7 +278,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	
 	public static AIInterpretationMetadata metadata()
 	{
-		return AIInterpretationMetadata.construct(OpenAIService.PROVIDER, AI_MODEL, 0);
+		return AIInterpretationMetadata.construct(OpenAIService.PROVIDER, interpModel.getId(), 0);
 	}
 	
 	@SneakyThrows
@@ -526,7 +527,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		
 		String text = "title: " + origin.getTitle() + "\nurl: " + origin.getUrl() + "\n\n";
 		
-		int maxLen = OpenAIService.MAX_GPT4o_REQUEST_LENGTH - prompt.length();
+		int maxLen = interpModel.getContextWindowStringLength() - prompt.length();
 				
 		text += body;
 		if (text.length() > maxLen)
@@ -553,8 +554,8 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
     }
 	
 	private void createRequest(CustomOriginData data, String sysMsg, String userMsg) {
-		if ((userMsg.length() + sysMsg.length()) > OpenAIService.MAX_GPT4o_REQUEST_LENGTH) {
-			throw new RuntimeException("Max user message length exceeded on " + data.getOid() + " (" + userMsg.length() + " > " + OpenAIService.MAX_GPT4o_REQUEST_LENGTH);
+		if ((userMsg.length() + sysMsg.length()) > interpModel.getContextWindowStringLength()) {
+			throw new RuntimeException("Max user message length exceeded on " + data.getOid() + " (" + userMsg.length() + " > " + interpModel.getContextWindowStringLength());
 		}
 		
 		List<BatchBillMessage> messages = new ArrayList<BatchBillMessage>();
@@ -563,7 +564,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		
 		requests.add(new BatchOpenAIRequest(
 				data,
-				new BatchOpenAIBody(messages, AI_MODEL)
+				new BatchOpenAIBody(messages, interpModel)
 		));
 		
 		tokenLen += (userMsg.length() / 4);

@@ -133,7 +133,10 @@ public class BillInterpretationParser {
 	private void processConfidence(String line) {
 		try
 		{
-			interp.setConfidence(Integer.parseInt(line));
+			if (line.contains("."))
+				interp.setConfidence(Math.round(Float.parseFloat(line)*100.0f));
+			else
+				interp.setConfidence(Integer.parseInt(line));
 		}
 		catch (Throwable t)
 		{

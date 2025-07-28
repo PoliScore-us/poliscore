@@ -20,6 +20,7 @@ import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.PoliscoreDataset;
+import us.poliscore.ai.OpenAIModel;
 import us.poliscore.images.StateLegislatorImageFetcher;
 import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.model.LegislativeChamber;
@@ -236,7 +237,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	    }
 
 	    String userPrompt = sb.toString();
-	    String response = openai.chat(BIRTHDAY_LOOKUP_SYSTEM_PROMPT, userPrompt, "o3-deep-research");
+	    String response = openai.chat(BIRTHDAY_LOOKUP_SYSTEM_PROMPT, userPrompt, OpenAIModel.o3DeepResearch);
 
 	    Log.info("OpenAI response:\n" + response);
 

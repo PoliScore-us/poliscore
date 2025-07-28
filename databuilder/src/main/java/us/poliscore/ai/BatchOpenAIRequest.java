@@ -3,6 +3,7 @@ package us.poliscore.ai;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
@@ -108,22 +109,25 @@ public class BatchOpenAIRequest {
 	@RegisterForReflection
 	@AllArgsConstructor
 	@NoArgsConstructor
+	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public static class BatchOpenAIBody {
-		private String model = OpenAIService.MODEL;
+		private String model = OpenAIService.DEFAULT_MODEL.getId();
 		
 		private List<BatchBillMessage> messages = new ArrayList<BatchBillMessage>();
 		
-		private int max_tokens = OpenAIService.MAX_OUTPUT_TOKENS;
-		
-		private float temperature = 0.0f;
+		private Float temperature = null;
 		
 		public BatchOpenAIBody(List<BatchBillMessage> messages) {
 			this.messages = messages;
 		}
 		
-		public BatchOpenAIBody(List<BatchBillMessage> messages, String model) {
+		public BatchOpenAIBody(List<BatchBillMessage> messages, OpenAIModel _model) {
 			this.messages = messages;
-			this.model = model;
+			this.model = _model.getId();
+			
+			if (_model.isSupportsTemperature()) {
+				temperature = 0.0f;
+			}
 		}
 	}
 	

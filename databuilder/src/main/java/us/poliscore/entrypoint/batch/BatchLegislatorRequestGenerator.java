@@ -27,6 +27,7 @@ import us.poliscore.ai.BatchOpenAIRequest;
 import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
+import us.poliscore.ai.OpenAIModel;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
@@ -48,6 +49,8 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	public static final long TOKEN_BLOCK_SIZE = 30000000;
 	
 	public static final boolean CHECK_S3_EXISTS = true;
+	
+	public static final OpenAIModel interpModel = OpenAIService.DEFAULT_MODEL;
 	
 	@Inject
 	private S3PersistenceService s3;
@@ -194,7 +197,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 			
 			String billMsg = "- " + interact.describe() + " \"" + interact.getBillName() + "\" (" + bill.getStatus().getDescription() + "): " + interact.getShortExplain();
 			
-			if ( (String.join("\n", billMsgs) + "\n" + billMsg).length() < OpenAIService.MAX_REQUEST_LENGTH ) {
+			if ( (String.join("\n", billMsgs) + "\n" + billMsg).length() < interpModel.getContextWindowStringLength() ) {
 				billMsgs.add(billMsg);
 				includedBills.add(interact.getBillId());
 			} else {
@@ -217,7 +220,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		{
 			val bill = dataset.get(interact.getBillId(), Bill.class).orElseThrow();
 			val billMsg = "- " + interact.describe() + " \"" + interact.getBillName() + "\" (" + bill.getStatus().getDescription() + "): " + interact.getShortExplain();
-			if ( (String.join("\n", billMsgs) + "\n" + billMsg).length() < OpenAIService.MAX_REQUEST_LENGTH ) {
+			if ( (String.join("\n", billMsgs) + "\n" + billMsg).length() < interpModel.getContextWindowStringLength() ) {
 				billMsgs.add(billMsg);
 				includedBills.add(interact.getBillId());
 			} else {
@@ -238,7 +241,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		{
 			val bill = dataset.get(interact.getBillId(), Bill.class).orElseThrow();
 			val billMsg = "- " + interact.describe() + " \"" + interact.getBillName() + "\" (" + bill.getStatus().getDescription() + "): " + interact.getShortExplain();
-			if ( (String.join("\n", billMsgs) + "\n" + billMsg).length() < OpenAIService.MAX_REQUEST_LENGTH ) {
+			if ( (String.join("\n", billMsgs) + "\n" + billMsg).length() < interpModel.getContextWindowStringLength() ) {
 				billMsgs.add(billMsg);
 				includedBills.add(interact.getBillId());
 			} else {
