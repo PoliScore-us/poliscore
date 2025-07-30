@@ -79,7 +79,7 @@ public class OpenAIService {
 	@SneakyThrows
 	public String chat(String systemMsg, String userMsg, OpenAIModel model)
     {
-		if (userMsg.length() > model.getContextWindowTokens()) {
+		if (userMsg.length() > model.getContextWindowStringLength()) {
 			throw new IndexOutOfBoundsException();
 		}
 		if (StringUtils.isEmpty(systemMsg) || StringUtils.isEmpty(userMsg)) {

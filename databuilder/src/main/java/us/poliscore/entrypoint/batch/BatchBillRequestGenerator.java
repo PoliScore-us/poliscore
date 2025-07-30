@@ -82,10 +82,10 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	}
 	
 	public List<File> process() throws IOException {
-		return process(data.getBuildDatasets(), true);
+		return process(data.getBuildDatasets(), true, true);
 	}
 	
-	public List<File> process(List<PoliscoreDataset> buildDatasets, boolean isSecondFetch) throws IOException
+	public List<File> process(List<PoliscoreDataset> buildDatasets, boolean enableWebSearch, boolean isSecondFetch) throws IOException
 	{
 		tokenLen = 0;
 		totalRequests = 0;
@@ -104,7 +104,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		}
 		
 		for(val dataset : buildDatasets)
-			processDataset(dataset, isSecondFetch, block);
+			processDataset(dataset, enableWebSearch, isSecondFetch, block);
 		
 		writeBlock(block++);
 		
@@ -113,7 +113,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		return writtenFiles;
 	}
 
-	private void processDataset(PoliscoreDataset dataset, boolean isSecondFetch, int block) throws IOException {
+	private void processDataset(PoliscoreDataset dataset, boolean enableWebSearch, boolean isSecondFetch, int block) throws IOException {
 		if (specificFetch != null && isSecondFetch) return;
 		
 		boolean includePressDirtyBills = !isSecondFetch;
@@ -142,7 +142,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 			val billText = billService.getBillText(b).orElse(null);
 			b.setText(billText);
 			
-			val userMsg = billInterpreter.getUserMsgForBill(b, b.getText().getDocument());
+			val userMsg = billInterpreter.getUserMsgForBill(b, b.getText().getDocument(), billProcessModel);
 			
 			if (userMsg.length() >= billProcessModel.getContextWindowStringLength())
 	    	{
@@ -154,8 +154,8 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	    				b.getText().setXml(slices.get(0).getText());
 	    			
 	    			List<BatchBillMessage> messages = new ArrayList<BatchBillMessage>();
-					messages.add(new BatchBillMessage("system", billInterpreter.getPromptForBill(b, false, false)));
-	    			messages.add(new BatchBillMessage("user", billInterpreter.getUserMsgForBill(b, b.getText().getDocument())));
+					messages.add(new BatchBillMessage("system", billInterpreter.getPromptForBill(b, false, enableWebSearch)));
+	    			messages.add(new BatchBillMessage("user", billInterpreter.getUserMsgForBill(b, b.getText().getDocument(), billProcessModel)));
 	    			
 	    			requests.add(new BatchOpenAIRequest(
 	    					new CustomData(BillInterpretation.generateId(b.getId(), null)),
@@ -205,12 +205,12 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		            		}
 	            		}
 	            		
-		    			createRequest(oid, billInterpreter.getPromptForBill(b, true, false), billInterpreter.getUserMsgForBill(b, String.join("\n", summaries)));
+		    			createRequest(oid, billInterpreter.getPromptForBill(b, true, enableWebSearch), billInterpreter.getUserMsgForBill(b, String.join("\n", summaries), billProcessModel));
 	        		}
 	    		}
 	    	}
 			else {
-    			createRequest(BillInterpretation.generateId(b.getId(), null), billInterpreter.getPromptForBill(b, false, false), userMsg);
+    			createRequest(BillInterpretation.generateId(b.getId(), null), billInterpreter.getPromptForBill(b, false, enableWebSearch), userMsg);
 			}
 			
 			if (tokenLen >= TOKEN_BLOCK_SIZE) {

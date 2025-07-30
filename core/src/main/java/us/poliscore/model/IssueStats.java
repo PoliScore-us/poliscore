@@ -73,7 +73,21 @@ public class IssueStats {
 	{
 		for (TrackedIssue issue : TrackedIssue.values())
 		{
-			Pattern pattern = Pattern.compile("^ ?-? ?\\**#*\\d?\\d?\\.?\\**#* ?\\**#*" + issue.getName() + "\\**#* *: *\\**#* *([+-]? *\\d+\\.?\\d*|N\\/A) *\\**#*\\\\* *(\\(.*\\))?$", Pattern.CASE_INSENSITIVE);
+//			Pattern pattern = Pattern.compile("^ ?-? ?\\**#*\\d?\\d?\\.?\\**#* ?\\**#*" + issue.getName() + "\\**#* *: *\\**#* *([+-]? *\\d+\\.?\\d*|N\\/A) *\\**#*\\\\* *(\\(.*\\))?$", Pattern.CASE_INSENSITIVE);
+
+			Pattern pattern = Pattern.compile(
+					"^ ?" +                               // Optional leading space
+				    "[\\-–−]? ?" +                        // Optional dash (hyphen, en dash, minus) and optional space
+				    "\\**#*\\d?\\d?\\.?\\**#* ?" +        // Optional formatting characters, digits, optional decimal point
+				    "\\**#*" +                            // More optional format characters
+				    Pattern.quote(issue.getName()) +      // Issue name (escaped for safety)
+				    "\\**#* *: *" +                       // Format characters + colon + spacing
+				    "\\**#* *" +                          // Optional formatting characters and spaces
+				    "([\\+\\-–−]? *\\d+\\.?\\d*|N\\/A)" + // Main captured value: number with optional sign or "N/A"
+				    " *\\**#*" +                          // Optional trailing format chars and spaces
+				    "\\\\* *(\\(.*\\))?$"                 // Optional notes in parentheses (2nd capture group)
+					, Pattern.CASE_INSENSITIVE);
+
 			Matcher matcher = pattern.matcher(line);
 		    
 		    if (matcher.find()) {

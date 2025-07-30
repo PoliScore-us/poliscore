@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -14,6 +15,7 @@ import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.dataset.DatasetProvider;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
+import us.poliscore.model.Persistable;
 
 @ApplicationScoped
 public class GovernmentDataService {
@@ -69,6 +71,14 @@ public class GovernmentDataService {
 		}
 		
 		throw new NoSuchElementException();
+	}
+	
+	public <T extends Persistable> Optional<T> get(String id, Class<T> clazz) {
+		return this.getDataset(id).get(id, clazz);
+	}
+	
+	public <T extends Persistable> boolean exists(String id, Class<T> clazz) {
+		return this.getDataset(id).exists(id, clazz);
 	}
 	
 	public PoliscoreDataset getDataset(LegislativeNamespace namespace, int year) {

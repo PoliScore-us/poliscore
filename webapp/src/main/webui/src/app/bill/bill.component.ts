@@ -17,6 +17,11 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { shortNameForBill } from '../bills';
 
+import { marked } from 'marked';
+marked.setOptions({
+  async: false
+});
+
 Chart.register(BarController, CategoryScale, LinearScale, BarElement, ChartDataLabels, Tooltip);
 
 @Component({
@@ -36,6 +41,8 @@ export class BillComponent implements OnInit {
   public loading: boolean = true;
 
   public isSmallScreen = false;
+
+  public formattedParagraphs: SafeHtml[] = [];
 
   public barChartData: ChartConfiguration<'bar'>['data'] = {
     labels: [],
@@ -107,7 +114,14 @@ export class BillComponent implements OnInit {
       this.loading = false;
       this.updateMetaTags();
       this.buildBarChartData();
+      this.formattedParagraphs = this.getFormattedParagraphs();
     });
+  }
+
+  getFormattedParagraphs(): SafeHtml[] {
+    return this.bill!.interpretation.longExplain
+      ?.split('\n')
+      .map(p => this.sanitizer.bypassSecurityTrustHtml(marked.parseInline(p) as string));
   }
 
   getBillTooltip(): string {

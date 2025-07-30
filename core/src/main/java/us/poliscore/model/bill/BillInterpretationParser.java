@@ -10,8 +10,15 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.val;
+import us.poliscore.model.InterpretationOrigin;
 import us.poliscore.model.IssueStats;
 import us.poliscore.model.TrackedIssue;
+import us.poliscore.model.press.PressInterpretation;
+import us.poliscore.service.storage.S3PersistenceService;
 
 public class BillInterpretationParser {
 	
@@ -23,7 +30,11 @@ public class BillInterpretationParser {
 	
 	private BillInterpretation interp;
 	
+	private S3PersistenceService s3;
+	
 	public static enum State {
+		REASONING("(?i)Reasoning Steps:"),
+		SEARCH_REFERENCES("(?i)Search References:"),
 		STATS("(?i)Stats:"),
 		AUTHOR("(?i)Author:"),
 		TITLE("(?i)Title:", "(?i)Bill Title:"),
@@ -43,11 +54,14 @@ public class BillInterpretationParser {
 //		}
 	}
 	
-	public BillInterpretationParser(BillInterpretation interp) {
+	public BillInterpretationParser(BillInterpretation interp, S3PersistenceService s3) {
 		this.interp = interp;
+		this.s3 = s3;
 	}
 	
 	public void parse(String text) {
+		interp.setSearchReferences("");
+		interp.setReasoning("");
 		interp.setShortExplain("");
 		interp.setLongExplain("");
 		interp.setAuthor("");
@@ -59,7 +73,7 @@ public class BillInterpretationParser {
 		{
 			while (scanner.hasNextLine())
 			{
-			  String line = scanner.nextLine().strip();
+			  String line = standardizeFormatting(scanner.nextLine());
 			  
 			  if (StringUtils.isBlank(line) || setState(line) || state == null) continue;
 			  
@@ -71,6 +85,36 @@ public class BillInterpretationParser {
 		// TODO : Clean?
 		
 		validateIssueStats(interp.getIssueStats());
+	}
+	
+	private String standardizeFormatting(String line) {
+	    if (line == null) return null;
+
+	    return line
+	        // Normalize dashes to hyphen-minus
+	        .replace("–", "-").replace("—", "-").replace("−", "-")
+	        .replace("\u2010", "-").replace("\u2013", "-").replace("\u2014", "-").replace("\u2212", "-")
+
+	        // Normalize pluses to '+'
+	        .replace("＋", "+").replace("\uFF0B", "+")
+
+	        // Normalize quotes
+	        .replace("“", "\"").replace("”", "\"")
+	        .replace("‘", "'").replace("’", "'")
+
+	        // Normalize full-width punctuation
+	        .replace("．", ".").replace("，", ",").replace("：", ":")
+
+	        // Normalize non-breaking/narrow spaces to normal space
+	        .replaceAll("[\\u00A0\\u2007\\u202F]", " ")
+
+	        // Standardize N/A variants
+	        .replaceAll("(?i)\\b(n\\s*/\\s*a)\\b", "N/A")
+
+	        // Collapse multiple spaces
+	        .replaceAll("\\s+", " ")
+
+	        .trim();
 	}
 	
 	private void processContent(String line) {
@@ -88,6 +132,10 @@ public class BillInterpretationParser {
 			processLongForm(line);
 		} else if (State.CONFIDENCE.equals(state)) {
 			processConfidence(line);
+		} else if (State.REASONING.equals(state)) {
+			processReasoning(line);
+		} else if (State.SEARCH_REFERENCES.equals(state)) {
+			processSearchReferences(line);
 		}
 	}
 	
@@ -121,6 +169,74 @@ public class BillInterpretationParser {
 //		}
 	}
 	
+	private void processReasoning(String line) {
+		String newline = StringUtils.isBlank(interp.getReasoning()) ? "" : "\n";
+		interp.setReasoning(interp.getReasoning() + newline + line);
+	}
+	
+	private void processSearchReferences(String line) {
+		String newline = StringUtils.isBlank(interp.getReasoning()) ? "" : "\n";
+		interp.setSearchReferences(interp.getSearchReferences() + newline + line);
+		
+		try
+		{
+			line = line.replace(" - ", "").replace("- ", "").replace(" -", "").replace("-", "").replace("\\\"", "");
+			
+			// [\"https://example.org/full/url/here\", \"author\", \"title\", \"sentiment as an integer from -100 to 100\", \"summary\"]
+			String[] values = new ObjectMapper().readValue(line, new TypeReference<String[]>() {});
+			
+			val url = values[0];
+			val author = values[1];
+			val title = values[2];
+			val sentiment = parseSentiment(values[3]);
+			val summary = values[4];
+			
+			val origin = new InterpretationOrigin(url, title);
+			
+			val pi = new PressInterpretation();
+			pi.setBillId(interp.getBillId());
+			pi.setOrigin(origin);
+			pi.setMetadata(interp.getMetadata());
+			pi.setId(PressInterpretation.generateId(interp.getBillId(), origin));
+			pi.setNoInterp(false);
+			pi.setAuthor(author);
+			pi.setGenArticleTitle(title);
+			pi.setSentiment(sentiment);
+			pi.setShortExplain(summary);
+			s3.put(pi);
+			
+			interp.getPressInterps().add(pi);
+		}
+		catch(Throwable t) {
+			logger.error("Error parsing search reference", t);
+		}
+	}
+	
+	private int parseSentiment(String sentimentStr) {
+	    if (StringUtils.isBlank(sentimentStr)) return 0;
+	    
+	    try {
+	    	return Integer.parseInt(sentimentStr);
+	    } catch (Throwable t) {
+	    	// Ignore
+	    }
+
+	    String normalized = sentimentStr.toLowerCase().trim();
+
+	    if (normalized.contains("mixed")) return 0;
+	    if (normalized.contains("neutral")) return 0;
+	    if (normalized.contains("analytical")) return 0;
+
+	    if (normalized.contains("supportive") || normalized.contains("positive") || normalized.contains("endorse")) return 75;
+	    if (normalized.contains("strongly supportive") || normalized.contains("enthusiastic")) return 100;
+
+	    if (normalized.contains("critical") || normalized.contains("negative")) return -75;
+	    if (normalized.contains("strongly critical") || normalized.contains("condemn")) return -100;
+
+	    // Fallback for unknown/ambiguous sentiment
+	    return 0;
+	}
+	
 	private void processStat(String line) {
 		Pair<TrackedIssue, Integer> stat = IssueStats.parseStat(line);
 		  
@@ -133,6 +249,8 @@ public class BillInterpretationParser {
 	private void processConfidence(String line) {
 		try
 		{
+			line = line.replaceAll("%", "").strip();
+			
 			if (line.contains("."))
 				interp.setConfidence(Math.round(Float.parseFloat(line)*100.0f));
 			else

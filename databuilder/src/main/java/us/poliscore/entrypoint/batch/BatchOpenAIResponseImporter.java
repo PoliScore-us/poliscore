@@ -3,6 +3,7 @@ package us.poliscore.entrypoint.batch;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -63,7 +64,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 //	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/unprocessed.jsonl";
 	
 //	 All Legislators (August 21st)
-	public static final String INPUT = "/Users/rrowlands/Downloads/batch_68791d017b748190ace32f2812983ff9_output.jsonl";
+	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/openapi-bills-bulk-1.jsonl.out.jsonl";
 	
 	// All Legislators (Aug 5th) 
 //	public static final String INPUT = "/Users/rrowlands/Downloads/batch_tUs6UH4XIsYDBjIhbX4Ni9Sq_output.jsonl";
@@ -259,7 +260,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			return;
 		}
 		
-		new BillInterpretationParser(bi).parse(interpText);
+		new BillInterpretationParser(bi, s3).parse(interpText);
 		
 		if (!bi.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety)) {
 			if (sliceIndex != null) {throw new RuntimeException("Did not find OverallBenefitToSociety stat on interpretation");  }
@@ -286,6 +287,10 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		
 		if (StringUtils.isBlank(bi.getLongExplain()) || (sliceIndex == null && (StringUtils.isBlank(bi.getShortExplain()) || bi.getIssueStats() == null || !bi.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety)))) {
 			throw new RuntimeException("Interpretation missing proper stats or explain." + billId);
+		}
+		
+		if (pressBillInterpGenerator.getQueriedBills().contains(bill)) {
+			bi.setLastPressQuery(LocalDate.now());
 		}
 		
 		if (bi.getOrigin().equals(InterpretationOrigin.POLISCORE) && sliceIndex == null) {

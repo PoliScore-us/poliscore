@@ -32,6 +32,8 @@ export interface BillInterpretation {
   billId: string;
   pressInterps: PressInterpretation[];
   metadata: BillMetadata;
+  reasoning: string;
+  confidence: number;
 }
 
 export interface PressInterpretation {

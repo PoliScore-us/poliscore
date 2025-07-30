@@ -35,6 +35,16 @@ export class DisclaimerComponent {
       autoFocus: false // (optional: prevents auto-scrolling to the input)
     });
   }
+
+  getLargeForTooltip() {
+    if (!this.large) return "";
+
+    if (this.large.length > 1000) {
+      return this.large.substring(0, 1000) + "\n\n... click for more ...\n";
+    } else {
+      return this.large;
+    }
+  }
 }
 
 @Component({

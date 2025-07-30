@@ -60,6 +60,9 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	public static boolean REINTERPRET_PARTIES = false;
 	
+	// Enables the agent to use web searches, but disables batch processing (which doesn't currently support web searches)
+	public static boolean FORCE_WEB_SEARCH = true;
+	
 	@Inject
 	private BatchBillRequestGenerator billRequestGenerator;
 	
@@ -211,10 +214,15 @@ public class DatabaseBuilder implements QuarkusApplication
 	private void interpretBills(List<PoliscoreDataset> buildDatasets) { interpretBills(buildDatasets, false); }
 	@SneakyThrows private void interpretBills(List<PoliscoreDataset> buildDatasets, boolean isRecursive) {
 		if (INTERPRET_NEW_BILLS) {
-			List<File> requests = billRequestGenerator.process(buildDatasets, isRecursive);
+			List<File> requests = billRequestGenerator.process(buildDatasets, FORCE_WEB_SEARCH, isRecursive);
 			
 			if (requests.size() > 0) {
-				List<File> responses = openAi.processBatch(requests);
+				List<File> responses;
+				
+				if (FORCE_WEB_SEARCH)
+					responses = openAi.processBatchImmediately(requests);
+				else
+					responses = openAi.processBatch(requests);
 				
 				for (File f : responses) {
 					responseImporter.process(f);

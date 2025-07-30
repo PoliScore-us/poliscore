@@ -31,18 +31,25 @@ import us.poliscore.service.storage.LocalCachedS3Service;
  */
 @ApplicationScoped
 public class BillInterpretationService {
-
-	// Test bills:
-	// 1. Riders (7 identified) - https://poliscore.us/bill/118/hr/4365
-	// 2. Good for america, bad for the world - https://poliscore.us/bill/118/hr/2336
-	// 3. Controversial bill - https://poliscore.us/bill/118/s/1409
-	// 4. Beetle bill - https://www.congress.gov/bill/118th-congress/senate-bill/3838
 	
 	public static final String statsPromptTemplate = """
 			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Stats:') in your response. Do not include the section instructions in your response.
+			
+			An incredibly basic google search from the bill name and number has already been done for you to gather additional information.{searchModelInstructions1}
+
+			Reasoning Steps:
+			This is your first section, and it includes several steps. You are to fill out each step in your response, thinking carefully at each step. By the end of this reasoning section, you will have developed a more informed and accurate analysis which you will use to fill out the final analysis sections.
+			
+			Step 1: Initial take - Read through the bill text and write a short summary here. Analyze the mechanisms by which the bill attempts to achieve those goals. What do you think the expected outcome will be, purely based on reading the text alone? Does it make sense at a high level? Are there any glaring problems?
+			Step 2: Gather references - Find similar laws that might already be on the books, identify overlap or legal context to the bill. Identify public resources - identify relevant scientific papers (if any), expert opinions, and any existing analysis or reports which might be relevant, including budgetary analysis (CBO).
+			Step 3: Identify a narrative - Apply the narratives taken from legal, media and other expert opinion to the bill. Does it align with your initial take? Do any of these media organizations exhibit any bias? Can you identify an overarching narrative about the bill which seems to be true, accounting for all the evidence you now have? 
+			Step 4: Budgetary concerns - Is the bill a good use of taxpayer dollars? How much might it cost over the short term? And the long term? Will the taxpayers experience a "net win", gaining more in services than they spend on the service(s)?
+			Step 5: Identify winners and losers - Is the bill good for some people and bad for others? Who do you think might be behind the bill?
+			Step 6: Estimate confidence and identify unknown - List any uncertainties in your analysis, questions or unknowns you might have which might change the outcome of your analysis.
+			{searchModelStep}
 
 			Stats:
-			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant.
+			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. The 'Overall Benefit to Society' stat is used to determine an overall grade for this bill, and grades are assigned as follows (where s is the score): A: s >= 40, B: 40 < s >= 30, C: 30 < s >= 15, D: 15 < s >= 0, F: s < 0.
 			
 			{issuesList}
 			
@@ -53,26 +60,53 @@ public class BillInterpretationService {
 			A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and it's expected impact to society. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.
 			
 			Long Report:
-			A detailed, but not repetitive, report of the bill which references concrete, notable and specific text of the bill where possible. Make sure to explain: an overall summary of the bill; the high level goals the bill is attempting to achieve, and how it plans to achieve those goals; the impact to society the bill would have, if enacted. Your audience here is general public layman voters, so if you think they won't understand an acronym or a complex topic, please explain it. Should be between one and five paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. Keep in mind that we're trying to figure out how to spend U.S. taxpayer dollars: budgetary concerns are important. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.{{searchModelInstructions}}
+			Your first paragraph will explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving your opinion on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and identifying industry stakeholders, if relevant. Your audience here is general public layman voters, so if you think they won't understand an acronym or a complex topic, please explain it. Should be between one and five paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.{searchModelInstructions2}
 			
 			Confidence:
-			A self-rated number from 0 to 100 measuring how confident you are that your analysis was valid and interpreted correctly.
+			A self-rated integer from 0 to 100 measuring how confident you are that your analysis was valid and interpreted correctly.
+			
+			{searchReferences}
 			""";
 	
 	public static final String slicePromptTemplate = """
 			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Stats:') in your response. Do not include the section instructions in your response.
 
+			Reasoning Steps:
+			This is your first section, and it includes several steps. You are to fill out each step in your response, thinking carefully at each step. By the end of this reasoning section, you will have developed a more informed and accurate analysis which you will use to fill out the final analysis sections.
+			
+			Step 1: Initial take - Read through the bill text and write a short summary here. Analyze the mechanisms by which the bill attempts to achieve those goals. What do you think the expected outcome will be, purely based on reading the text alone? Does it make sense at a high level? Are there any glaring problems?
+			Step 2: Gather references - Find similar laws that might already be on the books, identify overlap or legal context to the bill. Identify public resources - identify relevant scientific papers (if any), expert opinions, and any existing analysis or reports which might be relevant, including budgetary analysis (CBO).
+			Step 3: Identify a narrative - Apply the narratives taken from legal, media and other expert opinion to the bill. Does it align with your initial take? Do any of these media organizations exhibit any bias? Can you identify an overarching narrative about the bill which seems to be true, accounting for all the evidence you now have? 
+			Step 4: Budgetary concerns - Is the bill a good use of taxpayer dollars? How much might it cost over the short term? And the long term? Will the taxpayers experience a "net win", gaining more in services than they spend on the service(s)?
+			Step 5: Identify winners and losers - Is the bill good for some people and bad for others? Who do you think might be behind the bill?
+			Step 6: Estimate confidence and identify unknown - List any uncertainties in your analysis, questions or unknowns you might have which might change the outcome of your analysis.
+			
 			Stats:
-			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant.
+			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. The 'Overall Benefit to Society' stat is used to determine an overall grade for this bill, and grades are assigned as follows (where s is the score): A: s >= 40, B: 40 < s >= 30, C: 30 < s >= 15, D: 15 < s >= 0, F: s < 0.
 			
 			{issuesList}
 			
 			Long Report:
-			A detailed, but not repetitive, report of the bill which references concrete, notable and specific text of the bill where possible. Make sure to explain: an overall summary of the bill; the high level goals the bill is attempting to achieve, and how it plans to achieve those goals; the impact to society the bill would have, if enacted. Your audience here is general public layman voters, so if you think they won't understand an acronym or a complex topic, please explain it. Should be between one and four paragraphs long, depending on the complexity of the bill and the topics it covers. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. Keep in mind that we're trying to figure out how to spend U.S. taxpayer dollars: budgetary concerns are important. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.{{searchModelInstructions}}
+			A detailed, but not repetitive, report of the bill which references concrete, notable and specific text of the bill where possible. Make sure to explain: an overall summary of the bill; the high level goals the bill is attempting to achieve, and how it plans to achieve those goals; the impact to society the bill would have, if enacted. Your audience here is general public layman voters, so if you think they won't understand an acronym or a complex topic, please explain it. Should be between one and four paragraphs long, depending on the complexity of the bill and the topics it covers. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. Keep in mind that we're trying to figure out how to spend U.S. taxpayer dollars: budgetary concerns are important. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.
+			
+			{searchReferences}
 			""";
 	
 	public static final String aggregatePrompt = """
 			A large U.S. bill has been split into sections and summarized. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Stats:') in your response. Do not include the section instructions in your response.
+			
+			An incredibly basic google search from the bill name and number has already been done for you to gather additional information.{searchModelInstructions1}
+			
+			Reasoning Steps:
+			This is your first section, and it includes several steps. You are to fill out each step in your response, thinking carefully at each step. By the end of this reasoning section, you will have developed a more informed and accurate analysis which you will use to fill out the final analysis sections.
+			
+			Step 1: Initial take - Read through the bill text and write a short summary here. Analyze the mechanisms by which the bill attempts to achieve those goals. What do you think the expected outcome will be, purely based on reading the text alone? Does it make sense at a high level? Are there any glaring problems?
+			Step 2: Gather references - Find similar laws that might already be on the books, identify overlap or legal context to the bill. Identify public resources - identify relevant scientific papers (if any), expert opinions, and any existing analysis or reports which might be relevant, including budgetary analysis (CBO).
+			Step 3: Identify a narrative - Apply the narratives taken from legal, media and other expert opinion to the bill. Does it align with your initial take? Do any of these media organizations exhibit any bias? Can you identify an overarching narrative about the bill which seems to be true, accounting for all the evidence you now have? 
+			Step 4: Budgetary concerns - Is the bill a good use of taxpayer dollars? How much might it cost over the short term? And the long term? Will the taxpayers experience a "net win", gaining more in services than they spend on the service(s)?
+			Step 5: Identify winners and losers - Is the bill good for some people and bad for others? Who do you think might be behind the bill?
+			Step 6: Estimate confidence and identify unknown - List any uncertainties in your analysis, questions or unknowns you might have which might change the outcome of your analysis.
+			{searchModelStep}
 			
 			Bill Title:
 			Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very short title for the bill based on its content.
@@ -81,7 +115,12 @@ public class BillInterpretationService {
 			A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and it's expected impact to society. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.
 			
 			Long Report:
-			A detailed, but not repetitive, report of the bill which references concrete, notable and specific text of the bill where possible. Make sure to explain: an overall summary of the bill; the high level goals the bill is attempting to achieve, and how it plans to achieve those goals; the impact to society the bill would have, if enacted. Your audience here is general public layman voters, so if you think they won't understand an acronym or a complex topic, please explain it. Should be between one and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. Keep in mind that we're trying to figure out how to spend U.S. taxpayer dollars: budgetary concerns are important. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.{{searchModelInstructions}}
+			A detailed, but not repetitive, report of the bill which references concrete, notable and specific text of the bill where possible. Make sure to explain: an overall summary of the bill; the high level goals the bill is attempting to achieve, and how it plans to achieve those goals; the impact to society the bill would have, if enacted. Your audience here is general public layman voters, so if you think they won't understand an acronym or a complex topic, please explain it. Should be between one and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. Keep in mind that we're trying to figure out how to spend U.S. taxpayer dollars: budgetary concerns are important. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.{searchModelInstructions2}
+			
+			Confidence:
+			A self-rated integer from 0 to 100 measuring how confident you are that your analysis was valid and interpreted correctly.
+			
+			{searchReferences}
 			""";
 	
 	public static final String statsPrompt;
@@ -92,7 +131,10 @@ public class BillInterpretationService {
     	slicePrompt = slicePromptTemplate.replaceFirst("\\{issuesList\\}", issues);
 	}
 	
-	public static final String SEARCH_MODEL_INSTRUCTIONS = " Where appropriate, please cite references from your search inside the report. References can be sited using industry standard link syntax: [explanation text here](http://example.com]";
+	public static final String SEARCH_MODEL_INSTRUCTIONS1 = " Feel free to perform your own additional web searches during this process to gain additional context or information such as reasoning from the bill sponsor(s) or budgetary information which may not be apparent from the bill text. If you do find useful information, make sure to reference the source in the long report using markdown link syntax (in addition to placing it in the references at the bottom).";
+	public static final String SEARCH_MODEL_INSTRUCTIONS2 = " Where appropriate, please cite references from your search inside the report. References can be cited using markdown link syntax: [explanation text here](http://example.com]";
+	public static final String SEARCH_MODEL_STEP = "Step 7: Perform a web search to gather more information and answer any questions you might have.";
+	public static final String SEARCH_REFERENCES = "Search References:\nList any references you have uncovered during your web search(es), following the format for each reference. This format MUST be JSON array parseable where every value in the JSON array should be a quoted string.:\n- [\"https://example.org/full/url/here\", \"author\", \"title\", \"sentiment as an integer from -100 to 100\", \"summary\"]";
 	
 	@Inject
 	protected OpenAIService ai;
@@ -123,15 +165,21 @@ public class BillInterpretationService {
 		}
 		
 		if (searchEnabled) {
-			prompt = prompt.replaceFirst("\\{searchModelInstructions\\}", SEARCH_MODEL_INSTRUCTIONS);
+			prompt = prompt.replaceFirst("\\{searchModelInstructions1\\}", SEARCH_MODEL_INSTRUCTIONS1);
+			prompt = prompt.replaceFirst("\\{searchModelInstructions2\\}", SEARCH_MODEL_INSTRUCTIONS2);
+			prompt = prompt.replaceFirst("\\{searchModelStep\\}", SEARCH_MODEL_STEP);
+			prompt = prompt.replaceFirst("\\{searchReferences\\}", SEARCH_REFERENCES);
 		} else {
-			prompt = prompt.replaceFirst("\\{searchModelInstructions\\}", "");
+			prompt = prompt.replaceFirst("\\{searchModelInstructions1\\}", "");
+			prompt = prompt.replaceFirst("\\{searchModelInstructions2\\}", "");
+			prompt = prompt.replaceFirst("\\{searchModelStep6\\}", "");
+			prompt = prompt.replaceFirst("\\{searchReferences\\}", "");
 		}
 		
 		return prompt;
 	}
 	
-	public String getUserMsgForBill(Bill bill, String billText) {
+	public String getUserMsgForBill(Bill bill, String billText, OpenAIModel model) {
 //		var userMsg = "Bill Text:\n" + billText;
 //		
 //		val op = s3.get(CBOBillAnalysis.generateId(bill.getId()), CBOBillAnalysis.class);
@@ -143,22 +191,36 @@ public class BillInterpretationService {
 //		return userMsg;
 		
 		String userMsg = "";
+		final String billTextMsg = "Bill Text:\n" + billText;
 		
 		var pressInterps = billService.getPressInterps(bill.getId());
 		
 		if (pressInterps.size() > 0) {
-			userMsg = "Press Coverage:\n";
-			userMsg += "The following articles were pulled from a basic Google search for this bill and were included to provide additional context for the interpretation. Their inclusion does not represent an endorsement. Often a Google search for a bill will reveal key legislative stakeholders, so view these articles with a skeptical eye. We want to prioritize what's best for all of America, not necessarily a few key stakeholders.\n\n";
+			String header = "Press Coverage:\n" + "The following articles were pulled from a basic Google search for this bill and were included to provide additional context for the interpretation. Their inclusion does not represent an endorsement. Often a Google search for a bill will reveal key legislative stakeholders, so view these articles with a skeptical eye. We want to prioritize what's best for all of America, not necessarily a few key stakeholders.\n\n";
 			
-			for (var interp : pressInterps)
+			int context = billTextMsg.length() + header.length();
+			
+			for (int i = 0; i < pressInterps.size(); ++i)
 			{
-				userMsg += interp.getAuthor() + "(" + interp.getOrigin().getUrl() + ") - " + interp.getOrigin().getTitle() + ":\n";
-				userMsg += interp.getLongExplain() + "\n\n";
+				var interp = pressInterps.get(i);
+				
+				String pressText = interp.getAuthor() + "(" + interp.getOrigin().getUrl() + ") - " + interp.getOrigin().getTitle() + ":\n" + interp.getLongExplain() + "\n\n";
+				
+				context += pressText.length();
+				
+				if (context < model.getContextWindowStringLength()) {
+					if (i == 0) {
+						userMsg = header;
+					}
+					
+					userMsg += pressText;
+				} else {
+					break;
+				}
 			}
 		}
 		
-		userMsg += "Bill Text:\n";
-		userMsg += billText;
+		userMsg += billTextMsg;
 		
 		return userMsg;
 	}

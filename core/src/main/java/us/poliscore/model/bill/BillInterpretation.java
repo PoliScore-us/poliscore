@@ -66,6 +66,10 @@ public class BillInterpretation extends SessionPersistable
 	
 	protected IssueStats issueStats;
 	
+	protected String reasoning;
+	
+	protected String searchReferences;
+	
 	protected String genBillTitle;
 	
 	protected List<String> riders;
