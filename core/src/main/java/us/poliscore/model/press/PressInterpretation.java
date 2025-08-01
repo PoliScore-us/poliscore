@@ -26,7 +26,7 @@ import us.poliscore.model.dynamodb.JacksonAttributeConverter.AIInterpretationMet
 import us.poliscore.model.legislator.LegislatorInterpretation;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @DynamoDbBean
 @RegisterForReflection
 @NoArgsConstructor

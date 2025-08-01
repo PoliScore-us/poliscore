@@ -37,6 +37,7 @@ import us.poliscore.model.Party;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.SessionPersistable;
 import us.poliscore.model.TrackedIssue;
+import us.poliscore.model.bill.Bill;
 import us.poliscore.model.dynamodb.DdbDataPage;
 import us.poliscore.model.dynamodb.IssueStatsMapLongAttributeConverter;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.CompressedLegislatorBillInteractionListConverter;
@@ -45,7 +46,7 @@ import us.poliscore.model.dynamodb.JacksonAttributeConverter.LegislatorLegislati
 import us.poliscore.model.dynamodb.LegiscanStateConverter;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @DynamoDbBean
 @NoArgsConstructor
 @RegisterForReflection

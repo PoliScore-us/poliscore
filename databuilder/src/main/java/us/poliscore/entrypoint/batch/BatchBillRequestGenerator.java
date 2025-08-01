@@ -28,6 +28,7 @@ import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
+import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillSlice;
@@ -43,12 +44,16 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 @QuarkusMain(name="BatchBillRequestGenerator")
 public class BatchBillRequestGenerator implements QuarkusApplication
 {
-	public static final long TOKEN_BLOCK_SIZE = 30000000;
+//	public static final List<String> specificFetch = null;
+	public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 4534));
 	
-	public static final List<String> specificFetch = null;
-//	public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_COLORADO, "2173", "sb", 114));
+	public static final int MAX_BILL_PROCESS = 100; // Denotes the max bills to process in a given session. -1 for infinite
+	
+	
 	
 	public static final boolean CHECK_S3_EXISTS = specificFetch == null;
+	
+	public static final long TOKEN_BLOCK_SIZE = 30000000;
 	
 	public static final OpenAIModel billProcessModel = OpenAIService.DEFAULT_MODEL;
 	
@@ -114,21 +119,26 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	}
 
 	private void processDataset(PoliscoreDataset dataset, boolean enableWebSearch, boolean isSecondFetch, int block) throws IOException {
+		if (MAX_BILL_PROCESS != -1 && isSecondFetch) return;
 		if (specificFetch != null && isSecondFetch) return;
 		
 		boolean includePressDirtyBills = !isSecondFetch;
 		
-		val requestBills = dataset.query(Bill.class).stream()
+		var requestBills = dataset.query(Bill.class).stream()
 				.filter(b -> specificFetch == null || specificFetch.contains(b.getId()))
 				.filter(b -> (!CHECK_S3_EXISTS || !billInterpreter.isInterpreted(b.getId()) || (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))))
 //				.filter(b -> billInterpreter.isInterpreted(b.getId()) && s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getRating() < 0 && b.getStatus().getProgress() == 1.0f)
 				.filter(b -> s3.exists(BillText.generateId(b.getId()), BillText.class))
-				.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed())
-				.toList();
+				.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed());
 		
-		Log.info("Processing " + requestBills.size() + " bills for request generation.");
+		if (MAX_BILL_PROCESS != -1)
+			requestBills = requestBills.limit(MAX_BILL_PROCESS);
 		
-		for (Bill b : requestBills) {
+		val requestBillsList = requestBills.toList();
+		
+		Log.info("Processing " + requestBillsList.size() + " bills for request generation.");
+		
+		for (Bill b : requestBillsList) {
 			
 			// The press interpreter may have said this bill was dirty, but after the press interps came back, they came back as NO_INTERP. At this point, it's not actually dirty and doesn't need to be interpreted.
 			if (CHECK_S3_EXISTS && billInterpreter.isInterpreted(b.getId()) && includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b)) {
@@ -173,7 +183,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	        			if (sliceInterp.isEmpty()) {
 	        				val oid = BillInterpretation.generateId(b.getId(), slice.getSliceIndex());
 	        				
-	        				if (CHECK_S3_EXISTS && s3.exists(oid, BillInterpretation.class)) { continue; }
+	        				if (s3.exists(oid, BillInterpretation.class)) { continue; }
 	        				
 		        			createRequest(oid, BillInterpretationService.slicePrompt, slice.getText());
 	        			} else {

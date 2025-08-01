@@ -24,6 +24,7 @@ export interface Bill {
 
 export interface BillInterpretation {
   issueStats: IssueStats;
+  quality?: number;
   id: string;
   genBillTitle: string;
   shortExplain: string;
@@ -173,7 +174,7 @@ export function issueKeyToLabel(key: string): string
     "WildlifeAndForestManagement": "Wildlife And Forest Management",
     "PublicLandsAndNaturalResources": "Public Lands And Natural Resources",
     "EnvironmentalManagementAndClimateChange": "Environmental Management And Climate Change",
-    "OverallBenefitToSociety": "Overall Benefit To Society"
+    "OverallBenefitToSociety": "Overall Impact To Society"
   };
 
   return map[key];
@@ -199,7 +200,7 @@ export function issueKeyToLabelSmall(key: string): string
     "WildlifeAndForestManagement": "Forest Management",
     "PublicLandsAndNaturalResources": "Natural Resources",
     "EnvironmentalManagementAndClimateChange": "Environment",
-    "OverallBenefitToSociety": "Benefit To Society"
+    "OverallBenefitToSociety": "Impact To Society"
   };
 
   return map[key];
@@ -223,6 +224,16 @@ export function gradeForStats(issueStats: IssueStats): string {
   let rating = getBenefitToSocietyIssue(issueStats)[1];
 
   return gradeForRating(rating);
+}
+
+export function gradeForQuality(quality: number): string {
+  if (quality >= 60) return "A";
+  else if (quality < 60 && quality >= 40) return "B";
+  else if (quality < 40 && quality >= 20) return "C";
+  else if (quality < 20 && quality >= 0) return "D";
+  else if (quality < 0) return "F";
+
+  return "?";
 }
 
 export function gradeForRating(rating: number): string {

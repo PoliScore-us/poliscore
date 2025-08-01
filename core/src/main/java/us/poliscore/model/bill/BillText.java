@@ -19,7 +19,7 @@ import us.poliscore.model.Persistable;
 import us.poliscore.model.SessionPersistable;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @RegisterForReflection
 public class BillText extends SessionPersistable

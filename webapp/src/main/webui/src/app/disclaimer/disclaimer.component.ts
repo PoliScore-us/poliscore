@@ -39,8 +39,8 @@ export class DisclaimerComponent {
   getLargeForTooltip() {
     if (!this.large) return "";
 
-    if (this.large.length > 1000) {
-      return this.large.substring(0, 1000) + "\n\n... click for more ...\n";
+    if (this.large.length > 700) {
+      return this.large.substring(0, 700) + "\n\n... click for more ...\n";
     } else {
       return this.large;
     }

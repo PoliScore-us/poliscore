@@ -31,7 +31,7 @@ import us.poliscore.model.legislator.LegislatorInterpretation;
 import us.poliscore.model.press.PressInterpretation;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @DynamoDbBean
 @RegisterForReflection
 @NoArgsConstructor
@@ -66,6 +66,10 @@ public class BillInterpretation extends SessionPersistable
 	
 	protected IssueStats issueStats;
 	
+	protected Integer quality;
+	
+	protected Integer confidence;
+	
 	protected String reasoning;
 	
 	protected String searchReferences;
@@ -79,8 +83,6 @@ public class BillInterpretation extends SessionPersistable
 	protected String shortExplain;
 	
 	protected String longExplain;
-	
-	protected Integer confidence;
 	
 	@NonNull
 	protected String billId;

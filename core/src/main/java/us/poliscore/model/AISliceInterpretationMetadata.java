@@ -16,7 +16,7 @@ public class AISliceInterpretationMetadata extends AIInterpretationMetadata {
 	
 	protected int sliceIndex;
 	
-	public static AISliceInterpretationMetadata construct(String provider, String model, int version, BillSlice slice)
+	public static AISliceInterpretationMetadata construct(String provider, String model, int version, boolean agentWebSearch, BillSlice slice)
 	{
 		AISliceInterpretationMetadata meta = new AISliceInterpretationMetadata();
 		meta.setProvider(provider);
@@ -26,6 +26,7 @@ public class AISliceInterpretationMetadata extends AIInterpretationMetadata {
 		meta.setEnd(slice.getEnd());
 		meta.setSliceIndex(slice.getSliceIndex());
 		meta.setDate(LocalDate.now());
+		meta.setWebSearchAgent(agentWebSearch);
 		return meta;
 	}
 	

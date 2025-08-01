@@ -40,6 +40,7 @@ import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
 import us.poliscore.ai.OpenAIModel;
+import us.poliscore.entrypoint.DatabaseBuilder;
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.InterpretationOrigin;
 import us.poliscore.model.LegislativeNamespace;
@@ -278,7 +279,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	
 	public static AIInterpretationMetadata metadata()
 	{
-		return AIInterpretationMetadata.construct(OpenAIService.PROVIDER, interpModel.getId(), 0);
+		return AIInterpretationMetadata.construct(OpenAIService.PROVIDER, interpModel.getId(), 0, DatabaseBuilder.FORCE_WEB_SEARCH);
 	}
 	
 	@SneakyThrows

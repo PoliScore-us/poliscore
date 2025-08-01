@@ -17,6 +17,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.errors.InternalServerException;
 import com.openai.models.batches.Batch;
 import com.openai.models.batches.Batch.Status;
 import com.openai.models.batches.BatchCreateParams;
@@ -40,6 +41,7 @@ import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.Environment;
 import us.poliscore.ai.OpenAIModel;
+import us.poliscore.entrypoint.DatabaseBuilder;
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.AISliceInterpretationMetadata;
 import us.poliscore.model.bill.BillSlice;
@@ -66,12 +68,12 @@ public class OpenAIService {
 	
 	public static AIInterpretationMetadata metadata()
 	{
-		return AIInterpretationMetadata.construct(PROVIDER, DEFAULT_MODEL.getId(), PROMPT_VERSION);
+		return AIInterpretationMetadata.construct(PROVIDER, DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.FORCE_WEB_SEARCH);
 	}
 	
 	public static AIInterpretationMetadata metadata(BillSlice slice)
 	{
-		return AISliceInterpretationMetadata.construct(PROVIDER, DEFAULT_MODEL.getId(), PROMPT_VERSION, slice);
+		return AISliceInterpretationMetadata.construct(PROVIDER, DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.FORCE_WEB_SEARCH, slice);
 	}
 	
 	public String chat(String systemMsg, String userMsg) { return this.chat(systemMsg, userMsg, null); }
@@ -111,8 +113,16 @@ public class OpenAIService {
 			
 		val params = paramBuilder.build();
 		
-		System.out.println("Sending request to open ai with message size " + userMsg.length());
-		Response response = client.responses().create(params);
+		Log.info("Sending request to open ai with message size " + userMsg.length());
+		RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
+			    .handle(SocketTimeoutException.class, InternalServerException.class)
+			    .withBackoff(1, 8, ChronoUnit.SECONDS)
+			    .withMaxRetries(3)
+			    .onRetry(e -> Log.warn("Retrying due to timeout or retryable server exception.."))
+			    .onFailure(e -> Log.error("Retries exhausted", e.getException()))
+			    .build();
+		
+		Response response = Failsafe.with(retryPolicy).get(() -> client.responses().create(params));
     	
     	if (response.error().isPresent())
     	{
@@ -176,10 +186,10 @@ public class OpenAIService {
 				val b = it.next();
 				
 				RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
-				    .handle(SocketTimeoutException.class)
+				    .handle(SocketTimeoutException.class, InternalServerException.class)
 				    .withBackoff(1, 8, ChronoUnit.SECONDS)
 				    .withMaxRetries(3)
-				    .onRetry(e -> Log.warn("Retrying due to timeout..."))
+				    .onRetry(e -> Log.warn("Retrying due to timeout or retryable server exception..."))
 				    .onFailure(e -> Log.error("Retries exhausted", e.getException()))
 				    .build();
 				
@@ -226,90 +236,92 @@ public class OpenAIService {
 			List<String> lines = FileUtils.readLines(jsonlFile, "UTF-8");
 			List<String> outputLines = new ArrayList<>();
 
-			for (String line : lines) {
-				if (StringUtils.isBlank(line)) {
-					continue;
-				}
-
-				val objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-				val node = objectMapper.readTree(line);
-				val body = node.get("body");
-
-				if (body == null || !body.has("messages")) {
-					throw new IllegalArgumentException("Missing 'body' or 'messages' in line: " + line);
-				}
-
-				String model = body.has("model") ? body.get("model").asText() : null;
-				String systemMsg = null;
-				String userMsg = null;
-
-				for (val msgNode : body.get("messages")) {
-					String role = msgNode.get("role").asText();
-					String content = msgNode.get("content").asText();
-
-					if ("system".equals(role)) {
-						systemMsg = content;
-					} else if ("user".equals(role)) {
-						userMsg = content;
+			try {
+				for (String line : lines) {
+					if (StringUtils.isBlank(line)) {
+						continue;
 					}
-
-					if (systemMsg != null && userMsg != null) {
-						break;
+	
+					val objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+					val node = objectMapper.readTree(line);
+					val body = node.get("body");
+	
+					if (body == null || !body.has("messages")) {
+						throw new IllegalArgumentException("Missing 'body' or 'messages' in line: " + line);
 					}
+	
+					String model = body.has("model") ? body.get("model").asText() : null;
+					String systemMsg = null;
+					String userMsg = null;
+	
+					for (val msgNode : body.get("messages")) {
+						String role = msgNode.get("role").asText();
+						String content = msgNode.get("content").asText();
+	
+						if ("system".equals(role)) {
+							systemMsg = content;
+						} else if ("user".equals(role)) {
+							userMsg = content;
+						}
+	
+						if (systemMsg != null && userMsg != null) {
+							break;
+						}
+					}
+	
+					if (systemMsg == null || userMsg == null) {
+						throw new IllegalArgumentException("Expected at least one system and one user message in: " + line);
+					}
+	
+					val customId = node.path("custom_id").asText(null);
+	
+					String assistantResponse = chat(systemMsg, userMsg, OpenAIModel.fromString(model));
+	
+					// Build the "body" part (chat completion result)
+					val responseNode = objectMapper.createObjectNode();
+					responseNode.put("id", "chatcmpl-" + java.util.UUID.randomUUID());
+					responseNode.put("object", "chat.completion");
+					responseNode.put("created", System.currentTimeMillis() / 1000);
+					responseNode.put("model", StringUtils.defaultIfEmpty(model, DEFAULT_MODEL.getId()));
+	
+					val choicesArray = objectMapper.createArrayNode();
+					val choice = objectMapper.createObjectNode();
+					choice.put("index", 0);
+	
+					val message = objectMapper.createObjectNode();
+					message.put("role", "assistant");
+					message.put("content", assistantResponse);
+					choice.set("message", message);
+					choice.put("finish_reason", "stop");
+					choicesArray.add(choice);
+					responseNode.set("choices", choicesArray);
+	
+					val usageNode = objectMapper.createObjectNode();
+					usageNode.put("prompt_tokens", 0);
+					usageNode.put("completion_tokens", 0);
+					usageNode.put("total_tokens", 0);
+					responseNode.set("usage", usageNode);
+	
+					// Wrap response inside OpenAI batch envelope format
+					val responseEnvelope = objectMapper.createObjectNode();
+					responseEnvelope.put("status_code", 200);
+					responseEnvelope.set("body", responseNode);
+	
+					val out = objectMapper.createObjectNode();
+					if (customId != null) {
+						out.put("custom_id", customId);
+					}
+					out.set("response", responseEnvelope);
+	
+					outputLines.add(out.toString());
 				}
-
-				if (systemMsg == null || userMsg == null) {
-					throw new IllegalArgumentException("Expected at least one system and one user message in: " + line);
-				}
-
-				val customId = node.path("custom_id").asText(null);
-
-				String assistantResponse = chat(systemMsg, userMsg, OpenAIModel.fromString(model));
-
-				// Build the "body" part (chat completion result)
-				val responseNode = objectMapper.createObjectNode();
-				responseNode.put("id", "chatcmpl-" + java.util.UUID.randomUUID());
-				responseNode.put("object", "chat.completion");
-				responseNode.put("created", System.currentTimeMillis() / 1000);
-				responseNode.put("model", StringUtils.defaultIfEmpty(model, DEFAULT_MODEL.getId()));
-
-				val choicesArray = objectMapper.createArrayNode();
-				val choice = objectMapper.createObjectNode();
-				choice.put("index", 0);
-
-				val message = objectMapper.createObjectNode();
-				message.put("role", "assistant");
-				message.put("content", assistantResponse);
-				choice.set("message", message);
-				choice.put("finish_reason", "stop");
-				choicesArray.add(choice);
-				responseNode.set("choices", choicesArray);
-
-				val usageNode = objectMapper.createObjectNode();
-				usageNode.put("prompt_tokens", 0);
-				usageNode.put("completion_tokens", 0);
-				usageNode.put("total_tokens", 0);
-				responseNode.set("usage", usageNode);
-
-				// Wrap response inside OpenAI batch envelope format
-				val responseEnvelope = objectMapper.createObjectNode();
-				responseEnvelope.put("status_code", 200);
-				responseEnvelope.set("body", responseNode);
-
-				val out = objectMapper.createObjectNode();
-				if (customId != null) {
-					out.put("custom_id", customId);
-				}
-				out.set("response", responseEnvelope);
-
-				outputLines.add(out.toString());
+			} finally {
+				File outputFile = new File(jsonlFile.getParentFile(), jsonlFile.getName() + ".out.jsonl");
+				FileUtils.writeLines(outputFile, outputLines);
+	
+				Log.info("Wrote responses to file: " + outputFile.getAbsolutePath());
+				responseFiles.add(outputFile);
 			}
-
-			File outputFile = new File(jsonlFile.getParentFile(), jsonlFile.getName() + ".out.jsonl");
-			FileUtils.writeLines(outputFile, outputLines);
-
-			Log.info("Wrote responses to file: " + outputFile.getAbsolutePath());
-			responseFiles.add(outputFile);
 		}
 
 		return responseFiles;

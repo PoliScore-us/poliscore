@@ -33,7 +33,7 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 public class BillInterpretationService {
 	
 	public static final String statsPromptTemplate = """
-			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Stats:') in your response. Do not include the section instructions in your response.
+			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, producing an impact analysis which evaluates whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Impact:') in your response. Do not include the section instructions in your response. Do not ever use 'I' language (as in, I reached this conclusion because...).
 			
 			An incredibly basic google search from the bill name and number has already been done for you to gather additional information.{searchModelInstructions1}
 
@@ -48,10 +48,13 @@ public class BillInterpretationService {
 			Step 6: Estimate confidence and identify unknown - List any uncertainties in your analysis, questions or unknowns you might have which might change the outcome of your analysis.
 			{searchModelStep}
 
-			Stats:
-			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. The 'Overall Benefit to Society' stat is used to determine an overall grade for this bill, and grades are assigned as follows (where s is the score): A: s >= 40, B: 40 < s >= 30, C: 30 < s >= 15, D: 15 < s >= 0, F: s < 0.
+			Impact:
+			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant.
 			
 			{issuesList}
+			
+			Quality:
+			Write a single integer, from -100 to 100, which represents the quality of the legislation. Quality in this context refers to more than a technical or linguistic evaluation - it should directly translate to either a recommendation for or against the bill (as per the grading rubric). If the impact to society is negative, then so too should the quality score - a bill with a negative impact is an F quality bill. This metric is separate from the impact scores, in that a bill might be of high quality (well written, sensible legislation) but it might have a low impact. A common example might be a congressional gold metal award given for a heroic act (high quality), but the overall impact to society is small. This quality score is used to determine an overall grade for this bill, and grades are assigned as follows (where q is the quality): A: q >= 60, B: 60 < q >= 40, C: 40 < q >= 20, D: 20 < q >= 0, F: q < 0.
 			
 			Bill Title:
 			Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very concise title for the bill based on its content. If the bill has a title, but it is confusing, vague, too long, or would otherwise be poorly understood by the general public, please make up a very concise title for the bill based on its content.
@@ -69,7 +72,7 @@ public class BillInterpretationService {
 			""";
 	
 	public static final String slicePromptTemplate = """
-			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Stats:') in your response. Do not include the section instructions in your response.
+			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Impact:') in your response. Do not include the section instructions in your response. Do not ever use 'I' language (as in, I reached this conclusion because...).
 
 			Reasoning Steps:
 			This is your first section, and it includes several steps. You are to fill out each step in your response, thinking carefully at each step. By the end of this reasoning section, you will have developed a more informed and accurate analysis which you will use to fill out the final analysis sections.
@@ -81,10 +84,13 @@ public class BillInterpretationService {
 			Step 5: Identify winners and losers - Is the bill good for some people and bad for others? Who do you think might be behind the bill?
 			Step 6: Estimate confidence and identify unknown - List any uncertainties in your analysis, questions or unknowns you might have which might change the outcome of your analysis.
 			
-			Stats:
-			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. The 'Overall Benefit to Society' stat is used to determine an overall grade for this bill, and grades are assigned as follows (where s is the score): A: s >= 40, B: 40 < s >= 30, C: 30 < s >= 15, D: 15 < s >= 0, F: s < 0.
+			Impact:
+			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant.
 			
 			{issuesList}
+			
+			Quality:
+			Write a single integer, from -100 to 100, which represents the quality of the legislation. This metric is separate from the impact scores, in that a bill might be of high quality (well written, sensible legislation) but it might have a low impact. A common example might be a congressional gold metal award given for a heroic act (high quality), but the overall impact to society is small. This quality score is used to determine an overall grade for this bill, and grades are assigned as follows (where q is the quality): A: q >= 60, B: 60 < q >= 40, C: 40 < q >= 20, D: 20 < q >= 0, F: q < 0.
 			
 			Long Report:
 			A detailed, but not repetitive, report of the bill which references concrete, notable and specific text of the bill where possible. Make sure to explain: an overall summary of the bill; the high level goals the bill is attempting to achieve, and how it plans to achieve those goals; the impact to society the bill would have, if enacted. Your audience here is general public layman voters, so if you think they won't understand an acronym or a complex topic, please explain it. Should be between one and four paragraphs long, depending on the complexity of the bill and the topics it covers. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. Keep in mind that we're trying to figure out how to spend U.S. taxpayer dollars: budgetary concerns are important. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.
@@ -93,7 +99,7 @@ public class BillInterpretationService {
 			""";
 	
 	public static final String aggregatePrompt = """
-			A large U.S. bill has been split into sections and summarized. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Stats:') in your response. Do not include the section instructions in your response.
+			A large U.S. bill has been split into sections and summarized. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Impact:') in your response. Do not include the section instructions in your response. Do not ever use 'I' language (as in, I reached this conclusion because...).
 			
 			An incredibly basic google search from the bill name and number has already been done for you to gather additional information.{searchModelInstructions1}
 			
@@ -107,6 +113,9 @@ public class BillInterpretationService {
 			Step 5: Identify winners and losers - Is the bill good for some people and bad for others? Who do you think might be behind the bill?
 			Step 6: Estimate confidence and identify unknown - List any uncertainties in your analysis, questions or unknowns you might have which might change the outcome of your analysis.
 			{searchModelStep}
+			
+			Quality:
+			Write a single integer, from -100 to 100, which represents the quality of the legislation. This metric is separate from the impact scores, in that a bill might be of high quality (well written, sensible legislation) but it might have a low impact. A common example might be a congressional gold metal award given for a heroic act (high quality), but the overall impact to society is small. This quality score is used to determine an overall grade for this bill, and grades are assigned as follows (where q is the quality): A: q >= 60, B: 60 < q >= 40, C: 40 < q >= 20, D: 20 < q >= 0, F: q < 0.
 			
 			Bill Title:
 			Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very short title for the bill based on its content.
@@ -132,9 +141,10 @@ public class BillInterpretationService {
 	}
 	
 	public static final String SEARCH_MODEL_INSTRUCTIONS1 = " Feel free to perform your own additional web searches during this process to gain additional context or information such as reasoning from the bill sponsor(s) or budgetary information which may not be apparent from the bill text. If you do find useful information, make sure to reference the source in the long report using markdown link syntax (in addition to placing it in the references at the bottom).";
-	public static final String SEARCH_MODEL_INSTRUCTIONS2 = " Where appropriate, please cite references from your search inside the report. References can be cited using markdown link syntax: [explanation text here](http://example.com]";
+	public static final String SEARCH_MODEL_INSTRUCTIONS2 = " Where appropriate, please cite references from your search inside the report. References can be cited using markdown link syntax: [explanation text here](http://example.com)";
 	public static final String SEARCH_MODEL_STEP = "Step 7: Perform a web search to gather more information and answer any questions you might have.";
-	public static final String SEARCH_REFERENCES = "Search References:\nList any references you have uncovered during your web search(es), following the format for each reference. This format MUST be JSON array parseable where every value in the JSON array should be a quoted string.:\n- [\"https://example.org/full/url/here\", \"author\", \"title\", \"sentiment as an integer from -100 to 100\", \"summary\"]";
+	public static final String SEARCH_REFERENCES = "Search References:\nA single line JSON array payload which contains machine readable data about all the references used in your anaylsis. Each reference shall be represented by a JSON array with the following string fields: [\"https://example.org/full/url/here\", \"author\", \"title\", \"sentiment as an integer from -100 to 100\", \"summary\", \"long summary\"]\n"
+			+ "The long summary field must contain any and all critical information from the article which you used in your analysis, such that the analysis could be repeated in the future with only this information. Here is an example of a single cited reference (you may have more than one): [[\"https://pmc.ncbi.nlm.nih.gov/articles/PMC9677302/\", \"Sajjad et al., Canadian Journal of Kidney Health and Disease, 2022\", \"Motivators and Barriers to Living Donor Kidney Transplant as Perceived by Past and Potential Donors\", \"20\", \"Peer-reviewed study citing lack of job security as a significant barrier to living donation.\", \"A large proportion of women and men reported that guaranteed job security (47% women and 38% of men), paid time off (51% of women and 42% of men), reimbursement of lost wages (49% of women and 38% of men), and protections to guarantee no impact on future insurability (62% of women and 52% of men) were significant motivators to donate.\"]]";
 	
 	@Inject
 	protected OpenAIService ai;
@@ -172,7 +182,7 @@ public class BillInterpretationService {
 		} else {
 			prompt = prompt.replaceFirst("\\{searchModelInstructions1\\}", "");
 			prompt = prompt.replaceFirst("\\{searchModelInstructions2\\}", "");
-			prompt = prompt.replaceFirst("\\{searchModelStep6\\}", "");
+			prompt = prompt.replaceFirst("\\{searchModelStep\\}", "");
 			prompt = prompt.replaceFirst("\\{searchReferences\\}", "");
 		}
 		
@@ -191,12 +201,12 @@ public class BillInterpretationService {
 //		return userMsg;
 		
 		String userMsg = "";
-		final String billTextMsg = "Bill Text:\n" + billText;
+		final String billTextMsg = "Official Bill Text:\n" + billText;
 		
 		var pressInterps = billService.getPressInterps(bill.getId());
 		
 		if (pressInterps.size() > 0) {
-			String header = "Press Coverage:\n" + "The following articles were pulled from a basic Google search for this bill and were included to provide additional context for the interpretation. Their inclusion does not represent an endorsement. Often a Google search for a bill will reveal key legislative stakeholders, so view these articles with a skeptical eye. We want to prioritize what's best for all of America, not necessarily a few key stakeholders.\n\n";
+			String header = "References:\n" + "The following articles were pulled from a web search for this bill and were included to provide additional context for the interpretation. Their inclusion does not represent an endorsement of the opinions expressed from the source. Often a web search for a bill will reveal key legislative stakeholders, so view these articles with a skeptical eye. We want to prioritize what's best for all of America, not necessarily a few key stakeholders. Feel free to cite these sources using markdown link syntax in your long report if appropriate and relevant.\n\n";
 			
 			int context = billTextMsg.length() + header.length();
 			

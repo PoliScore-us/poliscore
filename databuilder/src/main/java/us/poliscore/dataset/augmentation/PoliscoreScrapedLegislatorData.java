@@ -7,10 +7,11 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import us.poliscore.model.SessionPersistable;
+import us.poliscore.model.bill.Bill;
 import us.poliscore.model.legislator.Legislator;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @RegisterForReflection
 public class PoliscoreScrapedLegislatorData extends SessionPersistable {

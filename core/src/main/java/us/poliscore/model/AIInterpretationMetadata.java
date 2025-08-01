@@ -22,19 +22,25 @@ public class AIInterpretationMetadata extends InterpretationMetadata {
 	@NonNull
 	protected String model;
 	
+	/**
+	 * When set to true, indicates that the interpretation was produced by an ai agent with access to a web search tool.
+	 */
+	protected boolean webSearchAgent;
+	
 	@NonNull
 	protected int promptVersion;
 	
 	@NonNull
 	protected LocalDate date;
 	
-	public static AIInterpretationMetadata construct(String provider, String model, int promptVersion)
+	public static AIInterpretationMetadata construct(String provider, String model, int promptVersion, boolean webSearchAgent)
 	{
 		AIInterpretationMetadata meta = new AIInterpretationMetadata();
 		meta.setProvider(provider);
 		meta.setModel(model);
 		meta.setPromptVersion(promptVersion);
 		meta.setDate(LocalDate.now());
+		meta.setWebSearchAgent(webSearchAgent);
 		return meta;
 	}
 	

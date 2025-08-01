@@ -1,5 +1,6 @@
 package us.poliscore.service.storage;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -8,14 +9,17 @@ import java.util.Set;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.lang3.StringUtils;
 
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import lombok.AllArgsConstructor;
 import lombok.Cleanup;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.val;
+import lombok.experimental.Accessors;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -24,7 +28,6 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import us.poliscore.PoliscoreUtil;
-import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Persistable;
 import us.poliscore.service.GovernmentDataService;
 
@@ -141,15 +144,15 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	}
 	
 	public <T extends Persistable> List<T> query(Class<T> clazz, String sessionKey) {
-		return query(clazz, sessionKey, null, -1, true);
+		return query(clazz, sessionKey, new QueryCriteria(null, null, null, -1, true));
 	}
 	
 	public <T extends Persistable> List<T> query(Class<T> clazz, String sessionKey, String objectKey) {
-		return query(clazz, objectKey, sessionKey, -1, true);
+		return query(clazz, sessionKey, new QueryCriteria(objectKey, null, null, -1, true));
 	}
 	
 	@SneakyThrows
-	public <T extends Persistable> List<T> query(Class<T> clazz, String sessionKey, String objectKey, int pageSize, boolean ascending)
+	public <T extends Persistable> List<T> query(Class<T> clazz, String sessionKey, QueryCriteria criteria)
 	{
 	    val keys = new java.util.ArrayList<String>();
 	    String continuationToken = null;
@@ -157,8 +160,9 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	    String storageBucket = Persistable.getClassStorageBucket(clazz, sessionKey);
 	    
 	    String fullPrefix = storageBucket;
-	    if (StringUtils.isNotBlank(objectKey))
-	    	fullPrefix = storageBucket + "/" + objectKey;
+	    if (criteria.getObjectKeyPrefix() != null) {
+	        fullPrefix += "/" + criteria.getObjectKeyPrefix();
+	    }
 
 	    // First: collect all matching keys
 	    do {
@@ -173,8 +177,17 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 
 	        val resp = getClient().listObjectsV2(builder.build());
 
+//	        for (val s3Object : resp.contents()) {
+//	            keys.add(s3Object.key());
+//	        }
+	        
 	        for (val s3Object : resp.contents()) {
-	            keys.add(s3Object.key());
+	            Instant lastModified = s3Object.lastModified();
+
+	            if ((criteria.getLastModifiedAfter() == null || lastModified.isAfter(criteria.getLastModifiedAfter())) &&
+	                (criteria.getLastModifiedBefore() == null || lastModified.isBefore(criteria.getLastModifiedBefore()))) {
+	                keys.add(s3Object.key());
+	            }
 	        }
 
 	        continuationToken = resp.nextContinuationToken();
@@ -182,13 +195,13 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	    while (continuationToken != null);
 
 	    // Now: sort keys if needed
-	    if (!ascending) {
+	    if (!criteria.isAscending()) {
 	        keys.sort(java.util.Collections.reverseOrder());
 	    }
 
 	    val results = new java.util.ArrayList<T>();
 
-	    int limit = pageSize > 0 ? Math.min(pageSize, keys.size()) : keys.size(); // If pageSize <= 0, fetch all
+	    int limit = criteria.getPageSize() > 0 ? Math.min(criteria.getPageSize(), keys.size()) : keys.size(); // If pageSize <= 0, fetch all
 
 	    for (int i = 0; i < limit; i++) {
 	        val s3Key = keys.get(i);
@@ -266,6 +279,25 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 			// S3 delete is idempotent, but we can optionally log
 			Log.info("Attempted to delete non-existent object from S3 " + key);
 		}
+	}
+	
+	@Data
+	@Accessors(chain = true)
+	@AllArgsConstructor
+	@NoArgsConstructor
+	public static class QueryCriteria {
+
+	    private String objectKeyPrefix; // formerly objectKey
+
+	    private Instant lastModifiedAfter;
+	    private Instant lastModifiedBefore;
+
+	    private int pageSize = 0; // <= 0 means "no limit"
+	    private boolean ascending = true;
+
+	    // Future fields:
+	    // private Instant createdAfter;
+	    // private Map<String, String> requiredTags;
 	}
 	
 }

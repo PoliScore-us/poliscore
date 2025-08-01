@@ -26,6 +26,7 @@ import us.poliscore.PartyBillLinker;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
 import us.poliscore.ai.BatchOpenAIResponse;
+import us.poliscore.entrypoint.DatabaseBuilder;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.InterpretationOrigin;
 import us.poliscore.model.Party;
@@ -260,7 +261,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			return;
 		}
 		
-		new BillInterpretationParser(bi, s3).parse(interpText);
+		new BillInterpretationParser(bill, bi, s3).parse(interpText);
 		
 		if (!bi.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety)) {
 			if (sliceIndex != null) {throw new RuntimeException("Did not find OverallBenefitToSociety stat on interpretation");  }
@@ -289,7 +290,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			throw new RuntimeException("Interpretation missing proper stats or explain." + billId);
 		}
 		
-		if (pressBillInterpGenerator.getQueriedBills().contains(bill)) {
+		if (DatabaseBuilder.FORCE_WEB_SEARCH || pressBillInterpGenerator.getQueriedBills().contains(bill)) {
 			bi.setLastPressQuery(LocalDate.now());
 		}
 		

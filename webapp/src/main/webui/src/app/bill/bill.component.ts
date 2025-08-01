@@ -1,7 +1,7 @@
 import { Component, HostListener, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { AppService } from '../app.service';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import convertStateCodeToName, { Bill, BillInterpretation, colorForGrade, getBenefitToSocietyIssue, gradeForRating, gradeForStats, issueKeyToLabel, issueKeyToLabelSmall, PressInterpretation } from '../model';
+import convertStateCodeToName, { Bill, BillInterpretation, colorForGrade, getBenefitToSocietyIssue, gradeForQuality, gradeForRating, gradeForStats, issueKeyToLabel, issueKeyToLabelSmall, PressInterpretation } from '../model';
 import { MatCardModule } from '@angular/material/card';
 import { CommonModule, isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { HttpClient, HttpHandler } from '@angular/common/http';
@@ -314,7 +314,13 @@ export class BillComponent implements OnInit {
 
   getBillName() { return this.bill == null ? "" : shortNameForBill(this.bill!); }
   gradeForBill(): string { return this.gradeForInterp(this.bill?.interpretation!); }
-  gradeForInterp(interp: BillInterpretation) { return gradeForStats(interp?.issueStats!); }
+  gradeForInterp(interp: BillInterpretation) {
+    if (interp?.quality) {
+      return gradeForQuality(interp!.quality);
+    }
+
+    return gradeForStats(interp?.issueStats!);
+  }
   // gradeForPressInterp(interp: PressInterpretation) { return interp!.sentiment; }
   gradeForPressInterp(interp: PressInterpretation) { return interp!.sentiment >= 10 ? "Positive" : (interp!.sentiment < 0 ? "Negative" : "Mixed") }
 

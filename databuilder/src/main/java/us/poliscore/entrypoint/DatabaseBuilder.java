@@ -2,6 +2,8 @@ package us.poliscore.entrypoint;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -45,6 +47,7 @@ import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
+import us.poliscore.service.storage.S3PersistenceService.QueryCriteria;
 
 /**
  * Run this to keep a deployed server up-to-date.
@@ -114,23 +117,25 @@ public class DatabaseBuilder implements QuarkusApplication
 		val buildDatasets = data.getBuildDatasets();
 		
 		for (val dataset : buildDatasets) {
-			data.syncS3LegislatorImages(dataset);
-			data.syncS3BillText(dataset);
+//			data.syncS3LegislatorImages(dataset);
+//			data.syncS3BillText(dataset);
 			
 			s3.optimizeExists(BillInterpretation.class, dataset.getSession().getKey());
 			s3.optimizeExists(LegislatorInterpretation.class, dataset.getSession().getKey());
 			
-			syncDdbWithS3(dataset);
+//			syncDdbWithS3(dataset);
 		}
 		
-		interpretBillPressArticles(buildDatasets);
+		if (!FORCE_WEB_SEARCH)
+			interpretBillPressArticles(buildDatasets);
+		
 		interpretBills(buildDatasets);
 		pressBillInterpGenerator.recordLastPressQueries(); // We want to record that our press query is complete, but only after the bill has been updated and re-interpreted (otherwise we would need to query again if it fails halfway through)
 		
-		interpretLegislators(buildDatasets);
-		interpretPartyStats(buildDatasets);
-		
-		webappDataGenerator.process();
+//		interpretLegislators(buildDatasets);
+//		interpretPartyStats(buildDatasets);
+//		
+//		webappDataGenerator.process();
 		
 		Log.info("Poliscore database build complete.");
 	}
@@ -168,10 +173,9 @@ public class DatabaseBuilder implements QuarkusApplication
 		}
 		
 		// Update bills whose press interpretations are out of date //
-		// TODO : Sort by date and only grab the top x amount
 		Log.info("Syncing press interpretations");
 		Set<Bill> updated = new HashSet<Bill>();
-		for (val pi : s3.query(PressInterpretation.class, dataset.getSession().getKey())) {
+		for (val pi : s3.query(PressInterpretation.class, dataset.getSession().getKey(), new QueryCriteria().setLastModifiedAfter(Instant.now().minus(15, ChronoUnit.DAYS)))) {
 			if (pi.isNoInterp()) continue;
 			
 			if (pi.getId().contains("null") || pi.getBillId().contains("null")) {

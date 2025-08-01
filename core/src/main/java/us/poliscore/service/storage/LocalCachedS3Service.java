@@ -8,6 +8,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import us.poliscore.model.Persistable;
 import us.poliscore.service.MemoryObjectService;
+import us.poliscore.service.storage.S3PersistenceService.QueryCriteria;
 
 @ApplicationScoped
 @DefaultBean
@@ -66,11 +67,11 @@ public class LocalCachedS3Service extends S3PersistenceService implements Applic
 	}
 	
 	public <T extends Persistable> List<T> query(Class<T> clazz, String sessionKey, String objectKey) {
-		return super.query(clazz, sessionKey, objectKey, -1, true);
+		return super.query(clazz, sessionKey, objectKey);
 	}
 	
-	public <T extends Persistable> List<T> query(Class<T> clazz, String sessionKey, String objectKey, int pageSize, boolean ascending) {
-		return super.query(clazz, sessionKey, objectKey, pageSize, ascending);
+	public <T extends Persistable> List<T> query(Class<T> clazz, String sessionKey, QueryCriteria criteria) {
+		return super.query(clazz, sessionKey, criteria);
 	}
 	
 	public <T extends Persistable> void optimizeExists(Class<T> clazz, String sessionKey) {

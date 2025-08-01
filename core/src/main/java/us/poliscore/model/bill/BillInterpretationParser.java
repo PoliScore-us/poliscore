@@ -4,17 +4,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
+import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.val;
 import us.poliscore.model.InterpretationOrigin;
+import us.poliscore.model.InterpretationOrigin.InvalidOriginException;
 import us.poliscore.model.IssueStats;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.press.PressInterpretation;
@@ -26,7 +30,11 @@ public class BillInterpretationParser {
 	
 	public static List<String> summaryHeader = Arrays.asList("summary:", "*summary:*", "**summary:**", "*summary*", "**summary**");
 	
+	private static final Pattern LEADING_DASHES = Pattern.compile("^[\\p{Pd}\\u2212\\s]*");
+	
 	private State state = null;
+	
+	private Bill bill;
 	
 	private BillInterpretation interp;
 	
@@ -35,7 +43,8 @@ public class BillInterpretationParser {
 	public static enum State {
 		REASONING("(?i)Reasoning Steps:"),
 		SEARCH_REFERENCES("(?i)Search References:"),
-		STATS("(?i)Stats:"),
+		IMPACT("(?i)Impact:"),
+		QUALITY("(?i)Quality:"),
 		AUTHOR("(?i)Author:"),
 		TITLE("(?i)Title:", "(?i)Bill Title:"),
 		RIDERS("(?i)Riders:"),
@@ -54,12 +63,14 @@ public class BillInterpretationParser {
 //		}
 	}
 	
-	public BillInterpretationParser(BillInterpretation interp, S3PersistenceService s3) {
+	public BillInterpretationParser(Bill bill, BillInterpretation interp, S3PersistenceService s3) {
+		this.bill = bill;
 		this.interp = interp;
 		this.s3 = s3;
 	}
 	
 	public void parse(String text) {
+		interp.setQuality(0);
 		interp.setSearchReferences("");
 		interp.setReasoning("");
 		interp.setShortExplain("");
@@ -73,7 +84,7 @@ public class BillInterpretationParser {
 		{
 			while (scanner.hasNextLine())
 			{
-			  String line = standardizeFormatting(scanner.nextLine());
+			  String line = scanner.nextLine().trim();
 			  
 			  if (StringUtils.isBlank(line) || setState(line) || state == null) continue;
 			  
@@ -118,8 +129,16 @@ public class BillInterpretationParser {
 	}
 	
 	private void processContent(String line) {
-		if (State.STATS.equals(state)) {
+		if (!ArrayUtils.contains(new State[] {
+				State.LONG_REPORT, State.SHORT_REPORT, State.SEARCH_REFERENCES
+		}, state)) {
+			line = standardizeFormatting(line);
+		}
+		
+		if (State.IMPACT.equals(state)) {
 			processStat(line);
+		} else if (State.QUALITY.equals(state)) {
+			processQuality(line);
 		} else if (State.AUTHOR.equals(state)) {
 			processAuthor(line);
 		} else if (State.TITLE.equals(state)) {
@@ -175,41 +194,67 @@ public class BillInterpretationParser {
 	}
 	
 	private void processSearchReferences(String line) {
+		// Even though we asked openai to not give us newlines, sometimes it does anyway
+		if (line.strip().equals("[") || line.strip().equals("]")) return;
+		
 		String newline = StringUtils.isBlank(interp.getReasoning()) ? "" : "\n";
 		interp.setSearchReferences(interp.getSearchReferences() + newline + line);
 		
 		try
 		{
-			line = line.replace(" - ", "").replace("- ", "").replace(" -", "").replace("-", "").replace("\\\"", "");
+			// Remove leading dash-like characters (hyphen, en dash, em dash, minus, etc.)
+	        line = LEADING_DASHES.matcher(line).replaceFirst("");
+
+	        // Also remove escaped quotes (from legacy issues?)
+	        line = line.replace("\\\"", "");
 			
-			// [\"https://example.org/full/url/here\", \"author\", \"title\", \"sentiment as an integer from -100 to 100\", \"summary\"]
-			String[] values = new ObjectMapper().readValue(line, new TypeReference<String[]>() {});
-			
-			val url = values[0];
-			val author = values[1];
-			val title = values[2];
-			val sentiment = parseSentiment(values[3]);
-			val summary = values[4];
-			
-			val origin = new InterpretationOrigin(url, title);
-			
-			val pi = new PressInterpretation();
-			pi.setBillId(interp.getBillId());
-			pi.setOrigin(origin);
-			pi.setMetadata(interp.getMetadata());
-			pi.setId(PressInterpretation.generateId(interp.getBillId(), origin));
-			pi.setNoInterp(false);
-			pi.setAuthor(author);
-			pi.setGenArticleTitle(title);
-			pi.setSentiment(sentiment);
-			pi.setShortExplain(summary);
-			s3.put(pi);
-			
-			interp.getPressInterps().add(pi);
+	        try {
+	        	String[][] references = new ObjectMapper().readValue(line, new TypeReference<String[][]>() {});
+	        	
+	        	for (val values : references) {
+	        		try {
+	        			processSearchReference(values);
+	        		} catch (InvalidOriginException e) {
+	        			// Url validation failed
+	        		}
+		        }
+	        } catch (JsonProcessingException t) {
+	        	// Even though we asked openai to not give us newlines, sometimes it does anyway
+	        	String[] values = new ObjectMapper().readValue(line, new TypeReference<String[]>() {});
+	        	
+	        	processSearchReference(values);
+	        }
 		}
 		catch(Throwable t) {
 			logger.error("Error parsing search reference", t);
 		}
+	}
+	
+	private void processSearchReference(String[] values) {
+		val url = values[0];
+		val author = values[1];
+		val title = values[2];
+		val sentiment = parseSentiment(values[3]);
+		val shortExplain = values[4];
+		val longExplain = values[5];
+		
+		val origin = new InterpretationOrigin(url, title);
+		origin.validate(interp.getBill().getOfficialUrl());
+		
+		val pi = new PressInterpretation();
+		pi.setBillId(interp.getBillId());
+		pi.setOrigin(origin);
+		pi.setMetadata(interp.getMetadata());
+		pi.setId(PressInterpretation.generateId(interp.getBillId(), origin));
+		pi.setNoInterp(false);
+		pi.setAuthor(author);
+		pi.setGenArticleTitle(title);
+		pi.setSentiment(sentiment);
+		pi.setShortExplain(shortExplain);
+		pi.setLongExplain(longExplain);
+		s3.put(pi);
+		
+		interp.getPressInterps().add(pi);
 	}
 	
 	private int parseSentiment(String sentimentStr) {
@@ -243,6 +288,22 @@ public class BillInterpretationParser {
 		if (stat != null && stat.getRight() != IssueStats.NA)
 		{
 			interp.getIssueStats().setStat(stat.getLeft(), stat.getRight());
+		}
+	}
+	
+	private void processQuality(String line) {
+		try
+		{
+			line = line.replaceAll("%", "").strip();
+			
+			if (line.contains("."))
+				interp.setQuality(Math.round(Float.parseFloat(line)*100.0f));
+			else
+				interp.setQuality(Integer.parseInt(line));
+		}
+		catch (Throwable t)
+		{
+			logger.error("Error setting quality", t);
 		}
 	}
 	

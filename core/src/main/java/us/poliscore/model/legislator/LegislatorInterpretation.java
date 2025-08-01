@@ -24,12 +24,13 @@ import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.SessionPersistable;
 import us.poliscore.model.TrackedIssue;
+import us.poliscore.model.bill.Bill;
 import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
 import us.poliscore.model.legislator.Legislator.LegislatorLegislativeTermSortedSet;
 import us.poliscore.model.legislator.Legislator.LegislatorName;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @DynamoDbBean
 @NoArgsConstructor
 @RegisterForReflection
@@ -43,6 +44,8 @@ public class LegislatorInterpretation extends SessionPersistable
 	}
 	
 	protected IssueStats issueStats;
+	
+	protected Integer quality;
 	
 	protected AIInterpretationMetadata metadata;
 	
