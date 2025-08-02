@@ -9,15 +9,15 @@ import lombok.Data;
 @AllArgsConstructor
 public class OpenAIModel {
 	
-	public static final OpenAIModel GPT41 = new OpenAIModel("gpt-4.1", 950000, 32768, true, true);
+	public static final OpenAIModel GPT41 = new OpenAIModel("gpt-4.1", 950000, 32768, true, true, false);
 	
-	public static final OpenAIModel GPT41mini = new OpenAIModel("gpt-4.1-mini", GPT41.getContextWindowTokens(), GPT41.getMaxOutputTokens(), true, false);
+	public static final OpenAIModel GPT41mini = new OpenAIModel("gpt-4.1-mini", GPT41.getContextWindowTokens(), GPT41.getMaxOutputTokens(), true, false, false);
 	
-	public static final OpenAIModel GPT4o = new OpenAIModel("gpt-4o", 122500, 14000, true, true);
+	public static final OpenAIModel GPT4o = new OpenAIModel("gpt-4o", 122500, 14000, true, true, false);
 	
-	public static final OpenAIModel o3 = new OpenAIModel("o3", 190000, 95000, false, true);
+	public static final OpenAIModel o3 = new OpenAIModel("o3", 190000, 95000, false, true, true);
 	
-	public static final OpenAIModel o3DeepResearch = new OpenAIModel("o3-deep-research", 190000, 95000, false, true);
+	public static final OpenAIModel o3DeepResearch = new OpenAIModel("o3-deep-research", 190000, 95000, false, true, false);
 	
 	public static OpenAIModel fromString(String _id) {
 		if (_id.equals(GPT41.getId())) {
@@ -44,6 +44,8 @@ public class OpenAIModel {
 	private boolean supportsTemperature;
 	
 	private boolean supportsSearch;
+	
+	private boolean isMaxEffort;
 	
 	public int getContextWindowStringLength() {
 		return contextWindowTokens * 4;

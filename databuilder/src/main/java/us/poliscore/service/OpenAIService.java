@@ -18,6 +18,8 @@ import org.apache.commons.lang3.StringUtils;
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.errors.InternalServerException;
+import com.openai.models.Reasoning;
+import com.openai.models.ReasoningEffort;
 import com.openai.models.batches.Batch;
 import com.openai.models.batches.Batch.Status;
 import com.openai.models.batches.BatchCreateParams;
@@ -110,6 +112,9 @@ public class OpenAIService {
 		
 		if (_model.isSupportsTemperature())
 			paramBuilder.temperature(0.0d); // We don't want randomness. Give us predictability and accuracy
+		
+		if (_model.isMaxEffort())
+			paramBuilder.reasoning(Reasoning.builder().effort(ReasoningEffort.HIGH).build());
 			
 		val params = paramBuilder.build();
 		

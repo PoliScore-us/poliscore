@@ -1,4 +1,4 @@
-import { Bill, gradeForRating, gradeForStats } from "./model";
+import { Bill, gradeForQuality, gradeForRating, gradeForStats } from "./model";
 
 export function shortNameForBill(bill: Bill) {
     if (bill.interpretation && bill.interpretation.genBillTitle && bill.name.length > 100) {
@@ -37,6 +37,10 @@ export function descriptionForBill(bill: Bill): string
 
  export function gradeForBill(bill: Bill): string
 {
+  if (bill.interpretation && bill.interpretation.quality) {
+    return gradeForQuality(bill.interpretation.quality);
+  }
+
     if (bill.rating) {
         return gradeForRating(bill.rating);
     }

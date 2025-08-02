@@ -5,6 +5,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
@@ -49,18 +51,23 @@ public class DataCleaner implements QuarkusApplication {
 //		cleanInvalidPressInterps(dataset);
 //		wipeAllPressInterps(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2023), Bill.class).get());
 		
-		redeployBill(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2023), Bill.class).get());
-		redeployBill(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2027), Bill.class).get());
-		redeployBill(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2038), Bill.class).get());
-		redeployBill(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2221), Bill.class).get());
-		redeployBill(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2257), Bill.class).get());
-		redeployBill(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2266), Bill.class).get());
-		redeployBill(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2291), Bill.class).get());
-		redeployBill(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2292), Bill.class).get());
-		redeployBill(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2309), Bill.class).get());
+//		redeployBill(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2023), Bill.class).get());
+		
+		cleanQualityMetric(dataset);
 		
 		
 		System.out.println("Program complete.");
+	}
+	
+	public void cleanQualityMetric(PoliscoreDataset dataset) {
+		for (Bill b : dataset.query(Bill.class).stream().filter(b -> billInterpreter.isInterpreted(b.getId())).collect(Collectors.toList())) {
+			val interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get();
+			
+			if (interp.getRating() < 0 && interp.getQuality() != null && interp.getQuality() > 0)
+				System.out.println(interp.getBillId());
+//				s3.delete(interp.getId(), BillInterpretation.class);
+
+		}
 	}
 	
 	public void redeployBill(Bill b) {

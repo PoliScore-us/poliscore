@@ -44,8 +44,8 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 @QuarkusMain(name="BatchBillRequestGenerator")
 public class BatchBillRequestGenerator implements QuarkusApplication
 {
-//	public static final List<String> specificFetch = null;
-	public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 4534));
+	public static final List<String> specificFetch = null;
+//	public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 4546));
 	
 	public static final int MAX_BILL_PROCESS = 100; // Denotes the max bills to process in a given session. -1 for infinite
 	
