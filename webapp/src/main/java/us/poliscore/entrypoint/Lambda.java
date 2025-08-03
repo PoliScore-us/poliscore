@@ -172,7 +172,7 @@ public class Lambda {
 		} else if (index.equals("TrackedIssue")) {
 			var issue = TrackedIssue.valueOf(sortKey);
 			stream = stream.filter(lbi -> lbi.getIssueStats().hasStat(issue));
-			comparator = (LegislatorBillInteraction a, LegislatorBillInteraction b) -> Integer.valueOf(a.getRating(issue)).compareTo(b.getRating(issue));
+			comparator = (LegislatorBillInteraction a, LegislatorBillInteraction b) -> Integer.valueOf(a.getImpact(issue)).compareTo(b.getImpact(issue));
 		} else {
 			throw new UnsupportedOperationException(index);
 		}
