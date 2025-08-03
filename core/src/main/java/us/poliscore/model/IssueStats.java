@@ -131,11 +131,14 @@ public class IssueStats {
 		return getStat(issue, 0);
 	}
 	
-	@JsonIgnore public Integer getRating(TrackedIssue issue) { return getStat(issue); }
+	@JsonIgnore public Integer getImpact(TrackedIssue issue) { return getStat(issue); }
 	
 	@JsonIgnore
 	public int getStat(TrackedIssue issue, int defaultValue)
 	{
+		if (issue == null)
+			issue = TrackedIssue.OverallBenefitToSociety;
+		
 		return stats.getOrDefault(issue, defaultValue);
 	}
 	

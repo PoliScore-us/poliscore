@@ -180,16 +180,15 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			throw new RuntimeException("Unable to parse valid issue stats for legislator " + leg.getId());
 		}
 		
-		s3.put(interp);
-		
 		leg.setInteractions(legInterp.getInteractionsForInterpretation(leg).stream()
 				.filter(i -> i.getIssueStats() != null)
 				.sorted((a,b) -> a.getDate().compareTo(b.getDate())).limit(1100).collect(Collectors.toCollection(LegislatorBillInteractionList::new)));
 		
 		leg.setInterpretation(interp);
 		
-		legInterp.calculateImpact(leg);
+		legInterp.calculateImpactAndRating(leg, interp);
 		
+		s3.put(interp);
 		legService.ddbPersist(leg, interp);
 	}
 	

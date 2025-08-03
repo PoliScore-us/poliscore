@@ -27,6 +27,7 @@ import us.poliscore.model.legislator.LegislatorBillInteraction;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCosponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
+import us.poliscore.model.legislator.LegislatorInterpretation;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 import us.poliscore.service.storage.ObjectStorageServiceIF;
@@ -314,8 +315,11 @@ Generate a layman's, concise, three paragraph, {{analysisType}}, highlighting an
 	    }
 	}
 
-	public void calculateImpact(Legislator leg) {
+	public void calculateImpactAndRating(Legislator leg, LegislatorInterpretation interp) {
 		Map<TrackedIssue, Long> impact = new HashMap<TrackedIssue, Long>();
+		
+		Double rating = 0.0d;
+		double total = 0;
 		
 		for (LegislatorBillInteraction interact : getInteractionsForInterpretation(leg)) {
 			if (interact.getIssueStats() != null) {
@@ -323,9 +327,15 @@ Generate a layman's, concise, three paragraph, {{analysisType}}, highlighting an
 					val existing = impact.getOrDefault(issue, 0l);
 					impact.put(issue, existing + Long.valueOf(interact.getImpact(issue)));
 				}
+				
+				if (interact.getRating() != null) {
+					rating += interact.getRating();
+					total++;
+				}
 			}
 		}
 		
 		leg.setImpactMap(impact);
+		interp.setRating(total == 0 ? 0 : (int)Math.round(rating / total));
 	}
 }

@@ -45,7 +45,7 @@ public class LegislatorInterpretation extends SessionPersistable
 	
 	protected IssueStats issueStats;
 	
-	protected Integer quality;
+	protected Integer rating;
 	
 	protected AIInterpretationMetadata metadata;
 	
@@ -76,8 +76,13 @@ public class LegislatorInterpretation extends SessionPersistable
 
 	@JsonIgnore public void setDate(LocalDate date) { }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return issueStats.getRating(); }
-	@JsonIgnore public Integer getRating(TrackedIssue issue) { return issueStats.getRating(issue); }
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return getRating(null); }
+	public Integer getRating(TrackedIssue issue) {
+		if (rating != null)
+			return rating;
+		
+		return issueStats.getImpact(issue);
+	}
 
 	@JsonIgnore public void setRating(int rating) { }
 }

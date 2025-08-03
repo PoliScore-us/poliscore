@@ -66,6 +66,9 @@ public class BillInterpretation extends SessionPersistable
 	
 	protected IssueStats issueStats;
 	
+	protected Integer rating;
+	
+	// Deprecated - use rating instead
 	protected Integer quality;
 	
 	protected Integer confidence;
@@ -130,9 +133,19 @@ public class BillInterpretation extends SessionPersistable
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() { return metadata.getDate(); }
 	@JsonIgnore public void setDate(LocalDate date) { }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return issueStats.getRating(); }
-	@JsonIgnore public Integer getRating(TrackedIssue issue) { return issueStats.getRating(issue); }
-	@JsonIgnore public void setRating(int rating) { }
+	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return getRating(null); }
+	public Integer getRating(TrackedIssue issue) {
+		if (rating != null)
+			return rating;
+		if (quality != null)
+			return quality;
+		
+		return issueStats.getImpact(issue);
+	}
+	public void setRating(int rating) { }
+	
+	@JsonIgnore public Integer getImpact(TrackedIssue issue) { return issueStats.getImpact(issue); }
+	@JsonIgnore public void setImpact() { }
 
 	public boolean hasPressInterp(InterpretationOrigin origin) {
 		return this.pressInterps.stream().filter(p -> p.getOrigin().equals(origin) && !p.isNoInterp()).count() > 0;

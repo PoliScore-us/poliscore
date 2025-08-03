@@ -44,7 +44,7 @@ public class BillInterpretationParser {
 		REASONING("(?i)Reasoning Steps:"),
 		SEARCH_REFERENCES("(?i)Search References:"),
 		IMPACT("(?i)Impact:"),
-		QUALITY("(?i)Quality:"),
+		RATING("(?i)Rating:"),
 		AUTHOR("(?i)Author:"),
 		TITLE("(?i)Title:", "(?i)Bill Title:"),
 		RIDERS("(?i)Riders:"),
@@ -70,7 +70,7 @@ public class BillInterpretationParser {
 	}
 	
 	public void parse(String text) {
-		interp.setQuality(0);
+		interp.setRating(0);
 		interp.setSearchReferences("");
 		interp.setReasoning("");
 		interp.setShortExplain("");
@@ -137,8 +137,8 @@ public class BillInterpretationParser {
 		
 		if (State.IMPACT.equals(state)) {
 			processStat(line);
-		} else if (State.QUALITY.equals(state)) {
-			processQuality(line);
+		} else if (State.RATING.equals(state)) {
+			processRating(line);
 		} else if (State.AUTHOR.equals(state)) {
 			processAuthor(line);
 		} else if (State.TITLE.equals(state)) {
@@ -291,15 +291,15 @@ public class BillInterpretationParser {
 		}
 	}
 	
-	private void processQuality(String line) {
+	private void processRating(String line) {
 		try
 		{
 			line = line.replaceAll("%", "").strip();
 			
 			if (line.contains("."))
-				interp.setQuality(Math.round(Float.parseFloat(line)*100.0f));
+				interp.setRating(Math.round(Float.parseFloat(line)*100.0f));
 			else
-				interp.setQuality(Integer.parseInt(line));
+				interp.setRating(Integer.parseInt(line));
 		}
 		catch (Throwable t)
 		{

@@ -55,11 +55,11 @@ import us.poliscore.service.storage.S3PersistenceService.QueryCriteria;
 @QuarkusMain(name="DatabaseBuilder")
 public class DatabaseBuilder implements QuarkusApplication
 {
-	public static boolean INTERPRET_PRESS_BILLS = true;
+	public static boolean INTERPRET_PRESS_BILLS = false;
 	
-	public static boolean INTERPRET_NEW_BILLS = true;
+	public static boolean INTERPRET_NEW_BILLS = false;
 	
-	public static boolean REINTERPRET_LEGISLATORS = true;
+	public static boolean REINTERPRET_LEGISLATORS = false;
 	
 	public static boolean REINTERPRET_PARTIES = false;
 	
@@ -132,10 +132,10 @@ public class DatabaseBuilder implements QuarkusApplication
 		interpretBills(buildDatasets);
 		pressBillInterpGenerator.recordLastPressQueries(); // We want to record that our press query is complete, but only after the bill has been updated and re-interpreted (otherwise we would need to query again if it fails halfway through)
 		
-//		interpretLegislators(buildDatasets);
-//		interpretPartyStats(buildDatasets);
-//		
-//		webappDataGenerator.process();
+		interpretLegislators(buildDatasets);
+		interpretPartyStats(buildDatasets);
+		
+		webappDataGenerator.process();
 		
 		Log.info("Poliscore database build complete.");
 	}
@@ -303,8 +303,10 @@ public class DatabaseBuilder implements QuarkusApplication
 						val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
 						while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
 							val n = prevInteracts.next();
-							if (n.getIssueStats() != null)
+							if (n.getIssueStats() != null) {
+								n.setRating(n.getIssueStats().getRating());
 								leg.getInteractionsPrivate1().add(n);
+							}
 						}
 					}
 				}
@@ -326,7 +328,7 @@ public class DatabaseBuilder implements QuarkusApplication
 			
 			leg.setInterpretation(interp);
 			
-			legInterp.calculateImpact(leg);
+			legInterp.calculateImpactAndRating(leg, interp);
 			
 			legService.ddbPersist(leg, interp);
 		}

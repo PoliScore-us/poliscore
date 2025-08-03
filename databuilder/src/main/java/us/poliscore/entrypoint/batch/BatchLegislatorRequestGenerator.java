@@ -185,10 +185,10 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	private void includeBillsByIssue(PoliscoreDataset dataset, final Legislator leg, List<String> billMsgs, Set<String> includedBills, final TrackedIssue issue, int amount, boolean ascending) {
 		var interacts = legInterp.getInteractionsForInterpretation(leg).stream().filter(i -> i.getIssueStats() != null && i.getIssueStats().hasStat(issue));
 		if (ascending)
-			interacts = interacts.sorted(Comparator.comparingInt(i -> Math.round(i.getRating(issue) + i.getStatusProgress()*25f*i.getJudgementWeight())));
+			interacts = interacts.sorted(Comparator.comparingInt(i -> Math.round(i.getIssueStats().getStat(issue) + i.getStatusProgress()*25f*i.getJudgementWeight())));
 //			interacts = interacts.sorted(Comparator.comparingInt(i -> i.getImpact(issue)));
 		else
-			interacts = interacts.sorted(Comparator.comparingInt((LegislatorBillInteraction i) -> Math.round(i.getRating(issue) + i.getStatusProgress()*25f*i.getJudgementWeight())).reversed());
+			interacts = interacts.sorted(Comparator.comparingInt((LegislatorBillInteraction i) -> Math.round(i.getIssueStats().getStat(issue) + i.getStatusProgress()*25f*i.getJudgementWeight())).reversed());
 //			interacts = interacts.sorted(Comparator.comparingInt((LegislatorBillInteraction i) -> i.getImpact(issue)).reversed());
 		
 		for (val interact : interacts.limit(amount).collect(Collectors.toList()))
@@ -212,9 +212,9 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		var billsByGrade = legInterp.getInteractionsForInterpretation(leg).stream().filter(i -> i.getIssueStats() != null);
 		
 		if (ascending)
-			billsByGrade = billsByGrade.sorted(Comparator.comparingInt(LegislatorBillInteraction::getWeightedRating));
+			billsByGrade = billsByGrade.sorted(Comparator.comparingInt(LegislatorBillInteraction::getRating));
 		else
-			billsByGrade = billsByGrade.sorted(Comparator.comparingInt(LegislatorBillInteraction::getWeightedRating).reversed());
+			billsByGrade = billsByGrade.sorted(Comparator.comparingInt(LegislatorBillInteraction::getRating).reversed());
 		
 		for (val interact : billsByGrade.limit(amount).collect(Collectors.toList()))
 		{

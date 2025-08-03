@@ -161,13 +161,13 @@ public class Bill extends SessionPersistable {
 		return calculateImpact(interpretation.getIssueStats().getStat(issue), status.getProgress(), getCosponsorPercent(), lawWeight);
 	}
 
-	public static int calculateImpact(int rating, float statusProgress, float cosponsorPercent)
+	public static int calculateImpact(int interpImpact, float statusProgress, float cosponsorPercent)
 	{
 		// 100 is the default 'lawWeight' for impact, and this is because when it comes to legislators, we want the legislator with the most sponsored
 		// laws to massively outweigh a legislator that otherwise just voted on the most bills. There is one specific scenario where we want the weight
 		// to be calculated differently, however, and that is when calculating the bill 'hot' index. In that scenario, we want laws to be important, but
 		// not always outweigh everything else, as we want the date to be a factor which sometimes outweighs the law weight.
-		return calculateImpact(rating, statusProgress, cosponsorPercent, DEFAULT_IMPACT_LAW_WEIGHT);
+		return calculateImpact(interpImpact, statusProgress, cosponsorPercent, DEFAULT_IMPACT_LAW_WEIGHT);
 	}
 	
 	public static int calculateImpact(int rating, float statusProgress, float cosponsorPercent, double lawWeight)
