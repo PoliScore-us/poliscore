@@ -321,7 +321,7 @@ Generate a layman's, concise, three paragraph, {{analysisType}}, highlighting an
 		Double rating = 0.0d;
 		double total = 0;
 		
-		for (LegislatorBillInteraction interact : getInteractionsForInterpretation(leg)) {
+		for (LegislatorBillInteraction interact : leg.getInteractions()) {
 			if (interact.getIssueStats() != null) {
 				for (TrackedIssue issue : interact.getIssueStats().getStats().keySet()) {
 					val existing = impact.getOrDefault(issue, 0l);

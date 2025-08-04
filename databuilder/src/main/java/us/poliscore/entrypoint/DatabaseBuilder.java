@@ -287,7 +287,7 @@ public class DatabaseBuilder implements QuarkusApplication
 				// If an interpretation from this session doesn't exist, grab one from the previous session.
 				var previousSession = data.getPreviousSession(dataset.getSession());
 				
-				if (previousSession != null) {
+				if (previousSession != null){ // && !previousSession.getCode().equals("118")
 					val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousSession.getNamespace(), previousSession.getCode(), leg.getCode()), LegislatorInterpretation.class);
 					
 					if (prevInterpOp.isPresent()) {
@@ -323,7 +323,7 @@ public class DatabaseBuilder implements QuarkusApplication
 //			}
 			
 			leg.setInteractions(legInterp.getInteractionsForInterpretation(leg).stream()
-					.filter(i -> i.getIssueStats() != null)
+					.filter(i -> i.getIssueStats() != null && i.getRating() != null)
 					.sorted((a,b) -> a.getDate().compareTo(b.getDate())).collect(Collectors.toCollection(LegislatorBillInteractionList::new)));
 			
 			leg.setInterpretation(interp);

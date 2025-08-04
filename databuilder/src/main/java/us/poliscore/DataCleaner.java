@@ -1,11 +1,8 @@
 package us.poliscore;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import io.quarkus.logging.Log;
@@ -17,11 +14,12 @@ import lombok.val;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
+import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
-import us.poliscore.service.LegislatorService;
+import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 import us.poliscore.service.storage.S3PersistenceService.QueryCriteria;
@@ -29,7 +27,7 @@ import us.poliscore.service.storage.S3PersistenceService.QueryCriteria;
 @QuarkusMain(name="DataCleaner")
 public class DataCleaner implements QuarkusApplication {
 	
-	@Inject private LegislatorService legService;
+	@Inject private LegislatorInterpretationService legService;
 	
 	@Inject private BillService billService;
 	
@@ -53,10 +51,31 @@ public class DataCleaner implements QuarkusApplication {
 		
 //		redeployBill(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2023), Bill.class).get());
 		
-		cleanQualityMetric(dataset);
+//		cleanQualityMetric(dataset);
 		
+		lookForNullRating(dataset);
 		
 		System.out.println("Program complete.");
+	}
+	
+	public void lookForNullRating(PoliscoreDataset dataset) {
+		val legId = Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "P000595");
+		val leg = ddb.get(legId, Legislator.class).get();
+//		val leg = dataset.get(legId, Legislator.class).get();
+		
+		int hasRating = 0;
+		int notRating = 0;
+		
+		for (val i : legService.getInteractionsForInterpretation(leg)) {
+			if (i.getRating() == null) {
+				System.out.println(i.getBillId());
+				notRating++;
+			} else {
+				hasRating++;
+			}
+		}
+		
+		System.out.println("Has rating: " + hasRating + " no rating " + notRating);
 	}
 	
 	public void cleanQualityMetric(PoliscoreDataset dataset) {

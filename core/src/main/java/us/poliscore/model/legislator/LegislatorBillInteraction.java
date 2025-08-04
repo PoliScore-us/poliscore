@@ -162,10 +162,10 @@ public abstract class LegislatorBillInteraction implements Comparable<Legislator
 	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX, Persistable.OBJECT_BY_IMPACT_INDEX, Persistable.OBJECT_BY_IMPACT_ABS_INDEX }) public String getStorageBucket() { return ID_CLASS_PREFIX; }
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public Integer getRating() { return this.rating; }
-	@JsonIgnore public void setRating(Integer rating) { this.rating = rating; }
+	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public Integer getRating() { return this.rating; }
+	public void setRating(Integer rating) { this.rating = rating; }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_ABS_INDEX }) public Integer getRatingAbs() { return this.rating == null ? null : Math.abs(getRating()); }
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_ABS_INDEX }) public Integer getRatingAbs() { return Math.abs(getRating()); }
 	@JsonIgnore public void setRatingAbs(Integer rating) { }
 	
 	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_IMPACT_INDEX })
