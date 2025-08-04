@@ -268,7 +268,9 @@ export class BillsComponent implements OnInit {
 
     this.isRequestingData = true;
     
-    let fetchSeq = ++this.lastDataFetchSequence;
+    if (replace)
+      this.lastDataFetchSequence++;
+    const fetchSeq = this.lastDataFetchSequence;
 
     this.service.getBills(this.page).then(bills => {
       if (fetchSeq != this.lastDataFetchSequence) return;
@@ -283,6 +285,7 @@ export class BillsComponent implements OnInit {
         this.hasMoreContent = false;
       }
     }).finally(() => {
+      if (fetchSeq != this.lastDataFetchSequence) return;
       this.isRequestingData = false;
     });
   }

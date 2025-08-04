@@ -72,8 +72,8 @@ DEPLOY_VIEW() {
     
     cd ../../../../
 
-    aws s3 rm s3://$BUCKET_NAME/$DEPLOYMENT_YEAR/$DEPLOYMENT_STATE --recursive || true
-    aws s3 cp webapp/src/main/webui/dist/poliscore/browser s3://$BUCKET_NAME/$DEPLOYMENT_YEAR/$DEPLOYMENT_STATE --recursive
+    aws s3 rm s3://$BUCKET_NAME/$DEPLOYMENT_YEAR/$DEPLOYMENT_STATE --recursive --quiet || true
+    aws s3 cp webapp/src/main/webui/dist/poliscore/browser s3://$BUCKET_NAME/$DEPLOYMENT_YEAR/$DEPLOYMENT_STATE --recursive --quiet
 
     echo "S3 Deployment complete:"
     echo "  Bucket: $BUCKET_NAME"

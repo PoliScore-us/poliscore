@@ -2,8 +2,13 @@ package us.poliscore;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
 
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
@@ -44,7 +49,8 @@ public class DataCleaner implements QuarkusApplication {
 	
 	protected void process() throws IOException
 	{
-		val dataset = data.importDataset(LegislativeNamespace.US_CONGRESS, 2026);
+//		val dataset = data.importDataset(LegislativeNamespace.US_CONGRESS, 2026);
+		val dataset = data.importDataset(LegislativeNamespace.US_COLORADO, 2025);
 		
 //		cleanInvalidPressInterps(dataset);
 //		wipeAllPressInterps(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2023), Bill.class).get());
@@ -53,9 +59,27 @@ public class DataCleaner implements QuarkusApplication {
 		
 //		cleanQualityMetric(dataset);
 		
-		lookForNullRating(dataset);
+//		lookForNullRating(dataset);
+		
+//		printLegislatorsBills(dataset.get(Legislator.generateId(LegislativeNamespace.US_COLORADO, "2173", "22225"), Legislator.class).get(), dataset);
 		
 		System.out.println("Program complete.");
+		
+	}
+	
+	public void printLegislatorsBills(Legislator leg, PoliscoreDataset dataset) {
+		Set<String> ids = new HashSet<String>();
+		
+		legService.updateInteractionsInterp(dataset, leg);
+		
+		for (val interact : legService.getInteractionsForInterpretation(leg).stream().filter(i ->
+				i.getRating() < 0 && s3.get(BillInterpretation.generateId(i.getBillId(), null), BillInterpretation.class).get().getMetadata().getDate().isBefore(LocalDate.of(2025, 8, 3))
+			).toList()) {
+			ids.add(interact.getBillId());
+		}
+		
+		System.out.println(StringUtils.join(ids.stream().map(id -> "\"" + id + "\"").toList(), ","));
+		System.out.println("Count: " + ids.size());
 	}
 	
 	public void lookForNullRating(PoliscoreDataset dataset) {

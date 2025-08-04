@@ -2,6 +2,7 @@ package us.poliscore.entrypoint.batch;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -46,6 +47,14 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 {
 	public static final List<String> specificFetch = null;
 //	public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 4546));
+//	public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_COLORADO, "2173", "sb", 317));
+	
+//	public static final List<String> specificFetch = Arrays.asList(
+//		    "BIL/us/co/2173/hb/1054","BIL/us/co/2173/hb/1062","BIL/us/co/2173/sb/303",
+//		    "BIL/us/co/2173/hb/1272","BIL/us/co/2173/hb/1069","BIL/us/co/2173/sb/132",
+//		    "BIL/us/co/2173/sb/201","BIL/us/co/2173/hb/1312","BIL/us/co/2173/hb/1208",
+//		    "BIL/us/co/2173/sb/11","BIL/us/co/2173/sb/77","BIL/us/co/2173/sb/160"
+//		);
 	
 	public static final int MAX_BILL_PROCESS = 100; // Denotes the max bills to process in a given session. -1 for infinite
 	
@@ -127,7 +136,10 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		var requestBills = dataset.query(Bill.class).stream()
 				.filter(b -> specificFetch == null || specificFetch.contains(b.getId()))
 				.filter(b -> (!CHECK_S3_EXISTS || !billInterpreter.isInterpreted(b.getId()) || (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))))
-//				.filter(b -> billInterpreter.isInterpreted(b.getId()) && s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getRating() < 0 && b.getStatus().getProgress() == 1.0f)
+//				.filter(b -> billInterpreter.isInterpreted(b.getId())
+//						&& s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getRating() < 0
+//						&& s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getMetadata().getDate().isBefore(LocalDate.of(2025, 8, 3))
+//								&& b.getStatus().getProgress() == 1.0f)
 				.filter(b -> s3.exists(BillText.generateId(b.getId()), BillText.class))
 				.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed());
 		

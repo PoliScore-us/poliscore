@@ -75,6 +75,8 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
 
   private hasMoreData: boolean = true;
 
+  private lastDataFetchSequence = 0;
+
   private chart: any = null;
 
   issueMap = issueMap;
@@ -576,20 +578,27 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
 
     // Trigger when scrolled to bottom
     if (el.offsetHeight + el.scrollTop >= (el.scrollHeight - 200) && this.leg != null) {
-      this.fetchInteractions();
+      this.fetchInteractions(false);
     }
   }
 
-  fetchInteractions() {
+  fetchInteractions(replace: boolean = true) {
     this.isRequestingData = true;
 
     this.page.exclusiveStartKey = this.leg!.interactions!.length - 1;
 
+    if (replace)
+      this.lastDataFetchSequence++;
+    const fetchSeq = this.lastDataFetchSequence;
+
     this.service.getLegislatorInteractions(this.legId!, this.page).then(page => {
+      if (fetchSeq != this.lastDataFetchSequence) return;
+
       this.leg!.interactions!.push(...page.data[0]);
       this.refreshBillData();
       this.hasMoreData = page.hasMoreData;
     }).finally(() => {
+      if (fetchSeq != this.lastDataFetchSequence) return;
       this.isRequestingData = false;
       this.hideInteractions = false;
     });
@@ -625,7 +634,7 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
     this.page.exclusiveStartKey = undefined;
     this.hasMoreData = true;
     this.page.sortKey = sortKey;
-  
+
     this.leg!.interactions = [];
 
     let routeIndex = "";
@@ -639,7 +648,7 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
   
     // Fetch new interactions
     this.hideInteractions = true;
-    this.fetchInteractions();
+    this.fetchInteractions(true);
   
     if (event && menuTrigger) {
       event.stopPropagation();

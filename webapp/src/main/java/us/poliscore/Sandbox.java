@@ -12,6 +12,10 @@ import java.util.stream.Collectors;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jboss.resteasy.reactive.RestQuery;
+import org.joda.time.LocalDate;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
@@ -22,8 +26,11 @@ import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.entrypoint.Lambda;
 import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Persistable;
+import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
+import us.poliscore.model.bill.BillIssueStat;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
@@ -52,6 +59,9 @@ public class Sandbox implements QuarkusApplication
 	
 	@Inject
     IpGeolocationService ipService;
+	
+	@Inject
+    ObjectMapper mapper;
 	
 	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
@@ -128,8 +138,9 @@ public class Sandbox implements QuarkusApplication
 //			.map(b -> b.getId())
 //			.toList();		
 		
-		
-//		val out = getBills(25, Lambda.TRACKED_ISSUE_INDEX + TrackedIssue.NationalDefense.name(), false, null, null);
+//		Integer _pageSize, String _index, Boolean _ascending, String _exclusiveStartKey, String sortKey, Integer _year, String _namespace
+		val out = getBills(25, Persistable.OBJECT_BY_ISSUE_RATING_INDEX, false, null, TrackedIssue.Healthcare.name(), 2025, LegislativeNamespace.US_COLORADO.getNamespace());
+//		val out = getBills(25, Persistable.OBJECT_BY_ISSUE_RATING_INDEX, false, null, TrackedIssue.Healthcare.name(), 2026, LegislativeNamespace.US_CONGRESS.getNamespace());
 		
 //		s3.optimizeExists(BillInterpretation.class);
 //		
@@ -139,7 +150,7 @@ public class Sandbox implements QuarkusApplication
 		
 		
     	
-//    	System.out.println(PoliscoreUtil.getObjectMapper().valueToTree(out));
+    	System.out.println(PoliscoreUtil.getObjectMapper().valueToTree(out));
 //		System.out.println(out);
 		
 		
@@ -248,6 +259,34 @@ public class Sandbox implements QuarkusApplication
 //    	return bills;
 //    }
 	
+	@SneakyThrows
+    public List<Persistable> getBills(Integer _pageSize, String _index, Boolean _ascending, String _exclusiveStartKey, String sortKey, Integer _year, String _namespace) {
+    	val index = StringUtils.isNotBlank(_index) ? _index : Persistable.OBJECT_BY_DATE_INDEX;
+    	val startKey = _exclusiveStartKey;
+    	var pageSize = _pageSize == null ? 25 : _pageSize;
+    	Boolean ascending = _ascending == null ? Boolean.TRUE : _ascending;
+    	
+    	Integer year = _year == null ? LocalDate.now().getYear() : _year;
+    	LegislativeNamespace namespace = StringUtils.isEmpty(_namespace) ? LegislativeNamespace.US_CONGRESS : LegislativeNamespace.of(_namespace);
+    	val session = lookupSession(namespace, year);
+    	String storageBucket = Persistable.getClassStorageBucket(Bill.class, namespace, session.getCode());
+    	
+    	val cacheable = StringUtils.isBlank(startKey) && pageSize == 25 && StringUtils.isBlank(sortKey) && !index.startsWith(Lambda.TRACKED_ISSUE_INDEX) && !index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX) && !index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX);
+    	val cacheKey = storageBucket + "-" + index + "-" + ascending.toString();
+    	
+    	List<Bill> bills;
+    	if (index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX) || index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX)) {
+    		storageBucket = BillIssueStat.getIndexPrimaryKey(namespace, session.getCode(), TrackedIssue.valueOf(sortKey));
+    		sortKey = null;
+    		val bii = ddb.query(BillIssueStat.class, pageSize, index, ascending, startKey, sortKey, storageBucket);
+    		return bii.stream().map(l -> (Persistable) l).toList();
+    	} else {
+    		bills = ddb.query(Bill.class, session.getKey(), pageSize, index, ascending, startKey, sortKey);
+    	}
+    	
+    	return bills.stream().map(l -> (Persistable) l).toList();
+    }
+	
 //	public List<Legislator> getLegislators(Integer _pageSize, String _index, Boolean _ascending, String _exclusiveStartKey, String sortKey) {
 //    	val index = StringUtils.isNotBlank(_index) ? _index : Persistable.OBJECT_BY_DATE_INDEX;
 //    	val startKey = _exclusiveStartKey;
@@ -260,6 +299,16 @@ public class Sandbox implements QuarkusApplication
 //    	
 //    	return legs;
 //    }
+	
+	@SuppressWarnings("unchecked")
+    @SneakyThrows
+    private List<LegislativeSession> getSessions() {
+    	return mapper.readValue(IOUtils.toString(Lambda.class.getResourceAsStream("/sessions.json"), "UTF-8"), new TypeReference<List<LegislativeSession>>() {});
+    }
+    
+    private LegislativeSession lookupSession(LegislativeNamespace namespace, int year) {
+    	return getSessions().stream().filter(s -> s.getNamespace().equals(namespace) && s.isYearWithin(year)).findAny().get();
+    }
 	
 	@SneakyThrows
 	public List<List<String>> getLegislatorPageData() {

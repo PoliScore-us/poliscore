@@ -308,7 +308,9 @@ export class LegislatorsComponent implements OnInit {
 
     this.isRequestingData = true;
 
-    let fetchSeq = ++this.lastDataFetchSequence;
+    if (replace)
+      this.lastDataFetchSequence++;
+    const fetchSeq = this.lastDataFetchSequence;
 
     this.service.getLegislators(this.page).then(legs => {
       if (fetchSeq != this.lastDataFetchSequence) return;
@@ -323,6 +325,7 @@ export class LegislatorsComponent implements OnInit {
         this.hasMoreContent = false;
       }
     }).finally(() => {
+      if (fetchSeq != this.lastDataFetchSequence) return;
       this.isRequestingData = false;
     });
   }

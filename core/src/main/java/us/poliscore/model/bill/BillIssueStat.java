@@ -60,11 +60,11 @@ public class BillIssueStat implements Persistable {
 	
 	protected LocalDate introducedDate;
 	
+	// This is currently used by front-end code
+	@DynamoDbIgnore public String getType() { return billId.split("/")[4]; }
+	
 	@Getter(onMethod = @__({ @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_ISSUE_RATING_INDEX }) }))
 	protected int rating;
-	
-	// BIL/us/congress/118/hr/8580
-	@DynamoDbIgnore public CongressionalBillType getType() { return CongressionalBillType.valueOf(billId.split("/")[4].toUpperCase()); }
 	
 	@JsonIgnore @DynamoDbIgnore public String getSession() { return billId.split("/")[3]; }
 	@JsonIgnore @DynamoDbIgnore public LegislativeNamespace getNamespace() { return LegislativeNamespace.of(billId.split("/")[1] + "/" + billId.split("/")[2]); }

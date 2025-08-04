@@ -101,7 +101,9 @@ public class InterpretationOrigin {
 				throw new InvalidOriginException("origin is bill's officlal url");
 			}
 			
-			verifyReachable();
+			// Doesn't really work all that well unfortunately
+			// TODO: It says this url is unreachable : https://www.cde.state.co.us/postsecondary/apexam_fee
+//			verifyReachable();
 		} catch (Throwable t) {
 			if (t instanceof InvalidOriginException) {
 				throw ((InvalidOriginException)t);
@@ -147,15 +149,6 @@ public class InterpretationOrigin {
 		if (!WebsiteReachabilityTester.isReachable(getUrl())) {
 	        throw new InvalidOriginException("URL is unreachable: " + getUrl());
 	    }
-	}
-
-	private void spoofBrowserHeaders(HttpURLConnection connection) {
-		connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-			"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
-		connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-		connection.setRequestProperty("Accept-Language", "en-US,en;q=0.5");
-		connection.setRequestProperty("Connection", "keep-alive");
-		connection.setRequestProperty("Referer", "https://www.google.com");
 	}
 	
 	@Override
