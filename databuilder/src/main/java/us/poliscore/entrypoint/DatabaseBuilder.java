@@ -304,7 +304,7 @@ public class DatabaseBuilder implements QuarkusApplication
 						while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
 							val n = prevInteracts.next();
 							if (n.getIssueStats() != null) {
-								n.setRating(n.getIssueStats().getRating());
+								n.setRating(Math.round(n.getIssueStats().getRating() * n.getJudgementWeight() * 0.9f));
 								leg.getInteractionsPrivate1().add(n);
 							}
 						}
