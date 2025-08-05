@@ -148,16 +148,19 @@ public class DatabaseBuilder implements QuarkusApplication
 		long amount = 0;
 		
 		// This could be optimized by building an "index" for each ddb database
-		for (Bill b : dataset.query(Bill.class).stream().filter(b -> billInterpreter.isInterpreted(b.getId())).collect(Collectors.toList())) {
+		for (Bill b : dataset.query(Bill.class)) {
 			var dbill = ddb.get(b.getId(), Bill.class).orElse(null);
+			
+			val interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class);
+			if (interp.isEmpty()) continue;
 			
 			if (dbill == null 
 			    || !Objects.equals(dbill.getStatus(), b.getStatus()) 
 			    || !Objects.equals(dbill.getLastActionDate(), b.getLastActionDate())
-			    || !Objects.equals(dbill.getName(), b.getName())) {
+			    || !Objects.equals(dbill.getName(), b.getName())
+			    || !Objects.equals(dbill.getInterpretation().getLastPressQuery(), interp.get().getLastPressQuery())) {
 			    
-			    val interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get();
-			    billService.ddbPersist(b, interp);
+			    billService.ddbPersist(b, interp.get());
 			    amount++;
 			}
 
@@ -173,31 +176,31 @@ public class DatabaseBuilder implements QuarkusApplication
 		}
 		
 		// Update bills whose press interpretations are out of date //
-		Log.info("Syncing press interpretations");
-		Set<Bill> updated = new HashSet<Bill>();
-		for (val pi : s3.query(PressInterpretation.class, dataset.getSession().getKey(), new QueryCriteria().setLastModifiedAfter(Instant.now().minus(15, ChronoUnit.DAYS)))) {
-			if (pi.isNoInterp()) continue;
-			
-			if (pi.getId().contains("null") || pi.getBillId().contains("null")) {
-				s3.delete(pi.getId(), PressInterpretation.class);
-				continue;
-			}
-			
-			var bill = ddb.get(pi.getBillId(), Bill.class).orElse(null);
-			
-			if (bill != null && bill.getInterpretation() != null && !updated.contains(bill)) {
-				var interp = bill.getInterpretation();
-				
-				if (interp.getPressInterps() == null) interp.setPressInterps(new ArrayList<PressInterpretation>());
-				
-				if (!interp.getPressInterps().stream().filter(ddbpi -> !ddbpi.isNoInterp()).anyMatch(ddbpi -> ddbpi.getId().equals(pi.getId()))) {
-					interp = s3.get(BillInterpretation.generateId(pi.getBillId(), null), BillInterpretation.class).get();
-					billService.ddbPersist(bill, interp);
-					updated.add(bill);
-				}
-			}
-		}
-		Log.info("Updated " + updated.size() + " bills whose press interpretations were out of date.");
+//		Log.info("Syncing press interpretations");
+//		Set<Bill> updated = new HashSet<Bill>();
+//		for (val pi : s3.query(PressInterpretation.class, dataset.getSession().getKey(), new QueryCriteria().setLastModifiedAfter(Instant.now().minus(15, ChronoUnit.DAYS)))) {
+//			if (pi.isNoInterp()) continue;
+//			
+//			if (pi.getId().contains("null") || pi.getBillId().contains("null")) {
+//				s3.delete(pi.getId(), PressInterpretation.class);
+//				continue;
+//			}
+//			
+//			var bill = ddb.get(pi.getBillId(), Bill.class).orElse(null);
+//			
+//			if (bill != null && bill.getInterpretation() != null && !updated.contains(bill)) {
+//				var interp = bill.getInterpretation();
+//				
+//				if (interp.getPressInterps() == null) interp.setPressInterps(new ArrayList<PressInterpretation>());
+//				
+//				if (!interp.getPressInterps().stream().filter(ddbpi -> !ddbpi.isNoInterp()).anyMatch(ddbpi -> ddbpi.getId().equals(pi.getId()))) {
+//					interp = s3.get(BillInterpretation.generateId(pi.getBillId(), null), BillInterpretation.class).get();
+//					billService.ddbPersist(bill, interp);
+//					updated.add(bill);
+//				}
+//			}
+//		}
+//		Log.info("Updated " + updated.size() + " bills whose press interpretations were out of date.");
 	}
 	
 	@SneakyThrows

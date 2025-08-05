@@ -136,10 +136,12 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		var requestBills = dataset.query(Bill.class).stream()
 				.filter(b -> specificFetch == null || specificFetch.contains(b.getId()))
 				.filter(b -> (!CHECK_S3_EXISTS || !billInterpreter.isInterpreted(b.getId()) || (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))))
-//				.filter(b -> billInterpreter.isInterpreted(b.getId())
-//						&& s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getRating() < 0
-//						&& s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getMetadata().getDate().isBefore(LocalDate.of(2025, 8, 3))
-//								&& b.getStatus().getProgress() == 1.0f)
+//				.filter(b -> 
+//				billInterpreter.isInterpreted(b.getId())
+////						&& s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getRating() < 0
+//						 && s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getMetadata().getModel().toLowerCase().equals("gpt-4o")
+////								&& b.getStatus().getProgress() == 1.0f
+//								)
 				.filter(b -> s3.exists(BillText.generateId(b.getId()), BillText.class))
 				.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed());
 		
