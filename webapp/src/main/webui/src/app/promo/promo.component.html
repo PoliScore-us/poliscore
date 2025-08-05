@@ -93,20 +93,51 @@
 			<!-- Two -->
 			<section id="two" class="wrapper">
 				<div class="inner alt">
+					<section class="spotlight" id="motivations">
+						<div class="image">
+                            <a [routerLink]="'/about'" fragment="motivations"><img src="images/roadmap.png" alt="A robot conquering a mountain" /></a>
+                        </div>
+						<div class="content">
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="motivations">Motivations</a></h3>
+
+							<p>When legislators write bad policy, we all pay the price. The luxuries of the modern information era afford no excuses for this substandard policy - comprehensive bill analyses can be performed by agentic AI models in less than a minute.</p>
+
+							<p>All it takes is one <a href="https://github.com/pissedoffcitizen">PissedOffCitizen</a> to stop building tools for corporate America, and start building tools for middle America.</p>
+
+							<p>Don't buy their lies - there IS enough agreement on policy to make substantial forward progress. We just need to stop consuming political "junk food" in the form of memes and outrage bait on social media, and start talking about policy. Specific, actionable policy.</p>
+
+							<p>So share this project with your neighbors. Share it with your mom. Share it with your dog. Because we're not funded by corporate fat cats and you won't see us advertising on YouTube or making shitty memes on social media.</p>
+						</div>
+					</section>
+
+					<section class="spotlight" id="rooted-in-policy">
+						<div class="image">
+                            <a [routerLink]="'/about'" fragment="rooted-in-policy"><img src="images/poliscore2.png" alt="A robot speaking to a crowd" /></a>
+                        </div>
+						<div class="content">
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="rooted-in-policy">Rooted In Policy</a></h3>
+
+							<p>If you agree with the bill interpretations found on this website, then you agree with the legislator interpretations. This is because the legislator stats are generated directly from a simple mathematical <em>aggregate</em> of the bill interpretations. This isn't AI magic, this is simple <a href="https://github.com/PoliScore-us/poliscore/blob/959507c0d70b255e410b035fe6eb9cd7dd56787e/databuilder/src/main/java/us/poliscore/service/LegislatorInterpretationService.java#L189">(and easy to verify)</a> basic number crunching.</p>
+						</div>
+					</section>
+
                     <section class="spotlight" id="ai-voting">
 						<div class="image">
                             <a [routerLink]="'/about'" fragment="ai-voting"><img src="images/robot-speaker.png" alt="A Robot Judge" /></a>
                         </div>
 						<div class="content">
-							<h3 class="content-header"><a [routerLink]="'/about'" fragment="ai-voting">Using AI to grade bills and legislators</a></h3>
-							<p>Ultimately, this website answers the question "Who would AI vote for and why?". There are a few reasons why I think this is an incredibly important question, and it has to do with the interworkings of how AI decides what response to generate from a given prompt.</p>
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="ai-voting">Using AI to do the Heavy Lifting</a></h3>
+
+							<p>Because AI is the one doing the bill analyses, it is ultimately AI which is doing most of the heavy lifting. How does it decide whose side to take on incredibly divisive topics like abortion?</p>
+
+							<p>While our agentic AI system does pull expert opinions from scientific studies and directly cite them in the bill analyses, there is also something deeper going on. To find an answer to this question we must dig into the interworkings of how AI decides what response to generate from a given prompt.</p>
 
                             <ol>
-                                <li>AI's responses are weighted towards those most frequently found in it's training data. Since the training data is all the books humanity has ever written, all of wikipedia, and all of our online comments and opinions, this suddenly becomes a very interesting exercise. What's the most commonly found opinion online with regards to climate change? Or abortion?</li>
+                                <li>AI's responses are weighted towards those most frequently found in its training data. Since the training data is all the books humanity has ever written, all of wikipedia, and all of our online comments and opinions, this suddenly becomes a very interesting exercise. What's the most commonly found opinion online with regards to climate change? Or abortion?</li>
                                 <li>AI's responses are also weighted towards those which most closely match the relevant context for the prompt. This is important, because if the training data was found in a jokes book, it might not be relevant for analyizing bills in a non-partisan manner. Because our context is one requiring authoritative responses, it ends up weighing the output towards authoritative contexts.</li>
                             </ol>
 
-                            <p>So, in essense what we've done here, is we've taken the vast majority of written text, weighted it by frequency and context, and then used it to predict every bill's impact to society. Those impact scores were then aggregated to the legislators and used to assign grades.</p>
+                            <p>So, in essence what we've done here, is we've taken the vast majority of written text, weighted it by frequency and context, and then used it to predict every bill's impact to society. Those impact scores were then aggregated to the legislators and used to assign grades.</p>
 						</div>
 					</section>
 
@@ -120,10 +151,10 @@
 							<p>It is our goal to avoid partisan bias in the grading process.</p>
 
                             <ol>
-                                <li>Our prompts explictly ask AI to be non-partisan and focus on "Overall Benefit to Society"</li>
+                                <li>Our prompts explicitly ask AI to be non-partisan and focus on "Overall Benefit to Society"</li>
                                 <li>Our AI "wrapper" and aggregation algorithms are non-partisan. We do basic aggregation and display of data produced by AI</li>
                                 <li>PoliScore is funded through non-partisan means. We do not accept money from any political parties or donors.</li>
-                                <li>Open AI is not a partisan organization</li>
+                                <li>OpenAI is not a partisan organization</li>
                                 <li>Our mission is inherently non-partisan. We just want to help empower voters and make government more transparent.</li>
                             </ol>
 
@@ -179,52 +210,6 @@
 							</ol> -->
 
 							<!-- <p>If you're somebody that agrees with these issues, feel free to use PoliScore as a tool to help wade through our political process. If you disagree with an opinion found here on PoliScore, please consider coming back later because we might allow in the future for citizens to submit or vote on your own bill interpretations. Our goal is to be a hub for policy discourse.</p> -->
-						</div>
-					</section>
-
-                    <section class="spotlight" id="motivations">
-						<div class="image">
-                            <a [routerLink]="'/about'" fragment="motivations"><img src="images/roadmap.png" alt="A robot conquering a mountain" /></a>
-                        </div>
-						<div class="content">
-							<h3 class="content-header"><a [routerLink]="'/about'" fragment="motivations">Motivations</a></h3>
-
-							<p>PoliScore is a highly experimental science project born out of deep concern for the state of modern politics leading up to the 2024 election. It was created to answer the fundamental question: "What would happen if we used AI to grade bills and then aggregated those grades to evaluate legislators?" Over time, it has grown to encompass the following goals:</p>
-
-							<ol>
-								<li>To explore and expose the political opinions inherent within AI to the world.</li>
-								<li>To make legislation more readable and accessible using AI.</li>
-								<li>To encourage accountability and traceability between legislators and their legislation.</li>
-							</ol>
-
-							<!-- <p>The primary driving question behind PoliScore is: is it possible, perhaps using AI, to create an algorithm which, similar to what we have here for judges in Colorado, provides a non-paristan performance analysis for legislators in congress, thereby creating a private sector non-partisan congressional oversight comittee. Such an algorithm could be open-source and accountable to the public at large.</p> -->
-
-							<p>A continual driving force behind the project is the desire to create an open-source, non-partisan legislative oversight algorithm, which grades legislators on their performance.</p>
-
-							<!-- <p>PoliScore does not at all intend to in any way diminish the work done by the courageous and vital members of the press or other investigative journalists. In contrast, PoliSocre's mission would be to take the insights gathered by the press, aggregate them, and produce regular reports which can be consumed by the public at large as a tool for more informed voting.</p> -->
-						</div>
-					</section>
-
-                    <section class="spotlight" id="rooted-in-policy">
-						<div class="image">
-                            <a [routerLink]="'/about'" fragment="rooted-in-policy"><img src="images/poliscore2.png" alt="A robot speaking to a crowd" /></a>
-                        </div>
-						<div class="content">
-							<h3 class="content-header"><a [routerLink]="'/about'" fragment="rooted-in-policy">Rooted In Policy</a></h3>
-
-							<p>PoliScore's grades are rooted in policy and they're highly transparent. We don't assign a legislator a grade until we've read and interpreted hundreds of their bill interactions. Since legislators are inherently very devisive figures, AI never actually directly grades them. It grades their legislation, and the aggregation of their legislation is what determines their score. This allows legislators to focus more on their policy - and less on creating memes for social media.</p>
-
-							<!-- <ol>
-								<li>To explore and expose the political opinions inherent within AI to the world.</li>
-								<li>To make congressional legislation more readable and accessible using AI.</li>
-								<li>To encourage accountability and traceability between legislators and their legislation.</li>
-							</ol> -->
-
-							<!-- <p>The primary driving question behind PoliScore is: is it possible, perhaps using AI, to create an algorithm which, similar to what we have here for judges in Colorado, provides a non-paristan performance analysis for legislators in congress, thereby creating a private sector non-partisan congressional oversight comittee. Such an algorithm could be open-source and accountable to the public at large.</p> -->
-
-							<!-- <p>A continual driving force behind the project is the desire to create an open-source, non-partisan congressional oversight algorithm, which grades legislators on their performance.</p> -->
-
-							<!-- <p>PoliScore does not at all intend to in any way diminish the work done by the courageous and vital members of the press or other investigative journalists. In contrast, PoliSocre's mission would be to take the insights gathered by the press, aggregate them, and produce regular reports which can be consumed by the public at large as a tool for more informed voting.</p> -->
 						</div>
 					</section>
 
