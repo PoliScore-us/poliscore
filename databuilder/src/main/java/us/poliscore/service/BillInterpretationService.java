@@ -35,7 +35,7 @@ public class BillInterpretationService {
 	public static final String statsPromptTemplate = """
 			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, producing an impact analysis which evaluates whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Impact:') in your response. Do not include the section instructions in your response. Do not ever use 'I' language (as in, I reached this conclusion because...).
 			
-			An incredibly basic google search from the bill name and number has already been done for you to gather additional information.{searchModelInstructions1}
+			{searchModelInstructions1}
 
 			Reasoning Steps:
 			This is your first section, and it includes several steps. You are to fill out each step in your response, thinking carefully at each step. By the end of this reasoning section, you will have developed a more informed and accurate analysis which you will use to fill out the final analysis sections.
@@ -101,7 +101,7 @@ public class BillInterpretationService {
 	public static final String aggregatePrompt = """
 			A large U.S. bill has been split into sections and summarized. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Impact:') in your response. Do not include the section instructions in your response. Do not ever use 'I' language (as in, I reached this conclusion because...).
 			
-			An incredibly basic google search from the bill name and number has already been done for you to gather additional information.{searchModelInstructions1}
+			{searchModelInstructions1}
 			
 			Reasoning Steps:
 			This is your first section, and it includes several steps. You are to fill out each step in your response, thinking carefully at each step. By the end of this reasoning section, you will have developed a more informed and accurate analysis which you will use to fill out the final analysis sections.
@@ -140,7 +140,7 @@ public class BillInterpretationService {
     	slicePrompt = slicePromptTemplate.replaceFirst("\\{issuesList\\}", issues);
 	}
 	
-	public static final String SEARCH_MODEL_INSTRUCTIONS1 = " Feel free to perform your own additional web searches during this process to gain additional context or information such as reasoning from the bill sponsor(s) or budgetary information which may not be apparent from the bill text. If you do find useful information, make sure to reference the source in the long report using markdown link syntax (in addition to placing it in the references at the bottom).";
+	public static final String SEARCH_MODEL_INSTRUCTIONS1 = " Some initial web searches may or may not have been done for you and may be included with the bill text in a 'References' section. Feel free to perform your own additional web searches during this process to gain additional context or information such as reasoning from the bill sponsor(s) or budgetary information which may not be apparent from the bill text. If you do find useful information, make sure to reference the source in the long report using markdown link syntax (in addition to placing it in the references at the bottom).";
 	public static final String SEARCH_MODEL_INSTRUCTIONS2 = " Where appropriate, please cite references from your search inside the report. References can be cited using markdown link syntax: [explanation text here](http://example.com)";
 	public static final String SEARCH_MODEL_STEP = "Step 7: Perform a web search to gather more information and answer any questions you might have.";
 	public static final String SEARCH_REFERENCES = "Search References:\nA single line JSON array payload which contains machine readable data about all the references used in your anaylsis. Each reference shall be represented by a JSON array with the following string fields: [\"https://example.org/full/url/here\", \"author\", \"title\", \"sentiment as an integer from -100 to 100\", \"summary\", \"long summary\"]\n"
