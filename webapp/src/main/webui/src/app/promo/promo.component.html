@@ -115,7 +115,13 @@
                             <a [routerLink]="'/about'" fragment="rooted-in-policy"><img src="images/poliscore2.png" alt="A robot speaking to a crowd" /></a>
                         </div>
 						<div class="content">
-							<h3 class="content-header"><a [routerLink]="'/about'" fragment="rooted-in-policy">Rooted In Policy</a></h3>
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="rooted-in-policy">How Does It Work?</a></h3>
+
+							<p>When you ask ChatGPT to 'perform a legislative analysis of xyz legislator' it spits out what we call a 'both sides' analysis. These types of analyses are a modern form of political correctness, and they're used by large organizations when they want to stay out of politics.</p>
+
+							<p>What we noticed, however, is that AI is perfectly happy to give non-partisan opinions on legislation. It's a natural consequence of how the tool (and intelligence) works. There are some things that we just "know", things like what a screwdriver is, or how to fix a roof. This fact can be exploited to extract opinions about legislators - one only needs to make the leap that a legislator is the aggregate of their legislation.</p>
+
+							<p>So what we did, is we got AI to grade all the bills in congress, focusing entirely on "Overall Benefit to Society" (being as non-partisan as possible), and then we took those scores and aggregated them to the legislators. The result produces a gap - between the things we know to be true, and the policy that legislators are producing. The larger the gap, the worse their score.</p>
 
 							<p>If you agree with the bill interpretations found on this website, then you agree with the legislator interpretations. This is because the legislator stats are generated directly from a simple mathematical <em>aggregate</em> of the bill interpretations. This isn't AI magic, this is simple <a href="https://github.com/PoliScore-us/poliscore/blob/959507c0d70b255e410b035fe6eb9cd7dd56787e/databuilder/src/main/java/us/poliscore/service/LegislatorInterpretationService.java#L189">(and easy to verify)</a> basic number crunching.</p>
 						</div>
@@ -128,7 +134,7 @@
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="ai-voting">Using AI to do the Heavy Lifting</a></h3>
 
-							<p>Because AI is the one doing the bill analyses, it is ultimately AI which is doing most of the heavy lifting. How does it decide whose side to take on incredibly divisive topics like abortion?</p>
+							<p>Because AI is the one doing the bill analyses, it is ultimately AI which is doing most of the heavy lifting. How exactly does it decide whose side to take on incredibly divisive topics like abortion?</p>
 
 							<p>While our agentic AI system does pull expert opinions from scientific studies and directly cite them in the bill analyses, there is also something deeper going on. To find an answer to this question we must dig into the interworkings of how AI decides what response to generate from a given prompt.</p>
 
@@ -213,6 +219,7 @@
 						</div>
 					</section>
 
+					<!--
 					<section class="spotlight" id="how-it-works">
 						<div class="image">
                             <a [routerLink]="'/about'" fragment="how-it-works"><img src="images/local-data.png" alt="Data on a map" /></a>
@@ -223,6 +230,7 @@
 							<p>Next comes legislator interpretations. Legislator metrics are produced from a weighted average of the last ~1000 bill interactions. These metrics are then fed to AI, along with some bill summaries, and AI is then asked to produce a critique of their recent legislative history. At a conceptual level, these legislator metrics represent the legislator's predicted impact to society, as estimated by AI, if all their legislation were able to be enacted as is.</p>
 						</div>
 					</section>
+				-->
 
                     <!--
 					<section class="spotlight" id="local-data">
