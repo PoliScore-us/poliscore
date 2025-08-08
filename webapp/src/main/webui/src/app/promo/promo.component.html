@@ -115,11 +115,11 @@
 
 							<p>When legislators write bad policy, we all pay the price. The luxuries of the modern information era afford no excuses for this substandard policy — comprehensive bill analyses can be performed by agentic AI models in less than a minute.</p>
 
-							<p>When you ask ChatGPT to 'perform a legislative analysis of xyz legislator' it spits out what we call a 'both sides' analysis. 'Both sides' analyses typically follow the format, "well democrats think this, and republicans think this, what do you think 🤔?". It's really a clever response — the user feels emboldened to believe whatever it is they already believed, and the company gets to avoid taking a stance on an issue which will enrage half the population.</p>
+							<p>When you ask ChatGPT to 'perform a legislative analysis of xyz legislator' it spits out what we call a 'both sides' analysis. 'Both sides' analyses typically follow the format, "well democrats think this, and republicans think this, what do you think 🤔?". It's really a clever misdirect — the user feels emboldened to believe whatever it is they already believed, and the company gets to avoid taking a stance on an issue which will enrage half the population.</p>
 
-							<p>These types of 'analyses' are ultimately a modern form of political correctness, and they're used by large organizations when they want to stay out of politics. This sort of political correctness might be good for a business's bottom line, but it's not good for our society.</p>
+							<p>These types of 'analyses' are ultimately a modern form of political correctness, and they're used by large organizations when they want to stay out of politics. This political correctness might be good for a business's bottom line, but it's not good for our society.</p>
 
-							<p>What we noticed, however, is that AI is perfectly happy to give non-partisan opinions on legislation. It's a natural consequence of how the tool (and intelligence) works. There are some things that we just "know", things like what a screwdriver is, or how to fix a roof. You can deny what roof is, or how one works, but it won't help you when it comes time to fixing the roof. This fact can be exploited to extract opinions about legislators — one only needs to make the leap that a legislator is the aggregate of their legislation.</p>
+							<p>What we noticed, however, is that AI is perfectly happy to give opinions on legislation. It's a natural consequence of how the tool (and intelligence) works. There are some things that we just "know", things like what a screwdriver is, or how to fix a roof. You can deny what a roof is, or how one works, but it won't help you when it comes time to fixing the roof. This fact can be exploited to extract opinions about legislators — one only needs to make the leap that a legislator is the aggregate of their legislation.</p>
 						</div>
 					</section>
 
@@ -130,7 +130,7 @@
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="rooted-in-policy">How Does It Work?</a></h3>
 
-							<p>Just like a teacher grades papers, we got AI to grade all the bills in congress, focusing entirely on "Overall Benefit to Society" (being as non-partisan as possible). We then took those scores and aggregated them to the legislators (like a final grade in a class). The resultant score literally reflects a gap between the things we know to be true, and the policy that legislators are producing. The larger the gap, the worse their score.</p>
+							<p>Just like a teacher grades papers, we got AI to grade all the bills in congress, focusing entirely on "Overall Benefit to Society", and being as non-partisan as possible. We then took those scores and aggregated them to the legislators (like a final grade in a class). The resultant score literally reflects a gap between the things we know to be true, and the policy that legislators are producing. The larger the gap, the worse their score.</p>
 
 							<p>If you agree with the bill interpretations found on this website, then you agree with the legislator interpretations. This is because the legislator stats are generated directly from a simple mathematical <em>aggregate</em> of the bill interpretations. This isn't AI magic, this is basic <a href="https://github.com/PoliScore-us/poliscore/blob/959507c0d70b255e410b035fe6eb9cd7dd56787e/databuilder/src/main/java/us/poliscore/service/LegislatorInterpretationService.java#L189">(and easy to verify)</a> number crunching.</p>
 						</div>
@@ -148,7 +148,7 @@
 							<p>While our agentic AI system does pull expert opinions from scientific studies and directly cite them in the bill analyses, there is also something deeper going on. To find an answer to this question we must dig into the interworkings of how AI decides what response to generate from a given prompt.</p>
 
                             <ol>
-                                <li>AI's responses are weighted towards those most frequently found in its training data. Since the training data is all the books humanity has ever written, all of wikipedia, and all of our online comments and opinions, this suddenly becomes a very interesting exercise. What's the most commonly found opinion online with regards to climate change? Or abortion?</li>
+                                <li>AI's responses are weighted towards those most frequently found in its training data. Since the training data is all the books humanity has ever written, all of wikipedia, and our online comments and opinions, this suddenly becomes a very interesting exercise. What's the most commonly found opinion online with regards to climate change? Or abortion?</li>
                                 <li>AI's responses are also weighted towards those which most closely match the relevant context for the prompt. This is important, because if the training data was found in a jokes book, it might not be relevant for analyizing bills in a non-partisan manner. Because our context is one requiring authoritative responses, it ends up weighing the output towards authoritative contexts.</li>
                             </ol>
 

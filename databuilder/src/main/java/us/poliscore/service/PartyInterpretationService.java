@@ -53,7 +53,7 @@ public class PartyInterpretationService {
 			Based on these scores, this party has received the overall letter grade: {{letterGrade}}. You will be given summaries of bills this party has introduced within this session, sorted by two different scoring and sorting mechanisms: rating and impact. Rating was calculated by directly sorting the bills based on the \"Overall Benefit to Society\" metric. Impact is a metric which factors in rating, number of cosponsors, and how far the bill made it through the legislative process (i.e. laws are more important than bills). Highest and lowest rated bills can be useful for knowing what the extremes of the party are up to, versus impact is useful for knowing what the party actually found coalitions around. Please generate a layman's, concise, five paragraph, {{analysisType}}. Begin your first paragraph by focusing on higher level goals, highlighting any {{behavior}}, identifying trends, and pointing out major focuses and priorities of the party. Your next three paragraphs will attempt to explain why the party received the scores they did in the following policy areas: [{{highlightPolicyAreas}}] and should reference specific bill titles (in quotes). Do not include the party's policy area grade scores and do not mention their letter grade in your summary.
 			""";
 	
-	public static final OpenAIModel partyInterpModel = OpenAIService.DEFAULT_MODEL;
+	public static final OpenAIModel partyInterpModel = OpenAIModel.DEFAULT_MODEL;
 	
 	@Inject
 	private LocalCachedS3Service s3;

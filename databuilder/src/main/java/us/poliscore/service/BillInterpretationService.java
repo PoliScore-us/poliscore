@@ -49,7 +49,7 @@ public class BillInterpretationService {
 			{searchModelStep}
 
 			Impact:
-			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant.
+			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. There is an important distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that it will have none. Use N/A if the goals of the bill do not align at all with the policy area.
 			
 			{issuesList}
 			
@@ -85,7 +85,7 @@ public class BillInterpretationService {
 			Step 6: Estimate confidence and identify unknown - List any uncertainties in your analysis, questions or unknowns you might have which might change the outcome of your analysis.
 			
 			Impact:
-			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant.
+			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. There is an important distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that it will have none. Use N/A if the goals of the bill do not align at all with the policy area.
 			
 			{issuesList}
 			

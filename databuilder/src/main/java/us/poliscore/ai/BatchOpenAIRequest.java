@@ -111,7 +111,7 @@ public class BatchOpenAIRequest {
 	@NoArgsConstructor
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public static class BatchOpenAIBody {
-		private String model = OpenAIService.DEFAULT_MODEL.getId();
+		private String model = OpenAIModel.DEFAULT_MODEL.getId();
 		
 		private List<BatchBillMessage> messages = new ArrayList<BatchBillMessage>();
 		

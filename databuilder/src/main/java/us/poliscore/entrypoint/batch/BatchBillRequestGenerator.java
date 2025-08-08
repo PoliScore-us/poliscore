@@ -56,7 +56,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 //		    "BIL/us/co/2173/sb/11","BIL/us/co/2173/sb/77","BIL/us/co/2173/sb/160"
 //		);
 	
-	public static final int MAX_BILL_PROCESS = 200; // Denotes the max bills to process in a given session. -1 for infinite
+	public static final int MAX_BILL_PROCESS = 100; // Denotes the max bills to process in a given session. -1 for infinite
 	
 	
 	
@@ -64,7 +64,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	
 	public static final long TOKEN_BLOCK_SIZE = 30000000;
 	
-	public static final OpenAIModel billProcessModel = OpenAIService.DEFAULT_MODEL;
+	public static final OpenAIModel billProcessModel = OpenAIModel.DEFAULT_MODEL;
 	
 	@Inject
 	private LocalCachedS3Service s3;

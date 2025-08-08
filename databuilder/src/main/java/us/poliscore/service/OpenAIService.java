@@ -53,8 +53,6 @@ public class OpenAIService {
 	
 	public static final String PROVIDER = "openai";
 	
-	public static final OpenAIModel DEFAULT_MODEL = OpenAIModel.o3;
-	
 	public static final int PROMPT_VERSION = 0;
 	
 	// If a batch is sent with a number of requests less than or equal to this number we will not use the batch api and process it immediately.
@@ -70,12 +68,12 @@ public class OpenAIService {
 	
 	public static AIInterpretationMetadata metadata()
 	{
-		return AIInterpretationMetadata.construct(PROVIDER, DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.FORCE_WEB_SEARCH);
+		return AIInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.FORCE_WEB_SEARCH);
 	}
 	
 	public static AIInterpretationMetadata metadata(BillSlice slice)
 	{
-		return AISliceInterpretationMetadata.construct(PROVIDER, DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.FORCE_WEB_SEARCH, slice);
+		return AISliceInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.FORCE_WEB_SEARCH, slice);
 	}
 	
 	public String chat(String systemMsg, String userMsg) { return this.chat(systemMsg, userMsg, null); }
@@ -97,7 +95,7 @@ public class OpenAIService {
 		
 		OpenAIClient client = OpenAIOkHttpClient.builder().apiKey(secret.getOpenAISecret()).build();
 		
-		OpenAIModel _model = ObjectUtils.defaultIfNull(model, DEFAULT_MODEL);
+		OpenAIModel _model = ObjectUtils.defaultIfNull(model, OpenAIModel.DEFAULT_MODEL);
 		
 		val paramBuilder = ResponseCreateParams.builder()
 				.instructions(systemMsg)
@@ -287,7 +285,7 @@ public class OpenAIService {
 					responseNode.put("id", "chatcmpl-" + java.util.UUID.randomUUID());
 					responseNode.put("object", "chat.completion");
 					responseNode.put("created", System.currentTimeMillis() / 1000);
-					responseNode.put("model", StringUtils.defaultIfEmpty(model, DEFAULT_MODEL.getId()));
+					responseNode.put("model", StringUtils.defaultIfEmpty(model, OpenAIModel.DEFAULT_MODEL.getId()));
 	
 					val choicesArray = objectMapper.createArrayNode();
 					val choice = objectMapper.createObjectNode();
