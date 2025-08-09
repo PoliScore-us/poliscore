@@ -11,7 +11,7 @@ import lombok.Data;
 @AllArgsConstructor
 public class OpenAIModel {
 	
-	public static final OpenAIModel GPT5 = new OpenAIModel("gpt-5", 400_000, 128_000, false, true, ReasoningEffort.MEDIUM, new RateLimit(40_000_000, 15_000));
+	public static final OpenAIModel GPT5 = new OpenAIModel("gpt-5", 400_000, 128_000, false, true, ReasoningEffort.HIGH, new RateLimit(40_000_000, 15_000));
 	
 	public static final OpenAIModel GPT41 = new OpenAIModel("gpt-4.1", 950_000, 32_768, true, true, null, new RateLimit(30_000_000, 10_000));
 	
@@ -19,7 +19,7 @@ public class OpenAIModel {
 	
 	public static final OpenAIModel GPT4o = new OpenAIModel("gpt-4o", 122_500, 14_000, true, true, null, new RateLimit(30_000_000, 10_000));
 	
-	public static final OpenAIModel o3 = new OpenAIModel("o3", 190_000, 95_000, false, true, ReasoningEffort.MEDIUM, new RateLimit(30_000_000, 10_000));
+	public static final OpenAIModel o3 = new OpenAIModel("o3", 190_000, 95_000, false, true, ReasoningEffort.HIGH, new RateLimit(30_000_000, 10_000));
 	
 	public static final OpenAIModel o3DeepResearch = new OpenAIModel("o3-deep-research", 190_000, 95_000, false, true, null, new RateLimit(30_000_000, 10_000));
 	
