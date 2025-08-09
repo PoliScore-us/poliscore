@@ -29,6 +29,7 @@ export interface BillInterpretation {
   genBillTitle: string;
   shortExplain: string;
   longExplain: string;
+  laymansReport: string;
   riders: string[];
   billId: string;
   pressInterps: PressInterpretation[];

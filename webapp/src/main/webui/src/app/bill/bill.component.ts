@@ -3,6 +3,7 @@ import { AppService } from '../app.service';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import convertStateCodeToName, { Bill, BillInterpretation, colorForGrade, getBenefitToSocietyIssue, gradeForQuality, gradeForRating, gradeForStats, issueKeyToLabel, issueKeyToLabelSmall, PressInterpretation } from '../model';
 import { MatCardModule } from '@angular/material/card';
+import { MatTabsModule } from '@angular/material/tabs';
 import { CommonModule, isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { HttpClient, HttpHandler } from '@angular/common/http';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
@@ -27,7 +28,7 @@ Chart.register(BarController, CategoryScale, LinearScale, BarElement, ChartDataL
 @Component({
   selector: 'bill',
   standalone: true,
-  imports: [MatTooltipModule, MatTableModule, DisclaimerComponent, HeaderComponent, MatCardModule, CommonModule, CommonModule, RouterModule, MatButtonModule],
+  imports: [MatTabsModule, MatTooltipModule, MatTableModule, DisclaimerComponent, HeaderComponent, MatCardModule, CommonModule, CommonModule, RouterModule, MatButtonModule],
   providers: [AppService, HttpClient],
   templateUrl: './bill.component.html',
   styleUrl: './bill.component.scss'
@@ -42,7 +43,11 @@ export class BillComponent implements OnInit {
 
   public isSmallScreen = false;
 
-  public formattedParagraphs: SafeHtml[] = [];
+  public formattedExpertReport: SafeHtml[] = [];
+
+  public formattedLaymansReport: SafeHtml[] = [];
+
+  public selectedReportTab = 0; // Optional: store selected tab index
 
   public barChartData: ChartConfiguration<'bar'>['data'] = {
     labels: [],
@@ -114,12 +119,13 @@ export class BillComponent implements OnInit {
       this.loading = false;
       this.updateMetaTags();
       this.buildBarChartData();
-      this.formattedParagraphs = this.getFormattedParagraphs();
+      this.formattedExpertReport = this.getFormattedParagraphs(this.bill!.interpretation.longExplain);
+      this.formattedLaymansReport = this.getFormattedParagraphs(this.bill!.interpretation.laymansReport);
     });
   }
 
-  getFormattedParagraphs(): SafeHtml[] {
-    return this.bill!.interpretation.longExplain
+  getFormattedParagraphs(text: string): SafeHtml[] {
+    return text
       ?.split('\n')
       .map(p => this.sanitizer.bypassSecurityTrustHtml(marked.parseInline(p) as string));
   }

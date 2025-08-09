@@ -2,6 +2,7 @@ package us.poliscore.service;
 
 import java.io.File;
 import java.net.URI;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -73,6 +74,8 @@ public class BillService {
 
 	public void ddbPersist(Bill b, BillInterpretation interp)
 	{
+		b.setLastUpdate(LocalDateTime.now());
+		
 		populatePressInterps(interp);
 		b.setInterpretation(interp);
 		ddb.put(b);

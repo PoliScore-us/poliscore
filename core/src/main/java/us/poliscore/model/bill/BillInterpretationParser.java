@@ -50,6 +50,7 @@ public class BillInterpretationParser {
 		RIDERS("(?i)Riders:"),
 		SHORT_REPORT("(?i)Short Report:"),
 		LONG_REPORT("(?i)Long Report:"),
+		LAYMANS_REPORT("(?i)Laymans Report:"),
 		CONFIDENCE("(?i)Confidence:");
 		
 		private List<String> regex;
@@ -79,6 +80,7 @@ public class BillInterpretationParser {
 		interp.setRiders(new ArrayList<String>());
 		interp.setIssueStats(new IssueStats());
 		interp.setConfidence(-1);
+		interp.setLaymansReport("");
 		
 		try (final Scanner scanner = new Scanner(text))
 		{
@@ -130,7 +132,7 @@ public class BillInterpretationParser {
 	
 	private void processContent(String line) {
 		if (!ArrayUtils.contains(new State[] {
-				State.LONG_REPORT, State.SHORT_REPORT, State.SEARCH_REFERENCES
+				State.LONG_REPORT, State.SHORT_REPORT, State.LAYMANS_REPORT, State.SEARCH_REFERENCES
 		}, state)) {
 			line = standardizeFormatting(line);
 		}
@@ -155,6 +157,8 @@ public class BillInterpretationParser {
 			processReasoning(line);
 		} else if (State.SEARCH_REFERENCES.equals(state)) {
 			processSearchReferences(line);
+		} else if (State.LAYMANS_REPORT.equals(state)) {
+			processLaymansReport(line);
 		}
 	}
 	
@@ -346,6 +350,10 @@ public class BillInterpretationParser {
 	
 	private void processLongForm(String line) {
 		interp.setLongExplain(interp.getLongExplain() + "\n" + line);
+	}
+	
+	private void processLaymansReport(String line) {
+		interp.setLaymansReport(interp.getLaymansReport() + "\n" + line);
 	}
 	
 	private void processShortForm(String line) {

@@ -1,6 +1,6 @@
 package us.poliscore.model;
 
-import java.util.Arrays;
+import java.time.LocalDateTime;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -31,6 +31,8 @@ abstract public class SessionPersistable implements Persistable {
 	
 	@NonNull
 	protected String id;
+	
+	protected LocalDateTime lastUpdate;
 	
 	@DynamoDbPartitionKey
 	@EqualsAndHashCode.Include

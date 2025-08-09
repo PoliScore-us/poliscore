@@ -3,6 +3,7 @@ package us.poliscore.entrypoint;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -117,13 +118,13 @@ public class DatabaseBuilder implements QuarkusApplication
 		val buildDatasets = data.getBuildDatasets();
 		
 		for (val dataset : buildDatasets) {
-			data.syncS3LegislatorImages(dataset);
-			data.syncS3BillText(dataset);
+//			data.syncS3LegislatorImages(dataset);
+//			data.syncS3BillText(dataset);
 			
 			s3.optimizeExists(BillInterpretation.class, dataset.getSession().getKey());
 			s3.optimizeExists(LegislatorInterpretation.class, dataset.getSession().getKey());
 			
-			syncDdbWithS3(dataset);
+//			syncDdbWithS3(dataset);
 		}
 		
 		if (!FORCE_WEB_SEARCH)
@@ -154,11 +155,20 @@ public class DatabaseBuilder implements QuarkusApplication
 			val interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class);
 			if (interp.isEmpty()) continue;
 			
+			if (interp.get().getLastUpdate() == null && interp.get().getLastPressQuery() == null) {
+				interp.get().setLastUpdate(LocalDateTime.now());
+				s3.put(interp.get());
+			}
+			
+			val lastInterpUpdate = interp.get().getLastUpdate() == null ? interp.get().getLastPressQuery() : interp.get().getLastUpdate();
+			val lastBillUpdate = dbill.getInterpretation().getLastUpdate() == null ? dbill.getInterpretation().getLastPressQuery() : dbill.getInterpretation().getLastUpdate();
+			
 			if (dbill == null 
 			    || !Objects.equals(dbill.getStatus(), b.getStatus()) 
 			    || !Objects.equals(dbill.getLastActionDate(), b.getLastActionDate())
 			    || !Objects.equals(dbill.getName(), b.getName())
-			    || !Objects.equals(dbill.getInterpretation().getLastPressQuery(), interp.get().getLastPressQuery())) {
+			    || !Objects.equals(lastInterpUpdate, lastBillUpdate)
+			    ) {
 			    
 			    billService.ddbPersist(b, interp.get());
 			    amount++;
@@ -170,10 +180,10 @@ public class DatabaseBuilder implements QuarkusApplication
 		Log.info("Decaying hot values");
 		
 		// Decay first x hot values //
-		for (Bill b : ddb.query(Bill.class, dataset.getSession().getKey(), 1000, Persistable.OBJECT_BY_HOT_INDEX, false, null, null))
-		{
-			ddb.put(b);
-		}
+//		for (Bill b : ddb.query(Bill.class, dataset.getSession().getKey(), 1000, Persistable.OBJECT_BY_HOT_INDEX, false, null, null))
+//		{
+//			ddb.put(b);
+//		}
 		
 		// Update bills whose press interpretations are out of date //
 //		Log.info("Syncing press interpretations");

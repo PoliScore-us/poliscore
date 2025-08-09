@@ -87,6 +87,8 @@ public class BillInterpretation extends SessionPersistable
 	
 	protected String longExplain;
 	
+	protected String laymansReport;
+	
 	@NonNull
 	protected String billId;
 	

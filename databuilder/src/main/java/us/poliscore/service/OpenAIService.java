@@ -1,9 +1,11 @@
 package us.poliscore.service;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.net.SocketTimeoutException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -19,7 +21,6 @@ import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.errors.InternalServerException;
 import com.openai.models.Reasoning;
-import com.openai.models.ReasoningEffort;
 import com.openai.models.batches.Batch;
 import com.openai.models.batches.Batch.Status;
 import com.openai.models.batches.BatchCreateParams;
@@ -59,7 +60,9 @@ public class OpenAIService {
 	// This is because the OpenAI Batch API has been known to take forever or even fail to process.
 	public static final int IMMEDIATE_PROCESS_THRESHOLD = 5;
 	
-	public static final int WAIT_BETWEEN_CALLS = 60; // in seconds
+	private int tokensUsedThisMinute = 0;
+	private int requestsMadeThisMinute = 0;
+	private LocalDateTime usageWindowStart = LocalDateTime.now();
 	
 	@Inject
     protected SecretService secret;
@@ -76,6 +79,32 @@ public class OpenAIService {
 		return AISliceInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.FORCE_WEB_SEARCH, slice);
 	}
 	
+	private void resetRateLimitsIfNecessary() {
+	    if (ChronoUnit.MINUTES.between(usageWindowStart, LocalDateTime.now()) >= 1) {
+	        tokensUsedThisMinute = 0;
+	        requestsMadeThisMinute = 0;
+	        usageWindowStart = LocalDateTime.now();
+	    }
+	}
+	
+	private void waitForRateLimit(OpenAIModel model, int tokensToBeUsed) throws InterruptedException {
+	    resetRateLimitsIfNecessary();
+
+	    OpenAIModel.RateLimit limit = model.getRateLimit();
+
+	    while (requestsMadeThisMinute >= limit.getRpm() ||
+	           tokensUsedThisMinute + tokensToBeUsed >= limit.getTpm()) {
+
+	        long millisToWait = 1000L; // wait 1s and check again
+	        Log.info("Rate limit hit. Waiting " + millisToWait + "ms...");
+	        Thread.sleep(millisToWait);
+	        resetRateLimitsIfNecessary();
+	    }
+
+	    requestsMadeThisMinute++;
+	    tokensUsedThisMinute += tokensToBeUsed;
+	}
+	
 	public String chat(String systemMsg, String userMsg) { return this.chat(systemMsg, userMsg, null); }
 	
 	@SneakyThrows
@@ -88,10 +117,8 @@ public class OpenAIService {
 			throw new IllegalArgumentException();
 		}
 		
-		if (nextCallTime != null && ChronoUnit.SECONDS.between(LocalDateTime.now(), nextCallTime) > 0)
-		{
-			Thread.sleep(ChronoUnit.SECONDS.between(LocalDateTime.now(), nextCallTime) * 1000);
-		}
+		int estimatedTokens = userMsg.length() / 4; // Roughly 4 chars per token
+		waitForRateLimit(model, estimatedTokens);
 		
 		OpenAIClient client = OpenAIOkHttpClient.builder().apiKey(secret.getOpenAISecret()).build();
 		
@@ -111,17 +138,21 @@ public class OpenAIService {
 		if (_model.isSupportsTemperature())
 			paramBuilder.temperature(0.0d); // We don't want randomness. Give us predictability and accuracy
 		
-		if (_model.isMaxEffort())
-			paramBuilder.reasoning(Reasoning.builder().effort(ReasoningEffort.HIGH).build());
+		if (_model.getReasoningEffort() != null)
+			paramBuilder.reasoning(Reasoning.builder().effort(_model.getReasoningEffort()).build());
 			
 		val params = paramBuilder.build();
 		
 		Log.info("Sending request to open ai with message size " + userMsg.length());
 		RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
 			    .handle(SocketTimeoutException.class, InternalServerException.class)
+			    .handleIf((failure) -> {
+			        String msg = failure.getMessage();
+			        return msg != null && msg.toLowerCase().contains("rate limit");
+			    })
 			    .withBackoff(1, 8, ChronoUnit.SECONDS)
 			    .withMaxRetries(3)
-			    .onRetry(e -> Log.warn("Retrying due to timeout or retryable server exception.."))
+			    .onRetry(e -> Log.warn("Retrying due to timeout or retryable server exception [" + e.getLastException().getMessage() + "]"))
 			    .onFailure(e -> Log.error("Retries exhausted", e.getException()))
 			    .build();
 		
@@ -135,8 +166,6 @@ public class OpenAIService {
     	if (!response.status().get().equals(ResponseStatus.COMPLETED)) {
     		throw new RuntimeException("OpenAI's response status was not equal to completed. " + response.status().get());
     	}
-    	
-    	nextCallTime = LocalDateTime.now().plusSeconds(Math.round(((double)userMsg.length() / (double)_model.getContextWindowTokens()) * (double)WAIT_BETWEEN_CALLS)).plusSeconds(2);
     	
     	return response.output().stream()
     			.filter(r -> r.message().isPresent())
@@ -237,9 +266,12 @@ public class OpenAIService {
 			Log.info("Processing immediate batch for file: " + jsonlFile.getAbsolutePath());
 
 			List<String> lines = FileUtils.readLines(jsonlFile, "UTF-8");
-			List<String> outputLines = new ArrayList<>();
+			
+			File outputFile = new File(jsonlFile.getParentFile(), jsonlFile.getName() + ".out.jsonl");
+			responseFiles.add(outputFile);
+			Log.info("Writing responses to file: " + outputFile.getAbsolutePath());
 
-			try {
+			try (BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
 				for (String line : lines) {
 					if (StringUtils.isBlank(line)) {
 						continue;
@@ -316,20 +348,13 @@ public class OpenAIService {
 					}
 					out.set("response", responseEnvelope);
 	
-					outputLines.add(out.toString());
+					writer.write(out.toString());
+                    writer.newLine();
+                    writer.flush();
 				}
-			} finally {
-				File outputFile = new File(jsonlFile.getParentFile(), jsonlFile.getName() + ".out.jsonl");
-				FileUtils.writeLines(outputFile, outputLines);
-	
-				Log.info("Wrote responses to file: " + outputFile.getAbsolutePath());
-				responseFiles.add(outputFile);
 			}
 		}
 
 		return responseFiles;
 	}
-
-
-
 }
