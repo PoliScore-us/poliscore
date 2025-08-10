@@ -73,33 +73,33 @@ public class IssueStats {
 	{
 		for (TrackedIssue issue : TrackedIssue.values())
 		{
-//			Pattern pattern = Pattern.compile("^ ?-? ?\\**#*\\d?\\d?\\.?\\**#* ?\\**#*" + issue.getName() + "\\**#* *: *\\**#* *([+-]? *\\d+\\.?\\d*|N\\/A) *\\**#*\\\\* *(\\(.*\\))?$", Pattern.CASE_INSENSITIVE);
-
 			Pattern pattern = Pattern.compile(
-					"^ ?" +                               // Optional leading space
-				    "[\\-–−]? ?" +                        // Optional dash (hyphen, en dash, minus) and optional space
-				    "\\**#*\\d?\\d?\\.?\\**#* ?" +        // Optional formatting characters, digits, optional decimal point
-				    "\\**#*" +                            // More optional format characters
-				    Pattern.quote(issue.getName()) +      // Issue name (escaped for safety)
-				    "\\**#* *: *" +                       // Format characters + colon + spacing
-				    "\\**#* *" +                          // Optional formatting characters and spaces
-				    "([\\+\\-–−]? *\\d+\\.?\\d*|N\\/A)" + // Main captured value: number with optional sign or "N/A"
-				    " *\\**#*" +                          // Optional trailing format chars and spaces
-				    "\\\\* *(\\(.*\\))?$"                 // Optional notes in parentheses (2nd capture group)
-					, Pattern.CASE_INSENSITIVE);
+		    	    "^\\s*" +                                    // optional leading space
+		    	    "[\\-–−•]?\\s*" +                            // optional bullet/dash
+		    	    "\\**#*\\d{0,2}\\.?\\**#*\\s*" +             // optional list numbering/formatting
+		    	    "\\**#*" +                                   // More optional format characters
+		    	    Pattern.quote(issue.getName()) +             // issue name (escaped for safety)
+		    	    "\\**#*\\s*:\\s*" +                          // Format characters + colon + spacing
+		    	    "\\**#*\\s*" +                               // Optional formatting characters and spaces
+		    	    "([\\+\\-–−]?\\s*\\d+(?:\\.\\d+)?|N\\/?A)" + // Main captured value: number with optional sign or "N/A"
+		    	    ".*$",                                       // Allow any trailing explanation
+		    	    Pattern.CASE_INSENSITIVE
+		    	);
 
 			Matcher matcher = pattern.matcher(line);
 		    
 		    if (matcher.find()) {
-		    	Integer value;
-		    	if (matcher.group(1).equals("N/A")) {
-		    		value = NA;
-		    	} else {
-		    		value = Integer.parseInt(matcher.group(1).replaceAll("\\s", ""));
-		    	}
-		    	
-		    	return Pair.of(issue, value);
-		    }
+	    	    Integer value;
+	    	    String v = matcher.group(1).replaceAll("\\s", "");
+	    	    if (v.equalsIgnoreCase("N/A")) {
+	    	        value = NA;
+	    	    } else {
+	    	        // strip any unicode minus/en dash to ASCII minus for parseInt
+	    	        v = v.replace('−','-').replace('–','-');
+	    	        value = (int) Math.round(Double.parseDouble(v));
+	    	    }
+	    	    return Pair.of(issue, value);
+	    	}
 		}
 		
 		return null;

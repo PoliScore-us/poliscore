@@ -14,6 +14,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import io.quarkus.logging.Log;
@@ -160,14 +161,11 @@ public class DatabaseBuilder implements QuarkusApplication
 				s3.put(interp.get());
 			}
 			
-			val lastInterpUpdate = interp.get().getLastUpdate() == null ? interp.get().getLastPressQuery() : interp.get().getLastUpdate();
-			val lastBillUpdate = dbill.getInterpretation().getLastUpdate() == null ? dbill.getInterpretation().getLastPressQuery() : dbill.getInterpretation().getLastUpdate();
-			
 			if (dbill == null 
 			    || !Objects.equals(dbill.getStatus(), b.getStatus()) 
 			    || !Objects.equals(dbill.getLastActionDate(), b.getLastActionDate())
 			    || !Objects.equals(dbill.getName(), b.getName())
-			    || !Objects.equals(lastInterpUpdate, lastBillUpdate)
+			    || !Objects.equals(ObjectUtils.firstNonNull(interp.get().getLastUpdate(), interp.get().getLastPressQuery()), ObjectUtils.firstNonNull(dbill.getInterpretation().getLastUpdate(), dbill.getInterpretation().getLastPressQuery()))
 			    ) {
 			    
 			    billService.ddbPersist(b, interp.get());

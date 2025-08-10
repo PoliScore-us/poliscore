@@ -63,15 +63,10 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 @QuarkusMain(name="BatchOpenAIResponseImporter")
 public class BatchOpenAIResponseImporter implements QuarkusApplication
 {
-//	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/unprocessed.jsonl";
+	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/unprocessed.jsonl";
 	
-//	 All Legislators (August 21st)
-	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/openapi-bills-bulk-1.jsonl.out.jsonl";
-	
-	// All Legislators (Aug 5th) 
-//	public static final String INPUT = "/Users/rrowlands/Downloads/batch_tUs6UH4XIsYDBjIhbX4Ni9Sq_output.jsonl";
-	
-//	public static final String INPUT = "/Users/rrowlands/dev/projects/poliscore/databuilder/target/file-NPxmq8zQKACqaSrTnufd6V.jsonl";
+//	Canceled half-way through a batch
+//	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/openapi-bills-bulk-1.jsonl.out.jsonl";
 	
 	@Inject
 	private CachedDynamoDbService ddb;
