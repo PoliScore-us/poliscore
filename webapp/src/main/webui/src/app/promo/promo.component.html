@@ -117,7 +117,7 @@
 								
 								<!-- Social media has only made the problem worse. It feels like most people are voting these days based on whatever the latest meme is or some ridiculous rage bait “gotcha” guy shoving a microphone into college kid’s faces. Corporations, after all, have massive software systems which help them to lobby the government. Why shouldn’t voters have tools to help them dig through the mess in Washington?</p> -->
 
-							<p>If only there was a way to know which politicians are on our side — the side of the American people. Luckily AI can also be used for good, when put in the right hands. Meet PoliScore — the world's first AI legislative rating system. </p>
+							<p>If only there was a way to know which politicians are on our side — the side of the American people. AI can also be used for good — when guided by the right principles. Meet PoliScore — the world's first AI legislative rating system. </p>
 
 
 
@@ -146,7 +146,7 @@
 
 							<!--<p>If you agree with the bill interpretations found on this website, then you agree with the legislator interpretations. This is because the legislator stats are generated directly from a simple mathematical <em>aggregate</em> of the bill interpretations. This isn't AI magic, this is basic <a href="https://github.com/PoliScore-us/poliscore/blob/959507c0d70b255e410b035fe6eb9cd7dd56787e/databuilder/src/main/java/us/poliscore/service/LegislatorInterpretationService.java#L189">(and easy to verify)</a> number crunching.</p>-->
 
-							<p>This may sound like science fiction, but the bedrock principles are sound. In Colorado, judges are evaluated by non-partisan Judicial Performance Commissions (JPCs) to determine if they meet performance standards. These commissions assess judges based on various factors and provide recommendations to voters on whether a judge should be retained in their position. The system is incredibly successful - afterall, what do I really know about how well a judge is performing their job?</p>
+							<p>This may sound like science fiction, but the bedrock principles are sound. In Colorado, judges are evaluated by non-partisan Judicial Performance Commissions (JPCs) to determine if they meet performance standards. These commissions assess judges based on various factors and provide recommendations to voters on whether a judge should be retained in their position. The system is incredibly successful - after all, what do I really know about how well a judge is performing their job?</p>
 						</div>
 					</section>
 
@@ -167,7 +167,7 @@
 
                             <ol>
                                 <li>AI's responses are weighted towards those most frequently found in its training data. Since the training data is all the books humanity has ever written, all of wikipedia, and our online comments and opinions, this suddenly becomes a very interesting exercise. What's the most commonly found opinion online with regards to climate change? Or abortion?</li>
-                                <li>AI's responses are also weighted towards those which most closely match the relevant context for the prompt. This is important, because if the training data was found in a jokes book, it might not be relevant for analyizing bills in a non-partisan manner. Because our context is one requiring authoritative responses, it ends up weighing the output towards authoritative contexts.</li>
+                                <li>AI's responses are also weighted towards those which most closely match the relevant context for the prompt. This is important, because if the training data was found in a jokes book, it might not be relevant for analyzing bills in a non-partisan manner. Because our context is one requiring authoritative responses, it ends up weighing the output towards authoritative contexts.</li>
 								<li>There is one final 'X' factor at play. In answering our prompts, AI must generate a singular, cohesive response which accounts for all of the criteria specified in our prompt and as fetched from it's internet queries — and our prompts are as tough as they are open source. This process results in an emergent "artificial intelligence" property which shines in the grading process.</li>
                             </ol>
 
@@ -369,7 +369,7 @@
 								<br/><br/>
 								
 								Short Report:<br/>
-								A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and it's expected impact to society. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.
+								A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.
 								<br/><br/>
 								
 								Long Report:<br/>
@@ -398,7 +398,7 @@
 								<li>Voted Against: -0.5</li>
 							</ul>
 
-							<p>Votes against a bill were assigned a negative weight, which simply means that if the legislator voted against a bill with a negative score then it affected them positively and vise versa.</p>
+							<p>Votes against a bill were assigned a negative weight, which simply means that if the legislator voted against a bill with a negative score then it affected them positively and vice versa.</p>
 						</div>
 					</section>
 
@@ -451,7 +451,7 @@ Based on these scores, this legislator has received the overall letter grade: {{
 								<li>fullName: The legislator's full first and last name.</li>
 								<li>stats: The previously calculated legislator's policy score statistics, written as text.</li>
 								<li>letterGrade: The calculated letter grade for the legislator, as described in 'Legislator and Bill Letter Grades'</li>
-								<li>analysisType: One of 'endorsement', 'mixed analysis' or 'harsh critique', dependent upon the legislator's previosuly calculated letter grade. A's and B's are assigned as 'endorsement'. C's and D's are assigned as 'mixed analysis'. F's are assigned as 'harsh critique'.</li>
+								<li>analysisType: One of 'endorsement', 'mixed analysis' or 'harsh critique', dependent upon the legislator's previously calculated letter grade. A's and B's are assigned as 'endorsement'. C's and D's are assigned as 'mixed analysis'. F's are assigned as 'harsh critique'.</li>
 								<li>behavior: One of 'specific accomplishments', 'specific accomplishments or alarming behaviour', or 'alarming behaviour', dependent upon the legislator's previously calculated letter grade. A's and B's are assigned as 'specific accomplishments'. C's and D's are assigned as 'specific accomplishments or alarming behaviour'. F's are assigned as 'alarming behaviour'.</li>
 								<li>billInteractions: A list of previously calculated bill summaries of the legislator's bill interactions. The bill interactions are first grouped by the policy areas, and then they are sorted by the absolute value of the score magnitude multiplied by the interaction weight. We then rotate through the policy areas, including the top bills for each policy area until we run out of token space in the prompt.</li>
 							</ul>
@@ -485,7 +485,7 @@ Based on these scores, this legislator has received the overall letter grade: {{
                             <a [routerLink]="'/about'" fragment="mission"><img src="images/donate.png" alt="Please donate" /></a>
                         </div>
 						<div class="content">
-							<h3 class="content-header"><a [routerLink]="'/about'" fragment="mission">A Misson to Serve Voters</a></h3>
+							<h3 class="content-header"><a [routerLink]="'/about'" fragment="mission">A Mission to Serve Voters</a></h3>
 							<p>At Poliscore, our mission is to provide a clear AI evaluation of legislative performance in America. In an era where misinformation and sensationalized news dominate, we aim to bring clarity and accountability by grading legislators based on their actual legislative actions, not media portrayals. We utilize advanced AI technology to scan and interpret bills, which we then use to create comprehensive performance metrics for legislators. This approach ensures discussions are rooted in verifiable policy actions rather than partisan rhetoric.</p>
 						</div>
 					</section>
