@@ -161,14 +161,6 @@
 
 							<p>This project is ultimately structured under the premise that people would rather live in a society that works for everyone rather than "win" an argument, consequences to society be damned. For this to happen, we at some point have to stop fighting and come to a consensus on these tough issues.</p>
 
-							<p>Luckily America is not as divided on these major issues as it might seem.</p>
-
-							<ol>
-								<li><a href="https://www.pewresearch.org/short-reads/2023/08/09/what-the-data-says-about-americans-views-of-climate-change/">70% of Americans want to transition to renewable energy</a></li>
-								<li><a href="https://www.pewresearch.org/politics/2022/07/06/majority-of-public-disapproves-of-supreme-courts-decision-to-overturn-roe-v-wade/">62% of Americans are in favor of the Roe v Wade decision</a>.</li>
-								<li><a href="https://www.pewresearch.org/short-reads/2024/07/24/key-facts-about-americans-and-guns/">58% of Americans favor stricter gun laws</a></li>
-							</ol>
-
 							<p>Our agentic AI system finds the truth on these tough issues by pulling expert opinions from scientific studies and directly citing them in the bill analyses. Stakeholder opinions are queried from official press releases and existing budgetary analyses are pulled from the non-partisan Congressional Budget Office (CBO). Every grade is transparently posted on our website, and you can easily sort legislator bill interactions by grade to determine exactly why a legislator receieved the grade they did.</p>
 
 							<p>How exactly does AI decide between two competing narratives? To find an answer to this question we must dig into the interworkings of how AI decides what response to generate from a given prompt.</p>
@@ -176,9 +168,10 @@
                             <ol>
                                 <li>AI's responses are weighted towards those most frequently found in its training data. Since the training data is all the books humanity has ever written, all of wikipedia, and our online comments and opinions, this suddenly becomes a very interesting exercise. What's the most commonly found opinion online with regards to climate change? Or abortion?</li>
                                 <li>AI's responses are also weighted towards those which most closely match the relevant context for the prompt. This is important, because if the training data was found in a jokes book, it might not be relevant for analyizing bills in a non-partisan manner. Because our context is one requiring authoritative responses, it ends up weighing the output towards authoritative contexts.</li>
+								<li>There is one final 'X' factor at play. In answering our prompts, AI must generate a singular, cohesive response which accounts for all of the criteria specified in our prompt and as fetched from it's internet queries — and our prompts are as tough as they are open source. This process results in an emergent "artificial intelligence" property which shines in the grading process.</li>
                             </ol>
 
-                            <p>So, in essence what we've done here, is we've taken the vast majority of written text, weighted it by frequency and context, and then used it to predict every bill's impact to society. Those impact scores were then aggregated to the legislators and used to assign grades.</p>
+                            <p>So, in summary what we've done here, is we've taken the vast majority of written text, weighted it by frequency and context, done comprehensive research, and then used it to craft a cohesive, consistent narrative about the bill's predicted impact to society. Sound like an intelligent approach to politics?</p>
 						</div>
 					</section>
 
@@ -232,7 +225,6 @@
 
 							<p>We recently changed our messaging for the primary reason: non-partisan organizations are not supposed to endorse political canddiates. The fact that we are giving some candidates good grades and other candidates bad grades could be seen as an endorsement.</p> -->
 
-							<!--
 							<p>We have found that on environmental policy, abortion, and gun control, AI appears to mostly be aligned with the majority of public and scientific opinion.</p>
 							<ol>
 								<li><a href="https://www.pewresearch.org/short-reads/2023/08/09/what-the-data-says-about-americans-views-of-climate-change/">70% of Americans want to transition to renewable energy</a></li>
@@ -241,7 +233,6 @@
 							</ol>
 
                             <p>I would also wager that these three issues are responsible for the vast majority of the difference in grades between the political parties.</p>
-							-->
 
 							<!-- <p>From time to time, you may find AI spouting off out some "interesting" opinions. This project makes no attempt to "correct" or validate any of AI's opinions, so take them with a little bit of a grain of salt. AI chatbots work by parroting back their training data, which often times produces intelligent and thoughtful analysis. However, there is always a chance that AI could parrot back unhelpful, incorrect or dangerous training data. There is also a potential for bias in the RLHF (reinforcement learning with human feedback) process which is orchestrated by Open AI.</p>
 
