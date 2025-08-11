@@ -108,7 +108,7 @@
                         <!--<div class="bill-section"><h2 *ngIf="bill.interpretation.riders.length > 0">Summary</h2><p *ngFor="let paragraph of bill.interpretation.longExplain?.split('\n')" [innerHTML]="paragraph"></p></div>-->
 
                         <div class="bill-section">
-                            <div *ngIf="bill?.interpretation?.laymansReport == null || bill!.interpretation!.laymansReport.length == 0" class="bill-section"><p *ngFor="let paragraph of formattedExpertReport" [innerHTML]="paragraph"></p></div>
+                            <div *ngIf="bill?.interpretation?.laymansReport == null || bill!.interpretation!.laymansReport.length == 0" class=""><p *ngFor="let paragraph of formattedExpertReport" [innerHTML]="paragraph"></p></div>
 
                             <!-- Tabs -->
                             <mat-tab-group *ngIf="bill?.interpretation?.laymansReport" [(selectedIndex)]="selectedReportTab">
