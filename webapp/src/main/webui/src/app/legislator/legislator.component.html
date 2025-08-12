@@ -61,7 +61,8 @@
 
                 <div *ngIf="leg != null && hasValidInterp && !loading">
                     <!-- <h2>Interpretation</h2> -->
-                    <div class="leg-summary"><p *ngFor="let paragraph of leg?.interpretation?.longExplain?.split('\n')" [innerHTML]="paragraph"></p></div>
+                    <!-- <div class="leg-summary"><p *ngFor="let paragraph of leg?.interpretation?.longExplain?.split('\n')" [innerHTML]="paragraph"></p></div> -->
+                    <div class="leg-summary"><p *ngFor="let paragraph of formattedReport" [innerHTML]="paragraph"></p></div>
                 </div>
             </mat-card-content>
         </mat-card>

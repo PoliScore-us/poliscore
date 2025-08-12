@@ -184,6 +184,8 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		
 		legInterp.calculateImpactAndRating(leg, interp);
 		
+		interp.setLastUpdate(LocalDateTime.now());
+		
 		s3.put(interp);
 		legService.ddbPersist(leg, interp);
 	}

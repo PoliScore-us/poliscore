@@ -9,7 +9,7 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card'; 
 import { MatTableModule } from '@angular/material/table';
-import { Meta, Title } from '@angular/platform-browser';
+import { DomSanitizer, Meta, SafeHtml, Title } from '@angular/platform-browser';
 import { MatButtonModule } from '@angular/material/button';
 import { ConfigService } from '../config.service';
 import { HeaderComponent } from '../header/header.component';
@@ -17,6 +17,11 @@ import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu'; 
 import { getDistrictLabel } from '../legislators';
+
+import { marked } from 'marked';
+marked.setOptions({
+  async: false
+});
 
 /*
 const floatingLabelsPlugin = {
@@ -72,6 +77,8 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
   public hideInteractions: boolean = false;
 
   public hasValidInterp: boolean = false;
+
+  public formattedReport: SafeHtml[] = [];
 
   private hasMoreData: boolean = true;
 
@@ -153,7 +160,7 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
     pageSize: 25
   };
 
-  constructor(public config: ConfigService, private meta: Meta, private service: AppService, private route: ActivatedRoute, private router: Router, @Inject(PLATFORM_ID) private _platformId: Object, private titleService: Title) { }
+  constructor(private sanitizer: DomSanitizer, public config: ConfigService, private meta: Meta, private service: AppService, private route: ActivatedRoute, private router: Router, @Inject(PLATFORM_ID) private _platformId: Object, private titleService: Title) { }
 
   ngOnInit(): void {
     this.legId = this.route.snapshot.paramMap.get('id') as string;
@@ -196,6 +203,11 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
       //   this.page.index = "ObjectsByImpact";
       //   this.page.ascending = true;
   
+      if (leg.interpretation != null) {
+        console.log(leg!.interpretation.longExplain);
+        this.formattedReport = this.getFormattedParagraphs(leg!.interpretation.longExplain);
+      }
+
       this.updateMetaTags();
   
       this.refreshBillData();
@@ -208,6 +220,12 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
     const currentYear: number = new Date().getFullYear();
     return currentYear - 1;
   }
+
+  getFormattedParagraphs(text: string): SafeHtml[] {
+      return text
+        ?.split('\n')
+        .map(p => this.sanitizer.bypassSecurityTrustHtml(marked.parseInline(p) as string));
+    }
   
   isNonSafari() {
     return !(navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome'));

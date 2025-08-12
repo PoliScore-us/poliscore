@@ -59,9 +59,9 @@ public class DatabaseBuilder implements QuarkusApplication
 {
 	public static boolean INTERPRET_PRESS_BILLS = false;
 	
-	public static boolean INTERPRET_NEW_BILLS = true;
+	public static boolean INTERPRET_NEW_BILLS = false;
 	
-	public static boolean REINTERPRET_LEGISLATORS = false;
+	public static boolean REINTERPRET_LEGISLATORS = true;
 	
 	public static boolean REINTERPRET_PARTIES = false;
 	
@@ -119,13 +119,13 @@ public class DatabaseBuilder implements QuarkusApplication
 		val buildDatasets = data.getBuildDatasets();
 		
 		for (val dataset : buildDatasets) {
-			data.syncS3LegislatorImages(dataset);
-			data.syncS3BillText(dataset);
+//			data.syncS3LegislatorImages(dataset);
+//			data.syncS3BillText(dataset);
 			
 			s3.optimizeExists(BillInterpretation.class, dataset.getSession().getKey());
 			s3.optimizeExists(LegislatorInterpretation.class, dataset.getSession().getKey());
 			
-			syncDdbWithS3(dataset);
+//			syncDdbWithS3(dataset);
 		}
 		
 		if (!FORCE_WEB_SEARCH)
@@ -255,7 +255,12 @@ public class DatabaseBuilder implements QuarkusApplication
 			List<File> requests = legislatorRequestGenerator.process(buildDatasets);
 		
 			if (requests.size() > 0) {
-				List<File> responses = openAi.processBatch(requests);
+				List<File> responses;
+				
+				if (FORCE_WEB_SEARCH)
+					responses = openAi.processBatchImmediately(requests);
+				else
+					responses = openAi.processBatch(requests);
 				
 				for (File f : responses) {
 					responseImporter.process(f);

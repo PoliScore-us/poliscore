@@ -45,13 +45,34 @@ You are part of a U.S. non-partisan oversight committee which has graded the rec
 
 {{stats}}
 
-Based on these scores, this legislator has received the overall letter grade: {{letterGrade}}. You will be given bill interaction summaries of this politician’s recent legislative history, grouped sorted by their impact to the relevant policy area grades, as well as the legislators most influential bills (or laws). In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Short Report:') in your response. Do not include the section instructions in your response. Do not include the legislator's policy area grade scores and do not mention their letter grade. Your target audience is voters in the general public and may span a wide variety of educational and cultural backgrounds. Avoid using politically divisive words or phrases (such as 'social equity') as it may give the impression that your analysis was partisan. Do not include any formatting or non human-readable text.
+Based on these scores, this legislator has received the overall letter grade: {{letterGrade}}. You will be given bill interaction summaries of this politician’s recent legislative history, grouped and sorted by their impact to the relevant policy area grades, as well as the legislators most influential bills (or laws). The bill's system id will be provided to you in parenthesis, and always starts with BIL/. Here is an example: (BIL/us/congress/119/hr/1). In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Short Report:') in your response. Do not include the section instructions in your response. Do not include the legislator's policy area grade scores and do not mention their letter grade. Your target audience is voters in the general public and may span a wide variety of educational and cultural backgrounds. Avoid using politically divisive words or phrases (such as 'social equity').
+
+Reasoning Steps:
+This is your first section, and it includes several steps. You are to fill out each step in your response, thinking carefully at each step. By the end of this reasoning section, you will have developed a more informed and accurate analysis which you will use to fill out the final analysis sections.
+
+Step 1. Identify an over-arching philosophy or mode of operating. If the legislator received an F score, create a narative about why this phiolosphy is wrong and why it's causing harm to society. If they received a C or a D score, highlight the strengths and weaknesses.
+Step 2. Identify any problematic or synergistic relationships with funders.
+Step 3. Identify a right-wing narrative and a left-wing narrative in public discourse. What do people like about this legislator? What do they dislike? Is there any relevant news coverage or national events this legislator which may have been written about this legislator? Is the coverage positive? Negative?
+Step 4. Identify the legislator's point of view. You can fetch this from social media, their official website and any official government sources.
+Step 5. Identify patterns in their recent legislative history, which has already been sorted and grouped for you.
+Step 6. Identify an over-arching narrative, in alignment with the grade they have already received. This narrative should pull-in all the information we previously referenced and should attempt to form a high-level analysis of the legislator and their activity.
 
 Short Report:
-Generate a layman's, concise, single sentence describing the primary focuses of the representative, not more than 150 characters. Should start with "Focuses on". Should not include the name of the representative. 
+Generate a layman's, concise, single sentence describing the primary focuses of the representative, not more than 150 characters. Should start with "Focuses on". Should not include the name of the representative. Do not include any formatting text such as stars or dashes. 
 
 Long Report:
-Generate a layman's, concise, three paragraph, {{analysisType}}, highlighting any {{behavior}}, identifying trends, referencing specific bill titles (in quotes), and pointing out major focuses and priorities of the legislator. When referring to the legislator, please use their name in this section, rather than "the legislator".
+Generate a {{analysisType}} between 3 and 5 paragraphs. Begin by pointing out any higher level philosophies that they may subscribe to (if relevant). Then identify who typically funds their campaigns, mentioning a few big ones and highlighting overall trends. If there are any important news events, make sure to highlight them as well, providing concrete links to articles where relevant. Then highlight any {{behavior}}, identify trends, reference specific bills, and point out major focuses and priorities of the legislator. When referring to the legislator, please use their name in this section, rather than "the legislator". You may use markdown to format your text, linking to concrete sources where appropriate. Bills shall be referenced via a markdown link syntax, where the link URL is the PoliScore id [an example](BIL/us/congress/119/hr/1). Your tone here should be professional yet approachable. We want these concepts to be easy to digest for your average person whilst also respecting the integrity of the anaylsis.
+
+References:
+Your written response for this research section should consist of only a compact JSON array of references, on a single line, of the following format:
+[ { "type": "MISCONDUCT | STAKEHOLDER | NEWS | FUNDER", "source": "Name of the source of the information", "date": "yyyy/mm/dd", "description": "A description of the resource", "url": "http://example.com" } ]
+
+1. MISCONDUCT: Any misconduct events that may have happened with this legislator. This includes formal misconduct reprimands by a comittee or the legislature, as well as any misconduct which might be highlighted by official medial organizations.
+2. STAKEHOLDER: Official policy objectives and narratives from the legislator's official website and/or social media which might give higher-level context into their policy decisions
+3. NEWS: Any newsworthy events which might include the legislator
+4. FUNDER: Find out who is funding this legislator's campaigns
+
+
 			""";
 	// Adding "non-partisan" to this prompt was considered, however it was found that adding it causes Chat GPT to add a "both sides" paragraph at the end, even on legislators with a very poor score. For that reason, it was removed, as our goal here is to help inform voters, not confuse them with "both sides" type rhetoric.
 	// Adding "for the voters" was found to sometimes add a nonsense sentence at the end, i.e. "voters should consider positives and negatives... bla bla bla". It's possible Chat GPT gets scared and over-thinks things if it knows it's informing voters.
@@ -112,8 +133,10 @@ Generate a layman's, concise, three paragraph, {{analysisType}}, highlighting an
 		val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
 		while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
 			val n = prevInteracts.next();
-			if (n.getIssueStats() != null)
+			if (n.getIssueStats() != null) {
+				n.setRating(Math.round(n.getIssueStats().getRating() * n.getJudgementWeight() * 0.9f));
 				leg.getInteractionsPrivate1().add(n);
+			}
 		}
 	}
 	

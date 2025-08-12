@@ -26,6 +26,13 @@ public class LegislatorBillLinker {
 	        if (exp == null || exp.isBlank()) {
 	            return; // Nothing to link
 	        }
+	        
+	        // If this prompt has hardcoded bill references then we can't also run a name linker because it could double link them.
+	        if (exp.contains("[BIL/") || exp.contains("(BIL/")) {
+                String linked = linkMarkdownBills(exp, sessions);
+                leg.getInterpretation().setLongExplain(linked);
+                return;
+            }
 
 	        // 1. Sort interactions by descending length of billName
 	        List<LegislatorBillInteraction> sortedInteractions = leg.getInteractions().stream()
@@ -100,6 +107,57 @@ public class LegislatorBillLinker {
 	        Log.error(t);
 	    }
 	}
+	
+	/**
+	 * Converts new markdown bill references into HTML anchors using linkForBill.
+	 * Supports:
+	 *   [Some Label](BIL/...)
+	 *   [Some Label][BIL/...]
+	 */
+	private static final Pattern BILL_LINK = Pattern.compile(
+	    "\\[(?<label>[^\\]]+)]\\s*(?:\\((?<id1>BIL/[^)]+)\\)|\\[(?<id2>BIL[^\\]]+)])",
+	    Pattern.CASE_INSENSITIVE // allow bil/ too
+	);
+
+	private static String linkMarkdownBills(String text, List<LegislativeSession> sessions) {
+	    Matcher m = BILL_LINK.matcher(text);
+	    StringBuffer out = new StringBuffer();
+	    while (m.find()) {
+	        String label = m.group("label");
+	        String id = m.group("id1") != null ? m.group("id1") : m.group("id2"); // includes the BIL/... prefix
+	        String href = safeLinkForBill(id, sessions);
+
+	        // Only replace when we have a real URL (not one that still contains "BIL/")
+	        String replacement = (href != null && !href.contains("BIL/"))
+	                ? "<a href=\"" + href + "\">" + label + "</a>"
+	                : m.group(0);
+
+	        m.appendReplacement(out, Matcher.quoteReplacement(replacement));
+	    }
+	    m.appendTail(out);
+	    return out.toString();
+	}
+    
+    private static String prettyLabelFromId(String id) {
+        try {
+            String[] parts = id.split("/");
+            String typeName = parts.length > 4 ? parts[4] : "";
+            String billNumber = parts.length > 5 ? parts[5] : "";
+            String label = (typeName + "-" + billNumber).replaceAll("^-|-$", "");
+            return label.isBlank() ? id : label;
+        } catch (Exception e) {
+            return id;
+        }
+    }
+
+    private static String safeLinkForBill(String id, List<LegislativeSession> sessions) {
+        try {
+            return linkForBill(id, sessions);
+        } catch (Exception e) {
+            Log.warn("Failed to resolve bill id from markdown: " + id, e);
+            return null;
+        }
+    }
 	
 	public static String linkForBill(String id, List<LegislativeSession> sessions)
 	{
