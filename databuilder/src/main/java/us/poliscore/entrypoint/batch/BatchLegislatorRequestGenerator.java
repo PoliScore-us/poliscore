@@ -49,13 +49,13 @@ import us.poliscore.service.storage.S3PersistenceService;
 public class BatchLegislatorRequestGenerator implements QuarkusApplication
 {
 	public static final List<String> specificFetch = null;
-//	public static final List<String> specificFetch = Arrays.asList(Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "H000273"));
+//	public static final List<String> specificFetch = Arrays.asList(Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "R000579"));
 	
 //	public static final Period OLDER_THAN = null;
 	public static final Period OLDER_THAN = Period.ofMonths(1); // TODO : Increase this later
 	
 //	public static final int MAX_REQUESTS = -1;
-	public static final int MAX_REQUESTS = 60;
+	public static final int MAX_REQUESTS = 30;
 	
 	public static final boolean CHECK_S3_EXISTS = specificFetch == null && OLDER_THAN == null;
 	

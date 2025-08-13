@@ -54,14 +54,20 @@ Step 1. Identify an over-arching philosophy or mode of operating. If the legisla
 Step 2. Identify any problematic or synergistic relationships with funders.
 Step 3. Identify a right-wing narrative and a left-wing narrative in public discourse. What do people like about this legislator? What do they dislike? Is there any relevant news coverage or national events this legislator which may have been written about this legislator? Is the coverage positive? Negative?
 Step 4. Identify the legislator's point of view. You can fetch this from social media, their official website and any official government sources.
-Step 5. Identify patterns in their recent legislative history, which has already been sorted and grouped for you.
+Step 5. Identify patterns in their recent policy history, which has already been sorted and grouped for you.
 Step 6. Identify an over-arching narrative, in alignment with the grade they have already received. This narrative should pull-in all the information we previously referenced and should attempt to form a high-level analysis of the legislator and their activity.
 
 Short Report:
 Generate a layman's, concise, single sentence describing the primary focuses of the representative, not more than 150 characters. Should start with "Focuses on". Should not include the name of the representative. Do not include any formatting text such as stars or dashes. 
 
 Long Report:
-Generate a {{analysisType}} between 3 and 5 paragraphs. Begin by pointing out any higher level philosophies that they may subscribe to (if relevant). Then identify who typically funds their campaigns, mentioning a few big ones and highlighting overall trends. If there are any important news events, make sure to highlight them as well, providing concrete links to articles where relevant. Then highlight any {{behavior}}, identify trends, reference specific bills, and point out major focuses and priorities of the legislator. When referring to the legislator, please use their name in this section, rather than "the legislator". You may use markdown to format your text, linking to concrete sources where appropriate. Bills shall be referenced via a markdown link syntax, where the link URL is the PoliScore id [an example](BIL/us/congress/119/hr/1). Your tone here should be professional yet approachable. We want these concepts to be easy to digest for your average person whilst also respecting the integrity of the anaylsis.
+Generate a {{analysisType}} report. Your report will be 5 paragraphs, the content of which is as follows:
+1. Your first paragraph will be a high level summary of the legislator’s recent work. This summary needs to condense all the research you’ve previously done into easy, digestable talking points, pointing out major focuses, priorities and values of the legislator and highlighting any {{behavior}}. Mention any higher level philosophies or groups that they may subscribe or belong to. Write your most noteworthy and interesting information here, we want to hook the reader early.
+2. Identify who typically funds their campaigns, mentioning a few big ones and highlighting overall trends. If you found any problematic or synergistic relationships with funders make sure to mention them. 
+3. Document your findings from your news/web research, providing concrete links to articles where relevant.
+4. Tie it all together with a concrete policy analysis. Refrain from listing more than ten bills here, we want overall trends and notable bills (not just a dump of bills), especially if they align with painting a larger picture or focus of the legislator’s work.
+5. Conclude by painting a picture of their impact to society, both unrealized (proposed but not law), and realized.
+When referring to the legislator, please use their name, rather than "the legislator". You may use markdown to format your text, linking to concrete sources where appropriate. Bills shall be referenced via a markdown link syntax, where the link URL is the PoliScore id [an example](BIL/us/congress/119/hr/1). Your tone here should be professional yet approachable. We want these concepts to be easy to digest for your average person whilst also respecting the integrity of the anaylsis. Don't lead each paragraph with 'Impact:', 'Policy analysis:', or 'What’s the coverage?'. These paragraphs should flow like natural writing.
 
 References:
 Your written response for this research section should consist of only a compact JSON array of references, on a single line, of the following format:

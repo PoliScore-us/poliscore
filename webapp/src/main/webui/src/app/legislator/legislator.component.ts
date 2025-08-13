@@ -204,7 +204,6 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
       //   this.page.ascending = true;
   
       if (leg.interpretation != null) {
-        console.log(leg!.interpretation.longExplain);
         this.formattedReport = this.getFormattedParagraphs(leg!.interpretation.longExplain);
       }
 
