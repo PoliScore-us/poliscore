@@ -80,6 +80,8 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
 
   public formattedReport: SafeHtml[] = [];
 
+  public isRecentInterp: boolean = false;
+
   private hasMoreData: boolean = true;
 
   private lastDataFetchSequence = 0;
@@ -205,6 +207,7 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
   
       if (leg.interpretation != null) {
         this.formattedReport = this.getFormattedParagraphs(leg!.interpretation.longExplain);
+        this.isRecentInterp = new Date(leg!.interpretation!.metadata.date) > new Date('2025-08-14');
       }
 
       this.updateMetaTags();

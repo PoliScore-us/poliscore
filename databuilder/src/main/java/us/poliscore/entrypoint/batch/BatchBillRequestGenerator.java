@@ -46,7 +46,10 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 public class BatchBillRequestGenerator implements QuarkusApplication
 {
 	public static final List<String> specificFetch = null;
-//	public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 4546));
+//	public static final List<String> specificFetch = Arrays.asList(
+//			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 4947),
+//			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 4964)
+//		);
 //	public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_COLORADO, "2173", "sb", 317));
 	
 //	public static final List<String> specificFetch = Arrays.asList(

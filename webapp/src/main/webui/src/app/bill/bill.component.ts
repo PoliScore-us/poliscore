@@ -19,6 +19,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { shortNameForBill } from '../bills';
 
 import { marked } from 'marked';
+import { SubscribeFormComponent } from '../subscribe-form/subscribe-form.component';
 marked.setOptions({
   async: false
 });
@@ -28,7 +29,7 @@ Chart.register(BarController, CategoryScale, LinearScale, BarElement, ChartDataL
 @Component({
   selector: 'bill',
   standalone: true,
-  imports: [MatTabsModule, MatTooltipModule, MatTableModule, DisclaimerComponent, HeaderComponent, MatCardModule, CommonModule, CommonModule, RouterModule, MatButtonModule],
+  imports: [SubscribeFormComponent, MatTabsModule, MatTooltipModule, MatTableModule, DisclaimerComponent, HeaderComponent, MatCardModule, CommonModule, CommonModule, RouterModule, MatButtonModule],
   providers: [AppService, HttpClient],
   templateUrl: './bill.component.html',
   styleUrl: './bill.component.scss'

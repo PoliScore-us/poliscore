@@ -1,0 +1,34 @@
+<!-- The trigger button -->
+<button type="button" class="ps-btn" (click)="open()">
+  {{ buttonLabel }}
+</button>
+
+<!-- Modal -->
+<dialog #dlg class="ps-dialog">
+  <form method="dialog" class="ps-card" (ngSubmit)="subscribe()">
+    <h3 class="ps-title">Get alerts</h3>
+    <p class="ps-sub">
+      We’ll email you when new items match: <strong>{{ category }}</strong>
+    </p>
+
+    <label class="ps-label" for="email">Email</label>
+    <input
+      id="email"
+      type="email"
+      name="email"
+      [(ngModel)]="email"
+      required
+      placeholder="you@example.com"
+      class="ps-input"
+    />
+
+    <div class="ps-actions">
+      <button type="button" class="ps-btn ps-btn-secondary" (click)="close()">Cancel</button>
+      <button type="submit" class="ps-btn" [disabled]="loading || !email">
+        {{ loading ? 'Subscribing…' : 'Subscribe' }}
+      </button>
+    </div>
+
+    <p *ngIf="message" class="ps-message">{{ message }}</p>
+  </form>
+</dialog>

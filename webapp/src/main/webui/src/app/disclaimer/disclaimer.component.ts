@@ -2,7 +2,7 @@ import { Component, Inject, Input } from '@angular/core';
 import { MatDialog, MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { BillMetadata } from '../model';
+import { InterpretationMetadata } from '../model';
 
 @Component({
   selector: 'disclaimer',
@@ -18,7 +18,7 @@ export class DisclaimerComponent {
 
   @Input() public positionBelow: boolean = false;
 
-  @Input() public metadata!: BillMetadata;
+  @Input() public metadata!: InterpretationMetadata;
 
   public tooltipVisible = true;
 
@@ -70,7 +70,7 @@ export class DisclaimerComponent {
 })
 export class DisclaimerDialogComponent {
   constructor(
-    @Inject(MAT_DIALOG_DATA) public data: { large: string, metadata: BillMetadata, disclaimerComponent: any },
+    @Inject(MAT_DIALOG_DATA) public data: { large: string, metadata: InterpretationMetadata, disclaimerComponent: any },
     public dialogRef: MatDialogRef<DisclaimerDialogComponent>
   ) {}
 

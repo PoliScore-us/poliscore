@@ -50,7 +50,7 @@ public class BillInterpretationParser {
 		RIDERS("(?i)Riders:"),
 		SHORT_REPORT("(?i)Short Report:"),
 		LONG_REPORT("(?i)Long Report:"),
-		LAYMANS_REPORT("(?i)Laymans Report:"),
+		LAYMANS_REPORT("(?i)Casual Report:"),
 		CONFIDENCE("(?i)Confidence:");
 		
 		private List<String> regex;

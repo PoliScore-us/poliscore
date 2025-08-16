@@ -66,6 +66,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 //	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/unprocessed.jsonl";
 	
 //	Canceled half-way through a batch (bills)
+//	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/openapi-bills-bulk-1.jsonl.out.jsonl";
 	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/openapi-legislators-bulk-1.jsonl.out.jsonl";
 	
 	@Inject
@@ -162,8 +163,9 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		legInterp.updateInteractionsInterp(data.getAllDataset(), leg);
 		
 		LegislatorInterpretation interp = s3.get(LegislatorInterpretation.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), leg.getCode()), LegislatorInterpretation.class)
-				.orElse(new LegislatorInterpretation(leg.getNamespace(), leg.getSessionCode(), leg.getCode(), OpenAIService.metadata(), null));
+				.orElse(new LegislatorInterpretation(leg.getNamespace(), leg.getSessionCode(), leg.getCode(), null, null));
 		
+		interp.setMetadata(OpenAIService.metadata());
 		interp.setHash(legInterp.calculateInterpHashCode(leg));
 		
 		DoubleIssueStats stats = legInterp.calculateAgregateInteractionStats(leg);

@@ -49,13 +49,15 @@ import us.poliscore.service.storage.S3PersistenceService;
 public class BatchLegislatorRequestGenerator implements QuarkusApplication
 {
 	public static final List<String> specificFetch = null;
-//	public static final List<String> specificFetch = Arrays.asList(Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "R000579"));
+//	public static final List<String> specificFetch = Arrays.asList(
+//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "C001137"),
+//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "H001100")
+//		);
 	
-//	public static final Period OLDER_THAN = null;
-	public static final Period OLDER_THAN = Period.ofMonths(1); // TODO : Increase this later
+//	public static final Period OLDER_THAN = specificFetch == null ? Period.ofMonths(1) : null;
+	public static final Period OLDER_THAN = Period.ofMonths(6);
 	
-//	public static final int MAX_REQUESTS = -1;
-	public static final int MAX_REQUESTS = 30;
+	public static final int MAX_REQUESTS = specificFetch != null ? -1 : 30;
 	
 	public static final boolean CHECK_S3_EXISTS = specificFetch == null && OLDER_THAN == null;
 	
@@ -110,19 +112,23 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	private void processDataset(PoliscoreDataset dataset, boolean enableWebSearch, int block) throws IOException {
 		Log.info("Processing legislators for dataset " + dataset.getSession().getDescription());
 		
-		var stream = dataset.query(Legislator.class).stream()
+		var list = dataset.query(Legislator.class).stream()
 				.filter(l -> specificFetch == null || specificFetch.contains(l.getId()))
 				.filter(l -> l.getInteractions().size() > 0)
 				.filter(l -> !CHECK_S3_EXISTS || !s3.exists(LegislatorInterpretation.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), l.getCode()), LegislatorInterpretation.class))
 				.filter(l -> interpIsOlderThan(l, dataset))
-				.sorted(Comparator.comparing(Legislator::getDate).reversed());
+				.filter(l -> hasEnoughInteractions(l, dataset))
+				.sorted(Comparator.comparing(Legislator::getDate).reversed())
+				.toList();
+		
+		var total = "";
 		
 		if (MAX_REQUESTS != -1) {
-			stream = stream.limit(MAX_REQUESTS);
+			total = list.size() > 0 ? " " + (list.size() - Math.min(list.size(), MAX_REQUESTS)) + " left to process after this batch" : "";
+			list = list.subList(0, Math.min(list.size(), MAX_REQUESTS));
 		}
 		
-		val list = stream.toList();
-		Log.info("Generating requests for " + list.size() + " legislators");
+		Log.info("Generating requests for " + list.size() + " legislators." + total);
 		
 		for (Legislator l : list) {
 			interpret(dataset, l);
@@ -143,17 +149,21 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		return interpOp.get().getLastUpdate().isBefore(LocalDateTime.now().minus(OLDER_THAN));
 	}
 	
-	protected void interpret(PoliscoreDataset dataset, Legislator leg)
-	{
+	private boolean hasEnoughInteractions(Legislator leg, PoliscoreDataset dataset) {
 		legInterp.backfillInteractionsFromPreviousSession(leg, data.getPreviousSession(dataset.getSession()));
 		
 		if (!legInterp.meetsInterpretationPrereqs(leg))
 		{
 			Log.info("Skipping " + leg.getId() + " (" + leg.getName().getOfficial_full() + ") because he did not have at least 100 interactions.");
 			skipped++;
-			return;
+			return false;
 		}
 		
+		return true;
+	}
+	
+	protected void interpret(PoliscoreDataset dataset, Legislator leg)
+	{
 		legInterp.updateInteractionsInterp(data.getAllDataset(), leg);
 		
 		DoubleIssueStats stats = legInterp.calculateAgregateInteractionStats(leg);
@@ -254,7 +264,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		for (val interact : billsByGrade.limit(amount).collect(Collectors.toList()))
 		{
 			val bill = data.get(interact.getBillId(), Bill.class).orElseThrow();
-			val billMsg = "- " + interact.describe() + " \"" + interact.getBillName() + "\" (" + bill.getStatus().getDescription() + ") (" + bill.getId() + "): " + interact.getShortExplain();
+			val billMsg = "- " + interact.describe() + " \"" + interact.getBillName() + "\" (Grade: " + interact.getIssueStats().getLetterGrade() + ") (" + bill.getStatus().getDescription() + ") (" + bill.getId() + "): " + interact.getShortExplain();
 			if ( (String.join("\n", billMsgs) + "\n" + billMsg).length() < interpModel.getContextWindowStringLength() ) {
 				billMsgs.add(billMsg);
 				includedBills.add(interact.getBillId());
@@ -275,7 +285,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		for (val interact : billsByImpact.limit(amount).collect(Collectors.toList()))
 		{
 			val bill = data.get(interact.getBillId(), Bill.class).orElseThrow();
-			val billMsg = "- " + interact.describe() + " \"" + interact.getBillName() + "\" (" + bill.getStatus().getDescription() + "): " + interact.getShortExplain();
+			val billMsg = "- " + interact.describe() + " \"" + interact.getBillName() + "\" (Grade: " + interact.getIssueStats().getLetterGrade() + ") (" + bill.getStatus().getDescription() + "): " + interact.getShortExplain();
 			if ( (String.join("\n", billMsgs) + "\n" + billMsg).length() < interpModel.getContextWindowStringLength() ) {
 				billMsgs.add(billMsg);
 				includedBills.add(interact.getBillId());

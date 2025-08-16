@@ -38,19 +38,19 @@ public class LegislatorInterpretationService
 	// Ensure that the x most recent bills are interpreted
 	public static final int LIMIT_BILLS = 999999;
 	
-//	private static final String PROMPT_TEMPLATE = "The provided text is a summary of the last {{time_period}} of legislative history of United States Legislator {{full_name}}. Please generate a concise (single paragraph) critique of this history, evaluating the performance, highlighting any specific accomplishments or alarming behaviour and pointing out major focuses and priorities of the legislator. In your critique, please attempt to reference concrete, notable and specific text of the summarized bills where possible.";
+//	private static final String PROMPT_TEMPLATE = "The provided text is a summary of the last {{time_period}} of legislative history of United States Legislator {{full_name}}. Please generate a concise (single paragraph) critique of this history, evaluating the performance, highlighting any specific accomplishments or alarming behavior and pointing out major focuses and priorities of the legislator. In your critique, please attempt to reference concrete, notable and specific text of the summarized bills where possible.";
 	
 	private static final String PROMPT_TEMPLATE = """
-You are part of a U.S. non-partisan oversight committee which has graded the recent legislative performance of {{namespace}} {{politicianType}} {{fullName}}. This legislator has received the following policy area grades (scores range from -100 to 100):
+You are part of an independent U.S. legislative watchdog which has graded the recent performance of {{namespace}} {{politicianType}} {{fullName}}. You have opinions on policy and are not afraid to voice them or take sides. You do not engage in "both sides" analyses. This legislator has received the following policy area grades (scores range from -100 to 100):
 
 {{stats}}
 
-Based on these scores, this legislator has received the overall letter grade: {{letterGrade}}. You will be given bill interaction summaries of this politician’s recent legislative history, grouped and sorted by their impact to the relevant policy area grades, as well as the legislators most influential bills (or laws). The bill's system id will be provided to you in parenthesis, and always starts with BIL/. Here is an example: (BIL/us/congress/119/hr/1). In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Short Report:') in your response. Do not include the section instructions in your response. Do not include the legislator's policy area grade scores and do not mention their letter grade. Your target audience is voters in the general public and may span a wide variety of educational and cultural backgrounds. Avoid using politically divisive words or phrases (such as 'social equity').
+Based on these scores, this legislator has received the overall letter grade: {{letterGrade}}. You will be given bill interaction summaries of this politician’s recent legislative history, grouped and sorted by their impact to the relevant policy area grades, as well as the legislators most influential bills (or laws). These bills have already been graded by our system and their grade will be listed first in the summary as a letter grade from A to F. The bill's system id will be provided to you in parentheses, and always starts with BIL/. Here is an example: (BIL/us/congress/119/hr/1). In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Short Report:') in your response. Do not include the section instructions in your response. Do not include the legislator's policy area grade scores and do not mention their letter grade. Your target audience is voters in the general public and may span a wide variety of educational and cultural backgrounds. Avoid using politically divisive words or phrases (such as 'social equity'). Use direct, plain language. Avoid hedging phrases (e.g., “some say,” “it could be argued”). Do not balance for its own sake; weight conclusions by evidence. When asked to provide links or research, do not ever invent them.
 
 Reasoning Steps:
 This is your first section, and it includes several steps. You are to fill out each step in your response, thinking carefully at each step. By the end of this reasoning section, you will have developed a more informed and accurate analysis which you will use to fill out the final analysis sections.
 
-Step 1. Identify an over-arching philosophy or mode of operating. If the legislator received an F score, create a narative about why this phiolosphy is wrong and why it's causing harm to society. If they received a C or a D score, highlight the strengths and weaknesses.
+Step 1. Identify an over-arching philosophy or mode of operating. If the legislator received an F score, create a narrative about why this philosophy is wrong and why it's causing harm to society. If they received a D score, provide an evidence-led mostly-disapproving critique, stressing the substantial shortcomings. If they received a C score, provide a balanced view of both notable strengths and weaknesses. If they received a B score, focus on their strengths while briefly mentioning minor areas of improvement. A scores should receive glowing commendations.
 Step 2. Identify any problematic or synergistic relationships with funders.
 Step 3. Identify a right-wing narrative and a left-wing narrative in public discourse. What do people like about this legislator? What do they dislike? Is there any relevant news coverage or national events this legislator which may have been written about this legislator? Is the coverage positive? Negative?
 Step 4. Identify the legislator's point of view. You can fetch this from social media, their official website and any official government sources.
@@ -61,13 +61,13 @@ Short Report:
 Generate a layman's, concise, single sentence describing the primary focuses of the representative, not more than 150 characters. Should start with "Focuses on". Should not include the name of the representative. Do not include any formatting text such as stars or dashes. 
 
 Long Report:
-Generate a {{analysisType}} report. Your report will be 5 paragraphs, the content of which is as follows:
+Generate a {{analysisType}}. Your report will be 5 paragraphs, the content of which is as follows:
 1. Your first paragraph will be a high level summary of the legislator’s recent work. This summary needs to condense all the research you’ve previously done into easy, digestable talking points, pointing out major focuses, priorities and values of the legislator and highlighting any {{behavior}}. Mention any higher level philosophies or groups that they may subscribe or belong to. Write your most noteworthy and interesting information here, we want to hook the reader early.
 2. Identify who typically funds their campaigns, mentioning a few big ones and highlighting overall trends. If you found any problematic or synergistic relationships with funders make sure to mention them. 
 3. Document your findings from your news/web research, providing concrete links to articles where relevant.
 4. Tie it all together with a concrete policy analysis. Refrain from listing more than ten bills here, we want overall trends and notable bills (not just a dump of bills), especially if they align with painting a larger picture or focus of the legislator’s work.
 5. Conclude by painting a picture of their impact to society, both unrealized (proposed but not law), and realized.
-When referring to the legislator, please use their name, rather than "the legislator". You may use markdown to format your text, linking to concrete sources where appropriate. Bills shall be referenced via a markdown link syntax, where the link URL is the PoliScore id [an example](BIL/us/congress/119/hr/1). Your tone here should be professional yet approachable. We want these concepts to be easy to digest for your average person whilst also respecting the integrity of the anaylsis. Don't lead each paragraph with 'Impact:', 'Policy analysis:', or 'What’s the coverage?'. These paragraphs should flow like natural writing.
+When referring to the legislator, please use their name, rather than "the legislator". You may use markdown to format your text, linking to concrete sources where appropriate. Bills shall be referenced via a markdown link syntax, where the link URL is the PoliScore id [name of the bill](BIL/us/congress/119/hr/1). Do not ever use [link] as the description of your link. Your tone here should be professional yet approachable. We want these concepts to be easy to digest for your average person whilst also respecting the integrity of the analysis. Don't lead each paragraph with 'Impact:', 'Policy analysis:', or 'What’s the coverage?'. These paragraphs should flow like natural writing. The overall tone must track the grade; for D, use a measured, evidence-first tone that underscores major shortcomings.
 
 References:
 Your written response for this research section should consist of only a compact JSON array of references, on a single line, of the following format:
@@ -316,8 +316,12 @@ Your written response for this research section should consist of only a compact
 				.replace("{{politicianType}}", leg.getTerms().last().getChamber() == LegislativeChamber.UPPER ? "Senator" : "House Representative")
 				.replace("{{fullName}}", leg.getName().getOfficial_full())
 				.replace("{{stats}}", stats.toString())
-				.replace("{{analysisType}}", grade.equals("A") || grade.equals("B") ? "commendation" : (grade.equals("C") || grade.equals("D") ? "mixed analysis" : "harsh critique"))
-				.replace("{{behavior}}", grade.equals("A") || grade.equals("B") ? "specific accomplishments" : (grade.equals("C") || grade.equals("D") ? "specific accomplishments or alarming behaviour" : "alarming behaviour"));
+				.replace("{{analysisType}}",
+					    grade.equals("A") || grade.equals("B") ? "commendation"
+					    : grade.equals("C") ? "mixed analysis"
+					    : grade.equals("D") ? "mostly disapproving critique"
+					    : "harsh critique")
+				.replace("{{behavior}}", grade.equals("A") || grade.equals("B") ? "specific accomplishments" : (grade.equals("C") || grade.equals("D") ? "specific accomplishments or alarming behavior" : "alarming behavior"));
 	}
 	
 	public static String describeTimePeriod(LocalDate periodStart, LocalDate periodEnd)

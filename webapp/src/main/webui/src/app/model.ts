@@ -33,7 +33,7 @@ export interface BillInterpretation {
   riders: string[];
   billId: string;
   pressInterps: PressInterpretation[];
-  metadata: BillMetadata;
+  metadata: InterpretationMetadata;
   reasoning: string;
   confidence: number;
   rating: number;
@@ -46,10 +46,10 @@ export interface PressInterpretation {
   shortExplain: string;
   longExplain: string;
   billId: string;
-  metadata: BillMetadata;
+  metadata: InterpretationMetadata;
 }
 
-export interface BillMetadata {
+export interface InterpretationMetadata {
   model: string;
   date: string;
 }
@@ -137,7 +137,7 @@ export interface LegislatorPageData {
 export interface LegislatorInterpretation {
     issueStats: IssueStats;
     legislatorId: string;
-    metadata: any;
+    metadata: InterpretationMetadata;
     longExplain: string;
     shortExplain: string;
 }
