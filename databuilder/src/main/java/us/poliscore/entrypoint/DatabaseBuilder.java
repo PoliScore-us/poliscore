@@ -119,13 +119,13 @@ public class DatabaseBuilder implements QuarkusApplication
 		val buildDatasets = data.getBuildDatasets();
 		
 		for (val dataset : buildDatasets) {
-//			data.syncS3LegislatorImages(dataset);
-//			data.syncS3BillText(dataset);
+			data.syncS3LegislatorImages(dataset);
+			data.syncS3BillText(dataset);
 			
 			s3.optimizeExists(BillInterpretation.class, dataset.getSession().getKey());
 			s3.optimizeExists(LegislatorInterpretation.class, dataset.getSession().getKey());
 			
-//			syncDdbWithS3(dataset);
+			syncDdbWithS3(dataset);
 		}
 		
 		if (!FORCE_WEB_SEARCH)

@@ -134,24 +134,23 @@ public class WebappDataGenerator implements QuarkusApplication
 				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
 				.forEach(l -> routes.add(url + finalPrefix + "/legislator/" + l.getCode()));
 			
-			if (dataset.getSession().getCode().equals("118")) {
-				// All bills
-				routes.add(url + prefix + "/bills");
-				dataset.query(Bill.class).stream()
-					.filter(b -> s3.exists(BillInterpretation.generateId(b.getId(), null).replace("-polisc", ""), BillInterpretation.class))
-					.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
-					.forEach(b -> routes.add(url + finalPrefix + "/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
-			} else {
-				// All bills
-				routes.add(url + prefix + "/bills");
-				dataset.query(Bill.class).stream()
-					.filter(b -> s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
-					.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
-					.forEach(b -> routes.add(url + finalPrefix + "/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
-			}
+			// All bills
+			routes.add(url + prefix + "/bills");
+			dataset.query(Bill.class).stream()
+				.filter(b -> s3.exists(getBillInterpId(b), BillInterpretation.class))
+				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
+				.forEach(b -> routes.add(url + finalPrefix + "/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
 		}
 		
 		FileUtils.write(out, String.join("\n", routes), "UTF-8");
+	}
+	
+	public String getBillInterpId(Bill b) {
+		if (b.getSessionCode().equals("118")) {
+			return BillInterpretation.generateId(b.getId(), null).replace("-polisc", "");
+		} else {
+			return BillInterpretation.generateId(b.getId(), null);
+		}
 	}
 	
 	@SneakyThrows
@@ -220,9 +219,9 @@ public class WebappDataGenerator implements QuarkusApplication
 	    	List<List<String>> datasetList = result.getOrDefault(dataset.getSession().getNamespace().getNamespace(), new ArrayList<List<String>>());
 	    	datasetList.addAll(dataset.query(Bill.class).stream()
 		        .filter(b -> //PoliscoreUtil.SUPPORTED_CONGRESSES.stream().anyMatch(s -> b.isIntroducedInSession(s)) &&
-		                     s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
+		                     s3.exists(getBillInterpId(b), BillInterpretation.class))
 		        .map(b -> {
-		            b.setInterpretation(s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).orElseThrow());
+		            b.setInterpretation(s3.get(getBillInterpId(b), BillInterpretation.class).orElseThrow());
 	
 		            String displayName = b.getName();
 		            String normalizedTokens = normalize(displayName, stemmer);

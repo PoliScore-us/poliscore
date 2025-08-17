@@ -2,6 +2,7 @@ package us.poliscore.entrypoint.batch;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.ArrayList;
@@ -54,10 +55,11 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 //			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "H001100")
 //		);
 	
-//	public static final Period OLDER_THAN = specificFetch == null ? Period.ofMonths(1) : null;
-	public static final Period OLDER_THAN = Period.ofMonths(6);
+//	public static final LocalDateTime OLDER_THAN = specificFetch == null ? Period.ofMonths(1) : null;
+//	public static final LocalDateTime OLDER_THAN = LocalDateTime.now().minus(Period.ofMonths(6));
+	public static final LocalDateTime OLDER_THAN = LocalDate.of(2025, 8, 14).atStartOfDay();
 	
-	public static final int MAX_REQUESTS = specificFetch != null ? -1 : 30;
+	public static final int MAX_REQUESTS = specificFetch != null ? -1 : 100;
 	
 	public static final boolean CHECK_S3_EXISTS = specificFetch == null && OLDER_THAN == null;
 	
@@ -117,6 +119,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 				.filter(l -> l.getInteractions().size() > 0)
 				.filter(l -> !CHECK_S3_EXISTS || !s3.exists(LegislatorInterpretation.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), l.getCode()), LegislatorInterpretation.class))
 				.filter(l -> interpIsOlderThan(l, dataset))
+				.filter(l -> interpHasGrade("D", l, dataset) || interpHasGrade("C", l, dataset))
 				.filter(l -> hasEnoughInteractions(l, dataset))
 				.sorted(Comparator.comparing(Legislator::getDate).reversed())
 				.toList();
@@ -139,6 +142,14 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		}
 	}
 	
+	private boolean interpHasGrade(String grade, Legislator leg, PoliscoreDataset dataset) {
+		val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
+		if (interpOp.isEmpty()) return true;
+		if (interpOp.get().getIssueStats() == null) return true;
+		
+		return interpOp.get().getIssueStats().getLetterGrade().trim().equalsIgnoreCase(grade.trim());
+	}
+	
 	private boolean interpIsOlderThan(Legislator leg, PoliscoreDataset dataset) {
 		if (OLDER_THAN == null) return true;
 		
@@ -146,7 +157,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		if (interpOp.isEmpty()) return true;
 		if (interpOp.get().getLastUpdate() == null) return true;
 		
-		return interpOp.get().getLastUpdate().isBefore(LocalDateTime.now().minus(OLDER_THAN));
+		return interpOp.get().getLastUpdate().isBefore(OLDER_THAN);
 	}
 	
 	private boolean hasEnoughInteractions(Legislator leg, PoliscoreDataset dataset) {

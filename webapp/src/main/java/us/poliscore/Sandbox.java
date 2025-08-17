@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -67,6 +68,9 @@ public class Sandbox implements QuarkusApplication
 	
 	protected void process() throws IOException
 	{
+		countNumberOfBills();
+		
+		
 		// TEST getBill
 //		val out = ddb.get("BIL/us/congress/118/s/4700", Bill.class).orElseThrow();
 		
@@ -139,7 +143,7 @@ public class Sandbox implements QuarkusApplication
 //			.toList();		
 		
 //		Integer _pageSize, String _index, Boolean _ascending, String _exclusiveStartKey, String sortKey, Integer _year, String _namespace
-		val out = getBills(25, Persistable.OBJECT_BY_ISSUE_RATING_INDEX, false, null, TrackedIssue.Healthcare.name(), 2025, LegislativeNamespace.US_COLORADO.getNamespace());
+//		val out = getBills(25, Persistable.OBJECT_BY_ISSUE_RATING_INDEX, false, null, TrackedIssue.Healthcare.name(), 2025, LegislativeNamespace.US_COLORADO.getNamespace());
 //		val out = getBills(25, Persistable.OBJECT_BY_ISSUE_RATING_INDEX, false, null, TrackedIssue.Healthcare.name(), 2026, LegislativeNamespace.US_CONGRESS.getNamespace());
 		
 //		s3.optimizeExists(BillInterpretation.class);
@@ -150,10 +154,17 @@ public class Sandbox implements QuarkusApplication
 		
 		
     	
-    	System.out.println(PoliscoreUtil.getObjectMapper().valueToTree(out));
+//    	System.out.println(PoliscoreUtil.getObjectMapper().valueToTree(out));
 //		System.out.println(out);
 		
 		
+	}
+	
+	@SneakyThrows
+	public void countNumberOfBills() {
+		Map<String, List<List<String>>> billMap = mapper.readValue(IOUtils.toString(Lambda.class.getResourceAsStream("/bills.index"), "UTF-8"), Map.class);
+		
+		System.out.println("Bill count is " + billMap.values().stream().map(list -> list.size()).reduce(0, (a,b) -> a + b));
 	}
 	
 //	private void linkInterpBills(Legislator leg) {
