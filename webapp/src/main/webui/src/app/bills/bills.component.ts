@@ -119,7 +119,7 @@ export class BillsComponent implements OnInit {
   updateMetaTags(): void {
     let year = this.config.getYear();
 
-    let pageTitle = "Bills - PoliScore: AI Political Rating Service";
+    let pageTitle = "Bills - PoliScore: " + this.config.getTagline();
     const pageDescription = this.config.appDescription();
     const pageUrl = "https://poliscore.us/" + year + "/bills";
     const imageUrl = 'https://poliscore.us/' + year + '/images/poliscore-word-whitebg.png';

@@ -61,7 +61,7 @@ export class PromoComponent {
     updateMetaTags(): void {
       let year = this.config.getYear();
   
-      let pageTitle = "PoliScore: AI Political Rating Service";
+      let pageTitle = "PoliScore: " + this.config.getTagline();
       const pageDescription = this.config.appDescription();
       const pageUrl = "https://poliscore.us/" + year + "/about";
       const imageUrl = 'https://poliscore.us/' + year + '/images/poliscore-word-whitebg.png';

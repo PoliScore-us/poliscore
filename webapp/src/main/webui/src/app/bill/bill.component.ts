@@ -282,9 +282,9 @@ export class BillComponent implements OnInit {
     let namespace = billId.split("/")[1] + "/" + billId.split("/")[2];
     let year = this.config.sessionCodeToYear(billSession, namespace);
 
-    let pageTitle = this.bill!.name + " - Bill - PoliScore: AI Political Rating Service";
+    let pageTitle = this.bill!.name + " - Bill - PoliScore: " + this.config.getTagline();
     if (this.config.getNamespace() != null && this.config.getNamespace().length > 0 && this.config.getNamespace() !== 'us/congress')
-            pageTitle = this.bill!.name + " - " + convertStateCodeToName(this.config.getNamespace().split("/")[1]) + " State Bill - PoliScore: AI Political Rating Service";
+            pageTitle = this.bill!.name + " - " + convertStateCodeToName(this.config.getNamespace().split("/")[1]) + " State Bill - PoliScore: " + this.config.getTagline();
 
     const pageDescription = this.gradeForBill() + " (" + this.bill?.cosponsors.length + " cosponsors) - " + this.bill!.interpretation.shortExplain!.replace(/[\r\n]/g, '');
     const pageUrl = `https://poliscore.us` + this.config.billIdToAbsolutePath(billId);

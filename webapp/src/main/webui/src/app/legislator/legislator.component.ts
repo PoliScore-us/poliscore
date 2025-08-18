@@ -245,9 +245,9 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
     let session = parseInt(this.legId!.split("/")[3]);
     let year = this.config.congressToYear(session);
 
-    let pageTitle = this.leg!.name.official_full + " - PoliScore: AI Political Rating Service";
+    let pageTitle = this.leg!.name.official_full + " - PoliScore: " + this.config.getTagline();
     if (this.config.getNamespace() != null && this.config.getNamespace().length > 0 && this.config.getNamespace() !== 'us/congress')
-        pageTitle = this.leg!.name.official_full + " - " + convertStateCodeToName(this.config.getNamespace().split("/")[1]) + " State Legislator - PoliScore: AI Political Rating Service";
+        pageTitle = this.leg!.name.official_full + " - " + convertStateCodeToName(this.config.getNamespace().split("/")[1]) + " State Legislator - PoliScore: " + this.config.getTagline();
 
     let pageDescription = "Waiting for more data - Legislator interpretatons require at least a hundred bill interactions in order to ensure accuracy.";
     if (this.leg!.interpretation && this.leg!.interpretation!.longExplain)

@@ -60,6 +60,10 @@ export class ConfigService {
     return (congress - 1) * 2 + 1789 + 1;
   }
 
+  public getTagline(): string {
+    return "AI Impact Analysis Service";
+  }
+
   public sessionCodeToYear(sessionCode: string, namespace: string): number {
     var year = this.getYear();
 

@@ -135,11 +135,11 @@ export class LegislatorsComponent implements OnInit {
   updateMetaTags(): void {
     let year = this.config.getYear();
 
-    let pageTitle = "Legislators - PoliScore: AI Political Rating Service";
+    let pageTitle = "Legislators - PoliScore: " + this.config.getTagline();
     if (this.myLocation != null && this.page != null && this.page.index === 'ObjectsByLocation')
-      pageTitle = convertStateCodeToName(this.myLocation.toUpperCase()) + " Legislators - PoliScore: AI Political Rating Service"
+      pageTitle = convertStateCodeToName(this.myLocation.toUpperCase()) + " Legislators - PoliScore: " + this.config.getTagline();
     if (this.namespace != null && this.namespace.length > 0 && this.namespace !== 'us/congress')
-      pageTitle = convertStateCodeToName(this.namespace.split("/")[1]) + " State Legislators - PoliScore: AI Political Rating Service";
+      pageTitle = convertStateCodeToName(this.namespace.split("/")[1]) + " State Legislators - PoliScore: " + this.config.getTagline();
 
     const pageDescription = this.config.appDescription();
     const pageUrl = "https://poliscore.us/" + year + "/legislators";

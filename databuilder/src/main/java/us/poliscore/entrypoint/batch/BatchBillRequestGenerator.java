@@ -48,7 +48,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	public static final List<String> specificFetch = null;
 //	public static final List<String> specificFetch = Arrays.asList(
 //			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 4947),
-//			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 4964)
+//			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hjres", 112)
 //		);
 //	public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_COLORADO, "2173", "sb", 317));
 	

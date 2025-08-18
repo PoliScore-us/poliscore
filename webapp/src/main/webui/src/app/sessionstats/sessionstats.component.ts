@@ -130,7 +130,7 @@ export class SessionStatsComponent {
 
     let year = this.config.getYear();
 
-    let pageTitle = "Stats - PoliScore: AI Political Rating Service";
+    let pageTitle = "Stats - PoliScore: " + this.config.getTagline();
     if (this.stats?.session.namespace === 'us/congress')
       pageTitle = this.stats!.session.code + "th Congress " + pageTitle;
     else

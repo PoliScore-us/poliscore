@@ -63,6 +63,10 @@ export class HeaderComponent {
       return year;
   }
 
+  public getTagLine(): string {
+    return this.config.getTagline();
+  }
+
   public onChangeYear(year: number) {
       const currentUrl = new URL(window.location.href);
       const pathSegments = currentUrl.pathname.split('/').filter(seg => seg); // Remove empty segments
