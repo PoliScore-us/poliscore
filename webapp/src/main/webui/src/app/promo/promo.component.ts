@@ -159,7 +159,7 @@ export class DisclaimerDialogContactUsComponent {
 export class DisclaimerDialogSubscribeComponent implements AfterViewInit {
     @ViewChild('frame') frame!: ElementRef<HTMLIFrameElement>;
     @ViewChild('container') container!: ElementRef<HTMLElement>;
-    public iframeHeight = 370;
+    public iframeHeight = 380;
 
     constructor(
       @Inject(MAT_DIALOG_DATA) public data: { large: string, disclaimerComponent: any },
