@@ -54,6 +54,10 @@ export class PromoComponent {
       this.dialog.open(DisclaimerDialogComponent);
     }
 
+    clickSubscribe() {
+      this.dialog.open(DisclaimerDialogSubscribeComponent);
+    }
+
     clickContact() {
       this.dialog.open(DisclaimerDialogContactUsComponent);
     }
@@ -130,6 +134,30 @@ export class DisclaimerDialogContactUsComponent {
     constructor(
       @Inject(MAT_DIALOG_DATA) public data: { large: string, disclaimerComponent: any },
       public dialogRef: MatDialogRef<DisclaimerDialogContactUsComponent>
+    ) {}
+  
+    onClose(): void {
+      this.dialogRef.close();
+    }
+}
+
+@Component({
+  selector: 'disclaimer-dialog',
+  standalone: true,
+  imports: [CommonModule, MatDialogModule, MatButtonModule],
+  template: `
+    <div mat-dialog-content style="overflow: clip;">
+        <iframe width="580" height="450" src="https://2d35a37e.sibforms.com/serve/MUIFAJ3TMSl3wDT5BNTSGDaFYbSOAeQdvBAHVE2HZ_OKOg8Ae1pcgrqBqm19etHlufoptMVUelOaE4lTwdAOk3RsTmr95CDuV3NjsrBEl6YJ_0NmJTGOBkU-fMKQWpVq5A5CEcSNQYrj3NnilVqhnVtROSgy6Mhxjt8gaYUteUCadLxXAtNKQeiLJ1T0AOiXxCgLl_KNg9ezYnOa" frameborder="0" scrolling="auto" allowfullscreen style="display: block;margin-left: auto;margin-right: auto;max-width: 100%;"></iframe>
+    </div>
+    <div mat-dialog-actions align="center">
+      <button mat-button (click)="onClose()">Close</button>
+    </div>
+  `,
+})
+export class DisclaimerDialogSubscribeComponent {
+    constructor(
+      @Inject(MAT_DIALOG_DATA) public data: { large: string, disclaimerComponent: any },
+      public dialogRef: MatDialogRef<DisclaimerDialogSubscribeComponent>
     ) {}
   
     onClose(): void {
