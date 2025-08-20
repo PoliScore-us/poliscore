@@ -149,7 +149,7 @@ export class DisclaimerDialogContactUsComponent {
   imports: [CommonModule, MatDialogModule, MatButtonModule],
   template: `
     <div #container mat-dialog-content style="overflow: clip;">
-        <iframe #frame width="580" [height]="iframeHeight" src="https://2d35a37e.sibforms.com/serve/MUIFAJ3TMSl3wDT5BNTSGDaFYbSOAeQdvBAHVE2HZ_OKOg8Ae1pcgrqBqm19etHlufoptMVUelOaE4lTwdAOk3RsTmr95CDuV3NjsrBEl6YJ_0NmJTGOBkU-fMKQWpVq5A5CEcSNQYrj3NnilVqhnVtROSgy6Mhxjt8gaYUteUCadLxXAtNKQeiLJ1T0AOiXxCgLl_KNg9ezYnOa" frameborder="0" scrolling="auto" allowfullscreen style="display: block;margin-left: auto;margin-right: auto;max-width: 100%;"></iframe>
+        <iframe width="580" [height]="iframeHeight" src="https://2d35a37e.sibforms.com/serve/MUIFABRydGpQl2fs-e6DC-0XusqdgiRHtkyqEXvWJ4Fbef4ZQN_qqlkXY80ZJbCoIZW_vKzZfaUqhTPd-FhYxPeYy3v68zs5KNbdNkb_ag_ym5CWHgYGe6aftbrQnGxxf8YyL2j4S12r-rZiYygk84clqFu0BM-8NTAH5lQGoxmIAzXzKg1qiE-Aa0R7SN5a1z3GXlAR6_-neIm4" frameborder="0" scrolling="auto" allowfullscreen style="display: block;margin-left: auto;margin-right: auto;max-width: 100%;"></iframe>
     </div>
     <div mat-dialog-actions align="center">
       <button mat-button (click)="onClose()">Close</button>
@@ -159,7 +159,7 @@ export class DisclaimerDialogContactUsComponent {
 export class DisclaimerDialogSubscribeComponent implements AfterViewInit {
     @ViewChild('frame') frame!: ElementRef<HTMLIFrameElement>;
     @ViewChild('container') container!: ElementRef<HTMLElement>;
-    public iframeHeight = 400;
+    public iframeHeight = 370;
 
     constructor(
       @Inject(MAT_DIALOG_DATA) public data: { large: string, disclaimerComponent: any },
