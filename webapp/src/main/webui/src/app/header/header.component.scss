@@ -37,6 +37,6 @@
     white-space: nowrap; /* Prevents text from wrapping */
 }
 
-::ng-deep .cdk-overlay-pane {
+::ng-deep .cdk-overlay-pane.ps-disclaimer {
     width: 12em !important;
 }

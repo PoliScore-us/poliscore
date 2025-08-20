@@ -32,6 +32,7 @@ export class DisclaimerComponent {
       maxWidth: '95vw',
       minWidth: '80vw',
       maxHeight: '90vh',
+      panelClass: 'ps-disclaimer',
       autoFocus: false // (optional: prevents auto-scrolling to the input)
     });
   }

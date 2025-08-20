@@ -1,3 +1,15 @@
+
+@media screen and (max-width: 380px) {
+  ::ng-deep div.cdk-overlay-pane.ps-subscribe {
+    height: 90vh !important;
+  }
+
+  ::ng-deep div.cdk-overlay-pane.ps-subscribe div.mat-mdc-dialog-content {
+	height: 90%;
+	max-height: 90%;
+  }
+}
+
 .popup-donate {
 	position: absolute;
 	height: 3em;

@@ -61,6 +61,8 @@ public class PressInterpretation extends SessionPersistable {
 	
 	protected String author = "";
 	
+	protected String type = "";
+	
 	protected int confidence = -1;
 	
 	protected int sentiment = Integer.MIN_VALUE;

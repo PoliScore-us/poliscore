@@ -1,5 +1,5 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Component, Inject, PLATFORM_ID } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Inject, PLATFORM_ID, ViewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { ConfigService } from '../config.service';
@@ -55,7 +55,9 @@ export class PromoComponent {
     }
 
     clickSubscribe() {
-      this.dialog.open(DisclaimerDialogSubscribeComponent);
+      this.dialog.open(DisclaimerDialogSubscribeComponent, {
+        panelClass: 'ps-subscribe'
+      });
     }
 
     clickContact() {
@@ -146,19 +148,31 @@ export class DisclaimerDialogContactUsComponent {
   standalone: true,
   imports: [CommonModule, MatDialogModule, MatButtonModule],
   template: `
-    <div mat-dialog-content style="overflow: clip;">
-        <iframe width="580" height="450" src="https://2d35a37e.sibforms.com/serve/MUIFAJ3TMSl3wDT5BNTSGDaFYbSOAeQdvBAHVE2HZ_OKOg8Ae1pcgrqBqm19etHlufoptMVUelOaE4lTwdAOk3RsTmr95CDuV3NjsrBEl6YJ_0NmJTGOBkU-fMKQWpVq5A5CEcSNQYrj3NnilVqhnVtROSgy6Mhxjt8gaYUteUCadLxXAtNKQeiLJ1T0AOiXxCgLl_KNg9ezYnOa" frameborder="0" scrolling="auto" allowfullscreen style="display: block;margin-left: auto;margin-right: auto;max-width: 100%;"></iframe>
+    <div #container mat-dialog-content style="overflow: clip;">
+        <iframe #frame width="580" [height]="iframeHeight" src="https://2d35a37e.sibforms.com/serve/MUIFAJ3TMSl3wDT5BNTSGDaFYbSOAeQdvBAHVE2HZ_OKOg8Ae1pcgrqBqm19etHlufoptMVUelOaE4lTwdAOk3RsTmr95CDuV3NjsrBEl6YJ_0NmJTGOBkU-fMKQWpVq5A5CEcSNQYrj3NnilVqhnVtROSgy6Mhxjt8gaYUteUCadLxXAtNKQeiLJ1T0AOiXxCgLl_KNg9ezYnOa" frameborder="0" scrolling="auto" allowfullscreen style="display: block;margin-left: auto;margin-right: auto;max-width: 100%;"></iframe>
     </div>
     <div mat-dialog-actions align="center">
       <button mat-button (click)="onClose()">Close</button>
     </div>
   `,
 })
-export class DisclaimerDialogSubscribeComponent {
+export class DisclaimerDialogSubscribeComponent implements AfterViewInit {
+    @ViewChild('frame') frame!: ElementRef<HTMLIFrameElement>;
+    @ViewChild('container') container!: ElementRef<HTMLElement>;
+    public iframeHeight = 400;
+
     constructor(
       @Inject(MAT_DIALOG_DATA) public data: { large: string, disclaimerComponent: any },
       public dialogRef: MatDialogRef<DisclaimerDialogSubscribeComponent>
     ) {}
+
+    ngAfterViewInit() {
+      const w = Math.min(580, this.container.nativeElement.clientWidth);
+      const max = Math.floor(window.innerHeight * 0.9); // keep within viewport
+
+      if (w <= 360)
+        this.iframeHeight = 800;
+    }
   
     onClose(): void {
       this.dialogRef.close();
