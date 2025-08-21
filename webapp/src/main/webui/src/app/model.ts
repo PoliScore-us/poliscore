@@ -40,7 +40,9 @@ export interface BillInterpretation {
 }
 
 export interface PressInterpretation {
+  type: string;
   sentiment: number;
+  sentimentText: string;
   id: string;
   genArticleTitle: string;
   shortExplain: string;

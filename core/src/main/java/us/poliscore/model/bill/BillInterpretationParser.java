@@ -239,9 +239,10 @@ public class BillInterpretationParser {
 		val author = values[1];
 		val title = values[2];
 		val sentiment = parseSentiment(values[3]);
-		val shortExplain = values[4];
-		val longExplain = values[5];
-		val type = values[6];
+		val sentimentText = values[4];
+		val shortExplain = values[5];
+		val longExplain = values[6];
+		val type = values[7];
 		
 		val origin = new InterpretationOrigin(url, title);
 		origin.validate(interp.getBill().getOfficialUrl());
@@ -255,6 +256,7 @@ public class BillInterpretationParser {
 		pi.setAuthor(author);
 		pi.setGenArticleTitle(title);
 		pi.setSentiment(sentiment);
+		pi.setSentimentText(sentimentText);
 		pi.setShortExplain(shortExplain);
 		pi.setLongExplain(longExplain);
 		pi.setType(type);

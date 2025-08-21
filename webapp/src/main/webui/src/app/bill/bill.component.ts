@@ -328,8 +328,13 @@ export class BillComponent implements OnInit {
 
     return gradeForStats(interp?.issueStats!);
   }
-  // gradeForPressInterp(interp: PressInterpretation) { return interp!.sentiment; }
-  gradeForPressInterp(interp: PressInterpretation) { return interp!.sentiment >= 10 ? "Positive" : (interp!.sentiment < 0 ? "Negative" : "Mixed") }
+  gradeForPressInterp(interp: PressInterpretation) {
+    if (interp!.sentimentText && interp!.sentimentText.length > 0)
+      return interp.sentimentText;
+    else
+      return interp!.sentiment >= 10 ? "Positive" : (interp!.sentiment < 0 ? "Negative" : "Neutral")
+  }
+  // gradeForPressInterp(interp: PressInterpretation) { return interp!.sentiment >= 10 ? "Positive" : (interp!.sentiment < 0 ? "Negative" : "Mixed") }
 
   colorForGrade(grade: string): string { return colorForGrade(this.gradeForBill()); }
 
@@ -362,9 +367,29 @@ export class BillComponent implements OnInit {
     return "Cosponsor" + plural + ":\n\n" + this.bill?.cosponsors.map(s => "- <a href='" + this.config.legislatorIdToAbsolutePath(s.legislatorId) + "'>" + s.name.official_full + " (" + s.party.substring(0,1) + ")" + "</a>").join("\n");
   }
 
+  getSortedPressInterps(): PressInterpretation[] {
+    if (!this.bill?.interpretation?.pressInterps) return [];
+
+    const interps = [...this.bill.interpretation.pressInterps];
+
+    // If at least one has a type, sort by type
+    if (interps.some(pi => pi.type !== undefined && pi.type !== null)) {
+      return interps.sort((a, b) => {
+        const at = a.type ?? "";
+        const bt = b.type ?? "";
+        return at.localeCompare(bt);
+      });
+    }
+
+    // Otherwise, sort by sentiment (descending)
+    return interps.sort((a, b) => (b.sentiment ?? 0) - (a.sentiment ?? 0));
+  }
+
   getDisplayedColumns(): string[] {
     if (isPlatformBrowser(this._platformId) && window.innerWidth < 480) {
       return ['author', 'title', 'grade'];
+    } else if (this.bill!.interpretation!.pressInterps!.findIndex(pi => pi.type != undefined && pi.type.length > 0) != -1) {
+      return ['type', 'author', 'title', 'grade', "shortReport"];
     } else {
       return ['author', 'title', 'grade', "shortReport"];
     }

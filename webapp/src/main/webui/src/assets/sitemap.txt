@@ -8352,10 +8352,13 @@ https://poliscore.us/2026/bill/hr/5002
 https://poliscore.us/2026/bill/hr/5003
 https://poliscore.us/2026/bill/hr/5004
 https://poliscore.us/2026/bill/hr/5005
+https://poliscore.us/2026/bill/hr/5010
+https://poliscore.us/2026/bill/hr/5011
 https://poliscore.us/2026/bill/hr/5012
 https://poliscore.us/2026/bill/hr/5006
 https://poliscore.us/2026/bill/hr/5007
 https://poliscore.us/2026/bill/hr/5008
+https://poliscore.us/2026/bill/hr/5009
 https://poliscore.us/2026/bill/hr/4992
 https://poliscore.us/2026/bill/hr/4993
 https://poliscore.us/2026/bill/hr/4994

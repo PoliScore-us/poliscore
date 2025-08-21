@@ -67,6 +67,8 @@ public class PressInterpretation extends SessionPersistable {
 	
 	protected int sentiment = Integer.MIN_VALUE;
 	
+	protected String sentimentText;
+	
 	protected boolean noInterp = true;
 	
 	@NonNull
