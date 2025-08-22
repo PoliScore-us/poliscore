@@ -6664,6 +6664,7 @@ https://poliscore.us/2026/bill/hr/3955
 https://poliscore.us/2026/bill/hr/3956
 https://poliscore.us/2026/bill/hr/3957
 https://poliscore.us/2026/bill/hr/3970
+https://poliscore.us/2026/bill/hr/3971
 https://poliscore.us/2026/bill/hr/3969
 https://poliscore.us/2026/bill/hr/3961
 https://poliscore.us/2026/bill/hr/3962
@@ -7042,6 +7043,7 @@ https://poliscore.us/2026/bill/hr/4194
 https://poliscore.us/2026/bill/hr/4151
 https://poliscore.us/2026/bill/hr/4152
 https://poliscore.us/2026/bill/hr/4153
+https://poliscore.us/2026/bill/hr/4154
 https://poliscore.us/2026/bill/hr/4155
 https://poliscore.us/2026/bill/hr/4156
 https://poliscore.us/2026/bill/hr/4157
