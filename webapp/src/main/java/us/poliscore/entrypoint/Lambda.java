@@ -262,22 +262,30 @@ public class Lambda {
     	String location = null;
     	Integer year = _year == null ? LocalDate.now().getYear() : _year;
     	LegislativeNamespace namespace = StringUtils.isEmpty(_namespace) ? LegislativeNamespace.US_CONGRESS : LegislativeNamespace.of(_namespace);
+    	Boolean ascending = null;
     	
-    	if (StringUtils.isNotBlank(state)) {
-    		location = state.toUpperCase();
+    	String index;
+    	if (namespace.equals(LegislativeNamespace.US_CONGRESS)) {
+    		if (StringUtils.isNotBlank(state)) {
+        		location = state.toUpperCase();
+        	} else {
+    	    	try {
+    		    	val sourceIp = event.getRequestContext().getHttp().getSourceIp();
+    		    	location = ipService.locateIp(sourceIp).orElse(null);
+    	    	}
+    	    	catch(Exception e) {
+    	    		Log.error(e);
+    	    	}
+        	}
+    		
+    		index = (location == null ? null : Persistable.OBJECT_BY_LOCATION_INDEX);
     	} else {
-	    	try {
-		    	val sourceIp = event.getRequestContext().getHttp().getSourceIp();
-		    	location = ipService.locateIp(sourceIp).orElse(null);
-	    	}
-	    	catch(Exception e) {
-	    		Log.error(e);
-	    	}
+    		index = Persistable.OBJECT_BY_RATING_ABS_INDEX;
+    		location = null;
+    		ascending = false;
     	}
     	
-    	String index = (location == null ? null : Persistable.OBJECT_BY_LOCATION_INDEX);
-    	
-    	val legs = getLegislators(null, index, null, null, location, year, namespace.getNamespace());
+    	val legs = getLegislators(null, index, ascending, null, location, year, namespace.getNamespace());
     	
     	return new LegislatorPageData(location, legs, getAllLegs());
     }
