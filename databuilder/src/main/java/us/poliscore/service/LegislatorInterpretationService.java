@@ -91,6 +91,9 @@ Your written response for this research section should consist of only a compact
 	@Inject
 	private DynamoDbPersistenceService ddb;
 	
+	@Inject
+	private GovernmentDataService data;
+	
 //	public LegislatorInterpretation getOrCreate(String legislatorId)
 //	{
 //		val cached = s3.get(legislatorId.replaceFirst(Legislator.ID_CLASS_PREFIX, LegislatorInterpretation.ID_CLASS_PREFIX), LegislatorInterpretation.class);
@@ -216,6 +219,7 @@ Your written response for this research section should consist of only a compact
 	}
 	
 	public DoubleIssueStats calculateAgregateInteractionStats(Legislator leg) {
+		val dataset = data.getDataset(leg.getId());
 		DoubleIssueStats stats = new DoubleIssueStats();
 		
 		for (val interact : getInteractionsForInterpretation(leg))
@@ -228,6 +232,7 @@ Your written response for this research section should consist of only a compact
 		}
 		
 		stats = stats.divideByTotalSummed();
+		stats = stats.multiply(dataset.getConfig().getMultiplier());
 		return stats;
 	}
 	

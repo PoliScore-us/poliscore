@@ -80,7 +80,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		var cached = legiscan.cacheDataset(state, ref.getYear());
 		var session = buildSession(cached.getDataset().getSessionId(), cached.getDataset().getState(), cached.getDataset().getYearStart(), cached.getDataset().getYearEnd());
 		
-		PoliscoreDataset dataset = new PoliscoreDataset(session);
+		PoliscoreDataset dataset = new PoliscoreDataset(session, ref);
 		
 		for (var person : cached.getPeople().values()) {
 			importLegislator(person, dataset);

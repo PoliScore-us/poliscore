@@ -248,9 +248,9 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	
 	@SneakyThrows
 	public <T extends Persistable> void clearExistsOptimize(Class<T> clazz, String sessionKey) {
-		val idClassPrefix = Persistable.getClassStorageBucket(clazz, sessionKey);
+		val storageBucket = Persistable.getClassStorageBucket(clazz, sessionKey);
 		
-		objectsInBucket.remove(idClassPrefix);
+		objectsInBucket.remove(storageBucket);
 	}
 	
 	@SneakyThrows

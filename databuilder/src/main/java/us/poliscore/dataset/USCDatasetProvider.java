@@ -71,7 +71,7 @@ public class USCDatasetProvider implements DatasetProvider {
 	public PoliscoreDataset importDataset(DeploymentConfig ref) {
 		val cses = CongressionalSession.fromYear(ref.getYear());
 		LegislativeSession session = new LegislativeSession(cses.getStartDate(), cses.getEndDate(), String.valueOf(cses.getNumber()), LegislativeNamespace.US_CONGRESS);
-		PoliscoreDataset dataset = new PoliscoreDataset(session);
+		PoliscoreDataset dataset = new PoliscoreDataset(session, ref);
 		
 		updateUscLegislators();
 		importUSCLegislators(dataset);

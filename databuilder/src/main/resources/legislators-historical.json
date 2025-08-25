@@ -282079,8 +282079,8 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1913-04-07",
-        "end": "1913-12-31",
+        "start": "1913-01-06",
+        "end": "1913-01-29",
         "how": "appointment",
         "state": "AR",
         "class": 2,
@@ -282442,8 +282442,8 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1913-04-07",
-        "end": "1913-12-31",
+        "start": "1913-01-29",
+        "end": "1913-03-03",
         "state": "AR",
         "class": 2,
         "party": "Democrat"
@@ -342288,7 +342288,7 @@
       },
       {
         "type": "sen",
-        "start": "1913-04-07",
+        "start": "1913-03-10",
         "end": "1919-03-03",
         "state": "AR",
         "class": 2,
@@ -342296,7 +342296,7 @@
       },
       {
         "type": "sen",
-        "start": "1919-05-19",
+        "start": "1919-03-04",
         "end": "1925-03-03",
         "state": "AR",
         "class": 2,
@@ -342304,7 +342304,7 @@
       },
       {
         "type": "sen",
-        "start": "1925-12-07",
+        "start": "1925-03-04",
         "end": "1931-03-03",
         "state": "AR",
         "class": 2,
@@ -342312,8 +342312,16 @@
       },
       {
         "type": "sen",
-        "start": "1931-12-07",
-        "end": "1937-01-03",
+        "start": "1931-12-09",
+        "end": "1936-06-20",
+        "state": "AR",
+        "class": 2,
+        "party": "Democrat"
+      },
+      {
+        "type": "sen",
+        "start": "1937-01-05",
+        "end": "1937-07-14",
         "state": "AR",
         "class": 2,
         "party": "Democrat"
@@ -362584,9 +362592,17 @@
         "party": "Democrat"
       },
       {
+        "type": "rep",
+        "start": "1937-01-03",
+        "end": "1937-11-14",
+        "state": "AR",
+        "district": 2,
+        "party": "Democrat"
+      },
+      {
         "type": "sen",
-        "start": "1937-01-05",
-        "end": "1941-12-31",
+        "start": "1937-11-15",
+        "end": "1941-03-31",
         "state": "AR",
         "class": 2,
         "party": "Democrat"
@@ -504087,7 +504103,7 @@
       {
         "type": "sen",
         "start": "1989-01-03",
-        "end": "1993-12-31",
+        "end": "1993-01-20",
         "state": "TX",
         "class": 1,
         "party": "Democrat"
@@ -521860,7 +521876,7 @@
       {
         "type": "sen",
         "start": "1993-01-21",
-        "end": "1993-12-31",
+        "end": "1993-06-14",
         "state": "TX",
         "class": 1,
         "party": "Democrat",
@@ -568108,7 +568124,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1993-01-05",
+        "start": "1993-06-14",
         "end": "1995-01-03",
         "state": "TX",
         "class": 1,
