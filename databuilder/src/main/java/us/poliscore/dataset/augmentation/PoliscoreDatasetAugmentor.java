@@ -21,6 +21,7 @@ import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.ai.OpenAIModel;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.images.StateLegislatorImageFetcher;
 import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.model.LegislativeChamber;
@@ -86,7 +87,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 		}
 	}
 	
-	public void fetchData(PoliscoreDataset dataset) {
+	public void fetchData(PoliscoreDatasetIF dataset) {
 		fetchOfficalUrls(dataset);
 		fetchFromOpenStates(dataset);
 		
@@ -94,8 +95,8 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 //		openAiDeepResearch(dataset);
 	}
 	
-	public void fetchFromOpenStates(PoliscoreDataset dataset) {
-		if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS)) return;
+	public void fetchFromOpenStates(PoliscoreDatasetIF dataset) {
+		if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) return;
 		
 		int success = 0;
 		int skipped = 0;
@@ -146,8 +147,8 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 		Log.info("Successfully fetched data for " + success + " legislators. Skipped " + skipped);
 	}
 	
-	public void fetchOfficalUrls(PoliscoreDataset dataset) {
-		if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS)) return;
+	public void fetchOfficalUrls(PoliscoreDatasetIF dataset) {
+		if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) return;
 		
 		int success = 0;
 		int skipped = 0;
@@ -184,7 +185,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 		Log.info("Successfully fetched data for " + success + " legislators. Skipped " + skipped);
 	}
 	
-	public boolean fetchOfficialUrl(Legislator leg, PoliscoreDataset dataset) {
+	public boolean fetchOfficialUrl(Legislator leg, PoliscoreDatasetIF dataset) {
 		val existing = s3.get(PoliscoreScrapedLegislatorData.generateId(leg.getId()), PoliscoreScrapedLegislatorData.class);
 		if (existing.isPresent() && existing.get().getOfficialUrl() != null) return false;
 		
@@ -214,8 +215,8 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	}
 	
 	@SneakyThrows
-	public void openAiDeepResearch(PoliscoreDataset dataset) {
-		if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS)) return;
+	public void openAiDeepResearch(PoliscoreDatasetIF dataset) {
+		if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) return;
 		
 	    val legs = dataset.query(Legislator.class).stream()
 	            .filter(l -> l.getBirthday() == null)
@@ -229,7 +230,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	    Log.info("About to deep research birthdays for " + legs.size() + " legislators...");
 
 	    StringBuilder sb = new StringBuilder();
-	    sb.append(dataset.getSession().getNamespace().getDescription() + " State Legislature\n");
+	    sb.append(dataset.getNamespace().getDescription() + " State Legislature\n");
 	    sb.append("List of legislators:\n");
 
 	    for (Legislator leg : legs) {
@@ -288,7 +289,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	}
 	
 	@SneakyThrows
-	public PoliscoreScrapedLegislatorData scrapeDataFromOfficialUrl(String officialUrl, Legislator leg, PoliscoreDataset dataset) {
+	public PoliscoreScrapedLegislatorData scrapeDataFromOfficialUrl(String officialUrl, Legislator leg, PoliscoreDatasetIF dataset) {
 	    // Reuse the exact SSL setup as before
 	    KeyStore keyStore = KeyStore.getInstance("PKCS12");
 	    keyStore.load(StateLegislatorImageFetcher.class.getResourceAsStream("keystore"), "changeit".toCharArray());
@@ -320,11 +321,11 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	    return data;
 	}
 	
-	public static String guessOfficialUrl(Legislator leg, PoliscoreDataset dataset, String altFirstName) {
-	    if (leg == null || dataset == null || dataset.getSession() == null || leg.getName() == null || leg.getTerms().isEmpty())
+	public static String guessOfficialUrl(Legislator leg, PoliscoreDatasetIF dataset, String altFirstName) {
+	    if (leg == null || dataset == null || leg.getName() == null || leg.getTerms().isEmpty())
 	        return null;
 
-	    LegislativeNamespace ns = dataset.getSession().getNamespace();
+	    LegislativeNamespace ns = dataset.getNamespace();
 	    Legislator.LegislatorName name = leg.getName();
 	    LegislativeTerm lastTerm = leg.getTerms().last();
 
@@ -337,7 +338,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	    String last = name.getLast() == null ? "" : name.getLast().toLowerCase().replace(" ", "-");
 	    String id = leg.getId();
 	    String code = id != null ? id.substring(id.lastIndexOf("/") + 1) : "";
-	    int year = dataset.getSession().getStartDate().getYear();
+	    int year = dataset.getStartYear();
 
 	    if (ns == LegislativeNamespace.US_CONGRESS) {
 	        return "https://www.congress.gov/member/" + first + "-" + last + "/" + code;

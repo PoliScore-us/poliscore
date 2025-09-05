@@ -37,6 +37,7 @@ import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import us.poliscore.PoliscoreDataset;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.service.GovernmentDataService;
 
@@ -57,7 +58,7 @@ private static final String BUCKET_NAME = "poliscore-prod-public";
 	}
 	
 	@SneakyThrows
-	public void syncS3LegislatorImages(PoliscoreDataset dataset)
+	public void syncS3LegislatorImages(PoliscoreDatasetIF dataset)
 	{
 		int success = 0;
 		int skipped = 0;
@@ -91,7 +92,7 @@ private static final String BUCKET_NAME = "poliscore-prod-public";
 		Log.info("Successfully imported " + success + " images. Skipped " + skipped);
 	}
 	
-	protected boolean syncS3LegislatorImages(Legislator leg, PoliscoreDataset dataset) {
+	protected boolean syncS3LegislatorImages(Legislator leg, PoliscoreDatasetIF dataset) {
 		Optional<byte[]> bytes = fetchImage(leg, dataset);
 		
 		if (bytes.isEmpty()) return false;
@@ -101,7 +102,7 @@ private static final String BUCKET_NAME = "poliscore-prod-public";
 		return true;
 	}
 	
-	protected abstract Optional<byte[]> fetchImage(Legislator leg, PoliscoreDataset dataset);
+	protected abstract Optional<byte[]> fetchImage(Legislator leg, PoliscoreDatasetIF dataset);
 	
 	@SneakyThrows
 	protected CloseableHttpClient getHttpClient() {

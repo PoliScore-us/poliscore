@@ -15,6 +15,7 @@ import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.Environment;
 import us.poliscore.PoliscoreDataset;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
@@ -30,15 +31,15 @@ public class WebappRoutesGenerator implements QuarkusApplication {
 	@Inject
 	private LocalCachedS3Service s3;
 	
-	public void process(PoliscoreDataset dataset) throws IOException
+	public void process(PoliscoreDatasetIF dataset) throws IOException
 	{
 		generateRoutes(dataset);
 		
-		Log.info("Successfully generated webapp routes for session " + dataset.getSession().getDescription());
+		Log.info("Successfully generated webapp routes for dataset " + dataset.getDescription());
 	}
 	
 	@SneakyThrows
-	private void generateRoutes(PoliscoreDataset dataset) {
+	private void generateRoutes(PoliscoreDatasetIF dataset) {
 		final File out = new File(Environment.getDeployedPath(), WebappDataGenerator.WEBAPP_PATH + "/src/main/webui/routes.txt");
 		val routes = new ArrayList<String>();
 		
@@ -65,7 +66,7 @@ public class WebappRoutesGenerator implements QuarkusApplication {
 			.filter(b -> // b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION) &&
 					s3.exists(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class))
 			.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
-			.forEach(b -> routes.add("/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
+			.forEach(b -> routes.add("/" + b.getWebappUrlPath()));
 		
 		FileUtils.write(out, String.join("\n", routes), "UTF-8");
 	}
@@ -86,7 +87,7 @@ public class WebappRoutesGenerator implements QuarkusApplication {
 	    int year = Integer.parseInt(args[1]);
 
 	    data.importAllDatasets();
-	    PoliscoreDataset dataset = data.getDataset(LegislativeNamespace.of(namespace), year);
+	    PoliscoreDatasetIF dataset = data.getDataset(LegislativeNamespace.of(namespace), year);
 	    
 	    process(dataset);
 

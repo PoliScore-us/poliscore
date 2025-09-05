@@ -28,6 +28,7 @@ import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.IssueStats;
 import us.poliscore.model.LegislativeNamespace;
@@ -69,7 +70,7 @@ public class PartyInterpretationService {
 	
 	private HashMap<Party, Map<TrackedIssue, PriorityQueue<PartyBillInteraction>>> worstBillsByIssue;
 	
-	public List<File> process(List<PoliscoreDataset> buildDatasets) throws IOException
+	public List<File> process(List<PoliscoreDatasetIF> buildDatasets) throws IOException
 	{
 		for (val dataset : buildDatasets) {
 			val hasIndependent = dataset.hasIndependentPartyMembers();
@@ -89,15 +90,15 @@ public class PartyInterpretationService {
 		return writtenFiles;
 	}
 	
-	public SessionInterpretation recalculateStats(PoliscoreDataset dataset) {
+	public SessionInterpretation recalculateStats(PoliscoreDatasetIF dataset) {
 		return recalculateStats(dataset, dataset.hasIndependentPartyMembers());
 	}
 	
-	public SessionInterpretation recalculateStats(PoliscoreDataset dataset, boolean hasIndependent)
+	public SessionInterpretation recalculateStats(PoliscoreDatasetIF dataset, boolean hasIndependent)
 	{
 		// Initialize datastructures //
 		val sessionStats = new SessionInterpretation();
-		sessionStats.setSession(dataset.getSession());
+		sessionStats.setSession(dataset.getRegularSession());
 		
 		val mostImpactfulBills = new HashMap<Party, PriorityQueue<PartyBillInteraction>>();
 		val leastImpactfulBills = new HashMap<Party, PriorityQueue<PartyBillInteraction>>();
@@ -225,7 +226,7 @@ public class PartyInterpretationService {
 		return sessionStats;
 	}
 	
-	private void createRequest(PoliscoreDataset dataset, PartyInterpretation interp)
+	private void createRequest(PoliscoreDatasetIF dataset, PartyInterpretation interp)
 	{
 		List<String> msg = new ArrayList<String>();
 		
@@ -258,7 +259,7 @@ public class PartyInterpretationService {
 				msg.add(StringUtils.join(queueTake(10, worstBillsByIssue.get(interp.getParty()).get(issue)).stream().map(i -> i.getShortExplainForInterp()).toArray(), "\n"));
 		}
 		
-		createRequest(dataset.getSession().getKey(), interp.getParty(), PartyInterpretationService.getAiPrompt(dataset.getSession(), interp.getParty(), interp.getStats()), StringUtils.join(msg, "\n"));
+		createRequest(dataset.getRegularSession().getKey(), interp.getParty(), PartyInterpretationService.getAiPrompt(dataset.getRegularSession(), interp.getParty(), interp.getStats()), StringUtils.join(msg, "\n"));
 	}
 	
 	private List<PartyBillInteraction> queueTake(int amt, PriorityQueue<PartyBillInteraction> queue)

@@ -29,23 +29,23 @@ public class PoliscoreDatasetProvider implements DatasetProvider {
 	}
 	
 	@Override
-	public PoliscoreDataset importDataset(DeploymentConfig ref) {
+	public PoliscoreDatasetIF importDataset(DeploymentConfig ref) {
 		return getProvider(ref.getNamespace()).importDataset(ref);
 	}
 
 	@Override
-	public LegislativeSession getPreviousSession(LegislativeSession current) {
-		return getProvider(current.getNamespace()).getPreviousSession(current);
+	public LegislativeSession getPreviousRegularSession(LegislativeSession current) {
+		return getProvider(current.getNamespace()).getPreviousRegularSession(current);
 	}
 
 	@Override
-	public void syncS3LegislatorImages(PoliscoreDataset dataset) {
-		getProvider(dataset.getSession().getNamespace()).syncS3LegislatorImages(dataset);
+	public void syncS3LegislatorImages(PoliscoreDatasetIF dataset) {
+		getProvider(dataset.getNamespace()).syncS3LegislatorImages(dataset);
 	}
 
 	@Override
-	public void syncS3BillText(PoliscoreDataset dataset) {
-		getProvider(dataset.getSession().getNamespace()).syncS3BillText(dataset);
+	public void syncS3BillText(PoliscoreDatasetIF dataset) {
+		getProvider(dataset.getNamespace()).syncS3BillText(dataset);
 	}
 
 }

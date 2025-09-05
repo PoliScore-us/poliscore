@@ -2,7 +2,6 @@ package us.poliscore.entrypoint.batch;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -29,7 +28,7 @@ import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
-import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillSlice;
@@ -39,7 +38,6 @@ import us.poliscore.parsing.BillSlicer;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
-import us.poliscore.service.OpenAIService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 @QuarkusMain(name="BatchBillRequestGenerator")
@@ -59,7 +57,9 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 //		    "BIL/us/co/2173/sb/11","BIL/us/co/2173/sb/77","BIL/us/co/2173/sb/160"
 //		);
 	
-	public static final int MAX_BILL_PROCESS = 100; // Denotes the max bills to process in a given session. -1 for infinite
+	public static final int MAX_BILL_PROCESS = 300; // Denotes the max bills to process in a given session. -1 for infinite
+	
+	
 	
 	
 	
@@ -102,7 +102,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		return process(data.getBuildDatasets(), true, true);
 	}
 	
-	public List<File> process(List<PoliscoreDataset> buildDatasets, boolean enableWebSearch, boolean isSecondFetch) throws IOException
+	public List<File> process(List<PoliscoreDatasetIF> buildDatasets, boolean enableWebSearch, boolean isSecondFetch) throws IOException
 	{
 		tokenLen = 0;
 		totalRequests = 0;
@@ -116,8 +116,8 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		int block = 1;
 		
 		for(val dataset : buildDatasets) {
-			s3.optimizeExists(BillInterpretation.class, dataset.getSession().getKey());
-			s3.optimizeExists(BillText.class, dataset.getSession().getKey());
+			dataset.optimizeExists(s3, BillInterpretation.class);
+			dataset.optimizeExists(s3, BillText.class);
 		}
 		
 		for(val dataset : buildDatasets)
@@ -130,7 +130,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		return writtenFiles;
 	}
 
-	private void processDataset(PoliscoreDataset dataset, boolean enableWebSearch, boolean isSecondFetch, int block) throws IOException {
+	private void processDataset(PoliscoreDatasetIF dataset, boolean enableWebSearch, boolean isSecondFetch, int block) throws IOException {
 		if (MAX_BILL_PROCESS != -1 && isSecondFetch) return;
 		if (specificFetch != null && isSecondFetch) return;
 		
@@ -140,11 +140,12 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 				.filter(b -> specificFetch == null || specificFetch.contains(b.getId()))
 				.filter(b -> (!CHECK_S3_EXISTS || !billInterpreter.isInterpreted(b.getId()) || (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))))
 //				.filter(b -> 
+//				!billInterpreter.isInterpreted(b.getId()) || (b.getSessionCode().equals("2173") &&
 //				billInterpreter.isInterpreted(b.getId())
 ////						&& s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getRating() < 0
-//						 && s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getMetadata().getModel().toLowerCase().equals("gpt-4o")
+//						 && !s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getMetadata().getModel().toLowerCase().equals("gpt-5")
 ////								&& b.getStatus().getProgress() == 1.0f
-//								)
+//								))
 				.filter(b -> s3.exists(BillText.generateId(b.getId()), BillText.class))
 				.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed());
 		
@@ -153,7 +154,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		
 		val requestBillsList = requestBills.toList();
 		
-		Log.info("Processing " + requestBillsList.size() + " bills for request generation.");
+		Log.info("Processing " + requestBillsList.size() + " bills for request generation on dataset " + dataset.getDescription());
 		
 		for (Bill b : requestBillsList) {
 			

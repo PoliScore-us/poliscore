@@ -424,4 +424,27 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 	public <T extends Persistable> boolean exists(String id, Class<T> clazz) {
 		return get(id, clazz).isPresent();
 	}
+
+	@Override
+	public <T extends Persistable> long count(Class<T> clazz) {
+	    @SuppressWarnings("unchecked")
+	    final DynamoDbTable<T> table = (DynamoDbTable<T>) ddbe.table(TABLE_NAME, getSchema(clazz));
+
+	    final software.amazon.awssdk.enhanced.dynamodb.Expression expr =
+	            software.amazon.awssdk.enhanced.dynamodb.Expression.builder()
+	                    .expression("page = :p")
+	                    .putExpressionValue(":p", AttributeValue.fromS(HEAD_PAGE))
+	                    .build();
+
+	    final software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest req =
+	            software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest.builder()
+	                    .filterExpression(expr)
+	                    .build();
+
+	    long total = 0L;
+	    for (var page : table.scan(req)) {
+	        total += page.items().size();
+	    }
+	    return total;
+	}
 }

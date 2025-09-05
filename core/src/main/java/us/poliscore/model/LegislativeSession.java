@@ -3,6 +3,8 @@ package us.poliscore.model;
 import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonProperty.Access;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
@@ -13,7 +15,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
-import us.poliscore.model.LegislativeNamespace.*;
+import us.poliscore.model.LegislativeNamespace.NamespaceConverter;
+import us.poliscore.model.LegislativeNamespace.NamespaceDeserializer;
+import us.poliscore.model.LegislativeNamespace.NamespaceSerializer;
 
 @Data
 @AllArgsConstructor
@@ -21,6 +25,8 @@ import us.poliscore.model.LegislativeNamespace.*;
 @NoArgsConstructor
 @DynamoDbBean
 public class LegislativeSession {
+	
+	protected boolean regular = true;
 	
 	protected LocalDate startDate;
 	
@@ -47,6 +53,7 @@ public class LegislativeSession {
 		return startDate.getYear() <= year && endDate.getYear() >= year; 
 	}
 	
+	@JsonProperty(access = Access.READ_ONLY)
 	public String getDescription() {
 		return namespace.getDescription() + " " + startDate.getYear() + "-" + endDate.getYear() + " (" + code + ")";
 	}

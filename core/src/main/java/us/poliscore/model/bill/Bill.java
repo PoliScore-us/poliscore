@@ -32,6 +32,7 @@ import us.poliscore.model.SessionPersistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislatorName;
+import us.poliscore.service.SessionInfoService;
 
 @Data
 @EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
@@ -123,11 +124,23 @@ public class Bill extends SessionPersistable {
 		return name;
 	}
 	
+	@JsonIgnore
+	@DynamoDbIgnore
+	public String getWebappUrlPath() {
+		return "bill/" + (getNamespace().equals(LegislativeNamespace.US_CONGRESS) ? "" : getSessionCode() + "/") + getType().toLowerCase() + "/" + getNumber();
+	}
+	
 	public boolean isIntroducedInSession(LegislativeSession session) {
 		return session.getCode().equals(getSessionCode()) && this.getNamespace().equals(session.getNamespace());
 	}
 	
-	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX, Persistable.OBJECT_BY_RATING_ABS_INDEX, Persistable.OBJECT_BY_IMPACT_INDEX, OBJECT_BY_IMPACT_ABS_INDEX, OBJECT_BY_HOT_INDEX }) public String getStorageBucket() { return super.getStorageBucket(); }
+	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX, Persistable.OBJECT_BY_RATING_ABS_INDEX, Persistable.OBJECT_BY_IMPACT_INDEX, OBJECT_BY_IMPACT_ABS_INDEX, OBJECT_BY_HOT_INDEX }) public String getStorageBucket() {
+		if (getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+			return this.getId().substring(0, StringUtils.ordinalIndexOf(getId(), "/", 4));
+		else {
+			return getNamespace() + "/" + String.valueOf(SessionInfoService.lookupRegularSession(getNamespace(), getSessionCode()).getEndDate().getYear());
+		}
+	}
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 	
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() {

@@ -299,5 +299,34 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	    // private Instant createdAfter;
 	    // private Map<String, String> requiredTags;
 	}
-	
+
+	@Override
+	@SneakyThrows
+	public <T extends Persistable> long count(Class<T> clazz) {
+	    // For S3 storage, objects are partitioned by "storage bucket" prefix
+	    // which is derived from the class and session key. Since we don't have
+	    // a session key here, we count everything under the class’ root prefix.
+	    String storageBucket = Persistable.getClassStorageBucket(clazz, null);
+
+	    long total = 0L;
+	    String continuationToken = null;
+
+	    do {
+	        val builder = ListObjectsV2Request.builder()
+	                .bucket(BUCKET_NAME)
+	                .prefix(storageBucket)
+	                .maxKeys(1000);
+
+	        if (continuationToken != null) {
+	            builder.continuationToken(continuationToken);
+	        }
+
+	        val resp = getClient().listObjectsV2(builder.build());
+	        total += resp.keyCount(); // number of keys returned in this page
+	        continuationToken = resp.nextContinuationToken();
+	    } while (continuationToken != null);
+
+	    return total;
+	}
+
 }

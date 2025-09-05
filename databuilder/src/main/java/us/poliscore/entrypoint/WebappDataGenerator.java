@@ -28,8 +28,10 @@ import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.Environment;
+import us.poliscore.PoliscoreCompositeDataset;
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreUtil;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.bill.Bill;
@@ -46,6 +48,7 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 @QuarkusMain(name="WebappDataGenerator")
 public class WebappDataGenerator implements QuarkusApplication
 {
+	protected static String CORE_PATH = "../../core";
 	
 	protected static String WEBAPP_PATH = "../../webapp";
 	
@@ -68,11 +71,11 @@ public class WebappDataGenerator implements QuarkusApplication
 	
 	public void process() throws IOException
 	{
-		List<PoliscoreDataset> datasets = data.importAllDatasets();
+		List<PoliscoreDatasetIF> datasets = data.importAllDatasets();
 		
 		for (val dataset : datasets) {
-			s3.optimizeExists(BillInterpretation.class, dataset.getSession().getKey());
-			s3.optimizeExists(LegislatorInterpretation.class, dataset.getSession().getKey());
+			dataset.optimizeExists(s3, BillInterpretation.class);
+			dataset.optimizeExists(s3, LegislatorInterpretation.class);
 		}
 		
 		generateSiteMap(datasets);
@@ -81,22 +84,28 @@ public class WebappDataGenerator implements QuarkusApplication
 		writeSessionInfo(datasets);
 		
 		Log.info("Webapp Data Generator complete.");
-	}
+	} 
 	
 	@SneakyThrows
-	private void writeSessionInfo(List<PoliscoreDataset> datasets) {
+	private void writeSessionInfo(List<PoliscoreDatasetIF> datasets) {
 		val result = new ArrayList<LegislativeSession>();
 		
 		for (var dataset : datasets) {
-			result.add(dataset.getSession());
+			if (dataset instanceof PoliscoreCompositeDataset) {
+				for (var dataset2 : ((PoliscoreCompositeDataset)dataset).getDatasets()) {
+					result.add(((PoliscoreDataset)dataset2).getSession());
+				}
+			} else {
+				result.add(((PoliscoreDataset)dataset).getSession());
+			}
 		}
 		
-		FileUtils.write(new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/resources/sessions.json"), PoliscoreUtil.getObjectMapper().writeValueAsString(result), "UTF-8");
+		FileUtils.write(new File(Environment.getDeployedPath(), CORE_PATH + "/src/main/resources/sessions.json"), PoliscoreUtil.getObjectMapper().writeValueAsString(result), "UTF-8");
 		FileUtils.write(new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/webui/src/assets/sessions.json"), PoliscoreUtil.getObjectMapper().writeValueAsString(result), "UTF-8");
 	}
 	
 	@SneakyThrows
-	private void generateSiteMap(List<PoliscoreDataset> datasets) {
+	private void generateSiteMap(List<PoliscoreDatasetIF> datasets) {
 		final String url = "https://poliscore.us";
 		final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/webui/src/assets/sitemap.txt");
 		val routes = new ArrayList<String>();
@@ -106,14 +115,14 @@ public class WebappDataGenerator implements QuarkusApplication
 		for (var dataset : datasets)
 		{
 //			int lastYearOfSession = 1789 + (congress.getNumber() * 2) - 1;
-			int lastYearOfSession = dataset.getSession().getEndDate().getYear();
-			if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+			int lastYearOfSession = dataset.getEndYear();
+			if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
 				lastYearOfSession = lastYearOfSession - 1;
 			
 			String prefix = "/" + lastYearOfSession;
-			String state = dataset.getSession().getNamespace().toAbbreviation().toLowerCase().replace("us", "congress");
+			String state = dataset.getNamespace().toAbbreviation().toLowerCase().replace("us", "congress");
 			
-			if (!dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+			if (!dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
 				prefix = prefix + "/" + state;
 			final String finalPrefix = prefix;
 			
@@ -130,7 +139,7 @@ public class WebappDataGenerator implements QuarkusApplication
 			// All legislator routes
 			routes.add(url + prefix + "/legislators");
 			dataset.query(Legislator.class).stream()
-				.filter(l -> l.isMemberOfSession(dataset.getSession())) //  && s3.exists(LegislatorInterpretation.generateId(l.getId(), congress.getNumber()), LegislatorInterpretation.class)
+				.filter(l -> l.isMemberOfSession(dataset.getRegularSession())) //  && s3.exists(LegislatorInterpretation.generateId(l.getId(), congress.getNumber()), LegislatorInterpretation.class)
 				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
 				.forEach(l -> routes.add(url + finalPrefix + "/legislator/" + l.getCode()));
 			
@@ -139,7 +148,7 @@ public class WebappDataGenerator implements QuarkusApplication
 			dataset.query(Bill.class).stream()
 				.filter(b -> s3.exists(getBillInterpId(b), BillInterpretation.class))
 				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
-				.forEach(b -> routes.add(url + finalPrefix + "/bill/" + b.getType().toLowerCase() + "/" + b.getNumber()));
+				.forEach(b -> routes.add(url + finalPrefix + "/" + b.getWebappUrlPath()));
 		}
 		
 		FileUtils.write(out, String.join("\n", routes), "UTF-8");
@@ -154,7 +163,7 @@ public class WebappDataGenerator implements QuarkusApplication
 	}
 	
 	@SneakyThrows
-	public void generateLegislatorWebappIndex(List<PoliscoreDataset> datasets) {
+	public void generateLegislatorWebappIndex(List<PoliscoreDatasetIF> datasets) {
 	    final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/resources/legislators.index");
 	    Map<String, Set<String>> canonToNick = loadNicknameMap(); // canonical → nicknames
 
@@ -208,7 +217,7 @@ public class WebappDataGenerator implements QuarkusApplication
 	}
 	
 	@SneakyThrows
-	public void generateBillWebappIndex(List<PoliscoreDataset> datasets) {
+	public void generateBillWebappIndex(List<PoliscoreDatasetIF> datasets) {
 	    final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/resources/bills.index");
 	    DateTimeFormatter usFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 	    SnowballStemmer stemmer = new englishStemmer();
@@ -216,7 +225,7 @@ public class WebappDataGenerator implements QuarkusApplication
 	    Map<String, List<List<String>>> result = new HashMap<String, List<List<String>>>();
 
 	    for (var dataset : datasets) {
-	    	List<List<String>> datasetList = result.getOrDefault(dataset.getSession().getNamespace().getNamespace(), new ArrayList<List<String>>());
+	    	List<List<String>> datasetList = result.getOrDefault(dataset.getNamespace().getNamespace(), new ArrayList<List<String>>());
 	    	datasetList.addAll(dataset.query(Bill.class).stream()
 		        .filter(b -> //PoliscoreUtil.SUPPORTED_CONGRESSES.stream().anyMatch(s -> b.isIntroducedInSession(s)) &&
 		                     s3.exists(getBillInterpId(b), BillInterpretation.class))
@@ -226,7 +235,7 @@ public class WebappDataGenerator implements QuarkusApplication
 		            String displayName = b.getName();
 		            String normalizedTokens = normalize(displayName, stemmer);
 	
-		            String label = !(dataset.getSession().isOver())
+		            String label = !(dataset.getRegularSession().isOver())
 		                    ? displayName + " (" + b.getType() + " " + b.getNumber() + ")"
 		                    : displayName + " (" + b.getIntroducedDate().format(usFormat) + ")";
 	
@@ -234,7 +243,7 @@ public class WebappDataGenerator implements QuarkusApplication
 		        })
 		        .sorted(Comparator.comparing(b -> b.get(1)))
 		        .toList());
-	    	result.put(dataset.getSession().getNamespace().getNamespace(), datasetList);
+	    	result.put(dataset.getNamespace().getNamespace(), datasetList);
 	    }
 
 	    FileUtils.write(out, PoliscoreUtil.getObjectMapper().writeValueAsString(result), "UTF-8");

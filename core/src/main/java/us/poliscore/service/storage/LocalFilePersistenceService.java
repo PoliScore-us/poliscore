@@ -107,5 +107,20 @@ public class LocalFilePersistenceService implements ObjectStorageServiceIF
 		
 		throw new UnsupportedOperationException();
 	}
+
+	@Override
+	@SneakyThrows
+	public <T extends Persistable> long count(Class<T> clazz) {
+	    // Classes expose where they live via a static ID_CLASS_PREFIX (e.g., "bills", "legislators", etc.)
+	    final String idClassPrefix = (String) clazz.getField("ID_CLASS_PREFIX").get(null);
+	    final File objectStore = getStore(idClassPrefix);
+
+	    if (!objectStore.exists()) {
+	        return 0L;
+	    }
+
+	    // Count all JSON files recursively (ids may create nested directories).
+	    return (long) FileUtils.listFiles(objectStore, new String[]{"json"}, true).size();
+	}
 	
 }

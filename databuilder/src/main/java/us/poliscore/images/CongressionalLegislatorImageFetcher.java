@@ -21,7 +21,7 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.val;
-import us.poliscore.PoliscoreDataset;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.legislator.Legislator;
 
 /**
@@ -68,7 +68,7 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 	
 	@SneakyThrows
 	@Override
-	protected Optional<byte[]> fetchImage(Legislator leg, PoliscoreDataset dataset) {
+	protected Optional<byte[]> fetchImage(Legislator leg, PoliscoreDatasetIF dataset) {
 //		var existingJpg = fetchExistingJpgImage(leg, dataset);
 //		if (existingJpg.isPresent()) return existingJpg;
 		

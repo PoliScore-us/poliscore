@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Period;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -31,6 +30,7 @@ import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.TrackedIssue;
@@ -52,7 +52,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	public static final List<String> specificFetch = null;
 //	public static final List<String> specificFetch = Arrays.asList(
 //			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "C001137"),
-//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "H001100")
+//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "M000355")
 //		);
 	
 //	public static final LocalDateTime OLDER_THAN = specificFetch == null ? Period.ofMonths(1) : null;
@@ -88,7 +88,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	
 	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
-	public List<File> process(List<PoliscoreDataset> buildDatasets) throws IOException
+	public List<File> process(List<PoliscoreDatasetIF> buildDatasets) throws IOException
 	{
 		Log.info("Generating batch request to interpret legislators");
 		
@@ -96,11 +96,10 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		
 		int block = 1;
 		
-//		s3.optimizeExists(LegislatorInterpretation.class);
-		
 //		for (PoliscoreDataset dataset : buildDatasets) {
 		{
-			PoliscoreDataset dataset = data.getDataset(LegislativeNamespace.US_CONGRESS, 2026);
+			PoliscoreDatasetIF dataset = data.getDataset(LegislativeNamespace.US_COLORADO, 2025);
+			dataset.optimizeExists(s3, LegislatorInterpretation.class);
 			processDataset(dataset, true, block);
 		}
 		
@@ -111,15 +110,18 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		return writtenFiles;
 	}
 	
-	private void processDataset(PoliscoreDataset dataset, boolean enableWebSearch, int block) throws IOException {
-		Log.info("Processing legislators for dataset " + dataset.getSession().getDescription());
+	private void processDataset(PoliscoreDatasetIF dataset, boolean enableWebSearch, int block) throws IOException {
+		Log.info("Processing legislators for dataset " + dataset.getDescription());
 		
 		var list = dataset.query(Legislator.class).stream()
 				.filter(l -> specificFetch == null || specificFetch.contains(l.getId()))
 				.filter(l -> l.getInteractions().size() > 0)
-				.filter(l -> !CHECK_S3_EXISTS || !s3.exists(LegislatorInterpretation.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), l.getCode()), LegislatorInterpretation.class))
-				.filter(l -> interpIsOlderThan(l, dataset))
-				.filter(l -> interpHasGrade("D", l, dataset) || interpHasGrade("C", l, dataset))
+//				.filter(l -> !CHECK_S3_EXISTS || !s3.exists(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), l.getCode()), LegislatorInterpretation.class))
+//				.filter(l -> interpIsOlderThan(l, dataset))
+//				.filter(l -> interpHasGrade("D", l, dataset) || interpHasGrade("C", l, dataset))
+				.filter(l -> l.getNamespace().equals(LegislativeNamespace.US_COLORADO)
+						&& s3.exists(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), l.getCode()), LegislatorInterpretation.class)
+						&& !s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), l.getCode()), LegislatorInterpretation.class).get().getMetadata().getModel().toLowerCase().equals("gpt-5"))
 				.filter(l -> hasEnoughInteractions(l, dataset))
 				.sorted(Comparator.comparing(Legislator::getDate).reversed())
 				.toList();
@@ -142,26 +144,26 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		}
 	}
 	
-	private boolean interpHasGrade(String grade, Legislator leg, PoliscoreDataset dataset) {
-		val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
+	private boolean interpHasGrade(String grade, Legislator leg, PoliscoreDatasetIF dataset) {
+		val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
 		if (interpOp.isEmpty()) return true;
 		if (interpOp.get().getIssueStats() == null) return true;
 		
 		return interpOp.get().getIssueStats().getLetterGrade().trim().equalsIgnoreCase(grade.trim());
 	}
 	
-	private boolean interpIsOlderThan(Legislator leg, PoliscoreDataset dataset) {
+	private boolean interpIsOlderThan(Legislator leg, PoliscoreDatasetIF dataset) {
 		if (OLDER_THAN == null) return true;
 		
-		val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
+		val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
 		if (interpOp.isEmpty()) return true;
 		if (interpOp.get().getLastUpdate() == null) return true;
 		
 		return interpOp.get().getLastUpdate().isBefore(OLDER_THAN);
 	}
 	
-	private boolean hasEnoughInteractions(Legislator leg, PoliscoreDataset dataset) {
-		legInterp.backfillInteractionsFromPreviousSession(leg, data.getPreviousSession(dataset.getSession()));
+	private boolean hasEnoughInteractions(Legislator leg, PoliscoreDatasetIF dataset) {
+		legInterp.backfillInteractionsFromPreviousSession(leg, data.getPreviousRegularSession(dataset.getRegularSession()));
 		
 		if (!legInterp.meetsInterpretationPrereqs(leg))
 		{
@@ -173,9 +175,9 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		return true;
 	}
 	
-	protected void interpret(PoliscoreDataset dataset, Legislator leg)
+	protected void interpret(PoliscoreDatasetIF dataset, Legislator leg)
 	{
-		legInterp.updateInteractionsInterp(data.getAllDataset(), leg);
+		legInterp.updateInteractionsInterp(leg);
 		
 		DoubleIssueStats stats = legInterp.calculateAgregateInteractionStats(leg);
 		
@@ -209,7 +211,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		if (includedBills.size() == 0)
 			return;
 		
-		createRequest(LegislatorInterpretation.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), leg.getCode()), LegislatorInterpretationService.getAiPrompt(leg, stats.toIssueStats()), String.join("\n", billMsgs));
+		createRequest(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretationService.getAiPrompt(leg, stats.toIssueStats()), String.join("\n", billMsgs));
 	}
 
 	private void includeBillsByTopIssues(Legislator leg, DoubleIssueStats stats, List<String> billMsgs, Set<String> includedBills, int amount, boolean ascending) {

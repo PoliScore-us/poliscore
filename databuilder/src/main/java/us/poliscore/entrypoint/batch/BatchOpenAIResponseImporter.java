@@ -63,11 +63,11 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 @QuarkusMain(name="BatchOpenAIResponseImporter")
 public class BatchOpenAIResponseImporter implements QuarkusApplication
 {
-//	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/unprocessed.jsonl";
+	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/unprocessed.jsonl";
 	
 //	Canceled half-way through a batch (bills)
 //	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/openapi-bills-bulk-1.jsonl.out.jsonl";
-	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/openapi-legislators-bulk-1.jsonl.out.jsonl";
+//	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/oxpenapi-legislators-bulk-1.jsonl.out.jsonl";
 	
 	@Inject
 	private CachedDynamoDbService ddb;
@@ -160,9 +160,9 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		
 //		if (ddb.exists(leg.getId(), Legislator.class)) return;
 		
-		legInterp.updateInteractionsInterp(data.getAllDataset(), leg);
+		legInterp.updateInteractionsInterp(leg);
 		
-		LegislatorInterpretation interp = s3.get(LegislatorInterpretation.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), leg.getCode()), LegislatorInterpretation.class)
+		LegislatorInterpretation interp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretation.class)
 				.orElse(new LegislatorInterpretation(leg.getNamespace(), leg.getSessionCode(), leg.getCode(), null, null));
 		
 		interp.setMetadata(OpenAIService.metadata());

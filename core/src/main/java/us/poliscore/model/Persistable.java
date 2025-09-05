@@ -4,6 +4,7 @@ import java.util.Objects;
 
 import lombok.SneakyThrows;
 import lombok.val;
+import us.poliscore.model.bill.Bill;
 
 public interface Persistable {
 	

@@ -203,14 +203,14 @@ Your written response for this research section should consist of only a compact
 	/**
 	 * Updates all bill interactions with the latest bill interpretation from S3.
 	 */
-	public void updateInteractionsInterp(ObjectStorageServiceIF objStore, Legislator leg)
+	public void updateInteractionsInterp(Legislator leg)
 	{
 		for (val i : getInteractionsForInterpretation(leg))
 		{
 			val interp = s3.get(BillInterpretation.generateId(i.getBillId(), null), BillInterpretation.class);
 			
 			if (interp.isPresent()) {
-				val bill = objStore.get(i.getBillId(), Bill.class).orElseThrow();
+				val bill = data.get(i.getBillId(), Bill.class).orElseThrow();
 				bill.setInterpretation(interp.get());
 				
 				i.populate(bill, interp.get());

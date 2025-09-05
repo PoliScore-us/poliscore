@@ -80,5 +80,10 @@ public class CachedDynamoDbService implements ApplicationDataStoreIF
 		
 		return list;
 	}
+
+	@Override
+	public <T extends Persistable> long count(Class<T> clazz) {
+		return dynamodb.count(clazz);
+	}
 	
 }

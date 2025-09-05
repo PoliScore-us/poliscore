@@ -70,7 +70,7 @@ public class DataCleaner implements QuarkusApplication {
 	public void printLegislatorsBills(Legislator leg, PoliscoreDataset dataset) {
 		Set<String> ids = new HashSet<String>();
 		
-		legService.updateInteractionsInterp(dataset, leg);
+		legService.updateInteractionsInterp(leg);
 		
 		for (val interact : legService.getInteractionsForInterpretation(leg).stream().filter(i ->
 				i.getRating() < 0 && s3.get(BillInterpretation.generateId(i.getBillId(), null), BillInterpretation.class).get().getMetadata().getDate().isBefore(LocalDate.of(2025, 8, 3))

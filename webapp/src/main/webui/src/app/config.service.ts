@@ -78,8 +78,9 @@ export class ConfigService {
     return year;
   }
 
-  public lookupSession(namespace: string, year: number): Session | undefined {
+  public lookupSession(namespace: string, year: number, regular: boolean = true): Session | undefined {
     return this.sessions.find(session =>
+        session.regular === regular &&
         session.namespace === namespace &&
         year >= session.startDate[0] &&
         year <= session.endDate[0]
@@ -106,12 +107,15 @@ export class ConfigService {
     var namespace = billId.split("/")[1] + "/" + billId.split("/")[2];
     var year = String(this.sessionCodeToYear(sessionCode, namespace));
 
-    return this.routePath(namespace, year, "bill/" +  billId.replace('BIL/' + this.getNamespace() + '/' + sessionCode + '/', ''));
+    return this.routePath(namespace, year, "bill/" +  billId.replace('BIL/' + this.getNamespace() + '/', ''));
   }
 
   public pathToBillId(path: string): string
   {
-    return "BIL/" + this.getNamespace() + "/" + this.getCurrentSessionCode() + "/" + path;
+    if (this.getNamespace() === 'us/congress')
+      return "BIL/" + this.getNamespace() + "/" + this.getCurrentSessionCode() + "/" + path;
+    else
+      return "BIL/" + this.getNamespace() + "/" + path;
   }
 
   // public legislatorIdToPath(legislatorId: string): string

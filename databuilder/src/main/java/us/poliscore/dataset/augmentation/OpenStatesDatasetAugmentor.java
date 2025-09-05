@@ -21,6 +21,7 @@ import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.PoliscoreDataset;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.images.AbstractLegislatorImageFetcher;
 import us.poliscore.model.legislator.Legislator;
 
@@ -59,8 +60,8 @@ public class OpenStatesDatasetAugmentor extends AbstractLegislatorImageFetcher i
 	}
 
     @SneakyThrows
-    public Optional<List<OpenStatesLegislatorData>> fetchOpenStatesData(PoliscoreDataset dataset) {
-        String abbr = dataset.getSession().getNamespace().toAbbreviation().toLowerCase();
+    public Optional<List<OpenStatesLegislatorData>> fetchOpenStatesData(PoliscoreDatasetIF dataset) {
+        String abbr = dataset.getNamespace().toAbbreviation().toLowerCase();
         String cacheKey = "people/current/" + abbr;
 
         val metadata = cache.peekEntry(cacheKey);
@@ -95,7 +96,7 @@ public class OpenStatesDatasetAugmentor extends AbstractLegislatorImageFetcher i
         }
     }
     
-    public Optional<OpenStatesLegislatorData> fetchLegislatorData(Legislator leg, PoliscoreDataset dataset) {
+    public Optional<OpenStatesLegislatorData> fetchLegislatorData(Legislator leg, PoliscoreDatasetIF dataset) {
     	Optional<List<OpenStatesLegislatorData>> allData = fetchOpenStatesData(dataset);
     	
     	if (allData.isEmpty())
@@ -112,7 +113,7 @@ public class OpenStatesDatasetAugmentor extends AbstractLegislatorImageFetcher i
 
     @SneakyThrows
     @Override
-    protected Optional<byte[]> fetchImage(Legislator leg, PoliscoreDataset dataset) {
+    protected Optional<byte[]> fetchImage(Legislator leg, PoliscoreDatasetIF dataset) {
         val legData = fetchLegislatorData(leg, dataset);
         
         if (legData.isEmpty() || legData.get().getImage() == null || legData.get().getImage().trim().isEmpty()) {

@@ -173,7 +173,7 @@ public class LegislatorBillLinker {
 			val session = sessions.stream().filter(s -> s.getCode().equals(id.split("/")[3])).findAny().get();
 			year = session.getEndDate().getYear();
 			
-			return "/" + year + "/" + id.split("/")[2] + "/bill/" + id.substring(StringUtils.ordinalIndexOf(id, "/", 4) + 1);
+			return "/" + year + "/" + id.split("/")[2] + "/bill/" + id.substring(StringUtils.ordinalIndexOf(id, "/", 3) + 1);
 		}
 	}
 

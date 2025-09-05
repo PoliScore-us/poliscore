@@ -23,6 +23,17 @@ public enum CongressionalSession {
 		this.endDate = endDate;
 	}
 	
+	public int getStartYear() {
+		return startDate.getYear();
+	}
+	
+	/**
+	 * Returns an 'effective' year, not a precise year.
+	 */
+	public int getEndYear() {
+		return endDate.getYear()-1;
+	}
+	
 	public static CongressionalSession of(Integer session)
 	{
 		return Arrays.asList(CongressionalSession.values()).stream().filter(s -> Integer.valueOf(s.getNumber()).equals(session)).findAny().orElseThrow();

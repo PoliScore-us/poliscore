@@ -23,7 +23,7 @@ import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.PoliscoreDataset;
-import us.poliscore.dataset.augmentation.PoliscoreScrapedLegislatorData;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.service.storage.S3PersistenceService;
 
@@ -43,7 +43,7 @@ public class StateLegislatorImageFetcher extends AbstractLegislatorImageFetcher 
 	
 	@SneakyThrows
 	@Override
-	protected Optional<byte[]> fetchImage(Legislator leg, PoliscoreDataset dataset) {
+	protected Optional<byte[]> fetchImage(Legislator leg, PoliscoreDatasetIF dataset) {
 //		val memberUrl = getOfficialUrl(leg, dataset);
 		val memberUrl = leg.getOfficialUrl();
 	    if (memberUrl == null) return null;
@@ -115,7 +115,7 @@ public class StateLegislatorImageFetcher extends AbstractLegislatorImageFetcher 
 	 * @return
 	 */
 	@SneakyThrows
-	public String scrapeImageUrlFromMemberPage(String officialUrl, Legislator leg, PoliscoreDataset dataset) {
+	public String scrapeImageUrlFromMemberPage(String officialUrl, Legislator leg, PoliscoreDatasetIF dataset) {
 	    // Reuse the exact SSL setup as before
 	    KeyStore keyStore = KeyStore.getInstance("PKCS12");
 	    keyStore.load(StateLegislatorImageFetcher.class.getResourceAsStream("keystore"), "changeit".toCharArray());

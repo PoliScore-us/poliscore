@@ -33,9 +33,7 @@ import lombok.val;
 import us.poliscore.LegislatorBillLinker;
 import us.poliscore.LegislatorPageData;
 import us.poliscore.Page;
-import us.poliscore.model.CongressionalSession;
 import us.poliscore.model.LegislativeNamespace;
-import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
@@ -47,6 +45,7 @@ import us.poliscore.model.legislator.LegislatorBillInteraction;
 import us.poliscore.model.legislator.LegislatorIssueStat;
 import us.poliscore.model.session.SessionInterpretation;
 import us.poliscore.service.IpGeolocationService;
+import us.poliscore.service.SessionInfoService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 
 @Path("")
@@ -66,8 +65,6 @@ public class Lambda {
     ObjectMapper mapper;
     
     private static List<List<String>> cachedAllLegs;
-    
-    private static List<LegislativeSession> cachedSessions;
     
     private static Map<String, List<Legislator>> cachedLegislators = new HashMap<String, List<Legislator>>();
     
@@ -107,12 +104,12 @@ public class Lambda {
     @Path("getSessionStats")
     public SessionInterpretation getSessionStats(@NonNull @RestQuery("namespace") String nsKey, @RestQuery int year) {
     	val namespace = LegislativeNamespace.of(nsKey);
-    	val session = lookupSession(namespace, year);
+    	val session = SessionInfoService.lookupRegularSession(namespace, year);
     	
     	val op = ddb.get(SessionInterpretation.generateId(namespace, session.getCode()), SessionInterpretation.class);
     	
     	if (op.isEmpty()) {
-    		for (var loopSes : getSessions()) {
+    		for (var loopSes : SessionInfoService.getSessions()) {
     			if (!loopSes.equals(session) && loopSes.getNamespace().equals(session.getNamespace())) {
     				return ddb.get(SessionInterpretation.generateId(loopSes.getNamespace(), loopSes.getCode()), SessionInterpretation.class).orElse(null);
     			}
@@ -138,7 +135,7 @@ public class Lambda {
 //    		if (_ascending == null && leg.getInterpretation().getRating() < 0)
 //    			ascending = Boolean.TRUE;
     		
-    		LegislatorBillLinker.linkInterpBills(leg, getSessions());
+    		LegislatorBillLinker.linkInterpBills(leg, SessionInfoService.getSessions());
     		
     		var page = filterInteractions(leg, index, sortKey, pageSize, ascending, exclusiveStartKey);
     		
@@ -230,7 +227,7 @@ public class Lambda {
     	
     	Integer year = _year == null ? LocalDate.now().getYear() : _year;
     	LegislativeNamespace namespace = StringUtils.isEmpty(_namespace) ? LegislativeNamespace.US_CONGRESS : LegislativeNamespace.of(_namespace);
-    	val session = lookupSession(namespace, year);
+    	val session = SessionInfoService.lookupRegularSession(namespace, year);
     	String storageBucket = Persistable.getClassStorageBucket(Legislator.class, namespace, session.getCode());
     	
     	val cacheable = StringUtils.isBlank(startKey) && pageSize == 25 && !index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX) && !index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX);
@@ -291,20 +288,6 @@ public class Lambda {
     }
     
     @SuppressWarnings("unchecked")
-    @SneakyThrows
-    private List<LegislativeSession> getSessions() {
-    	if (cachedSessions == null) {
-    		cachedSessions = mapper.readValue(IOUtils.toString(Lambda.class.getResourceAsStream("/sessions.json"), "UTF-8"), new TypeReference<List<LegislativeSession>>() {});
-    	}
-    	
-    	return cachedSessions;
-    }
-    
-    private LegislativeSession lookupSession(LegislativeNamespace namespace, int year) {
-    	return getSessions().stream().filter(s -> s.getNamespace().equals(namespace) && s.isYearWithin(year)).findAny().get();
-    }
-    
-    @SuppressWarnings("unchecked")
 	@SneakyThrows
     private List<List<String>> getAllLegs() {
     	if (cachedAllLegs == null) {
@@ -340,8 +323,14 @@ public class Lambda {
     	
     	Integer year = _year == null ? LocalDate.now().getYear() : _year;
     	LegislativeNamespace namespace = StringUtils.isEmpty(_namespace) ? LegislativeNamespace.US_CONGRESS : LegislativeNamespace.of(_namespace);
-    	val session = lookupSession(namespace, year);
-    	String storageBucket = Persistable.getClassStorageBucket(Bill.class, namespace, session.getCode());
+    	val session = SessionInfoService.lookupRegularSession(namespace, year);
+    	
+    	String storageBucket;
+    	if (namespace.equals(LegislativeNamespace.US_CONGRESS))
+    		storageBucket = Persistable.getClassStorageBucket(Bill.class, namespace, session.getCode());
+		else {
+			storageBucket = namespace + "/" + String.valueOf(SessionInfoService.lookupRegularSession(namespace, session.getCode()).getEndDate().getYear());
+		}
     	
     	val cacheable = StringUtils.isBlank(startKey) && pageSize == 25 && StringUtils.isBlank(sortKey) && !index.startsWith(TRACKED_ISSUE_INDEX) && !index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX) && !index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX);
     	val cacheKey = storageBucket + "-" + index + "-" + ascending.toString();
@@ -354,7 +343,7 @@ public class Lambda {
     		val bii = ddb.query(BillIssueStat.class, pageSize, index, ascending, startKey, sortKey, storageBucket);
     		return bii.stream().map(l -> (Persistable) l).toList();
     	} else {
-    		bills = ddb.query(Bill.class, session.getKey(), pageSize, index, ascending, startKey, sortKey);
+    		bills = ddb.query(Bill.class, pageSize, index, ascending, startKey, sortKey, storageBucket);
     	}
     	
     	if (cacheable) {

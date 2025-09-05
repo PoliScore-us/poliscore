@@ -94,6 +94,7 @@ export interface SessionStats {
 }
 
 export interface Session {
+  regular: boolean;
   code: string;
   startDate: number[];
   endDate: number[];

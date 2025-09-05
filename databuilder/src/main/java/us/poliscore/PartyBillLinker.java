@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import io.quarkus.logging.Log;
 import lombok.val;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.bill.Bill;
@@ -22,7 +23,7 @@ import us.poliscore.model.session.SessionInterpretation.PartyInterpretation;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 public class PartyBillLinker {
-	public static void linkPartyBillsSinglePass(PartyInterpretation interp, SessionInterpretation sessionInterp, PoliscoreDataset dataset, LocalCachedS3Service s3) {
+	public static void linkPartyBillsSinglePass(PartyInterpretation interp, SessionInterpretation sessionInterp, PoliscoreDatasetIF dataset, LocalCachedS3Service s3) {
 	    try {
 	        String exp = interp.getLongExplain();
 	        if (exp == null || exp.isEmpty()) {
@@ -85,7 +86,7 @@ public class PartyBillLinker {
 	            
 	            if (matchedBill != null) {
 	                // Build the actual URL
-	                String linkUrl = linkForBill(matchedBill.getId(), dataset.getSession());
+	                String linkUrl = linkForBill(matchedBill.getId(), dataset);
 	                // We want to display the official Bill name (or your choice)
 	                String linkText = normalizeBillName(matchedBill.getName());
 
@@ -129,7 +130,7 @@ public class PartyBillLinker {
 	    return bill.getType() + "-" + bill.getNumber();
 	}
 
-	public static String linkForBill(String id, LegislativeSession session)
+	public static String linkForBill(String id, PoliscoreDatasetIF dataset)
 	{
 		int year = LocalDate.now().getYear();
 		
@@ -140,7 +141,7 @@ public class PartyBillLinker {
 			
 			return "/" + year + "/bill/" + id.substring(StringUtils.ordinalIndexOf(id, "/", 4) + 1);
 		} else {
-			year = session.getEndDate().getYear();
+			year = dataset.getEndYear();
 			
 			return "/" + year + "/" + id.split("/")[2] + "/bill/" + id.substring(StringUtils.ordinalIndexOf(id, "/", 4) + 1);
 		}

@@ -18,14 +18,17 @@ import jakarta.inject.Named;
 import lombok.SneakyThrows;
 import lombok.val;
 import software.amazon.awssdk.utils.StringUtils;
+import us.poliscore.PoliscoreCompositeDataset;
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.dataset.augmentation.PoliscoreDatasetAugmentor;
 import us.poliscore.images.StateLegislatorImageFetcher;
+import us.poliscore.legiscan.cache.CachedLegiscanDatasetResult;
 import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.legiscan.view.LegiscanBillType;
 import us.poliscore.legiscan.view.LegiscanBillView;
 import us.poliscore.legiscan.view.LegiscanChamber;
+import us.poliscore.legiscan.view.LegiscanDatasetView;
 import us.poliscore.legiscan.view.LegiscanMimeType;
 import us.poliscore.legiscan.view.LegiscanPeopleView;
 import us.poliscore.legiscan.view.LegiscanRollCallView;
@@ -75,24 +78,50 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	protected CachedLegiscanService legiscan;
 	
 	@Override
-	public PoliscoreDataset importDataset(DeploymentConfig ref) {
+	public PoliscoreDatasetIF importDataset(DeploymentConfig ref) {
 		var state = namespaceToState(ref.getNamespace());
-		var cached = legiscan.cacheDataset(state, ref.getYear());
-		var session = buildSession(cached.getDataset().getSessionId(), cached.getDataset().getState(), cached.getDataset().getYearStart(), cached.getDataset().getYearEnd());
+		val views = legiscan.getDatasetList(state, ref.getYear());
+		
+		PoliscoreDatasetIF dataset;
+		
+		if (views.size() == 1) {
+			dataset = importDataset(views.get(0), ref, null);
+		} else {
+			dataset = new PoliscoreCompositeDataset(ref);
+			 
+			val regularView = views.stream().filter(v -> !v.isSpecial()).findFirst().get();
+			val regularDataset = importDataset(regularView, ref, null);
+			((PoliscoreCompositeDataset)dataset).addDataset(regularDataset);
+			
+			for (val view : views) {
+				if (view != regularView)
+					((PoliscoreCompositeDataset)dataset).addDataset(importDataset(view, ref, regularDataset));
+			}
+		}
+		
+		return dataset;
+	}
+	
+	protected PoliscoreDataset importDataset(LegiscanDatasetView view, DeploymentConfig ref, PoliscoreDataset regularDataset) {
+		CachedLegiscanDatasetResult cached = legiscan.cacheDataset(view);
+		
+		var session = buildSession(!view.isSpecial(), cached.getDataset().getSessionId(), cached.getDataset().getState(), cached.getDataset().getYearStart(), cached.getDataset().getYearEnd());
 		
 		PoliscoreDataset dataset = new PoliscoreDataset(session, ref);
-		
-		for (var person : cached.getPeople().values()) {
-			importLegislator(person, dataset);
+		if (regularDataset == null) {
+			regularDataset = dataset;
+			for (var person : cached.getPeople().values()) {
+				importLegislator(person, regularDataset);
+			}
+			psLegScraper.augmentLegislators(dataset);
 		}
-		psLegScraper.augmentLegislators(dataset);
 		
 		for (var bill : cached.getBills().values()) {
-			importBill(bill, dataset);
+			importBill(bill, dataset, regularDataset);
 		}
 		
 		for (var vote : cached.getVotes().values()) {
-			importRollCall(vote, dataset);
+			importRollCall(vote, dataset, regularDataset);
 		}
 		
 		return dataset;
@@ -102,7 +131,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		return LegiscanState.fromAbbreviation(namespace.getNamespace().replace("us/", ""));
 	}
 	
-	public static LegislativeSession buildSession(int sessionId, LegiscanState state, int yearStart, int yearEnd) {
+	public static LegislativeSession buildSession(boolean regular, int sessionId, LegiscanState state, int yearStart, int yearEnd) {
 		String key;
 		LegislativeNamespace namespace;
 		if (state.equals(LegiscanState.CONGRESS)) {
@@ -116,17 +145,17 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		var start = LocalDate.of(yearStart, 1, 1);
 		var end = LocalDate.of(yearEnd, 12, 31);
 		
-		return new LegislativeSession(start, end, key, namespace);
+		return new LegislativeSession(regular, start, end, key, namespace);
 	}
 	
 	@Override
-	public LegislativeSession getPreviousSession(LegislativeSession current) {
+	public LegislativeSession getPreviousRegularSession(LegislativeSession current) {
 		LegiscanState state = LegiscanState.fromAbbreviation(current.getNamespace().toAbbreviation());
 		
 		LegiscanSessionView previous = null;
 		for (var view : legiscan.getSessionList(state)) {
 			if (view.getYearStart() == current.getStartDate().getYear() && view.getYearEnd() == current.getEndDate().getYear() && !view.isSpecial())
-				return previous == null ? null : buildSession(previous.getSessionId(), previous.getState(), previous.getYearStart(), previous.getYearEnd());
+				return previous == null ? null : buildSession(true, previous.getSessionId(), previous.getState(), previous.getYearStart(), previous.getYearEnd());
 			
 			previous = view;
 		}
@@ -146,26 +175,26 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		}
 	}
 	
-	protected void importBill(LegiscanBillView view, PoliscoreDataset dataset) {
+	protected void importBill(LegiscanBillView view, PoliscoreDataset dataset, PoliscoreDataset regularDataset) {
 		val bill = new Bill();
 		
 		bill.setNumber(Integer.parseInt(view.getBillNumber().replaceAll("[^\\d]", "")));
 		
 		bill.setOriginatingChamber(LegislativeChamber.fromLegiscanChamber(view.getHistory().get(0).getChamber()));
 		
-		if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+		if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
     		bill.setType(toCongressionalBillType(view).name());
     	else
     		bill.setType(getChamberCode(bill.getOriginatingChamber()) + view.getBillType().getCode());
 		
-		bill.setId(Bill.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), bill.getType(), bill.getNumber()));
+		bill.setId(Bill.generateId(dataset.getNamespace(), dataset.getCode(), bill.getType(), bill.getNumber()));
 		
 		bill.setName(view.getTitle());
-    	bill.setStatus(buildStatus(view, dataset.getSession()));
+    	bill.setStatus(buildStatus(view, regularDataset.getSession()));
     	bill.setIntroducedDate(view.getHistory().getFirst().getDate());
-    	bill.setSponsor(convertSponsor(view.getSponsors().getFirst(), dataset));
+    	bill.setSponsor(convertSponsor(view.getSponsors().getFirst(), regularDataset));
     	if (view.getSponsors().size() > 1)
-    		bill.setCosponsors(view.getSponsors().subList(1, view.getSponsors().size()-1).stream().map(s -> convertSponsor(s, dataset)).collect(Collectors.toList()));
+    		bill.setCosponsors(view.getSponsors().subList(1, view.getSponsors().size()).stream().map(s -> convertSponsor(s, regularDataset)).collect(Collectors.toList()));
     	bill.setLastActionDate(view.getHistory().getLast().getDate());
     	bill.setLegiscanId(view.getBillId());
     	bill.setOfficialUrl(view.getStateLink());
@@ -174,7 +203,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
     	
     	if (bill.getSponsor() != null)
     	{
-			val leg = dataset.get(bill.getSponsor().getLegislatorId(), Legislator.class);
+			val leg = regularDataset.get(bill.getSponsor().getLegislatorId(), Legislator.class);
 			
 			if (leg.isPresent()) {
 				LegislatorBillSponsor interaction = new LegislatorBillSponsor();
@@ -184,14 +213,12 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 				interaction.setBillName(bill.getName());
 				interaction.setId(LegislatorBillSponsor.generateId(interaction.getLegId(), interaction.getDate(), interaction.getBillId()));
 				leg.get().addBillInteraction(interaction);
-				
-				dataset.put(leg.get());
 			}
     	}
     	
     	bill.getCosponsors().stream().filter(cs -> bill.getSponsor() == null || !bill.getSponsor().getLegislatorId().equals(cs.getLegislatorId())).forEach(cs -> {
     		if (!StringUtils.isBlank(cs.getLegislatorId())) {
-	    		val leg = dataset.get(cs.getLegislatorId(), Legislator.class);
+	    		val leg = regularDataset.get(cs.getLegislatorId(), Legislator.class);
 				
 	    		if (leg.isPresent()) {
 					LegislatorBillCosponsor interaction = new LegislatorBillCosponsor();
@@ -201,8 +228,6 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 					interaction.setBillName(bill.getName());
 					interaction.setId(LegislatorBillCosponsor.generateId(interaction.getLegId(), interaction.getDate(), interaction.getBillId()));
 					leg.get().addBillInteraction(interaction);
-					
-					dataset.put(leg.get());
 	    		}
     		}
     	});
@@ -242,14 +267,14 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	}
 
 	
-	private BillSponsor convertSponsor(LegiscanSponsorView view, PoliscoreDataset dataset) {
+	private BillSponsor convertSponsor(LegiscanSponsorView view, PoliscoreDataset regularDataset) {
 		String legId;
-		if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), view.getBioguideId());
+		if (regularDataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getCode(), view.getBioguideId());
 		else
-			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), String.valueOf(view.getPeopleId()));
+			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getCode(), String.valueOf(view.getPeopleId()));
 		
-		var leg = dataset.get(legId, Legislator.class).get();
+		var leg = regularDataset.get(legId, Legislator.class).get();
 		
 		var sponsor = new BillSponsor(legId, leg.getName());
 		sponsor.setParty(leg.getParty());
@@ -312,18 +337,18 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    return status;
 	}
 
-	protected void importRollCall(LegiscanRollCallView view, PoliscoreDataset dataset) {
+	protected void importRollCall(LegiscanRollCallView view, PoliscoreDataset dataset, PoliscoreDataset regularDataset) {
 		for (var vote : view.getVotes()) {
-			importVote(view, vote, dataset);
+			importVote(view, vote, dataset, regularDataset);
 		}
 	}
 	
-	protected void importVote(LegiscanRollCallView rollCall, LegiscanVoteDetailView vote, PoliscoreDataset dataset) {
+	protected void importVote(LegiscanRollCallView rollCall, LegiscanVoteDetailView vote, PoliscoreDataset dataset, PoliscoreDataset regularDataset) {
 		Legislator leg;
 		try
 		{
 			// TODO : I don't think this will work for congress (since the congress legislator code is bioguide id not people id) but we don't use legiscan for congress anyway
-			leg = dataset.get(Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), String.valueOf(vote.getPeopleId())), Legislator.class).orElseThrow();
+			leg = regularDataset.get(Legislator.generateId(regularDataset.getNamespace(), regularDataset.getCode(), String.valueOf(vote.getPeopleId())), Legislator.class).orElseThrow();
 		}
 		catch (NoSuchElementException ex)
 		{
@@ -350,8 +375,6 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		interaction.setId(LegislatorBillVote.generateId(interaction.getLegId(), interaction.getDate(), interaction.getBillId()));
 		
 		leg.addBillInteraction(interaction);
-		
-		dataset.put(leg);
 	}
 	
 	public static VoteStatus toVoteStatus(LegiscanVoteStatus legiscanVoteStatus) {
@@ -374,17 +397,17 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	}
 
 	
-	protected void importLegislator(LegiscanPeopleView view, PoliscoreDataset dataset) {
+	protected void importLegislator(LegiscanPeopleView view, PoliscoreDataset regularDataset) {
 	    if (view == null || StringUtils.isBlank(view.getName())) return;
 
 	    val leg = new Legislator();
 	    leg.setLegiscanId(view.getPeopleId());
 	    
 	    String legId;
-		if (dataset.getSession().getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), view.getBioguideId());
+		if (regularDataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getCode(), view.getBioguideId());
 		else
-			legId = Legislator.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), String.valueOf(view.getPeopleId()));
+			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getCode(), String.valueOf(view.getPeopleId()));
 		leg.setId(legId);
 		
 	    // Build and set name
@@ -397,30 +420,27 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    // Legiscan doesn't actually provide birthday so we're augmenting our dataset later with OpenStates data (which often has birthdays)...
 	    
 	    var term = new LegislativeTerm();
-	    term.setStartDate(dataset.getSession().getStartDate());
-	    term.setEndDate(dataset.getSession().getEndDate());
+	    term.setStartDate(regularDataset.getSession().getStartDate());
+	    term.setEndDate(regularDataset.getSession().getEndDate());
 	    term.setParty(Party.from(view.getParty().name()));
 	    term.setState(view.getState());
 	    term.setDistrict(StringUtils.isBlank(view.getDistrict()) ? null : view.getDistrict());
 	    term.setChamber(LegislativeChamber.fromLegiscanRole(view.getRole()));
 	    leg.getTerms().add(term);
 	    
-	    // If active in current session, add to that session
-	    if (leg.isMemberOfSession(dataset.getSession())) {
-	        dataset.put(leg);
-	    }
+	    regularDataset.put(leg);
 	}
 
 	@Override
-	public void syncS3LegislatorImages(PoliscoreDataset dataset) {
+	public void syncS3LegislatorImages(PoliscoreDatasetIF dataset) {
 //		openstates.syncS3LegislatorImages(dataset);
 		stateImageFetcher.syncS3LegislatorImages(dataset);
 	}
 	
 	@Override
 	@SneakyThrows
-	public void syncS3BillText(PoliscoreDataset dataset) {
-		s3.optimizeExists(BillText.class, dataset.getSession().getKey());
+	public void syncS3BillText(PoliscoreDatasetIF dataset) {
+		dataset.optimizeExists(s3, BillText.class);
 		
 		int count = 0;
 		
@@ -450,8 +470,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	        }
 		}
 		
-		// TODO : This might not be necessary but I can't really remember why its here anymore
-		s3.clearExistsOptimize(BillText.class, dataset.getSession().getKey());
+		dataset.clearExistsOptimize(s3, BillText.class);
 		
 		Log.info("Uploaded " + count + " new bill texts to s3 from Legiscan provider.");
 	}

@@ -22,4 +22,6 @@ public interface ObjectStorageServiceIF
 	 * @return
 	 */
 	public <T extends Persistable> List<T> query(Class<T> clazz);
+	
+	public <T extends Persistable> long count(Class<T> clazz);
 }

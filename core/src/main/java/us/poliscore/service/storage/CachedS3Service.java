@@ -60,5 +60,10 @@ public class CachedS3Service implements ApplicationDataStoreIF
 	public <T extends Persistable> void optimizeExists(Class<T> clazz, String sessionKey) {
 		s3.optimizeExists(clazz, sessionKey);
 	}
+
+	@Override
+	public <T extends Persistable> long count(Class<T> clazz) {
+		return s3.count(clazz);
+	}
 	
 }

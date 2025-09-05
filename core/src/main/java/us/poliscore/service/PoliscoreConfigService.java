@@ -15,7 +15,7 @@ public class PoliscoreConfigService {
 	
 	private static List<DeploymentConfig> SUPPORTED_DEPLOYMENTS = Arrays.asList(
 			new DeploymentConfig(LegislativeNamespace.US_CONGRESS, 2026), new DeploymentConfig(LegislativeNamespace.US_CONGRESS, 2024),
-			new DeploymentConfig(LegislativeNamespace.US_COLORADO, 2025, 2.0f)
+			new DeploymentConfig(LegislativeNamespace.US_COLORADO, 2025, 1.7f)
 	);
 	
 	public List<DeploymentConfig> getSupportedDeployments() {

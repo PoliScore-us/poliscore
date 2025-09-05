@@ -2,16 +2,12 @@ package us.poliscore.entrypoint;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.ObjectUtils;
@@ -25,13 +21,13 @@ import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.PoliscoreDataset;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.entrypoint.batch.BatchBillRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchLegislatorRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchOpenAIResponseImporter;
 import us.poliscore.entrypoint.batch.PressBillInterpretationRequestGenerator;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.LegislativeNamespace;
-import us.poliscore.model.Persistable;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.CongressionalBillType;
@@ -39,7 +35,6 @@ import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
 import us.poliscore.model.legislator.LegislatorBillInteraction;
 import us.poliscore.model.legislator.LegislatorInterpretation;
-import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
@@ -49,7 +44,6 @@ import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
-import us.poliscore.service.storage.S3PersistenceService.QueryCriteria;
 
 /**
  * Run this to keep a deployed server up-to-date.
@@ -61,7 +55,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	public static boolean INTERPRET_NEW_BILLS = true;
 	
-	public static boolean REINTERPRET_LEGISLATORS = false;
+	public static boolean REINTERPRET_LEGISLATORS = true;
 	
 	public static boolean REINTERPRET_PARTIES = false;
 	
@@ -119,13 +113,13 @@ public class DatabaseBuilder implements QuarkusApplication
 		val buildDatasets = data.getBuildDatasets();
 		
 		for (val dataset : buildDatasets) {
-			data.syncS3LegislatorImages(dataset);
-			data.syncS3BillText(dataset);
+//			data.syncS3LegislatorImages(dataset);
+//			data.syncS3BillText(dataset);
 			
-			s3.optimizeExists(BillInterpretation.class, dataset.getSession().getKey());
-			s3.optimizeExists(LegislatorInterpretation.class, dataset.getSession().getKey());
+			dataset.optimizeExists(s3, BillInterpretation.class);
+			dataset.optimizeExists(s3, LegislatorInterpretation.class);
 			
-			syncDdbWithS3(dataset);
+//			syncDdbWithS3(dataset);
 		}
 		
 		if (!FORCE_WEB_SEARCH)
@@ -143,7 +137,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	}
 	
 	@SneakyThrows
-	private void syncDdbWithS3(PoliscoreDataset dataset)
+	private void syncDdbWithS3(PoliscoreDatasetIF dataset)
 	{
 		Log.info("Making sure that our ddb database is up-to-date with what exists on s3.");
 		
@@ -165,6 +159,8 @@ public class DatabaseBuilder implements QuarkusApplication
 			    || !Objects.equals(dbill.getStatus(), b.getStatus()) 
 			    || !Objects.equals(dbill.getLastActionDate(), b.getLastActionDate())
 			    || !Objects.equals(dbill.getName(), b.getName())
+			    || !Objects.equals(dbill.getHot(), b.getHot())
+			    || !Objects.equals(dbill.getStorageBucket(), b.getStorageBucket())
 			    || !Objects.equals(ObjectUtils.firstNonNull(interp.get().getLastUpdate(), interp.get().getLastPressQuery()), ObjectUtils.firstNonNull(dbill.getInterpretation().getLastUpdate(), dbill.getInterpretation().getLastPressQuery()))
 			    ) {
 			    
@@ -212,7 +208,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	}
 	
 	@SneakyThrows
-	private void interpretBillPressArticles(List<PoliscoreDataset> buildDatasets) {
+	private void interpretBillPressArticles(List<PoliscoreDatasetIF> buildDatasets) {
 		if (INTERPRET_PRESS_BILLS) {
 			List<File> requests = pressBillInterpGenerator.process(buildDatasets);
 			
@@ -226,8 +222,8 @@ public class DatabaseBuilder implements QuarkusApplication
 		}
 	}
 	
-	private void interpretBills(List<PoliscoreDataset> buildDatasets) { interpretBills(buildDatasets, false); }
-	@SneakyThrows private void interpretBills(List<PoliscoreDataset> buildDatasets, boolean isRecursive) {
+	private void interpretBills(List<PoliscoreDatasetIF> buildDatasets) { interpretBills(buildDatasets, false); }
+	@SneakyThrows private void interpretBills(List<PoliscoreDatasetIF> buildDatasets, boolean isRecursive) {
 		if (INTERPRET_NEW_BILLS) {
 			List<File> requests = billRequestGenerator.process(buildDatasets, FORCE_WEB_SEARCH, isRecursive);
 			
@@ -250,7 +246,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	}
 	
 	@SneakyThrows
-	private void interpretLegislators(List<PoliscoreDataset> buildDatasets) {
+	private void interpretLegislators(List<PoliscoreDatasetIF> buildDatasets) {
 		if (REINTERPRET_LEGISLATORS) {
 			List<File> requests = legislatorRequestGenerator.process(buildDatasets);
 		
@@ -276,8 +272,8 @@ public class DatabaseBuilder implements QuarkusApplication
 	 * Recalculates all legislator stats and bill interactions without actually re-interpreting their activity. Saves on AI interpretation costs while
 	 * still allowing stats and interactions to remain up-to-date.
 	 */
-	private void recalculateLegislators(PoliscoreDataset dataset) {
-		Log.info("Recalculating legislators for " + dataset.getSession().getDescription());
+	private void recalculateLegislators(PoliscoreDatasetIF dataset) {
+		Log.info("Recalculating legislators for " + dataset.getDescription());
 		
 		List<String> legsWithoutInterp = new ArrayList<String>();
 		List<String> legsWithoutSufficientInteractions = new ArrayList<String>();
@@ -286,22 +282,22 @@ public class DatabaseBuilder implements QuarkusApplication
 //				.filter(l -> l.isMemberOfSession(data.getSession())) //  && s3.exists(LegislatorInterpretation.generateId(l.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class)
 				.collect(Collectors.toList()))
 		{
-			legInterp.updateInteractionsInterp(dataset, leg);
+			legInterp.updateInteractionsInterp(leg);
 			
 //			if (leg.getInteractions().size() < 100) {
 //				legsWithoutSufficientInteractions.add(leg.getBioguideId());
 //				continue;
 //			}
 			
-			LegislatorInterpretation interp = new LegislatorInterpretation(dataset.getSession().getNamespace(), dataset.getSession().getCode(), leg.getCode(), OpenAIService.metadata(), null);
-			val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getSession().getNamespace(), dataset.getSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
+			LegislatorInterpretation interp = new LegislatorInterpretation(dataset.getNamespace(), dataset.getCode(), leg.getCode(), OpenAIService.metadata(), null);
+			val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
 			
 			if (interpOp.isPresent()) { interp = interpOp.get(); }
 			
 			// If there exists an interp from a previous session, backfill the interactions until we get to 1000
 			if (legInterp.getInteractionsForInterpretation(leg).size() < 1000) {
 				// If an interpretation from this session doesn't exist, grab one from the previous session.
-				var previousSession = data.getPreviousSession(dataset.getSession());
+				var previousSession = data.getPreviousRegularSession(dataset.getRegularSession());
 				
 				if (previousSession != null){ // && !previousSession.getCode().equals("118")
 					val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousSession.getNamespace(), previousSession.getCode(), leg.getCode()), LegislatorInterpretation.class);
@@ -361,7 +357,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	}
 	
 	@SneakyThrows
-	private void interpretPartyStats(List<PoliscoreDataset> buildDatasets) {
+	private void interpretPartyStats(List<PoliscoreDatasetIF> buildDatasets) {
 		if (REINTERPRET_PARTIES) {
 			List<File> requests = partyInterpreter.process(buildDatasets);
 			

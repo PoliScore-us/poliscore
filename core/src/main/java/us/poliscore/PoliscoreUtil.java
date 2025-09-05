@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.service.SessionInfoService;
 
 public class PoliscoreUtil {
 	
@@ -42,6 +43,6 @@ public class PoliscoreUtil {
 		return all;
 	}
 	
-	public static ObjectMapper getObjectMapper() { return JsonMapper.builder().findAndAddModules().build(); }
+	public static ObjectMapper getObjectMapper() { return SessionInfoService.mapper(); }
 	
 }

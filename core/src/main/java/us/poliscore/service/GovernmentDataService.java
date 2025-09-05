@@ -13,6 +13,7 @@ import us.poliscore.PoliscoreCompositeDataset;
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.dataset.DatasetProvider;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Persistable;
@@ -25,13 +26,11 @@ public class GovernmentDataService {
 	
 	@Inject private PoliscoreConfigService config;
 	
-	private static List<PoliscoreDataset> importedDatasets = new ArrayList<PoliscoreDataset>();
+	private static List<PoliscoreDatasetIF> importedDatasets = new ArrayList<PoliscoreDatasetIF>();
 	
 	private static boolean didImportDatasets = false;
 	
-	private static PoliscoreDataset workingDataset;
-	
-	public List<PoliscoreDataset> importAllDatasets() {
+	public List<PoliscoreDatasetIF> importAllDatasets() {
 		if (didImportDatasets) return importedDatasets;
 		
 		for (val cfg : config.getSupportedDeployments()) {
@@ -43,14 +42,14 @@ public class GovernmentDataService {
 		return importedDatasets;
 	}
 	
-	public PoliscoreDataset importDataset(LegislativeNamespace namespace, int year) {
+	public PoliscoreDatasetIF importDataset(LegislativeNamespace namespace, int year) {
 		return importDataset(new DeploymentConfig(namespace, year));
 	}
 	
-	public PoliscoreDataset importDataset(DeploymentConfig ref) {
+	public PoliscoreDatasetIF importDataset(DeploymentConfig ref) {
 		// If it's already been imported, just return it
 		for (val dataset : importedDatasets) {
-			if (dataset.getSession().getNamespace().equals(ref.getNamespace()) && ref.getYear().equals(dataset.getSession().getEndDate().getYear())) {
+			if (dataset.getNamespace().equals(ref.getNamespace()) && ref.getYear().equals(dataset.getEndYear())) {
 				return dataset;
 			}
 		}
@@ -62,11 +61,11 @@ public class GovernmentDataService {
 		return dataset;
 	}
 	
-	public PoliscoreDataset getDataset(String poliscoreObjectId) {
+	public PoliscoreDatasetIF getDataset(String poliscoreObjectId) {
 		String sessionKey = poliscoreObjectId.split("/")[1] + "/" + poliscoreObjectId.split("/")[2] + "/" + poliscoreObjectId.split("/")[3];
 		
 		for (val dataset : importedDatasets) {
-			if (dataset.getSession().getKey().equals(sessionKey))
+			if (dataset.containsSession(sessionKey))
 				return dataset;
 		}
 		
@@ -81,49 +80,45 @@ public class GovernmentDataService {
 		return this.getDataset(id).exists(id, clazz);
 	}
 	
-	public PoliscoreDataset getDataset(LegislativeNamespace namespace, int year) {
+	public PoliscoreDatasetIF getDataset(LegislativeNamespace namespace, int year) {
 		for (val dataset : importedDatasets) {
-			if (dataset.getSession().getNamespace().equals(namespace) && dataset.getSession().isYearWithin(year))
+			if (dataset.getNamespace().equals(namespace) && dataset.isYearWithin(year))
 				return dataset;
 		}
 		
 		throw new NoSuchElementException();
 	}
 	
-	public PoliscoreDataset getDataset(LegislativeNamespace namespace, String sessionCode) {
+	public PoliscoreDatasetIF getDataset(LegislativeNamespace namespace, String sessionCode) {
 		for (val dataset : importedDatasets) {
-			if (dataset.getSession().getNamespace().equals(namespace) && dataset.getSession().getCode().equals(sessionCode))
+			if (dataset.getNamespace().equals(namespace) && dataset.containsSession(sessionCode))
 				return dataset;
 		}
 		
 		throw new NoSuchElementException();
 	}
 	
-	public void syncS3LegislatorImages(PoliscoreDataset dataset) {
+	public void syncS3LegislatorImages(PoliscoreDatasetIF dataset) {
 		provider.syncS3LegislatorImages(dataset);
 	}
 	
-	public void syncS3BillText(PoliscoreDataset dataset) {
+	public void syncS3BillText(PoliscoreDatasetIF dataset) {
 		provider.syncS3BillText(dataset);
 	}
 	
-	public PoliscoreCompositeDataset getAllDataset() {
-		return new PoliscoreCompositeDataset(importedDatasets);
-	}
-	
-	public List<PoliscoreDataset> getAllImportedDatasets() {
+	public List<PoliscoreDatasetIF> getAllImportedDatasets() {
 		return importedDatasets;
 	}
 	
-	public List<PoliscoreDataset> getBuildDatasets() {
-		val now = LocalDate.now();
+	public List<PoliscoreDatasetIF> getBuildDatasets() {
+		val currentYear = LocalDate.now().getYear();
 		
 		return importedDatasets.stream()
-				.filter(ds -> !now.isBefore(ds.getSession().getStartDate()) && !now.isAfter(ds.getSession().getEndDate()))
+				.filter(ds -> ds.isYearWithin(currentYear))
 				.toList();
 	}
 	
-	public LegislativeSession getPreviousSession(LegislativeSession current) {
-		return provider.getPreviousSession(current);
+	public LegislativeSession getPreviousRegularSession(LegislativeSession current) {
+		return provider.getPreviousRegularSession(current);
 	}
 }

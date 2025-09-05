@@ -18,17 +18,17 @@ public class NoOpDatasetProvider implements DatasetProvider {
 	}
 
 	@Override
-	public LegislativeSession getPreviousSession(LegislativeSession current) {
+	public LegislativeSession getPreviousRegularSession(LegislativeSession current) {
 		return null;
 	}
 
 	@Override
-	public void syncS3LegislatorImages(PoliscoreDataset dataset) {
+	public void syncS3LegislatorImages(PoliscoreDatasetIF dataset) {
 		
 	}
 
 	@Override
-	public void syncS3BillText(PoliscoreDataset dataset) {
+	public void syncS3BillText(PoliscoreDatasetIF dataset) {
 		
 	}
 	

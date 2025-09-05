@@ -40,6 +40,7 @@ import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
 import us.poliscore.ai.OpenAIModel;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.entrypoint.DatabaseBuilder;
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.InterpretationOrigin;
@@ -53,15 +54,10 @@ import us.poliscore.press.BillArticleRecognizer;
 import us.poliscore.press.GoogleSearchResponse;
 import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
-import us.poliscore.service.LegislatorInterpretationService;
-import us.poliscore.service.LegislatorService;
-import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PressInterpService;
 import us.poliscore.service.SecretService;
-import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
-import us.poliscore.service.storage.LocalFilePersistenceService;
 
 @QuarkusMain(name="PressScraperEntrypoint")
 public class PressBillInterpretationRequestGenerator implements QuarkusApplication {
@@ -283,14 +279,14 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	}
 	
 	@SneakyThrows
-	public List<File> process(List<PoliscoreDataset> buildDatasets)
+	public List<File> process(List<PoliscoreDatasetIF> buildDatasets)
 	{
 		Log.info("Scraping press articles");
 		
 		for (val dataset : buildDatasets) {
-			s3.optimizeExists(BillText.class, dataset.getSession().getKey());
-			s3.optimizeExists(PressInterpretation.class, dataset.getSession().getKey());
-			s3.optimizeExists(BillInterpretation.class, dataset.getSession().getKey());
+			dataset.optimizeExists(s3, BillText.class);
+			dataset.optimizeExists(s3, PressInterpretation.class);
+			dataset.optimizeExists(s3, BillInterpretation.class);
 		}
 		
 		block = 1;
@@ -310,7 +306,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		return writtenFiles;
 	}
 
-	private void processDataset(PoliscoreDataset dataset, int block) throws IOException {
+	private void processDataset(PoliscoreDatasetIF dataset, int block) throws IOException {
 		// Determine what bills to process //
 		Stream<Bill> bills;
 		if (specificFetch.length > 0) {
@@ -360,7 +356,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 //		processOrigin(b, new InterpretationOrigin("https://www.aamc.org/news/press-releases/aamc-statement-passage-full-year-continuing-resolution", "Medicare Telehealth Flexibilities Extended, but Without Promise of Permanent Solution"));
 		
 		if (remainingBillsCount > 0)
-			Log.info(remainingBillsCount + " bills remaining to process in dataset " + dataset.getSession().getKey());
+			Log.info(remainingBillsCount + " bills remaining to process in dataset " + dataset.getDescription());
 	}
 	
 	public void deleteExisting(Bill b)
