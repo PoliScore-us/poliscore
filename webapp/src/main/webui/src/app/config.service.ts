@@ -107,7 +107,10 @@ export class ConfigService {
     var namespace = billId.split("/")[1] + "/" + billId.split("/")[2];
     var year = String(this.sessionCodeToYear(sessionCode, namespace));
 
-    return this.routePath(namespace, year, "bill/" +  billId.replace('BIL/' + this.getNamespace() + '/', ''));
+    if (namespace === 'us/congress')
+      return this.routePath(namespace, year, "bill/" +  billId.split("/").slice(4).join("/"));
+    else
+      return this.routePath(namespace, year, "bill/" +  billId.replace('BIL/' + this.getNamespace() + '/', ''));
   }
 
   public pathToBillId(path: string): string
@@ -140,6 +143,9 @@ export class ConfigService {
 
   public routePath(namespace: string, year: string, path: string) {
     if (namespace === "us/congress") {
+      if (path.startsWith("bill/" + this.currentSessionCode))
+        path = path.replace("bill/" + this.currentSessionCode, "bill");
+
       return "/" + year + "/" + path;
     } else {
       return "/" + year + "/" + namespace.split("/")[1] + "/" + path;

@@ -55,7 +55,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	public static boolean INTERPRET_NEW_BILLS = true;
 	
-	public static boolean REINTERPRET_LEGISLATORS = true;
+	public static boolean REINTERPRET_LEGISLATORS = false;
 	
 	public static boolean REINTERPRET_PARTIES = false;
 	
@@ -113,13 +113,13 @@ public class DatabaseBuilder implements QuarkusApplication
 		val buildDatasets = data.getBuildDatasets();
 		
 		for (val dataset : buildDatasets) {
-//			data.syncS3LegislatorImages(dataset);
-//			data.syncS3BillText(dataset);
+			data.syncS3LegislatorImages(dataset);
+			data.syncS3BillText(dataset);
 			
 			dataset.optimizeExists(s3, BillInterpretation.class);
 			dataset.optimizeExists(s3, LegislatorInterpretation.class);
 			
-//			syncDdbWithS3(dataset);
+			syncDdbWithS3(dataset);
 		}
 		
 		if (!FORCE_WEB_SEARCH)
@@ -155,7 +155,9 @@ public class DatabaseBuilder implements QuarkusApplication
 				s3.put(interp.get());
 			}
 			
-			if (dbill == null 
+			b.setInterpretation(interp.get());
+			
+			if (dbill == null || dbill.getInterpretation() == null
 			    || !Objects.equals(dbill.getStatus(), b.getStatus()) 
 			    || !Objects.equals(dbill.getLastActionDate(), b.getLastActionDate())
 			    || !Objects.equals(dbill.getName(), b.getName())

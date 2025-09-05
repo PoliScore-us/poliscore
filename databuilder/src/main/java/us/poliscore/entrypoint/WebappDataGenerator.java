@@ -116,8 +116,6 @@ public class WebappDataGenerator implements QuarkusApplication
 		{
 //			int lastYearOfSession = 1789 + (congress.getNumber() * 2) - 1;
 			int lastYearOfSession = dataset.getEndYear();
-			if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-				lastYearOfSession = lastYearOfSession - 1;
 			
 			String prefix = "/" + lastYearOfSession;
 			String state = dataset.getNamespace().toAbbreviation().toLowerCase().replace("us", "congress");
