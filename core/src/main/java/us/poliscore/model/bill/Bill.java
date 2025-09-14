@@ -115,7 +115,7 @@ public class Bill extends SessionPersistable {
 	
 	public String getShortName()
 	{
-		if (StringUtils.isNotBlank(name) && name.length() < 125) {
+		if (StringUtils.isNotBlank(name) && name.length() < 100) {
 			return name;
 		} else if (interpretation != null && StringUtils.isNotBlank(interpretation.getGenBillTitle())) {
 			return interpretation.getGenBillTitle();

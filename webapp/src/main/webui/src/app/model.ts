@@ -4,6 +4,7 @@ export interface Bill {
   impact: number;
   impactAbs: number;
   name: string;
+  shortName: string;
   number: number;
   type: string;
   sponsor: BillSponsor;

@@ -161,6 +161,7 @@ public class DatabaseBuilder implements QuarkusApplication
 			    || !Objects.equals(dbill.getStatus(), b.getStatus()) 
 			    || !Objects.equals(dbill.getLastActionDate(), b.getLastActionDate())
 			    || !Objects.equals(dbill.getName(), b.getName())
+			    || !Objects.equals(dbill.getShortName(), b.getShortName())
 			    || !Objects.equals(dbill.getHot(), b.getHot())
 			    || !Objects.equals(dbill.getStorageBucket(), b.getStorageBucket())
 			    || !Objects.equals(ObjectUtils.firstNonNull(interp.get().getLastUpdate(), interp.get().getLastPressQuery()), ObjectUtils.firstNonNull(dbill.getInterpretation().getLastUpdate(), dbill.getInterpretation().getLastPressQuery()))

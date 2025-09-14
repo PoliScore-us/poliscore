@@ -49,8 +49,8 @@ public class DataCleaner implements QuarkusApplication {
 	
 	protected void process() throws IOException
 	{
-//		val dataset = data.importDataset(LegislativeNamespace.US_CONGRESS, 2026);
-		val dataset = data.importDataset(LegislativeNamespace.US_COLORADO, 2025);
+		val dataset = data.importDataset(LegislativeNamespace.US_CONGRESS, 2026);
+//		val dataset = data.importDataset(LegislativeNamespace.US_COLORADO, 2025);
 		
 //		cleanInvalidPressInterps(dataset);
 //		wipeAllPressInterps(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2023), Bill.class).get());
@@ -62,6 +62,14 @@ public class DataCleaner implements QuarkusApplication {
 //		lookForNullRating(dataset);
 		
 //		printLegislatorsBills(dataset.get(Legislator.generateId(LegislativeNamespace.US_COLORADO, "2173", "22225"), Legislator.class).get(), dataset);
+		
+		
+		val bill = dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 5304), Bill.class).get();
+		val interp = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class).get();
+		
+		bill.setInterpretation(interp);
+		System.out.println(interp.getGenBillTitle());
+		System.out.println(bill.getName());
 		
 		System.out.println("Program complete.");
 		

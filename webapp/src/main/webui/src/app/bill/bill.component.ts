@@ -132,7 +132,7 @@ export class BillComponent implements OnInit {
   }
 
   getBillTooltip(): string {
-    if (!this.bill || !this.bill.name || this.bill!.name.length <= 125 || this.getBillName()!.trim().toLowerCase() === this.bill!.name.trim().toLowerCase()) return '';
+    if (this.getBillName() === this.bill!.name) return '';
 
     return 'This bill\'s name was shortened by AI, for your convenience. The official bill title is: \n\n' + this.bill?.name;
   }

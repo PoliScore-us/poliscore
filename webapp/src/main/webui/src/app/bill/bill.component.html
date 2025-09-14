@@ -51,7 +51,7 @@
                                 </div>
                                 <div class="title-middle-stretch">
                                     <h1 class="card-title" [matTooltip]="bill.name"><a [href]="officialUrlForBill()">{{getBillName()}}</a></h1>
-                                    <h2 *ngIf="bill.interpretation && bill.interpretation.genBillTitle && bill.interpretation.genBillTitle !== bill.name" class="official-bill-title">{{ bill.name }}</h2>
+                                    <h2 *ngIf="getBillName() !== bill.name" class="official-bill-title">{{ bill.name }}</h2>
                                       
                                     <h3 class="card-subtitle">Sponsor: <a [href]="config.legislatorIdToAbsolutePath(bill.sponsor.legislatorId)">{{bill.sponsor.name.official_full + " (" + bill.sponsor.party.substring(0,1) + ")"}}</a></h3>
                                 </div>
@@ -73,7 +73,7 @@
                                     </div>
                                     <div class="title-middle">
                                         <h1 class="card-title" [matTooltip]="getBillTooltip()" matTooltipClass="bill-tooltip"><a [href]="officialUrlForBill()">{{getBillName()}}</a></h1>
-                                        <h2 *ngIf="bill.interpretation && bill.interpretation.genBillTitle && bill.interpretation.genBillTitle !== bill.name" class="official-bill-title">{{ bill.name }}</h2>
+                                        <h2 *ngIf="getBillName() !== bill.name" class="official-bill-title">{{ bill.name }}</h2>
                                         <h3 class="card-subtitle">Sponsor: <a [href]="config.legislatorIdToAbsolutePath(bill.sponsor.legislatorId)">{{bill.sponsor.name.official_full + " (" + bill.sponsor.party.substring(0,1) + ")"}}</a></h3>
                                     </div>
                                     <div class="title-right">

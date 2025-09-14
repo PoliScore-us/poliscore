@@ -275,6 +275,9 @@ public class USCDatasetProvider implements DatasetProvider {
 					{
 						importUscBill(dataset, fos);
 						totalBills++;
+					} catch (NoSuchElementException e) {
+						// Sponsor of a bill doesn't exist?
+						Log.error(e);
 					}
 				}
 			}
@@ -436,7 +439,13 @@ public class USCDatasetProvider implements DatasetProvider {
     	bill.setOriginatingChamber(CongressionalBillType.getOriginatingChamber(CongressionalBillType.valueOf(view.getBill_type().toUpperCase())));
     	bill.setStatus(buildStatus(dataset, view));
     	bill.setIntroducedDate(view.getIntroduced_at());
-    	bill.setSponsor(view.getSponsor() == null ? null : view.getSponsor().convert(dataset));
+    	
+    	try {
+    		bill.setSponsor(view.getSponsor() == null ? null : view.getSponsor().convert(dataset));
+    	} catch (NoSuchElementException e) {
+    		throw new NoSuchElementException("Could not find sponsor [" + view.getSponsor().getBioguide_id() + "] for bill [" + bill.getId() + "].", e);
+    	}
+    	
     	bill.setCosponsors(view.getCosponsors().stream().map(s -> s.convert(dataset)).collect(Collectors.toList()));
     	bill.setLastActionDate(view.getLastActionDate());
     	bill.setOfficialUrl("https://www.congress.gov/bill/" + dataset.getSession().getCode() + "th-congress/" + getCongressGovBillType(bill) + "/" + bill.getNumber());
