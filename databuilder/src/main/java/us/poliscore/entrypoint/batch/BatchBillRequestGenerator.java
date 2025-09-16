@@ -21,7 +21,6 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.val;
 import us.poliscore.Environment;
-import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.ai.BatchOpenAIRequest;
 import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
@@ -29,6 +28,7 @@ import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
 import us.poliscore.dataset.PoliscoreDatasetIF;
+import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillSlice;
@@ -46,7 +46,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	public static final List<String> specificFetch = null;
 //	public static final List<String> specificFetch = Arrays.asList(
 //			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 4947),
-//			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hjres", 112)
+//			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2690)
 //		);
 //	public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_COLORADO, "2173", "sb", 317));
 	
@@ -99,7 +99,8 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 	}
 	
 	public List<File> process() throws IOException {
-		return process(data.getBuildDatasets(), true, true);
+		data.importAllDatasets();
+		return process(data.getBuildDatasets(), true, false);
 	}
 	
 	public List<File> process(List<PoliscoreDatasetIF> buildDatasets, boolean enableWebSearch, boolean isSecondFetch) throws IOException

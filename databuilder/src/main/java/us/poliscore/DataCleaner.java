@@ -64,7 +64,7 @@ public class DataCleaner implements QuarkusApplication {
 //		printLegislatorsBills(dataset.get(Legislator.generateId(LegislativeNamespace.US_COLORADO, "2173", "22225"), Legislator.class).get(), dataset);
 		
 		
-		val bill = dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 5304), Bill.class).get();
+		val bill = dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 2690), Bill.class).get();
 		val interp = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class).get();
 		
 		bill.setInterpretation(interp);
