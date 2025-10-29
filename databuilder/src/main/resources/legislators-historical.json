@@ -237300,7 +237300,7 @@
       {
         "type": "sen",
         "start": "1897-03-15",
-        "end": "1901-12-31",
+        "end": "1901-07-01",
         "state": "SD",
         "class": 3,
         "party": "Republican"
@@ -240195,7 +240195,7 @@
       {
         "type": "sen",
         "start": "1899-12-04",
-        "end": "1901-12-31",
+        "end": "1901-03-28",
         "state": "NE",
         "class": 1,
         "party": "Populist"
@@ -244708,7 +244708,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1900-01-01",
+        "start": "1900-02-07",
         "end": "1905-03-03",
         "state": "CA",
         "class": 1,
@@ -248163,7 +248163,7 @@
       {
         "type": "sen",
         "start": "1901-12-02",
-        "end": "1905-12-31",
+        "end": "1905-12-08",
         "state": "OR",
         "class": 2,
         "party": "Republican"
@@ -250413,8 +250413,8 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1902-01-01",
-        "end": "1907-03-03",
+        "start": "1902-09-27",
+        "end": "1907-01-24",
         "state": "MI",
         "class": 2,
         "party": "Republican"
@@ -250442,7 +250442,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1902-01-01",
+        "start": "1902-01-29",
         "end": "1907-03-03",
         "state": "NJ",
         "class": 2,
@@ -251801,7 +251801,7 @@
       {
         "type": "sen",
         "start": "1903-11-09",
-        "end": "1905-12-31",
+        "end": "1905-03-03",
         "state": "IN",
         "class": 3,
         "party": "Republican"
@@ -253572,7 +253572,7 @@
       {
         "type": "sen",
         "start": "1903-11-09",
-        "end": "1907-12-31",
+        "end": "1907-07-27",
         "state": "AL",
         "class": 3,
         "party": "Democrat"
@@ -253711,7 +253711,7 @@
       {
         "type": "sen",
         "start": "1903-11-09",
-        "end": "1905-12-31",
+        "end": "1905-04-21",
         "state": "CT",
         "class": 3,
         "party": "Republican"
@@ -254487,7 +254487,7 @@
       {
         "type": "sen",
         "start": "1903-11-09",
-        "end": "1907-12-31",
+        "end": "1907-04-30",
         "state": "WI",
         "class": 3,
         "party": "Republican"
@@ -260549,8 +260549,8 @@
       },
       {
         "type": "sen",
-        "start": "1900-01-01",
-        "end": "1901-12-31",
+        "start": "1900-12-05",
+        "end": "1901-01-28",
         "state": "MN",
         "class": 1,
         "party": "Democrat"
@@ -261185,8 +261185,8 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1906-01-01",
-        "end": "1907-03-03",
+        "start": "1906-06-11",
+        "end": "1907-01-23",
         "state": "KS",
         "class": 2,
         "party": "Republican"
@@ -261230,8 +261230,8 @@
       },
       {
         "type": "sen",
-        "start": "1906-01-01",
-        "end": "1909-03-03",
+        "start": "1906-06-08",
+        "end": "1908-03-17",
         "state": "MD",
         "class": 3,
         "party": "Democrat"
@@ -262549,7 +262549,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1904-01-01",
+        "start": "1904-10-12",
         "end": "1907-03-03",
         "state": "MA",
         "class": 2,
@@ -263144,7 +263144,7 @@
       {
         "type": "sen",
         "start": "1907-12-02",
-        "end": "1911-12-31",
+        "end": "1911-01-04",
         "state": "WV",
         "class": 2,
         "party": "Republican"
@@ -263329,7 +263329,7 @@
       {
         "type": "sen",
         "start": "1907-12-02",
-        "end": "1911-12-31",
+        "end": "1911-08-08",
         "state": "ME",
         "class": 2,
         "party": "Republican"
@@ -265001,7 +265001,7 @@
       {
         "type": "sen",
         "start": "1907-12-02",
-        "end": "1909-12-31",
+        "end": "1909-12-22",
         "state": "MS",
         "class": 2,
         "party": "Democrat"
@@ -266285,7 +266285,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1908-01-01",
+        "start": "1908-03-06",
         "end": "1909-03-03",
         "state": "SC",
         "class": 3,
@@ -266314,7 +266314,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1908-01-01",
+        "start": "1908-03-27",
         "end": "1909-03-03",
         "state": "FL",
         "class": 3,
@@ -266376,7 +266376,7 @@
       },
       {
         "type": "sen",
-        "start": "1908-01-01",
+        "start": "1908-03-24",
         "end": "1909-03-03",
         "state": "VT",
         "class": 1,
@@ -266421,7 +266421,7 @@
       },
       {
         "type": "sen",
-        "start": "1908-01-01",
+        "start": "1908-01-22",
         "end": "1913-03-03",
         "state": "RI",
         "class": 2,
@@ -269622,7 +269622,7 @@
       {
         "type": "sen",
         "start": "1909-03-15",
-        "end": "1911-12-31",
+        "end": "1911-01-11",
         "state": "CO",
         "class": 3,
         "party": "Democrat"
@@ -269846,7 +269846,7 @@
       {
         "type": "sen",
         "start": "1909-03-15",
-        "end": "1909-12-31",
+        "end": "1909-10-21",
         "state": "ND",
         "class": 3,
         "party": "Republican"
@@ -269883,7 +269883,7 @@
       {
         "type": "sen",
         "start": "1909-03-15",
-        "end": "1913-12-31",
+        "end": "1913-08-08",
         "state": "AL",
         "class": 3,
         "party": "Democrat"
@@ -273518,7 +273518,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1910-01-01",
+        "start": "1910-02-23",
         "end": "1913-03-03",
         "state": "MS",
         "class": 2,
@@ -273547,8 +273547,8 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1910-01-01",
-        "end": "1911-12-31",
+        "start": "1910-02-01",
+        "end": "1911-02-01",
         "state": "ND",
         "class": 3,
         "party": "Democrat"
@@ -273576,8 +273576,8 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1910-01-01",
-        "end": "1911-12-31",
+        "start": "1910-11-17",
+        "end": "1911-07-14",
         "state": "GA",
         "class": 3,
         "party": "Democrat"
@@ -273605,7 +273605,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1910-01-01",
+        "start": "1910-12-07",
         "end": "1915-03-03",
         "state": "LA",
         "class": 3,
@@ -273633,8 +273633,8 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1910-01-01",
-        "end": "1911-12-31",
+        "start": "1910-11-12",
+        "end": "1911-04-11",
         "state": "IA",
         "class": 2,
         "party": "Republican"
@@ -279526,7 +279526,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1906-01-01",
+        "start": "1906-06-13",
         "end": "1911-03-03",
         "state": "DE",
         "class": 1,
@@ -279572,7 +279572,7 @@
       },
       {
         "type": "sen",
-        "start": "1912-01-01",
+        "start": "1912-03-27",
         "end": "1917-03-03",
         "state": "NM",
         "class": 1,
@@ -279601,8 +279601,8 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1912-01-01",
-        "end": "1915-03-03",
+        "start": "1912-11-29",
+        "end": "1914-01-28",
         "state": "MD",
         "class": 1,
         "party": "Republican"
@@ -279630,8 +279630,8 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1912-01-01",
-        "end": "1913-12-31",
+        "start": "1912-07-01",
+        "end": "1913-01-29",
         "state": "NV",
         "class": 1,
         "party": "Republican"
@@ -279659,8 +279659,8 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1912-01-01",
-        "end": "1913-12-31",
+        "start": "1912-11-18",
+        "end": "1913-02-05",
         "state": "ID",
         "class": 3,
         "party": "Democrat"
@@ -279683,8 +279683,8 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1912-01-01",
-        "end": "1913-03-03",
+        "start": "1912-04-11",
+        "end": "1913-01-24",
         "state": "TN",
         "class": 2,
         "party": "Republican"
@@ -282412,8 +282412,8 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1913-04-07",
-        "end": "1913-12-31",
+        "start": "1913-01-04",
+        "end": "1913-01-29",
         "how": "appointment",
         "state": "TX",
         "class": 2,
@@ -282825,7 +282825,7 @@
       {
         "type": "sen",
         "start": "1913-04-07",
-        "end": "1917-12-31",
+        "end": "1917-05-23",
         "state": "OR",
         "class": 2,
         "party": "Democrat"
@@ -285886,8 +285886,8 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1913-04-07",
-        "end": "1913-12-31",
+        "start": "1913-01-27",
+        "end": "1913-03-03",
         "state": "TN",
         "class": 2,
         "party": "Democrat"
@@ -286257,7 +286257,7 @@
       },
       {
         "type": "sen",
-        "start": "1914-01-01",
+        "start": "1914-11-04",
         "end": "1919-03-03",
         "state": "GA",
         "class": 2,
@@ -286285,7 +286285,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1914-01-01",
+        "start": "1914-01-28",
         "end": "1917-03-03",
         "state": "MD",
         "class": 1,
@@ -286345,7 +286345,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1914-01-01",
+        "start": "1914-05-11",
         "end": "1915-03-03",
         "state": "AL",
         "class": 3,
@@ -288553,7 +288553,7 @@
       {
         "type": "sen",
         "start": "1915-12-06",
-        "end": "1917-12-31",
+        "end": "1917-10-21",
         "state": "WI",
         "class": 3,
         "party": "Democrat"
@@ -289827,7 +289827,7 @@
       {
         "type": "sen",
         "start": "1915-12-06",
-        "end": "1917-12-31",
+        "end": "1917-12-24",
         "state": "NV",
         "class": 3,
         "party": "Democrat"
@@ -290768,7 +290768,7 @@
       },
       {
         "type": "sen",
-        "start": "1912-01-01",
+        "start": "1912-03-27",
         "end": "1915-03-03",
         "state": "AZ",
         "class": 3,
@@ -291649,7 +291649,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1916-01-01",
+        "start": "1916-11-08",
         "end": "1921-03-03",
         "state": "AR",
         "class": 3,
@@ -295561,7 +295561,7 @@
       {
         "type": "sen",
         "start": "1905-03-04",
-        "end": "1909-04-04",
+        "end": "1909-03-04",
         "state": "PA",
         "class": 1,
         "party": "Republican"
@@ -295569,7 +295569,7 @@
       {
         "type": "sen",
         "start": "1917-04-02",
-        "end": "1921-12-31",
+        "end": "1921-10-12",
         "state": "PA",
         "class": 1,
         "party": "Republican"
@@ -296235,7 +296235,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1908-01-01",
+        "start": "1908-10-21",
         "end": "1911-03-03",
         "state": "VT",
         "class": 1,
@@ -298083,7 +298083,7 @@
       {
         "type": "sen",
         "start": "1917-04-02",
-        "end": "1921-12-31",
+        "end": "1921-07-02",
         "state": "DE",
         "class": 1,
         "party": "Democrat"
@@ -298202,7 +298202,7 @@
       {
         "type": "sen",
         "start": "1918-07-06",
-        "end": "1919-03-03",
+        "end": "1918-11-05",
         "state": "SC",
         "class": 2,
         "party": "Democrat",
@@ -298232,7 +298232,7 @@
       {
         "type": "sen",
         "start": "1918-09-02",
-        "end": "1919-03-03",
+        "end": "1918-11-05",
         "state": "NH",
         "class": 3,
         "party": "Republican",
@@ -298261,7 +298261,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1918-01-01",
+        "start": "1918-11-06",
         "end": "1921-03-03",
         "state": "LA",
         "class": 3,
@@ -298379,16 +298379,16 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1907-12-02",
-        "end": "1907-12-31",
+        "start": "1907-01-23",
+        "end": "1907-03-03",
         "state": "OR",
         "class": 2,
         "party": "Republican"
       },
       {
         "type": "sen",
-        "start": "1918-01-01",
-        "end": "1919-03-03",
+        "start": "1918-11-06",
+        "end": "1918-12-17",
         "state": "OR",
         "class": 2,
         "party": "Republican"
@@ -298417,7 +298417,7 @@
       {
         "type": "sen",
         "start": "1918-01-22",
-        "end": "1921-03-03",
+        "end": "1921-01-14",
         "state": "ID",
         "class": 3,
         "party": "Democrat",
@@ -298446,7 +298446,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1918-01-01",
+        "start": "1918-11-06",
         "end": "1919-03-03",
         "state": "SC",
         "class": 2,
@@ -298476,7 +298476,7 @@
       {
         "type": "sen",
         "start": "1918-04-30",
-        "end": "1919-03-03",
+        "end": "1918-11-05",
         "state": "MO",
         "class": 3,
         "party": "Democrat",
@@ -300090,8 +300090,8 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1911-04-04",
-        "end": "1911-12-31",
+        "start": "1911-01-09",
+        "end": "1911-01-31",
         "state": "WV",
         "class": 2,
         "party": "Republican"
@@ -302843,7 +302843,7 @@
       {
         "type": "sen",
         "start": "1919-05-19",
-        "end": "1923-12-31",
+        "end": "1923-04-28",
         "state": "MN",
         "class": 2,
         "party": "Republican"
@@ -306915,7 +306915,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1900-01-01",
+        "start": "1900-10-18",
         "end": "1903-03-03",
         "state": "VT",
         "class": 3,
@@ -306948,7 +306948,7 @@
       {
         "type": "sen",
         "start": "1921-04-11",
-        "end": "1923-12-31",
+        "end": "1923-07-12",
         "state": "VT",
         "class": 3,
         "party": "Republican"
@@ -309172,7 +309172,7 @@
       {
         "type": "sen",
         "start": "1921-04-11",
-        "end": "1925-12-31",
+        "end": "1925-06-22",
         "state": "ND",
         "class": 3,
         "party": "Republican"
@@ -309330,8 +309330,16 @@
         "party": "Republican"
       },
       {
+        "type": "rep",
+        "start": "1917-04-02",
+        "end": "1918-04-17",
+        "state": "WI",
+        "district": 11,
+        "party": "Republican"
+      },
+      {
         "type": "sen",
-        "start": "1918-01-01",
+        "start": "1918-04-18",
         "end": "1921-03-03",
         "state": "WI",
         "class": 3,
@@ -310200,7 +310208,7 @@
       {
         "type": "sen",
         "start": "1921-04-11",
-        "end": "1923-12-31",
+        "end": "1923-03-24",
         "state": "CO",
         "class": 3,
         "party": "Republican"
@@ -311819,7 +311827,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1918-01-01",
+        "start": "1918-11-06",
         "end": "1921-03-03",
         "state": "MO",
         "class": 3,
@@ -311828,7 +311836,7 @@
       {
         "type": "sen",
         "start": "1921-04-11",
-        "end": "1925-12-31",
+        "end": "1925-05-16",
         "state": "MO",
         "class": 3,
         "party": "Republican"
@@ -314939,7 +314947,7 @@
       },
       {
         "type": "sen",
-        "start": "1906-01-01",
+        "start": "1906-01-04",
         "end": "1911-03-03",
         "state": "WI",
         "class": 1,
@@ -314964,7 +314972,7 @@
       {
         "type": "sen",
         "start": "1923-12-03",
-        "end": "1925-12-31",
+        "end": "1925-06-18",
         "state": "WI",
         "class": 1,
         "party": "Republican"
@@ -316217,7 +316225,7 @@
       {
         "type": "sen",
         "start": "1923-12-03",
-        "end": "1925-12-31",
+        "end": "1925-10-14",
         "state": "IN",
         "class": 1,
         "party": "Democrat"
@@ -317642,7 +317650,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1924-01-01",
+        "start": "1924-12-01",
         "end": "1927-03-04",
         "state": "CO",
         "class": 3,
@@ -318060,7 +318068,7 @@
       {
         "type": "sen",
         "start": "1925-12-07",
-        "end": "1929-12-31",
+        "end": "1929-11-21",
         "state": "NJ",
         "class": 2,
         "party": "Republican"
@@ -318150,7 +318158,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1916-01-01",
+        "start": "1916-09-12",
         "end": "1919-03-03",
         "state": "ME",
         "class": 2,
@@ -320733,7 +320741,7 @@
       {
         "type": "sen",
         "start": "1925-12-07",
-        "end": "1929-12-31",
+        "end": "1929-08-24",
         "state": "TN",
         "class": 2,
         "party": "Democrat"
@@ -321306,7 +321314,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1926-01-01",
+        "start": "1926-11-30",
         "end": "1931-03-03",
         "state": "ME",
         "class": 2,
@@ -321427,7 +321435,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1926-01-01",
+        "start": "1926-04-12",
         "end": "1931-03-03",
         "state": "IA",
         "class": 2,
@@ -321774,7 +321782,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1924-01-01",
+        "start": "1925-01-08",
         "end": "1927-03-04",
         "state": "CT",
         "class": 3,
@@ -322079,7 +322087,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1922-01-01",
+        "start": "1922-11-08",
         "end": "1925-03-03",
         "state": "IA",
         "class": 2,
@@ -322637,7 +322645,7 @@
       {
         "type": "sen",
         "start": "1927-12-05",
-        "end": "1929-12-31",
+        "end": "1929-03-03",
         "state": "KS",
         "class": 3,
         "party": "Republican"
@@ -324654,7 +324662,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1918-01-01",
+        "start": "1918-11-06",
         "end": "1921-03-03",
         "state": "NH",
         "class": 3,
@@ -325786,7 +325794,7 @@
       {
         "type": "sen",
         "start": "1927-12-05",
-        "end": "1929-12-31",
+        "end": "1929-12-06",
         "state": "PA",
         "class": 3,
         "party": "Republican"
@@ -325952,7 +325960,7 @@
       },
       {
         "type": "sen",
-        "start": "1916-01-01",
+        "start": "1916-11-08",
         "end": "1921-03-03",
         "state": "IN",
         "class": 3,
@@ -326331,9 +326339,17 @@
         "party": "Republican"
       },
       {
+        "type": "rep",
+        "start": "1927-12-05",
+        "end": "1928-12-15",
+        "state": "OH",
+        "district": 22,
+        "party": "Republican"
+      },
+      {
         "type": "sen",
-        "start": "1928-01-01",
-        "end": "1929-12-31",
+        "start": "1928-12-15",
+        "end": "1929-10-28",
         "state": "OH",
         "class": 3,
         "party": "Republican"
@@ -326361,7 +326377,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1928-01-01",
+        "start": "1928-12-03",
         "end": "1933-03-03",
         "state": "IL",
         "class": 3,
@@ -376460,7 +376476,7 @@
       },
       {
         "type": "sen",
-        "start": "1926-01-01",
+        "start": "1926-12-06",
         "end": "1929-03-03",
         "state": "MA",
         "class": 1,
@@ -402473,7 +402489,7 @@
     "terms": [
       {
         "type": "sen",
-        "start": "1922-01-01",
+        "start": "1922-11-22",
         "end": "1927-03-04",
         "state": "GA",
         "class": 3,

@@ -20,6 +20,9 @@ import { shortNameForBill } from '../bills';
 
 import { marked } from 'marked';
 import { SubscribeFormComponent } from '../subscribe-form/subscribe-form.component';
+import { AuthService } from '../auth/auth.service';
+import { ExpertPreviewComponent } from '../expert-preview/expert-preview.component';
+import { Subscription } from 'rxjs';
 marked.setOptions({
   async: false
 });
@@ -29,7 +32,7 @@ Chart.register(BarController, CategoryScale, LinearScale, BarElement, ChartDataL
 @Component({
   selector: 'bill',
   standalone: true,
-  imports: [SubscribeFormComponent, MatTabsModule, MatTooltipModule, MatTableModule, DisclaimerComponent, HeaderComponent, MatCardModule, CommonModule, CommonModule, RouterModule, MatButtonModule],
+  imports: [ExpertPreviewComponent, SubscribeFormComponent, MatTabsModule, MatTooltipModule, MatTableModule, DisclaimerComponent, HeaderComponent, MatCardModule, CommonModule, RouterModule, MatButtonModule],
   providers: [AppService, HttpClient],
   templateUrl: './bill.component.html',
   styleUrl: './bill.component.scss'
@@ -44,11 +47,17 @@ export class BillComponent implements OnInit {
 
   public isSmallScreen = false;
 
-  public formattedExpertReport: SafeHtml[] = [];
+  public formattedExpertReport: SafeHtml[] | undefined;
 
-  public formattedLaymansReport: SafeHtml[] = [];
+  public formattedLaymansReport: SafeHtml[] | undefined;
 
   public selectedReportTab = 0; // Optional: store selected tab index
+
+  public showSignupAtBottom: boolean = true;
+
+  private loggedIn: boolean = false;
+
+  private sub?: Subscription;
 
   public barChartData: ChartConfiguration<'bar'>['data'] = {
     labels: [],
@@ -88,7 +97,7 @@ export class BillComponent implements OnInit {
     }
   };
 
-  constructor(private sanitizer: DomSanitizer, public config: ConfigService, private meta: Meta, private service: AppService, private route: ActivatedRoute, private router: Router, @Inject(PLATFORM_ID) private _platformId: Object, private titleService: Title) { }
+  constructor(private sanitizer: DomSanitizer, public config: ConfigService, private meta: Meta, private service: AppService, private route: ActivatedRoute, private router: Router, @Inject(PLATFORM_ID) private _platformId: Object, private titleService: Title, public auth: AuthService) { }
 
   @HostListener('window:resize', ['$event'])
   onResize() {
@@ -99,6 +108,11 @@ export class BillComponent implements OnInit {
   ngOnInit(): void {
     if (isPlatformBrowser(this._platformId))
       this.isSmallScreen = window.innerWidth < 600;
+
+    this.sub = this.auth.isAuthenticated$.subscribe(v => {
+      this.loggedIn = !!v;
+      this.recalcOverlay();
+    });
 
     this.billId = (this.route.snapshot.paramMap.get('id') as string);
     if (!this.billId.startsWith("BIL/" + this.config.getNamespace())) {
@@ -465,6 +479,20 @@ export class BillComponent implements OnInit {
         );
       }, 10);
     }
+  }
+
+  onTabChange(): void {
+    this.recalcOverlay();
+  }
+
+  private recalcOverlay(): void {
+    const hasExpert = !!(this.formattedExpertReport?.length);
+    const hasLaymans = !!(this.formattedLaymansReport?.length);
+
+    // show Expert tab when selected explicitly, or when Expert is the only report
+    const expertTabActive = this.selectedReportTab === 1 || (!hasLaymans && hasExpert);
+
+    this.showSignupAtBottom = !(!this.loggedIn && hasExpert && expertTabActive);
   }
 
 }

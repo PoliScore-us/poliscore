@@ -1,10 +1,11 @@
-import { Component, Input } from '@angular/core';
+import { Component, inject, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { Router, RouterModule } from '@angular/router';
 import { ConfigService } from '../config.service';
 import {MatSelectModule} from '@angular/material/select';
 import convertStateCodeToName from '../model';
+import { AuthService } from '../auth/auth.service';
 
 @Component({
   selector: 'header',
@@ -19,6 +20,8 @@ export class HeaderComponent {
   @Input() public bills: boolean = true;
   @Input() public congress: boolean = true;
   @Input() public about: boolean = true;
+
+  auth = inject(AuthService);
 
   public year: number = 2024;
   public years = [2026];

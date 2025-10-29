@@ -7,6 +7,7 @@ import { BillComponent } from './bill/bill.component';
 import { BillsComponent } from './bills/bills.component';
 import { SessionStatsComponent } from './sessionstats/sessionstats.component';
 import { PromoComponent } from './promo/promo.component';
+import { AuthCallbackComponent } from './auth-callback/auth-callback.component';
 
 function idPathMatcher(path: string) {
   let p = path;
@@ -50,6 +51,7 @@ function idPathMatcher(path: string) {
 
 export const routes: Routes = [
   { path: "", component: PromoComponent, data: { animation: 'promoPage' } },
+  { path: 'auth-callback', component: AuthCallbackComponent },
   { matcher: idPathMatcher('legislator'), component: LegislatorComponent, data: { animation: 'legislatorPage' } },
   { path: 'legislators', component: LegislatorsComponent, data: { animation: 'legislatorsPage' } },
   { path: 'legislators/:index/:ascending', component: LegislatorsComponent, data: { animation: 'legislatorsPage' } },

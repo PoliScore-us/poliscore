@@ -27,6 +27,16 @@
                <button *ngIf="bills" mat-raised-button [routerLink]="'/bills'"><a [routerLink]="'/bills'" class="unstyled"><span>Bills</span></a></button>
                <button *ngIf="congress" mat-raised-button [routerLink]="'/party'"><a [routerLink]="'/party'" class="unstyled"><span>Party Stats</span></a></button>
                <button *ngIf="about" mat-raised-button class="about-button" [routerLink]="'/'"><a href="/" class="unstyled"><span>About</span></a></button>
+
+               <div class="session">
+                <span class="ml-auto" *ngIf="auth.isAuthenticated$ | async; else loggedOut">
+                  <!-- <div *ngIf="auth.userData$ | async as user"><p>Welcome, {{ user.userData['cognito:username'] }}</p></div> -->
+                  <button (click)="auth.logout()" mat-raised-button>Logout</button>
+                </span>
+                <ng-template #loggedOut>
+                  <button (click)="auth.login()" mat-raised-button>Login</button>
+                </ng-template>
+               </div>
            </div>
        </div>
    </div>

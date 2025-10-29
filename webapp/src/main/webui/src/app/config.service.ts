@@ -141,7 +141,20 @@ export class ConfigService {
     return "LEG/" + this.getNamespace() + "/" + this.getCurrentSessionCode() + "/" + path;
   }
 
+  /**
+   * Relative pathing is returned for paths inside our same angular deployment. Absolute paths are returned for
+   * links in a different angular deployment. This allows us to utilize a baseHref of '/' for local dev and a
+   * separate deployed baseHref (which is essential for OIDC )
+   * 
+   * @param namespace 
+   * @param year 
+   * @param path 
+   * @returns 
+   */
   public routePath(namespace: string, year: string, path: string) {
+    let sameApp = namespace === this.getNamespace() && year === String(this.getYear());
+    if (sameApp) return path;
+
     if (namespace === "us/congress") {
       if (path.startsWith("bill/" + this.currentSessionCode))
         path = path.replace("bill/" + this.currentSessionCode, "bill");
