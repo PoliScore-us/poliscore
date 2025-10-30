@@ -20,6 +20,7 @@ import org.apache.commons.lang3.StringUtils;
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.errors.InternalServerException;
+import com.openai.errors.OpenAIInvalidDataException;
 import com.openai.models.Reasoning;
 import com.openai.models.batches.Batch;
 import com.openai.models.batches.Batch.Status;
@@ -145,7 +146,9 @@ public class OpenAIService {
 		
 		Log.info("Sending request to open ai with message size " + userMsg.length());
 		RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
-			    .handle(SocketTimeoutException.class, InternalServerException.class)
+			    .handle(SocketTimeoutException.class, InternalServerException.class,
+			    		OpenAIInvalidDataException.class // Even though this runs counter to their documentation, this exception is actually thrown wrapping a "SocketException: connection reset", so we definitely want to retry it.
+			    		)
 			    .handleIf((failure) -> {
 			        String msg = failure.getMessage();
 			        return msg != null && msg.toLowerCase().contains("rate limit");

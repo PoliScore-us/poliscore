@@ -1,10 +1,14 @@
 import { mergeApplicationConfig, ApplicationConfig } from '@angular/core';
 import { provideServerRendering } from '@angular/platform-server';
 import { backendUrl, sharedAppConfig } from './app.config';
-import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { provideAnimations, provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
 import { provideAuth } from 'angular-auth-oidc-client';
 import { makeAuthConfig } from './auth/auth.config';
+import { provideClientHydration } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
+import { routes } from './app.routes';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 
 // For prerender, don't touch window. Use a known public base URL:
 const redirectBase =
@@ -14,10 +18,13 @@ const redirectBase =
 const serverOnlyConfig: ApplicationConfig = {
   providers: [
     provideServerRendering(),
-    provideNoopAnimations(),
+  //   provideClientHydration(),
+  //   provideNoopAnimations(),
     provideAuth({ config: makeAuthConfig(redirectBase, { server: true }) })
   ]
+  // providers: [provideRouter(routes), provideAnimations(), provideAnimationsAsync(), provideClientHydration(), provideHttpClient(withFetch())]
 };
 
 export const serverConfig = mergeApplicationConfig(sharedAppConfig, serverOnlyConfig);
+// export const serverConfig = serverOnlyConfig;
 

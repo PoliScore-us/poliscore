@@ -15,11 +15,13 @@ const redirectBase =
 
 export const clientOnlyConfig: ApplicationConfig = {
   providers: [
-    provideClientHydration(), provideAnimations(), provideAnimationsAsync(),
-    provideRouter(routes),                // animations OK on client
+  //   provideClientHydration(), provideAnimations(), provideAnimationsAsync(),
+  //   provideRouter(routes),                // animations OK on client
     provideAuth({ config: makeAuthConfig(redirectBase)}), // OIDC on client
-    { provide: AbstractSecurityStorage, useClass: DefaultLocalStorageService }
+  //   { provide: AbstractSecurityStorage, useClass: DefaultLocalStorageService }
   ]
+  // providers: [provideRouter(routes), provideAnimations(), provideAnimationsAsync(), provideClientHydration(), provideHttpClient(withFetch())]
 };
 
 export const clientConfig = mergeApplicationConfig(sharedAppConfig, clientOnlyConfig);
+// export const clientConfig = clientOnlyConfig;

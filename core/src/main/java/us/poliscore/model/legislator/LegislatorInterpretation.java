@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
@@ -28,6 +30,7 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
 import us.poliscore.model.legislator.Legislator.LegislatorLegislativeTermSortedSet;
 import us.poliscore.model.legislator.Legislator.LegislatorName;
+import us.poliscore.util.ParsingUtil;
 
 @Data
 @EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
@@ -64,6 +67,19 @@ public class LegislatorInterpretation extends SessionPersistable
 		this.id = generateId(namespace, sessionKey, legislatorCode);
 		this.metadata = metadata;
 		this.issueStats = stats;
+	}
+	
+	public void validate()
+	{
+		if (ParsingUtil.containsJson(longExplain))
+			throw new IllegalStateException("longExplain contained json for " + getId());
+		
+		if (ParsingUtil.containsJson(shortExplain))
+			throw new IllegalStateException("longExplain contained json for " + getId());
+		
+		if (getIssueStats() == null || !getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety) || StringUtils.isBlank(getLongExplain())) {
+			throw new IllegalStateException("Unable to parse valid issue stats for " + getId());
+		}
 	}
 	
 	@JsonIgnore

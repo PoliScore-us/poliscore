@@ -1,23 +1,7 @@
 package us.poliscore;
 
-import static org.joox.JOOX.$;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
-import lombok.val;
-import us.poliscore.model.bill.Bill;
-import us.poliscore.model.bill.BillSlice;
-import us.poliscore.parsing.XMLBillSlicer;
-import us.poliscore.service.OpenAIService;
 
 @QuarkusTest
 public class SlicerTest {

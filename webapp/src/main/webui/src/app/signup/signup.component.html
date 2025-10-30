@@ -6,7 +6,7 @@
             <!-- <h1 class="ps-title">PoliScore</h1> -->
             <a class="unstyled" href="/"><img class="logo" src="images/poliscore-word.png" alt="PoliScore Logo"></a>
           </div>
-          <h2 class="ps-headline">{{ headline }}</h2>
+          <h2 class="ps-headline"><i class="icon solid fa-solid fa-flask" style="margin-right:10px; color: #81548f !important;"></i>{{ headline }}</h2>
           <p class="ps-sub">{{ headlineDescriptor }}</p>
         </header>
 
@@ -19,6 +19,9 @@
           </button> -->
           <button class="ps-btn ps-btn-primary" (click)="joinWaitlist()">
             Join the Waitlist
+          </button>
+          <button class="ps-btn ps-btn-secondary" (click)="sendEmail()">
+            Missed Something?
           </button>
           <button class="ps-btn ps-btn-secondary" (click)="goHome()">
             Take Me Home
@@ -38,6 +41,8 @@
                     <strong>
                     {{ f.title }}
                     <span *ngIf="f.soon" class="badge">Coming soon</span>
+                    <span *ngIf="f.eventually" class="badge">Long-term goal</span>
+                    <span *ngIf="f.completed" class="badge sneak-peek">Sneak Peek</span>
                     </strong>
                     <div class="subtitle">{{ f.teaser }}</div>
                     <span class="caret" aria-hidden="true"></span>

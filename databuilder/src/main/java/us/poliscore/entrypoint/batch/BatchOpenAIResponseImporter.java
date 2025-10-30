@@ -63,10 +63,10 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 @QuarkusMain(name="BatchOpenAIResponseImporter")
 public class BatchOpenAIResponseImporter implements QuarkusApplication
 {
-	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/unprocessed.jsonl";
+//	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/unprocessed.jsonl";
 	
 //	Canceled half-way through a batch (bills)
-//	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/openapi-bills-bulk-1.jsonl.out.jsonl";
+	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/openapi-bills-bulk-1.jsonl.out.jsonl";
 //	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/oxpenapi-legislators-bulk-1.jsonl.out.jsonl";
 	
 	@Inject
@@ -173,10 +173,6 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		
 		val interpText = resp.getResponse().getBody().getChoices().get(0).getMessage().getContent();
 		new LegislatorInterpretationParser(interp).parse(interpText);
-		
-		if (interp.getIssueStats() == null || !interp.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety) || StringUtils.isBlank(interp.getLongExplain())) {
-			throw new RuntimeException("Unable to parse valid issue stats for legislator " + leg.getId());
-		}
 		
 		leg.setInteractions(legInterp.getInteractionsForInterpretation(leg).stream()
 				.filter(i -> i.getIssueStats() != null)

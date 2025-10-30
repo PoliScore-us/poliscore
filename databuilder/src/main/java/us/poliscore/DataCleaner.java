@@ -16,10 +16,12 @@ import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.val;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.legislator.Legislator;
+import us.poliscore.model.legislator.LegislatorInterpretation;
 import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
@@ -52,24 +54,7 @@ public class DataCleaner implements QuarkusApplication {
 		val dataset = data.importDataset(LegislativeNamespace.US_CONGRESS, 2026);
 //		val dataset = data.importDataset(LegislativeNamespace.US_COLORADO, 2025);
 		
-//		cleanInvalidPressInterps(dataset);
-//		wipeAllPressInterps(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2023), Bill.class).get());
-		
-//		redeployBill(dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 2023), Bill.class).get());
-		
-//		cleanQualityMetric(dataset);
-		
-//		lookForNullRating(dataset);
-		
-//		printLegislatorsBills(dataset.get(Legislator.generateId(LegislativeNamespace.US_COLORADO, "2173", "22225"), Legislator.class).get(), dataset);
-		
-		
-		val bill = dataset.get(Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 2690), Bill.class).get();
-		val interp = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class).get();
-		
-		bill.setInterpretation(interp);
-		System.out.println(interp.getGenBillTitle());
-		System.out.println(bill.getName());
+		validateLegislatorInterps(dataset);
 		
 		System.out.println("Program complete.");
 		
@@ -149,6 +134,33 @@ public class DataCleaner implements QuarkusApplication {
 		}
 		
 		Log.info("Deleted " + pressInterps.size() + " existing interpretations");
+	}
+	
+	public void validateLegislatorInterps(PoliscoreDatasetIF dataset) {
+		Log.info("validating legislator interpretations.");
+		
+		int total = 0;
+		int invalid = 0;
+		
+		for (val leg : dataset.query(Legislator.class)) {
+			var interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
+			
+			if (interpOp.isPresent())
+			{
+				var interp = interpOp.get();
+				
+				try {
+					interp.validate();
+				} catch (IllegalStateException ex) {
+					invalid++;
+					Log.info("Exception thrown validating interp " + interp.getId(), ex);
+				}
+			}
+			
+			total++;
+		}
+		
+		Log.info("Finished validating legislator interps. Found " + invalid + " invalid interps of total " + total);
 	}
 	
 	public void cleanInvalidPressInterps(PoliscoreDataset dataset) {

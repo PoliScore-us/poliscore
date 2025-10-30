@@ -47,6 +47,8 @@ public class LegislatorInterpretationParser {
 				processContent(line);
 			}
 		}
+		
+		interp.validate();
 	}
 
 	private void processContent(String line) {

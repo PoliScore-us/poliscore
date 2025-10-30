@@ -168,7 +168,7 @@ Your written response for this research section should consist of only a compact
 	 */
 	public boolean meetsInterpretationPrereqs(Legislator leg)
 	{
-		return getInteractionsForInterpretation(leg).size() >= 100;
+		return getInteractionsForInterpretation(leg).size() >= 30;
 	}
 	
 //	protected void interpretMostRecentInteractions(Legislator leg)
