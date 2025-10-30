@@ -1,9 +1,11 @@
-import { AfterViewInit, Component, ElementRef, Inject, inject, Input, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Inject, inject, Input, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
+import { Meta, Title } from '@angular/platform-browser';
+import { ConfigService } from '../config.service';
 
 type Feature = {
   title: string;
@@ -35,7 +37,7 @@ type Feature = {
   templateUrl: './signup.component.html',
   styleUrl: './signup.component.scss'
 })
-export class SignupComponent {
+export class SignupComponent implements OnInit {
   // @Input() headline = 'Create your PoliScore account';
   @Input() headline = 'Labs';
 
@@ -46,8 +48,6 @@ export class SignupComponent {
   @Input() loginRouterLink: string | any[] = '/login';
   @Input() termsRouterLink: string | any[] = '/terms';
   @Input() privacyRouterLink: string | any[] = '/privacy';
-
-  constructor(public dialog: MatDialog) {}
 
   auth = inject(AuthService);
 
@@ -139,6 +139,32 @@ export class SignupComponent {
       eventually: true
     },
   ];
+
+  constructor(private meta: Meta, private titleService: Title, public dialog: MatDialog, public config: ConfigService) { }
+
+  ngOnInit(): void {
+    this.updateMetaTags();
+  }
+
+  updateMetaTags(): void {
+    const pageTitle = "Labs - PoliScore: " + this.config.getTagline();
+    const description = "Exciting new content coming to PoliScore";
+    // const pageUrl = `https://poliscore.us/signup`;
+
+    this.titleService.setTitle(pageTitle);
+    
+    this.meta.updateTag({ property: 'og:title', content: pageTitle });
+    this.meta.updateTag({ property: 'og:description', content: description });
+    // this.meta.updateTag({ property: 'og:url', content: pageUrl });
+    // this.meta.updateTag({ property: 'og:image', content: imageUrl });
+    // this.meta.updateTag({ property: 'og:type', content: 'website' });
+
+    // // Twitter meta tags (optional)
+    // this.meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
+    // this.meta.updateTag({ name: 'twitter:title', content: pageTitle });
+    // this.meta.updateTag({ name: 'twitter:description', content: pageDescription });
+    // this.meta.updateTag({ name: 'twitter:image', content: imageUrl });
+  }
 
   joinWaitlist() {
     this.dialog.open(DisclaimerDialogSubscribeComponent, {
