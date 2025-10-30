@@ -31,10 +31,10 @@
                         <button class="button primary icon solid show-me image"><a [routerLink]="'/legislators'" class="unstyled" style="color: #81548f">Show me <i class="icon solid fa-solid fa-arrow-right" style="margin-right:-10px; margin-left:10px; color: #81548f !important;"></i></a></button>
 						
 						<!-- <button class="button primary icon solid show-me image"><a [routerLink]="'/about'" class="unstyled" style="color: #81548f">Methodology</a></button> -->
-						<button class="button primary icon solid show-me image"><a (click)="clickSubscribe()" class="unstyled" style="color: #81548f"><span style="margin-left: 10px;">Stay Informed<i class="icon solid fa-solid fa-envelope" style="margin-left: 20px; margin-bottom:-6px; display:inline-block; color: #81548f !important;"></i></span></a></button>
 						<button class="button primary icon solid show-me image"><a (click)="clickContact()" class="unstyled" style="color: #81548f"><span style="margin-left: 10px;">Contact<i class="icon solid fa-solid fa-envelope" style="margin-left: 20px; margin-bottom:-6px; display:inline-block; color: #81548f !important;"></i></span></a></button>
-						<button class="button primary icon solid show-me image"><a href="https://ko-fi.com/poliscore" class="unstyled" style="min-width: 175px; color: #81548f;"><span style="margin-left:30px;">Donate<img src="images/kofi.png" class="kofi" style="margin-left: 23px; margin-bottom:-6px; display:inline-block;"></span></a></button>
+						<!-- <button class="button primary icon solid show-me image"><a href="https://ko-fi.com/poliscore" class="unstyled" style="min-width: 175px; color: #81548f;"><span style="margin-left:30px;">Donate<img src="images/kofi.png" class="kofi" style="margin-left: 23px; margin-bottom:-6px; display:inline-block;"></span></a></button> -->
 						<button class="button primary icon solid show-me image"><a (click)="clickPrivacyPolicy()" class="unstyled" style="color: #81548f">Privacy Policy</a></button>
+						<button class="button primary icon solid show-me image"><a [routerLink]="'/signup'" class="unstyled" style="color: #81548f"><span style="margin-left: 10px;">PoliScore Labs</span></a></button>
                     </span>
 					<!-- <div class="image phone"><div class="inner"><img src="images/screen.jpg" alt="" /></div></div> -->
 				</div>
@@ -513,14 +513,14 @@ Based on these scores, this legislator has received the overall letter grade: {{
 		<!-- Three -->
 			<section id="three" class="wrapper style2 special">
 				<header class="major" id="get-involved">
-					<h2><a [routerLink]="'/about'" fragment="get-involved">Get Involved</a></h2>
-					<div class="vertical-layout"><p>If you're excited about what we're doing, the best way to support the project is to support us on Ko-Fi. Because we're not funded by any large political parties or organizations, we rely on individual donors such as yourself.</p></div>
+					<h2><a [routerLink]="'/about'" fragment="get-involved">Coming Soon</a></h2>
+					<div class="vertical-layout"><p>PoliScore is a 'mom and pop' style software shop. We don't take money from vulture capitalists and we're not funded by oligarchs. If you're wondering how we're funded, the simple answer is - we're not yet! We're honestly still figuring that part out. Check out 'PoliScore Labs' to discover all the new and exciting things we're working on.</p></div>
 				</header>
 				<ul class="actions special">
-					<li><a href="https://ko-fi.com/poliscore" class="vertical-layout button primary icon solid">
+					<li><a href="signup" class="vertical-layout button primary icon solid">
 						<div class="horizontal-layout">
-							<img src="images/kofi.png" class="kofi">
-							Support on Ko-Fi
+							<!-- <img src="images/kofi.png" class="kofi"> -->
+							PoliScore Labs
 						</div>
 					</a></li>
 					<!-- <li><a class="button primary vertical-layout" href="https://mastodon.social/@pissedoffcitizen">
@@ -868,9 +868,9 @@ print 'It took ' + i + ' iterations to sort the deck.';</code></pre>
 		-->
 
 		<!-- Donate bar -->
-		 <div class="popup-donate vertical-layout" [class]="donateBarHidden ? 'hidden' : ''"><div class="vertical-layout" style="height: 100%;">
+		 <!-- <div class="popup-donate vertical-layout" [class]="donateBarHidden ? 'hidden' : ''"><div class="vertical-layout" style="height: 100%;">
 			<a href="https://ko-fi.com/poliscore" class="horizontal-layout button primary icon solid" style="min-width: 175px;"><img src="images/kofi.png" class="kofi" style="margin-left: 10px;">Support on Ko-Fi</a>
-		</div></div>
+		</div></div> -->
 
 		<!-- Footer -->
 			<footer id="footer">

@@ -8,6 +8,7 @@ import { BillsComponent } from './bills/bills.component';
 import { SessionStatsComponent } from './sessionstats/sessionstats.component';
 import { PromoComponent } from './promo/promo.component';
 import { AuthCallbackComponent } from './auth-callback/auth-callback.component';
+import { SignupComponent } from './signup/signup.component';
 
 function idPathMatcher(path: string) {
   let p = path;
@@ -62,6 +63,7 @@ export const routes: Routes = [
   { path: 'party/:party', component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
   { path: 'party/:party/:sort', component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
 
-  { path: "about", redirectTo: "", pathMatch: "full" }
+  { path: "about", redirectTo: "", pathMatch: "full" },
+  { path: "signup", component: SignupComponent }
   // { path: 'about', component: PromoComponent, title: "About - PoliScore: AI Political Rating Service", data: { animation: 'about' } }
 ];

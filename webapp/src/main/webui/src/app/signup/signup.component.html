@@ -1,0 +1,62 @@
+<div class="ps-container">
+      <div class="ps-card">
+        <header class="ps-header">
+          <div class="ps-lockup">
+            <!-- <div class="ps-logo-dot"></div> -->
+            <!-- <h1 class="ps-title">PoliScore</h1> -->
+            <a class="unstyled" href="/"><img class="logo" src="images/poliscore-word.png" alt="PoliScore Logo"></a>
+          </div>
+          <h2 class="ps-headline">{{ headline }}</h2>
+          <p class="ps-sub">{{ headlineDescriptor }}</p>
+        </header>
+
+        <section class="ps-cta">
+          <!-- <button class="ps-btn ps-btn-primary" (click)="onSignup()">
+            Create free account
+          </button>
+          <button class="ps-btn ps-btn-secondary" (click)="auth.login('/legislators')">
+            I already have an account
+          </button> -->
+          <button class="ps-btn ps-btn-primary" (click)="joinWaitlist()">
+            Join the Waitlist
+          </button>
+          <button class="ps-btn ps-btn-secondary" (click)="goHome()">
+            Take Me Home
+          </button>
+        </section>
+
+        <section class="ps-features">
+          <!-- <h3 class="ps-section-title">What you get</h3> -->
+            <h3 class="ps-section-title">Coming soon</h3>
+
+          <ul class="ps-list">
+            <li *ngFor="let f of features" [class.soon]="f.soon">
+              <span class="dot"></span>
+              <div>
+                <details class="ps-accordion">
+                <summary class="ps-accordion-summary">
+                    <strong>
+                    {{ f.title }}
+                    <span *ngIf="f.soon" class="badge">Coming soon</span>
+                    </strong>
+                    <div class="subtitle">{{ f.teaser }}</div>
+                    <span class="caret" aria-hidden="true"></span>
+                </summary>
+                <div class="ps-accordion-panel">
+                    {{ f.details }}
+                </div>
+                </details>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <!-- <footer class="ps-footer">
+          <small>
+            By continuing you agree to our
+            <a [routerLink]="termsRouterLink">Terms</a> and
+            <a [routerLink]="privacyRouterLink">Privacy Policy</a>.
+          </small>
+        </footer> -->
+      </div>
+    </div>

@@ -492,7 +492,7 @@ export class BillComponent implements OnInit {
     // show Expert tab when selected explicitly, or when Expert is the only report
     const expertTabActive = this.selectedReportTab === 1 || (!hasLaymans && hasExpert);
 
-    this.showSignupAtBottom = !(!this.loggedIn && hasExpert && expertTabActive);
+    this.showSignupAtBottom = !this.loggedIn && !(hasExpert && expertTabActive);
   }
 
 }
