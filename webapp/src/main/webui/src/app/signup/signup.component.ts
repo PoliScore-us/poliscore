@@ -53,6 +53,7 @@ export class SignupComponent implements OnInit {
 
   // You can tweak wording here any time.
   features: Feature[] = [
+    /*
     {
       title: 'Bill Expert Analysis',
       teaser: 'Full agentic analysis with embedded source references.',
@@ -77,6 +78,7 @@ export class SignupComponent implements OnInit {
       details: 'Slice results by issue clusters (e.g., Energy, Defense). Rankings use comparable, normalized vectors so cross-bill sorting remains fair even when text lengths and contexts vary.',
       completed: true
     },
+    */
     {
       title: 'Bill Text Comparison',
       teaser: 'Compare how scores evolve between versions',
