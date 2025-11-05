@@ -1,14 +1,20 @@
-import { provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { ApplicationConfig } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideClientHydration } from '@angular/platform-browser';
+import { authInterceptor } from './auth/auth.interceptor';
 
 export const sharedAppConfig: ApplicationConfig = {
   // providers: [ provideHttpClient(withFetch(), withInterceptorsFromDi()) ]
-  providers: [provideRouter(routes), provideAnimations(), provideAnimationsAsync(), provideClientHydration(), provideHttpClient(withFetch())]
+  providers: [
+    provideRouter(routes),
+    provideAnimations(),
+    provideClientHydration(),
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+  ]
 };
 
 export const backendUrl: string = "https://5hta4jxn7q6cfcyxnvz4qmkyli0tambn.lambda-url.us-east-1.on.aws/";

@@ -1,5 +1,6 @@
 import { LogLevel, PassedInitialConfig } from 'angular-auth-oidc-client';
 import type { OpenIdConfiguration } from 'angular-auth-oidc-client';
+import { environment } from '../../environments/environment';
 
 type ServerHints = { server?: boolean };
 
@@ -16,7 +17,7 @@ export function makeAuthConfig(
     // redirectUrl: "https://d84l1y8p4kdic.cloudfront.net",
     postLogoutRedirectUri: redirectBase,
 
-    scope: 'openid profile email',
+    scope: environment.cognito.scope,
     responseType: 'code',
 
     // Keep server quiet: no timers/iframes on server

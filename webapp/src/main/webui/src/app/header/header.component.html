@@ -28,15 +28,14 @@
                <button *ngIf="congress" mat-raised-button [routerLink]="'/party'"><a [routerLink]="'/party'" class="unstyled"><span>Party Stats</span></a></button>
                <button *ngIf="about" mat-raised-button class="about-button" [routerLink]="'/'"><a href="/" class="unstyled"><span>About</span></a></button>
 
-			   <!-- Auth TODO -->
-               <!-- <div class="session">
+               <div class="session">
                 <span class="ml-auto" *ngIf="auth.isAuthenticated$ | async; else loggedOut">
                   <button (click)="auth.logout()" mat-raised-button>Logout</button>
                 </span>
                 <ng-template #loggedOut>
                   <button (click)="auth.login()" mat-raised-button>Login</button>
                 </ng-template>
-               </div> -->
+               </div>
            </div>
        </div>
    </div>

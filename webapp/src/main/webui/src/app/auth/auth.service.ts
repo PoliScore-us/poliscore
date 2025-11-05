@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { OidcSecurityService, UserDataResult } from 'angular-auth-oidc-client';
 import { map, Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -45,8 +46,8 @@ export class AuthService {
 
     
     window.location.href =
-      `https://us-east-1ukl1ofrmk.auth.us-east-1.amazoncognito.com/logout` +
-      `?client_id=2cf7gbsb646vjei20g6cr0kio8` +
+      environment.cognito.domain + `/logout` +
+      `?client_id=` + environment.cognito.clientId +
       `&logout_uri=${encodeURIComponent(logoutUri)}`;
   }
 
@@ -66,5 +67,12 @@ export class AuthService {
     // }
 
     localStorage.clear();
+  }
+
+  signup(returnUrl?: string) {
+    const redirect = encodeURIComponent(returnUrl ?? environment.cognito.redirectUri);
+    window.location.href =
+      `${environment.cognito.domain}/signup?client_id=${environment.cognito.clientId}` +
+      `&response_type=code&scope=${environment.cognito.scope}&redirect_uri=${redirect}`;
   }
 }

@@ -10,7 +10,7 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 
-// For prerender, don't touch window. Use a known public base URL:
+// TDOO : This backendUrl just seems wrong. Does it even matter for the server config? IDK
 const redirectBase =
   backendUrl
   || 'https://d84l1y8p4kdic.cloudfront.net';

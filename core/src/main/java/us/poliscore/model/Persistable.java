@@ -56,6 +56,6 @@ public interface Persistable {
 		
 		val expectedPrefix = getIdClassPrefix(p.getClass());
 		if (!Objects.equals(expectedPrefix, p.getId().split("/")[0]))
-			throw new UnsupportedOperationException("Object's id class prefix does not match expected value.");
+			throw new UnsupportedOperationException("Object's id class prefix does not match expected value. Exepected prefix [" + expectedPrefix + "] on id [" + p.getId() + "]");
 	}
 }

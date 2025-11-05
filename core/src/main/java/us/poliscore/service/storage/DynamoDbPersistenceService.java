@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -45,9 +44,6 @@ import us.poliscore.service.GovernmentDataService;
 @ApplicationScoped
 public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 {
-	@ConfigProperty(name = "ddb.table")
-	public String TABLE_NAME;
-	
 	public static final String HEAD_PAGE = "0";
 	
 	@Data
@@ -66,6 +62,9 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 			return new DdbPage(page);
 		}
 	}
+	
+	@ConfigProperty(name = "ddb.table")
+	protected String TABLE_NAME;
 	
 	@Inject
     DynamoDbEnhancedClient ddbe;
@@ -90,6 +89,11 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 				.build());
 		
 		Log.info("Deleted from ddb " + obj.getId());
+	}
+	
+	public String getTableName()
+	{
+		return this.TABLE_NAME;
 	}
 	
 	@SuppressWarnings("unchecked")

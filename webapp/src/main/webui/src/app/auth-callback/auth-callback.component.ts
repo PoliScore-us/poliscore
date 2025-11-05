@@ -1,4 +1,5 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
 
 @Component({
@@ -11,12 +12,35 @@ import { OidcSecurityService } from 'angular-auth-oidc-client';
 export class AuthCallbackComponent implements OnInit {
 
   private oidc = inject(OidcSecurityService);
+  private platformId = inject(PLATFORM_ID);
 
   ngOnInit() {
-    this.oidc.checkAuth().subscribe(() => {
-      const ret = localStorage.getItem('ps:returnTo') || '/';
-      localStorage.removeItem('ps:returnTo');
-      location.replace(ret); // use full reload to land inside whichever sub-app
+  if (!isPlatformBrowser(this.platformId)) {
+      // Running on the server? Do nothing here.
+      return;
+    }
+
+    console.log("Auth callback initiaited");
+    // this.oidc.checkAuth().subscribe(() => {
+    //   const ret = localStorage.getItem('ps:returnTo') || '/';
+    //   localStorage.removeItem('ps:returnTo');
+    //   console.log("Redirecting to " + ret);
+    //   location.replace(ret); // use full reload to land inside whichever sub-app
+    // });
+
+    this.oidc.checkAuth().subscribe({
+      next: () => {
+        const ret = localStorage.getItem('ps:returnTo') || '/';
+        localStorage.removeItem('ps:returnTo');
+        console.log('[auth-callback] checkAuth OK → redirecting to', ret);
+        location.replace(ret); // hard reload so interceptors/token state apply everywhere
+      },
+      error: (err) => {
+        console.error('[auth-callback] checkAuth FAILED:', err);
+        // While debugging: avoid a missing route
+        // You can change this to '/signup' or another safe page.
+        location.replace('/'); 
+      }
     });
   }
   

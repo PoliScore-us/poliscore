@@ -8,10 +8,11 @@ import { routes } from './app.routes';
 import { provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
 import { AbstractSecurityStorage, DefaultLocalStorageService, provideAuth } from 'angular-auth-oidc-client';
 import { makeAuthConfig } from './auth/auth.config';
+import { environment } from '../environments/environment';
 
 // Use window.origin ONLY in browser
 const redirectBase =
-  (typeof window !== 'undefined' && window.location?.origin + "/auth-callback") || 'http://localhost:4200/auth-callback';
+  (typeof window !== 'undefined' && window.location?.origin + "/auth-callback") || environment.cognito.redirectUri;
 
 export const clientOnlyConfig: ApplicationConfig = {
   providers: [

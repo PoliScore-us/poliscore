@@ -44,8 +44,8 @@ else
 fi
 sed -i '' "s|export const namespace: string = \".*\";|export const namespace: string = \"$DEPLOYMENT_NAMESPACE\";|g" ./webapp/src/main/webui/src/app/app.config.ts
 
-if [[ "$DEPLOYMENT_NAMESPACE" == "us/congress" ]]; then
-  sed -i '' "s|\"baseHref\": \"/[0-9]\{4\}/.*\"|\"baseHref\": \"/$DEPLOYMENT_YEAR/\"|g" ./webapp/src/main/webui/angular.json
-else
-  sed -i '' "s|\"baseHref\": \"/[0-9]\{4\}/.*\"|\"baseHref\": \"/$DEPLOYMENT_YEAR/$DEPLOYMENT_STATE/\"|g" ./webapp/src/main/webui/angular.json
-fi
+#if [[ "$DEPLOYMENT_NAMESPACE" == "us/congress" ]]; then
+#  sed -i '' "s|\"baseHref\": \"/[0-9]\{4\}/.*\"|\"baseHref\": \"/$DEPLOYMENT_YEAR/\"|g" ./webapp/src/main/webui/angular.json
+#else
+#  sed -i '' "s|\"baseHref\": \"/[0-9]\{4\}/.*\"|\"baseHref\": \"/$DEPLOYMENT_YEAR/$DEPLOYMENT_STATE/\"|g" ./webapp/src/main/webui/angular.json
+#fi
