@@ -6,6 +6,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideClientHydration } from '@angular/platform-browser';
 import { authInterceptor } from './auth/auth.interceptor';
+import { entitlementInterceptor } from './billing/entitlement.interceptor';
 
 export const sharedAppConfig: ApplicationConfig = {
   // providers: [ provideHttpClient(withFetch(), withInterceptorsFromDi()) ]
@@ -13,7 +14,7 @@ export const sharedAppConfig: ApplicationConfig = {
     provideRouter(routes),
     provideAnimations(),
     provideClientHydration(),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor, entitlementInterceptor])),
   ]
 };
 

@@ -69,6 +69,10 @@ public class BillingService {
       )
       .setClientReferenceId(userId)
       .putMetadata("app_user_id", userId)
+      .setSubscriptionData(
+              SessionCreateParams.SubscriptionData.builder()
+                  .putMetadata("userId", userId)
+                  .build())
       .setSuccessUrl(successUrl + "?session_id={CHECKOUT_SESSION_ID}")
       .setCancelUrl(cancelUrl)
       .build();

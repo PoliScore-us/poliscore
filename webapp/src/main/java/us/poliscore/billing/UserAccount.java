@@ -1,8 +1,5 @@
 package us.poliscore.billing;
 
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.*;
-import us.poliscore.model.Persistable;
-
 import java.time.Instant;
 
 import org.apache.commons.lang3.StringUtils;
@@ -10,10 +7,18 @@ import org.apache.commons.lang3.StringUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
+import us.poliscore.model.Persistable;
 
 @DynamoDbBean
 @RegisterForReflection
+@Data
+@NoArgsConstructor
 public class UserAccount implements Persistable {
 	
 	public static final String ID_CLASS_PREFIX = "UAC";
@@ -21,11 +26,17 @@ public class UserAccount implements Persistable {
 	@NonNull
 	protected String id;
 	
+	protected String subscriptionId;
+	protected String priceId;
+	
 	protected String email;
 	protected String stripeCustomerId;
 	protected String plan;
 	protected String status;
 	protected Instant updatedAt;
+	
+	protected Long currentPeriodEnd;     // epoch seconds
+	protected Boolean cancelAtPeriodEnd; // true if set to cancel at term end
 	
 	@DynamoDbPartitionKey
 	@Override public String getId() { return id; }

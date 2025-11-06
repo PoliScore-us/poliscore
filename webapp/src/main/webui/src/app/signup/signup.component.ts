@@ -104,6 +104,17 @@ export class SignupComponent implements OnInit {
       details: 'Stay in the loop with configurable triggers—new bill introduced, score above/below X, or key committee actions.'
     },
     {
+      title: 'Historical Sessions Access',
+      teaser: 'Browse bills and legislators from past sessions.',
+      details: 'Open any prior session to view bill pages, legislator profiles, and scores exactly as they existed for that year. Use cross-session search and deep links to compare a legislator’s record or revisit a bill from its original session.',
+    },
+    {
+      title: 'Historical Analytics & Trends',
+      teaser: 'Time-series score movements and version timelines.',
+      details: 'See score deltas over time with overlays for amendments, committee actions, fiscal notes, and media events. Compare across sessions, drill into “what changed & why,” and export CSVs for offline analysis.',
+      soon: true
+    },
+    {
       title: 'Full State Legislature Data',
       teaser: 'All 50 states in one view.',
       details: 'Explore state bills with the same tools—scores, references, and change diffs—rolled out statewide as datasets finalize.',

@@ -75,32 +75,6 @@ public class Lambda {
     private static Map<String,List<List<String>>> allBillsIndex;
     
     @GET
-    @Path("/subscribe")
-    @SneakyThrows
-    public String subscribe(@RestQuery("email") String email, @RestQuery("category") String category) {
-        if (StringUtils.isBlank(email)) {
-            return "Email is required";
-        }
-
-        // Default category to "All" if not provided
-        if (StringUtils.isBlank(category)) {
-            category = "All";
-        }
-
-        // Create the subscriber
-        us.poliscore.model.Subscriber sub = new us.poliscore.model.Subscriber(
-            email.trim().toLowerCase(),
-            category.trim(),
-            java.time.LocalDate.now()
-        );
-
-        // Persist to DynamoDB
-        ddb.put(sub);
-
-        return "OK";
-    }
-    
-    @GET
     @Path("getSessionStats")
     public SessionInterpretation getSessionStats(@NonNull @RestQuery("namespace") String nsKey, @RestQuery int year) {
     	val namespace = LegislativeNamespace.of(nsKey);
