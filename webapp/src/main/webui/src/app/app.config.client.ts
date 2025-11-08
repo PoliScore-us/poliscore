@@ -16,6 +16,7 @@ const redirectBase =
 
 export const clientOnlyConfig: ApplicationConfig = {
   providers: [
+    provideRouter(routes),
   //   provideClientHydration(), provideAnimations(), provideAnimationsAsync(),
   //   provideRouter(routes),                // animations OK on client
     provideAuth({ config: makeAuthConfig(redirectBase)}), // OIDC on client

@@ -20,65 +20,71 @@ import us.poliscore.service.storage.DynamoDbPersistenceService;
 
 @ApplicationScoped
 public class BillingService {
-  @ConfigProperty(name = "stripe.secret") String stripeSecret;
-  @ConfigProperty(name = "app.success-url") String successUrl;
-  @ConfigProperty(name = "app.cancel-url") String cancelUrl;
+	@ConfigProperty(name = "stripe.secret")
+	String stripeSecret;
+	@ConfigProperty(name = "app.success-url")
+	String successUrl;
+	@ConfigProperty(name = "app.cancel-url")
+	String cancelUrl;
 
-  @Inject DynamoDbPersistenceService ddb;
+	@Inject
+	DynamoDbPersistenceService ddb;
 
-  @PostConstruct
-  void init() { Stripe.apiKey = stripeSecret; }
+	@PostConstruct
+	void init() {
+		Stripe.apiKey = stripeSecret;
+	}
 
-  public String ensureCustomer(String userId, String email) throws Exception {
-	  if (StringUtils.isBlank(userId))
-		  throw new IllegalArgumentException("userId cannot be blank");
-	  if (StringUtils.isBlank(email))
-		  throw new IllegalArgumentException("email cannot be blank");
-	  
-	  val op = ddb.get(userId, UserAccount.class);
-	  if (op.isPresent())
-		  return op.get().getStripeCustomerId();
+	public String ensureCustomer(String userId, String email) throws Exception {
+		if (StringUtils.isBlank(userId))
+			throw new IllegalArgumentException("userId cannot be blank");
 
-    var customer = Customer.create(Map.of(
-      "email", email,
-      "metadata", Map.of("app_user_id", userId)
-    ));
+		val op = ddb.get(userId, UserAccount.class);
+		if (op.isPresent())
+			return op.get().getStripeCustomerId();
 
-    var ub = new UserAccount();
-    ub.setId(userId);
-    ub.setEmail(email);
-    ub.setStripeCustomerId(customer.getId());
-    ub.setUpdatedAt(java.time.Instant.now());
-    ddb.put(ub);
+		// Email is technically only required if the user doesn't already exist and we need to create it.
+		if (StringUtils.isBlank(email))
+			throw new IllegalArgumentException("email cannot be blank");
 
-    return customer.getId();
-  }
+		var customer = Customer.create(Map.of("email", email, "metadata", Map.of("app_user_id", userId)));
 
-  public String createCheckoutUrl(String priceId, String userId, String email) throws Exception {
-	  Log.info("Checkout resource invoked with userid " + userId + ", priceid " + priceId + ", and email " + email);
-    String customerId = ensureCustomer(userId, email);
+		var ub = new UserAccount();
+		ub.setId(userId);
+		ub.setEmail(email);
+		ub.setStripeCustomerId(customer.getId());
+		ub.setUpdatedAt(java.time.Instant.now());
+		ddb.put(ub);
 
-    SessionCreateParams params = SessionCreateParams.builder()
-      .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
-      .setCustomer(customerId)
-      .addLineItem(
-        SessionCreateParams.LineItem.builder()
-          .setPrice(priceId)
-          .setQuantity(1L)
-          .build()
-      )
-      .setClientReferenceId(userId)
-      .putMetadata("app_user_id", userId)
-      .setSubscriptionData(
-              SessionCreateParams.SubscriptionData.builder()
-                  .putMetadata("userId", userId)
-                  .build())
-      .setSuccessUrl(successUrl + "?session_id={CHECKOUT_SESSION_ID}")
-      .setCancelUrl(cancelUrl)
-      .build();
+		return customer.getId();
+	}
 
-    Session session = Session.create(params);
-    return session.getUrl(); // Redirect user here
-  }
+	public String createCheckoutUrl(String priceId, String userId, String email) throws Exception {
+		Log.info("Checkout resource invoked with userid " + userId + ", priceid " + priceId + ", and email " + email);
+		String customerId = ensureCustomer(userId, email);
+
+		SessionCreateParams params = SessionCreateParams.builder().setMode(SessionCreateParams.Mode.SUBSCRIPTION)
+				.setCustomer(customerId)
+				.addLineItem(SessionCreateParams.LineItem.builder().setPrice(priceId).setQuantity(1L).build())
+				.setClientReferenceId(userId).putMetadata("app_user_id", userId)
+				.setSubscriptionData(
+						SessionCreateParams.SubscriptionData.builder().putMetadata("userId", userId).build())
+				.setSuccessUrl(successUrl + "?session_id={CHECKOUT_SESSION_ID}").setCancelUrl(cancelUrl).build();
+
+		Session session = Session.create(params);
+		return session.getUrl(); // Redirect user here
+	}
+
+	public String createPortalUrl(String userId, String email) throws Exception {
+		String customerId = ensureCustomer(userId, email);
+
+		com.stripe.param.billingportal.SessionCreateParams params = com.stripe.param.billingportal.SessionCreateParams
+				.builder().setCustomer(customerId).setReturnUrl(successUrl) // e.g. https://poliscore.us/account or
+																			// homepage
+				.build();
+
+		com.stripe.model.billingportal.Session session = com.stripe.model.billingportal.Session.create(params);
+
+		return session.getUrl(); // return portal URL
+	}
 }
-

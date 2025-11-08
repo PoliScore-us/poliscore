@@ -20,6 +20,7 @@ export class AuthCallbackComponent implements OnInit {
       return;
     }
 
+    const url = window.location.href;
     console.log("Auth callback initiaited");
     // this.oidc.checkAuth().subscribe(() => {
     //   const ret = localStorage.getItem('ps:returnTo') || '/';
@@ -28,7 +29,7 @@ export class AuthCallbackComponent implements OnInit {
     //   location.replace(ret); // use full reload to land inside whichever sub-app
     // });
 
-    this.oidc.checkAuth().subscribe({
+    this.oidc.checkAuth(url).subscribe({
       next: () => {
         const ret = localStorage.getItem('ps:returnTo') || '/';
         localStorage.removeItem('ps:returnTo');

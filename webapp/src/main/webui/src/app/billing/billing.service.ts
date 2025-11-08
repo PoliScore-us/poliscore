@@ -14,4 +14,12 @@ export class BillingService {
     if (!res?.url) throw new Error('No checkout URL returned');
     window.location.href = res.url; // Stripe-hosted page
   }
+
+  async getCustomerPortalUrl(): Promise<void> {
+    const res = await firstValueFrom(
+      this.http.get<UrlResponse>(environment.apiUrl + '/billing/portal')
+    );
+    if (!res?.url) throw new Error('No portal URL returned');
+    window.location.href = res.url; // redirect to Stripe-hosted portal
+  }
 }

@@ -6,7 +6,7 @@ import { provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/c
 import { provideAuth } from 'angular-auth-oidc-client';
 import { makeAuthConfig } from './auth/auth.config';
 import { provideClientHydration } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withDisabledInitialNavigation } from '@angular/router';
 import { routes } from './app.routes';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 
@@ -17,6 +17,7 @@ const redirectBase =
 
 const serverOnlyConfig: ApplicationConfig = {
   providers: [
+    provideRouter(routes, withDisabledInitialNavigation()),
     provideServerRendering(),
   //   provideClientHydration(),
   //   provideNoopAnimations(),

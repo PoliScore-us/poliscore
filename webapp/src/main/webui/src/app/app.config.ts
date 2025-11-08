@@ -11,7 +11,6 @@ import { entitlementInterceptor } from './billing/entitlement.interceptor';
 export const sharedAppConfig: ApplicationConfig = {
   // providers: [ provideHttpClient(withFetch(), withInterceptorsFromDi()) ]
   providers: [
-    provideRouter(routes),
     provideAnimations(),
     provideClientHydration(),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor, entitlementInterceptor])),

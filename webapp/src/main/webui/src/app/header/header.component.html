@@ -29,8 +29,9 @@
                <button *ngIf="about" mat-raised-button class="about-button" [routerLink]="'/'"><a href="/" class="unstyled"><span>About</span></a></button>
 
                <div class="session">
-                <span class="ml-auto" *ngIf="auth.isAuthenticated$ | async; else loggedOut">
+                <span class="ml-auto vertical-layout" *ngIf="auth.isAuthenticated$ | async; else loggedOut">
                   <button (click)="auth.logout()" mat-raised-button>Logout</button>
+                  <button (click)="onManageSubscription()" mat-raised-button>Manage Subscription</button>
                 </span>
                 <ng-template #loggedOut>
                   <button (click)="auth.login()" mat-raised-button>Login</button>

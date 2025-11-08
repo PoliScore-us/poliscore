@@ -6,6 +6,7 @@ import { ConfigService } from '../config.service';
 import {MatSelectModule} from '@angular/material/select';
 import convertStateCodeToName from '../model';
 import { AuthService } from '../auth/auth.service';
+import { BillingService } from '../billing/billing.service';
 
 @Component({
   selector: 'header',
@@ -22,6 +23,7 @@ export class HeaderComponent {
   @Input() public about: boolean = true;
 
   auth = inject(AuthService);
+  billingService = inject(BillingService);
 
   public year: number = 2024;
   public years = [2026];
@@ -108,6 +110,10 @@ export class HeaderComponent {
 
     // Navigate to the new URL
     window.location.href = newUrl;
+  }
+
+  async onManageSubscription() {
+    await this.billingService.getCustomerPortalUrl();
   }
 
 }
