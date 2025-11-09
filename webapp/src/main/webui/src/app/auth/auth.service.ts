@@ -15,6 +15,19 @@ export class AuthService {
   isAuthenticated$ = this.oidc.isAuthenticated$.pipe(map(s => s.isAuthenticated));
   userData$: Observable<UserDataResult> = this.oidc.userData$;
 
+  displayName$ = this.oidc.userData$.pipe(
+    map(ud => {
+      const c = ud?.userData as Record<string, any> | undefined;
+      return (
+        c?.['name'] ??
+        c?.['preferred_username'] ??
+        c?.['cognito:username'] ??
+        c?.['email'] ??
+        'Account'
+      );
+    })
+  );
+
   login(returnTo: string | null = null): void {
     if (returnTo == null)
       returnTo = location.pathname + location.search + location.hash;
@@ -24,31 +37,35 @@ export class AuthService {
   }
 
   logout(): void {
-    // ChatGPT's advice:
-    // Best practice with Cognito: revoke tokens and log out of the OP
-    // this.oidc.logoffAndRevokeTokens().subscribe(); // redirects to postLogoutRedirectUri
+    // // ChatGPT's advice:
+    // // Best practice with Cognito: revoke tokens and log out of the OP
+    // // this.oidc.logoffAndRevokeTokens().subscribe(); // redirects to postLogoutRedirectUri
 
 
 
-    // Clear session storage
-    // if (window.sessionStorage) {
-    //   window.sessionStorage.clear();
-    // }
+    // // Clear session storage
+    // // if (window.sessionStorage) {
+    // //   window.sessionStorage.clear();
+    // // }
 
 
-    // window.location.href = "https://us-east-1ukl1ofrmk.auth.us-east-1.amazoncognito.com/logout?client_id=2cf7gbsb646vjei20g6cr0kio8&logout_uri=<logout uri>";
+    // // window.location.href = "https://us-east-1ukl1ofrmk.auth.us-east-1.amazoncognito.com/logout?client_id=2cf7gbsb646vjei20g6cr0kio8&logout_uri=<logout uri>";
     
-    this.clearLocalStorage();
+    // this.clearLocalStorage();
 
-    const logoutUri = window.location.origin.endsWith('/') 
-      ? window.location.origin 
-      : window.location.origin + '/';
+    // // const logoutUri = window.location.origin.endsWith('/') 
+    // //   ? window.location.origin 
+    // //   : window.location.origin + '/';
+
+    // const logoutUri = "https://google.com/"
 
     
-    window.location.href =
-      environment.cognito.domain + `/logout` +
-      `?client_id=` + environment.cognito.clientId +
-      `&logout_uri=${encodeURIComponent(logoutUri)}`;
+    // window.location.href =
+    //   environment.cognito.domain + `/logout` +
+    //   `?client_id=` + environment.cognito.clientId +
+    //   `&logout_uri=${encodeURIComponent(logoutUri)}`;
+
+    this.oidc.logoff().subscribe();
   }
 
   clearLocalStorage(): void {

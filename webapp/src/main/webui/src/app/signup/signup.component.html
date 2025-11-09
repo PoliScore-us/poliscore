@@ -17,12 +17,9 @@
           <button class="ps-btn ps-btn-secondary" (click)="auth.login('/legislators')">
             I already have an account
           </button> -->
-          <button class="ps-btn ps-btn-primary" (click)="onSignup()">
-            Sign Up
-          </button>
-          <button class="ps-btn ps-btn-secondary" (click)="goHome()">
-            Take Me Home
-          </button>
+          <button class="ps-btn ps-btn-primary" (click)="onSignup()">Sign Up</button>
+          <button class="ps-btn ps-btn-secondary" (click)="auth.login()">Log in</button>
+          <button class="ps-btn ps-btn-secondary" (click)="goHome()">Take Me Home</button>
         </section>
 
         <section class="ps-features">

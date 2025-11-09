@@ -13,7 +13,7 @@ export function makeAuthConfig(
     clientId: '2cf7gbsb646vjei20g6cr0kio8',
 
     // Must exactly match Cognito Allowed URLs
-    redirectUrl: redirectBase,
+    redirectUrl: redirectBase + "/auth-callback",
     // redirectUrl: "https://d84l1y8p4kdic.cloudfront.net",
     postLogoutRedirectUri: redirectBase,
 

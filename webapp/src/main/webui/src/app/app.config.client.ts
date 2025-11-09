@@ -12,7 +12,7 @@ import { environment } from '../environments/environment';
 
 // Use window.origin ONLY in browser
 const redirectBase =
-  (typeof window !== 'undefined' && window.location?.origin + "/auth-callback") || environment.cognito.redirectUri;
+  (typeof window !== 'undefined' && window.location?.origin) || environment.cognito.redirectUri;
 
 export const clientOnlyConfig: ApplicationConfig = {
   providers: [

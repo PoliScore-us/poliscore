@@ -7,11 +7,13 @@ import {MatSelectModule} from '@angular/material/select';
 import convertStateCodeToName from '../model';
 import { AuthService } from '../auth/auth.service';
 import { BillingService } from '../billing/billing.service';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'header',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, RouterModule, MatSelectModule],
+  imports: [CommonModule, MatButtonModule, RouterModule, MatSelectModule, MatMenuModule, MatIconModule],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
 })

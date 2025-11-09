@@ -19,25 +19,56 @@
             <mat-select class="year" [(value)]="year" [panelClass]="'dropdown-panel'">
               <mat-option *ngFor="let y of years" [value]="y" (click)="onChangeYear(y)">{{ yearDisplayLabel(y) }}</mat-option>
             </mat-select>
+
+            <mat-select *ngIf="auth.isAuthenticated$ | async" class="account" [placeholder]="'logged in as ' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
+              <mat-option (click)="onManageSubscription()">Manage Account</mat-option>
+              <mat-option (click)="auth.logout()">Logout</mat-option>
+            </mat-select>
+            <!-- <label class="account">login or signup</label> -->
+            <mat-select *ngIf="!(auth.isAuthenticated$ | async)" class="account" [placeholder]="'login or signup'" [panelClass]="'dropdown-panel'">
+              <mat-option (click)="auth.login()">Login</mat-option>
+              <mat-option [routerLink]="'/signup'">Signup</mat-option>
+            </mat-select>
+
+            <!-- Account dropdown -->
+            <!-- <ng-container *ngIf="auth.isAuthenticated$ | async; else loggedOut">
+              <button
+                mat-icon-button
+                [matMenuTriggerFor]="accountMenu"
+                aria-label="Account menu"
+                class="account-btn"
+                style="border: 1px solid #ddd; width: 42px; height: 42px; margin-top: 6px;"
+              >
+                <mat-icon>account_circle</mat-icon>
+              </button>
+
+              <mat-menu #accountMenu="matMenu" xPosition="before">
+                <button mat-menu-item (click)="onManageSubscription()">Manage Subscription</button>
+                <button mat-menu-item (click)="auth.logout()">Logout</button>
+              </mat-menu>
+            </ng-container>
+
+            <ng-template #loggedOut>
+              <button (click)="auth.login()" mat-raised-button>Login</button>
+            </ng-template> -->
           </div>          
        </div>
        <div class="horizontal-layout" style="flex-direction: row-reverse !important;">
-           <div class="nav-buttons vertical-layout">
-               <button *ngIf="legislators" mat-raised-button [routerLink]="'/legislators'"><a [routerLink]="'/legislators'" class="unstyled"><span>Legislators</span></a></button>
-               <button *ngIf="bills" mat-raised-button [routerLink]="'/bills'"><a [routerLink]="'/bills'" class="unstyled"><span>Bills</span></a></button>
-               <button *ngIf="congress" mat-raised-button [routerLink]="'/party'"><a [routerLink]="'/party'" class="unstyled"><span>Party Stats</span></a></button>
-               <button *ngIf="about" mat-raised-button class="about-button" [routerLink]="'/'"><a href="/" class="unstyled"><span>About</span></a></button>
+        <div class="nav-buttons vertical-layout" style="align-items: flex-end; gap: 6px;">
 
-               <div class="session">
-                <span class="ml-auto vertical-layout" *ngIf="auth.isAuthenticated$ | async; else loggedOut">
-                  <button (click)="auth.logout()" mat-raised-button>Logout</button>
-                  <button (click)="onManageSubscription()" mat-raised-button>Manage Subscription</button>
-                </span>
-                <ng-template #loggedOut>
-                  <button (click)="auth.login()" mat-raised-button>Login</button>
-                </ng-template>
-               </div>
-           </div>
-       </div>
+          <!-- Main navigation buttons, stacked -->
+          <button *ngIf="bills" mat-raised-button [routerLink]="'/bills'">
+            <a [routerLink]="'/bills'" class="unstyled"><span>Bills</span></a>
+          </button>
+
+          <button *ngIf="congress" mat-raised-button [routerLink]="'/party'">
+            <a [routerLink]="'/party'" class="unstyled"><span>Party Stats</span></a>
+          </button>
+
+          <button *ngIf="about" mat-raised-button class="about-button" [routerLink]="'/'">
+            <a href="/" class="unstyled"><span>About</span></a>
+          </button>
+        </div>
+      </div>
    </div>
 </div>

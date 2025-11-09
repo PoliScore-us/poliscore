@@ -31,6 +31,18 @@
     // width: 8em;
 }
 
+.year-and-namespace .account {
+    font-size: 13px;
+    font-weight: bold;
+    padding-left: 20px;
+}
+
+::ng-deep .year-and-namespace .account .mat-mdc-select-placeholder {
+    white-space: normal !important;
+    text-align: center !important;
+    display: inline-block !important;
+}
+
 ::ng-deep .dropdown-panel {
     min-width: 12em !important; /* Ensures dropdown is wide enough */
     max-width: none !important; /* Allows expansion */
