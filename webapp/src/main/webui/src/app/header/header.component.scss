@@ -37,7 +37,7 @@
     padding-left: 20px;
 }
 
-::ng-deep .year-and-namespace .account .mat-mdc-select-placeholder {
+::ng-deep .year-and-namespace .account.loggedin .mat-mdc-select-placeholder {
     white-space: normal !important;
     text-align: center !important;
     display: inline-block !important;

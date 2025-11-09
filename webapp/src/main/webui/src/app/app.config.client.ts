@@ -11,8 +11,7 @@ import { makeAuthConfig } from './auth/auth.config';
 import { environment } from '../environments/environment';
 
 // Use window.origin ONLY in browser
-const redirectBase =
-  (typeof window !== 'undefined' && window.location?.origin) || environment.cognito.redirectUri;
+const redirectBase = environment.baseUrl;
 
 export const clientOnlyConfig: ApplicationConfig = {
   providers: [

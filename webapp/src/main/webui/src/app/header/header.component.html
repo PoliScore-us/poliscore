@@ -20,12 +20,12 @@
               <mat-option *ngFor="let y of years" [value]="y" (click)="onChangeYear(y)">{{ yearDisplayLabel(y) }}</mat-option>
             </mat-select>
 
-            <mat-select *ngIf="auth.isAuthenticated$ | async" class="account" [placeholder]="'logged in as ' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
+            <mat-select *ngIf="auth.isAuthenticated$ | async" class="account loggedin" [placeholder]="'logged in as ' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
               <mat-option (click)="onManageSubscription()">Manage Account</mat-option>
               <mat-option (click)="auth.logout()">Logout</mat-option>
             </mat-select>
             <!-- <label class="account">login or signup</label> -->
-            <mat-select *ngIf="!(auth.isAuthenticated$ | async)" class="account" [placeholder]="'login or signup'" [panelClass]="'dropdown-panel'">
+            <mat-select *ngIf="!(auth.isAuthenticated$ | async)" class="account loggedout" [placeholder]="'login or signup'" [panelClass]="'dropdown-panel'">
               <mat-option (click)="auth.login()">Login</mat-option>
               <mat-option [routerLink]="'/signup'">Signup</mat-option>
             </mat-select>

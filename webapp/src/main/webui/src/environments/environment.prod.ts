@@ -2,6 +2,7 @@ let baseUrl = "https://poliscore.us/";
 
 export const environment = {
   production: true,
+  baseUrl: baseUrl,
   apiUrl: 'TODO',
   
   cognito: {

@@ -31,10 +31,12 @@ export class AuthCallbackComponent implements OnInit {
 
     this.oidc.checkAuth(url).subscribe({
       next: () => {
-        const ret = localStorage.getItem('ps:returnTo') || '/';
-        localStorage.removeItem('ps:returnTo');
-        console.log('[auth-callback] checkAuth OK → redirecting to', ret);
-        location.replace(ret); // hard reload so interceptors/token state apply everywhere
+        setTimeout(() => { // TODO : This setTimeout really shouldn't be necessary
+          const ret = localStorage.getItem('ps:returnTo') || '/';
+          localStorage.removeItem('ps:returnTo');
+          console.log('[auth-callback] checkAuth OK → redirecting to', ret);
+          location.replace(ret); // hard reload so interceptors/token state apply everywhere
+        }, 1000)
       },
       error: (err) => {
         console.error('[auth-callback] checkAuth FAILED:', err);

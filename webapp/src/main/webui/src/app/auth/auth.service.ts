@@ -37,35 +37,17 @@ export class AuthService {
   }
 
   logout(): void {
-    // // ChatGPT's advice:
-    // // Best practice with Cognito: revoke tokens and log out of the OP
-    // // this.oidc.logoffAndRevokeTokens().subscribe(); // redirects to postLogoutRedirectUri
+    // clear local state only
+    this.oidc.logoffLocal();
 
+    const postLogout = environment.baseUrl;
 
+    const url =
+      `${environment.cognito.domain}/logout` +
+      `?client_id=${encodeURIComponent(environment.cognito.clientId)}` +
+      `&logout_uri=${encodeURIComponent(postLogout)}`;
 
-    // // Clear session storage
-    // // if (window.sessionStorage) {
-    // //   window.sessionStorage.clear();
-    // // }
-
-
-    // // window.location.href = "https://us-east-1ukl1ofrmk.auth.us-east-1.amazoncognito.com/logout?client_id=2cf7gbsb646vjei20g6cr0kio8&logout_uri=<logout uri>";
-    
-    // this.clearLocalStorage();
-
-    // // const logoutUri = window.location.origin.endsWith('/') 
-    // //   ? window.location.origin 
-    // //   : window.location.origin + '/';
-
-    // const logoutUri = "https://google.com/"
-
-    
-    // window.location.href =
-    //   environment.cognito.domain + `/logout` +
-    //   `?client_id=` + environment.cognito.clientId +
-    //   `&logout_uri=${encodeURIComponent(logoutUri)}`;
-
-    this.oidc.logoff().subscribe();
+    window.location.href = url;
   }
 
   clearLocalStorage(): void {
