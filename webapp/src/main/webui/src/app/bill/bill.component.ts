@@ -1,4 +1,4 @@
-import { Component, HostListener, Inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, HostListener, inject, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { AppService } from '../app.service';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import convertStateCodeToName, { Bill, BillInterpretation, colorForGrade, getBenefitToSocietyIssue, gradeForQuality, gradeForRating, gradeForStats, issueKeyToLabel, issueKeyToLabelSmall, PressInterpretation } from '../model';
@@ -23,6 +23,7 @@ import { SubscribeFormComponent } from '../subscribe-form/subscribe-form.compone
 import { AuthService } from '../auth/auth.service';
 import { ExpertPreviewComponent } from '../expert-preview/expert-preview.component';
 import { Subscription } from 'rxjs';
+import { EntitlementService } from '../billing/entitlement.service';
 marked.setOptions({
   async: false
 });
@@ -37,7 +38,7 @@ Chart.register(BarController, CategoryScale, LinearScale, BarElement, ChartDataL
   templateUrl: './bill.component.html',
   styleUrl: './bill.component.scss'
 })
-export class BillComponent implements OnInit {
+export class BillComponent implements OnInit, OnDestroy {
 
   public bill?: Bill;
 
@@ -55,9 +56,11 @@ export class BillComponent implements OnInit {
 
   public showSignupAtBottom: boolean = true;
 
-  private loggedIn: boolean = false;
-
   private sub?: Subscription;
+
+  isSubscribed: boolean = false;
+
+  ent = inject(EntitlementService);
 
   public barChartData: ChartConfiguration<'bar'>['data'] = {
     labels: [],
@@ -109,10 +112,10 @@ export class BillComponent implements OnInit {
     if (isPlatformBrowser(this._platformId))
       this.isSmallScreen = window.innerWidth < 600;
 
-    this.sub = this.auth.isAuthenticated$.subscribe(v => {
-      this.loggedIn = !!v;
+    this.sub = this.ent.status$.subscribe(s => {
+      this.isSubscribed = s.isSubscribed && s.isAuthenticated;
       this.recalcOverlay();
-    });
+     });
 
     this.billId = (this.route.snapshot.paramMap.get('id') as string);
     if (!this.billId.startsWith("BIL/" + this.config.getNamespace())) {
@@ -137,6 +140,10 @@ export class BillComponent implements OnInit {
       this.formattedExpertReport = this.getFormattedParagraphs(this.bill!.interpretation.longExplain);
       this.formattedLaymansReport = this.getFormattedParagraphs(this.bill!.interpretation.laymansReport);
     });
+  }
+
+  ngOnDestroy(): void {
+    this.sub?.unsubscribe();
   }
 
   getFormattedParagraphs(text: string): SafeHtml[] {
@@ -492,7 +499,7 @@ export class BillComponent implements OnInit {
     // show Expert tab when selected explicitly, or when Expert is the only report
     const expertTabActive = this.selectedReportTab === 1 || (!hasLaymans && hasExpert);
 
-    this.showSignupAtBottom = !this.loggedIn && !(hasExpert && expertTabActive);
+    this.showSignupAtBottom = !this.isSubscribed && !(hasExpert && expertTabActive);
   }
 
 }

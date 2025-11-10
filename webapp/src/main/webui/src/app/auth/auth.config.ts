@@ -28,6 +28,9 @@ export function makeAuthConfig(
     secureRoutes: ['https://api.poliscore.us', 'http://localhost:8080'],
 
     logLevel: hints.server ? LogLevel.None : LogLevel.Debug,
+
+    // Prevents a redirect to '/' when we login, which allows our AuthCallbackComponent to direct us properly
+    triggerAuthorizationResultEvent: true,
   };
 }
 

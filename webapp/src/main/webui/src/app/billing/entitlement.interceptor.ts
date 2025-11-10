@@ -1,11 +1,11 @@
 import { HttpInterceptorFn, HttpResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { tap } from 'rxjs';
-import { EntitlementStateService } from './entitlement-state.service';
+import { EntitlementService } from './entitlement.service';
 
 // Functional-style interceptor (Angular 16+)
 export const entitlementInterceptor: HttpInterceptorFn = (req, next) => {
-  const state = inject(EntitlementStateService);
+  const state = inject(EntitlementService);
   return next(req).pipe(
     tap(event => {
       if (event instanceof HttpResponse) {

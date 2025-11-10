@@ -166,6 +166,13 @@ a.unstyled, a.unstyled:visited, a.unstyled:hover, a.unstyled:active {
     align-items: center !important;
 }
 
+.vertical-layout.align-left {
+    align-items: baseline !important;
+}
+.vertical-layout.align-right {
+    align-items: end !important;
+}
+
 .horizontal-layout {
     display: flex !important;
     flex-direction: row !important;

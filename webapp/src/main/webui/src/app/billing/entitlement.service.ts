@@ -7,7 +7,7 @@ export interface EntitlementStatus {
 }
 
 @Injectable({ providedIn: 'root' })
-export class EntitlementStateService {
+export class EntitlementService {
   private readonly _status$ = new BehaviorSubject<EntitlementStatus>({
     isAuthenticated: false,
     isSubscribed: false,

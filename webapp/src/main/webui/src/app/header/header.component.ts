@@ -1,5 +1,5 @@
-import { Component, inject, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, HostListener, Inject, inject, Input, OnInit, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { Router, RouterModule } from '@angular/router';
 import { ConfigService } from '../config.service';
@@ -9,6 +9,10 @@ import { AuthService } from '../auth/auth.service';
 import { BillingService } from '../billing/billing.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatIconModule } from '@angular/material/icon';
+import { EntitlementService } from '../billing/entitlement.service';
+import { Subscription } from 'rxjs';
+import { PurchaseFlowService } from '../billing/purchase-flow.service';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'header',
@@ -17,7 +21,7 @@ import { MatIconModule } from '@angular/material/icon';
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit {
 
   @Input() public legislators: boolean = true;
   @Input() public bills: boolean = true;
@@ -26,6 +30,8 @@ export class HeaderComponent {
 
   auth = inject(AuthService);
   billingService = inject(BillingService);
+  entitlement = inject(EntitlementService);
+  private flow = inject(PurchaseFlowService);
 
   public year: number = 2024;
   public years = [2026];
@@ -33,7 +39,13 @@ export class HeaderComponent {
   public namespace: String = "us/congress";
   public namespaces = ["us/congress", "us/co"];
 
-  constructor(public config: ConfigService, private router: Router) { 
+  private sub?: Subscription;
+  
+  isSubscribed: boolean = false;
+
+  isSmallScreen: boolean = false;
+
+  constructor(public config: ConfigService, private router: Router, @Inject(PLATFORM_ID) private _platformId: Object) { 
     this.year = config.getYear();
     this.namespace = config.getNamespace();
 
@@ -44,6 +56,25 @@ export class HeaderComponent {
     }
 
     // this.removeLatestYear();
+  }
+
+  ngOnInit(): void {
+    this.sub = this.entitlement.status$.subscribe(s => {
+      this.isSubscribed = s.isSubscribed;
+     });
+
+    if (isPlatformBrowser(this._platformId))
+      this.isSmallScreen = window.innerWidth < 600;
+  }
+
+  ngOnDestroy(): void {
+    this.sub?.unsubscribe();
+  }
+
+  @HostListener('window:resize', ['$event'])
+  onResize() {
+    // Check screen width on resize
+    this.isSmallScreen = window.innerWidth < 600;
   }
 
   private removeLatestYear(): void {
@@ -116,6 +147,10 @@ export class HeaderComponent {
 
   async onManageSubscription() {
     await this.billingService.getCustomerPortalUrl();
+  }
+
+  signUp() {
+    this.flow.start(environment.stripe.productPremium);
   }
 
 }

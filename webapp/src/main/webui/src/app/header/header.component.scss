@@ -31,15 +31,35 @@
     // width: 8em;
 }
 
-.year-and-namespace .account {
+.year-and-namespace .account.bigScreen .select {
     font-size: 13px;
     font-weight: bold;
     padding-left: 20px;
 }
+.account.smallScreen {
+    padding-left: 16px;
+    padding-top: 5px;
+}
+.account.smallScreen .select {
+    font-size: 13px;
+    font-weight: bold;
+}
+.account .sub-expired {
+    z-index: 100;
+    font-weight: normal;
+    font-size: 0.8rem;
+}
+.account.smallScreen .sub-expired {
+    padding-top:5px;
+}
 
-::ng-deep .year-and-namespace .account.loggedin .mat-mdc-select-placeholder {
+::ng-deep .year-and-namespace .account.bigScreen .select.loggedin .mat-mdc-select-placeholder {
     white-space: normal !important;
     text-align: center !important;
+    display: inline-block !important;
+}
+::ng-deep .account.smallScreen .select.loggedin .mat-mdc-select-placeholder {
+    white-space: normal !important;
     display: inline-block !important;
 }
 

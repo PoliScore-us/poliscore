@@ -1,24 +1,38 @@
-import { ApplicationConfig, mergeApplicationConfig } from '@angular/core';
+import { APP_INITIALIZER, ApplicationConfig, mergeApplicationConfig, Provider } from '@angular/core';
 import { provideClientHydration } from '@angular/platform-browser';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { sharedAppConfig } from './app.config';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withEnabledBlockingInitialNavigation } from '@angular/router';
 import { routes } from './app.routes';
 import { provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
-import { AbstractSecurityStorage, DefaultLocalStorageService, provideAuth } from 'angular-auth-oidc-client';
+import { AbstractSecurityStorage, DefaultLocalStorageService, OidcSecurityService, provideAuth, withAppInitializerAuthCheck } from 'angular-auth-oidc-client';
 import { makeAuthConfig } from './auth/auth.config';
 import { environment } from '../environments/environment';
 
 // Use window.origin ONLY in browser
 const redirectBase = environment.baseUrl;
 
+function initAuth(oidc: OidcSecurityService) {
+  // Handles both normal loads and /auth-callback (it auto-detects the code in URL)
+  return () => oidc.checkAuth().toPromise();
+}
+
+export const AUTH_INIT: Provider = {
+  provide: APP_INITIALIZER,
+  useFactory: initAuth,
+  deps: [OidcSecurityService],
+  multi: true,
+};
+
+
 export const clientOnlyConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes),
+    AUTH_INIT,
+    provideRouter(routes), // withEnabledBlockingInitialNavigation()
   //   provideClientHydration(), provideAnimations(), provideAnimationsAsync(),
   //   provideRouter(routes),                // animations OK on client
-    provideAuth({ config: makeAuthConfig(redirectBase)}), // OIDC on client
+    provideAuth({ config: makeAuthConfig(redirectBase)}), // withAppInitializerAuthCheck()
   //   { provide: AbstractSecurityStorage, useClass: DefaultLocalStorageService }
   ]
   // providers: [provideRouter(routes), provideAnimations(), provideAnimationsAsync(), provideClientHydration(), provideHttpClient(withFetch())]

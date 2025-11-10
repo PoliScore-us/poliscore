@@ -1,9 +1,14 @@
 import { Component, inject, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { ChildrenOutletContexts, RouterOutlet } from '@angular/router';
 import { slideInAnimation } from './animations';
-import { Router, NavigationEnd } from '@angular/router';
+// import { Router, NavigationEnd } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
+
+import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError } from '@angular/router';
+
+
+
 
 declare let gtag: Function;
 
@@ -33,12 +38,17 @@ export class AppComponent implements OnInit {
           }
       });
      }
+
+     // Useful for debugging why we're routing somewhere
+    //  router.events.subscribe(e => {
+    //   if (e instanceof NavigationStart)  console.log('[NAV][start]', e.url, e.restoredState ? '(popstate)' : '');
+    //   if (e instanceof NavigationEnd)    console.log('[NAV][end]', e.urlAfterRedirects);
+    //   if (e instanceof NavigationCancel) console.log('[NAV][cancel]', e.url, '— reason:', e.reason);
+    //   if (e instanceof NavigationError)  console.log('[NAV][error]', e.url, e.error);
+    // });
   }
 
   ngOnInit(): void {
-    if (isPlatformBrowser(this._platformId)) {
-      this.oidc.checkAuth().subscribe();
-    }
   }
 
   getRouteAnimationData() {

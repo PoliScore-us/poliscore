@@ -6,12 +6,7 @@
            <!-- <button class="year" mat-raised-button>{{ year }} (118th congress)</button> -->
            <!-- <div class="horizontal-layout namespace-picker"><button mat-raised-button class="year" href="#">U.S. Congress</button> <button mat-raised-button class="year" href="#">{{year}} (118th)</button></div> -->
 
-           <div class="horizontal-layout year-and-namespace">
-            <!-- <mat-select class="namespace" [(value)]="namespace">
-              <mat-option value="us/congress">Congress</mat-option>
-              <mat-option value="colorado">Colorado</mat-option>
-            </mat-select> -->
-
+          <div class="horizontal-layout year-and-namespace">
             <mat-select class="namespace" [(value)]="namespace" [panelClass]="'dropdown-panel'">
               <mat-option *ngFor="let ns of namespaces" [value]="ns" (click)="onChangeNamespace(ns)">{{ namespaceDisplayLabel(ns) }}</mat-option>
             </mat-select>
@@ -20,54 +15,37 @@
               <mat-option *ngFor="let y of years" [value]="y" (click)="onChangeYear(y)">{{ yearDisplayLabel(y) }}</mat-option>
             </mat-select>
 
-            <mat-select *ngIf="auth.isAuthenticated$ | async" class="account loggedin" [placeholder]="'logged in as ' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
+            <div *ngIf="!isSmallScreen" class="account bigScreen vertical-layout">
+              <mat-select *ngIf="auth.isAuthenticated$ | async" class="select loggedin" [placeholder]="'logged in as ' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
+                <mat-option (click)="onManageSubscription()">Manage Account</mat-option>
+                <mat-option (click)="auth.logout()">Logout</mat-option>
+              </mat-select>
+              <mat-select *ngIf="!(auth.isAuthenticated$ | async)" class="select loggedout" [placeholder]="'login or signup'" [panelClass]="'dropdown-panel'">
+                <mat-option (click)="auth.login()">Login</mat-option>
+                <mat-option [routerLink]="'/signup'">Signup</mat-option>
+              </mat-select>
+              <label *ngIf="(auth.isAuthenticated$ | async) && !isSubscribed" style="color:red; cursor: pointer;" (click)="signUp()" class="sub-expired">Your subscription has expired!</label>
+            </div>
+          </div>
+
+          <div *ngIf="isSmallScreen" class="account smallScreen vertical-layout align-left">
+            <mat-select *ngIf="auth.isAuthenticated$ | async" class="select loggedin" [placeholder]="'logged in as ' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
               <mat-option (click)="onManageSubscription()">Manage Account</mat-option>
               <mat-option (click)="auth.logout()">Logout</mat-option>
             </mat-select>
-            <!-- <label class="account">login or signup</label> -->
-            <mat-select *ngIf="!(auth.isAuthenticated$ | async)" class="account loggedout" [placeholder]="'login or signup'" [panelClass]="'dropdown-panel'">
+            <mat-select *ngIf="!(auth.isAuthenticated$ | async)" class="select loggedout" [placeholder]="'login or signup'" [panelClass]="'dropdown-panel'">
               <mat-option (click)="auth.login()">Login</mat-option>
               <mat-option [routerLink]="'/signup'">Signup</mat-option>
             </mat-select>
-
-            <!-- Account dropdown -->
-            <!-- <ng-container *ngIf="auth.isAuthenticated$ | async; else loggedOut">
-              <button
-                mat-icon-button
-                [matMenuTriggerFor]="accountMenu"
-                aria-label="Account menu"
-                class="account-btn"
-                style="border: 1px solid #ddd; width: 42px; height: 42px; margin-top: 6px;"
-              >
-                <mat-icon>account_circle</mat-icon>
-              </button>
-
-              <mat-menu #accountMenu="matMenu" xPosition="before">
-                <button mat-menu-item (click)="onManageSubscription()">Manage Subscription</button>
-                <button mat-menu-item (click)="auth.logout()">Logout</button>
-              </mat-menu>
-            </ng-container>
-
-            <ng-template #loggedOut>
-              <button (click)="auth.login()" mat-raised-button>Login</button>
-            </ng-template> -->
-          </div>          
+            <label *ngIf="(auth.isAuthenticated$ | async) && !isSubscribed" style="color:red; cursor: pointer;" (click)="signUp()" class="sub-expired">Your subscription has expired!</label>
+          </div>
        </div>
        <div class="horizontal-layout" style="flex-direction: row-reverse !important;">
         <div class="nav-buttons vertical-layout" style="align-items: flex-end; gap: 6px;">
-
-          <!-- Main navigation buttons, stacked -->
-          <button *ngIf="bills" mat-raised-button [routerLink]="'/bills'">
-            <a [routerLink]="'/bills'" class="unstyled"><span>Bills</span></a>
-          </button>
-
-          <button *ngIf="congress" mat-raised-button [routerLink]="'/party'">
-            <a [routerLink]="'/party'" class="unstyled"><span>Party Stats</span></a>
-          </button>
-
-          <button *ngIf="about" mat-raised-button class="about-button" [routerLink]="'/'">
-            <a href="/" class="unstyled"><span>About</span></a>
-          </button>
+          <button *ngIf="legislators" mat-raised-button [routerLink]="'/legislators'"><a [routerLink]="'/legislators'" class="unstyled"><span>Legislators</span></a></button>
+          <button *ngIf="bills" mat-raised-button [routerLink]="'/bills'"><a [routerLink]="'/bills'" class="unstyled"><span>Bills</span></a></button>
+          <button *ngIf="congress" mat-raised-button [routerLink]="'/party'"><a [routerLink]="'/party'" class="unstyled"><span>Party Stats</span></a></button>
+          <button *ngIf="about" mat-raised-button class="about-button" [routerLink]="'/'"><a href="/" class="unstyled"><span>About</span></a></button>
         </div>
       </div>
    </div>
