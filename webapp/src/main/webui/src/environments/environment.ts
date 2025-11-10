@@ -3,7 +3,7 @@ let baseUrl = "http://localhost:4200/";
 export const environment = {
   production: false,
   baseUrl: baseUrl,
-  apiUrl: 'http://localhost:8080/api',
+  apiUrl: 'http://localhost:8080/',
   
   cognito: {
     domain: "https://us-east-1ukl1ofrmk.auth.us-east-1.amazoncognito.com",
@@ -18,4 +18,3 @@ export const environment = {
     productPremium: "price_1SPVyfCafu3P2GuOKKVl8wZv"
   }
 };
-
