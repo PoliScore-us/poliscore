@@ -3,7 +3,7 @@ let baseUrl = "https://poliscore.us/";
 export const environment = {
   production: true,
   baseUrl: baseUrl,
-  apiUrl: 'TODO',
+  apiUrl: 'https://5hta4jxn7q6cfcyxnvz4qmkyli0tambn.lambda-url.us-east-1.on.aws/',
   
   cognito: {
     domain: "https://us-east-1ukl1ofrmk.auth.us-east-1.amazoncognito.com",

@@ -7,6 +7,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideClientHydration } from '@angular/platform-browser';
 import { authInterceptor } from './auth/auth.interceptor';
 import { entitlementInterceptor } from './billing/entitlement.interceptor';
+import { environment } from '../environments/environment';
 
 export const sharedAppConfig: ApplicationConfig = {
   // providers: [ provideHttpClient(withFetch(), withInterceptorsFromDi()) ]
@@ -17,6 +18,6 @@ export const sharedAppConfig: ApplicationConfig = {
   ]
 };
 
-export const backendUrl: string = "https://5hta4jxn7q6cfcyxnvz4qmkyli0tambn.lambda-url.us-east-1.on.aws/";
+export const backendUrl: string = environment.apiUrl;
 export const year: number = 2025;
 export const namespace: string = "us/co";
