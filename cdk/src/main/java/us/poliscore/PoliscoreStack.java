@@ -176,7 +176,8 @@ class PoliscoreStack extends Stack {
         FunctionUrl.Builder.create(this, name + "-webapp-url")
         	.function(fPoliscore)
         	.authType(FunctionUrlAuthType.NONE)
-        	.cors(FunctionUrlCorsOptions.builder().allowedOrigins(Arrays.asList("*")).allowedMethods(Arrays.asList(HttpMethod.ALL)).build())
+        	// Quarkus owns cors. If we enable it here it will be added twice and break
+//        	.cors(FunctionUrlCorsOptions.builder().allowedOrigins(Arrays.asList("*")).allowedMethods(Arrays.asList(HttpMethod.ALL)).build())
         	.build();
 
         table.grantReadWriteData(fPoliscore);

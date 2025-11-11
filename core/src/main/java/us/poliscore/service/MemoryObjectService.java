@@ -44,4 +44,10 @@ public class MemoryObjectService implements ObjectStorageServiceIF {
 	{
 		return memoryStore.query(clazz);
 	}
+
+	@Override
+	public <T extends Persistable> List<T> query(Class<T> clazz, int pageSize, String index, Boolean ascending,
+			String startKey, String sortKey, String storageBucket) {
+		return memoryStore.query(clazz, pageSize, index, ascending, startKey, sortKey, storageBucket);
+	}
 }

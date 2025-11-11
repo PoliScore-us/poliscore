@@ -52,11 +52,6 @@ public class CachedS3Service implements ApplicationDataStoreIF
 		return memory.exists(id, clazz) || s3.exists(id, clazz);
 	}
 
-	@Override
-	public <T extends Persistable> List<T> query(Class<T> clazz) {
-		throw new UnsupportedOperationException();
-	}
-	
 	public <T extends Persistable> void optimizeExists(Class<T> clazz, String sessionKey) {
 		s3.optimizeExists(clazz, sessionKey);
 	}
@@ -64,6 +59,17 @@ public class CachedS3Service implements ApplicationDataStoreIF
 	@Override
 	public <T extends Persistable> long count(Class<T> clazz) {
 		return s3.count(clazz);
+	}
+	
+	@Override
+	public <T extends Persistable> List<T> query(Class<T> clazz) {
+		return s3.query(clazz);
+	}
+
+	@Override
+	public <T extends Persistable> List<T> query(Class<T> clazz, int pageSize, String index, Boolean ascending,
+			String startKey, String sortKey, String storageBucket) {
+		return s3.query(clazz, pageSize, index, ascending, startKey, sortKey, storageBucket);
 	}
 	
 }

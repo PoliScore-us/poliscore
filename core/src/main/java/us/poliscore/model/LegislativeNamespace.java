@@ -109,10 +109,9 @@ public enum LegislativeNamespace {
 		return this.getNamespace().split("/")[1].toUpperCase();
 	}
 	
-	// We can't override it because ddb uses it for serialization for some reason
-//	public String toString() {
-//		return namespace;
-//	}
+	public LegiscanState toState() {
+		return LegiscanState.fromAbbreviation(toAbbreviation());
+	}
 	
 	@Override
     @JsonValue

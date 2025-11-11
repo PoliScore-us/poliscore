@@ -85,5 +85,11 @@ public class CachedDynamoDbService implements ApplicationDataStoreIF
 	public <T extends Persistable> long count(Class<T> clazz) {
 		return dynamodb.count(clazz);
 	}
+
+	@Override
+	public <T extends Persistable> List<T> query(Class<T> clazz, int pageSize, String index, Boolean ascending,
+			String startKey, String sortKey, String storageBucket) {
+		return dynamodb.query(clazz, pageSize, index, ascending, startKey, sortKey, storageBucket);
+	}
 	
 }

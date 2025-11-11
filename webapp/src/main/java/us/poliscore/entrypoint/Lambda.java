@@ -33,6 +33,7 @@ import lombok.val;
 import us.poliscore.LegislatorBillLinker;
 import us.poliscore.LegislatorPageData;
 import us.poliscore.Page;
+import us.poliscore.WebappDatabase;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.TrackedIssue;
@@ -46,7 +47,7 @@ import us.poliscore.model.legislator.LegislatorIssueStat;
 import us.poliscore.model.session.SessionInterpretation;
 import us.poliscore.service.IpGeolocationService;
 import us.poliscore.service.SessionInfoService;
-import us.poliscore.service.storage.DynamoDbPersistenceService;
+import us.poliscore.service.storage.ObjectStorageServiceIF;
 
 @Path("")
 @RequestScoped
@@ -55,8 +56,8 @@ public class Lambda {
 	public static final String TRACKED_ISSUE_INDEX = "~ti~";
 
     @Inject
-    DynamoDbPersistenceService ddb;
-//    CachedDynamoDbService ddb;
+    @WebappDatabase
+    ObjectStorageServiceIF ddb;
     
     @Inject
     IpGeolocationService ipService;
@@ -215,7 +216,7 @@ public class Lambda {
     		return legs.stream().map(l -> (Persistable) l).toList();
     	}
     	
-    	val legs = ddb.query(Legislator.class, session.getKey(), pageSize, index, ascending, startKey, sortKey);
+    	val legs = ddb.query(Legislator.class, pageSize, index, ascending, startKey, sortKey, storageBucket);
     	
     	legs.forEach(l -> l.setInteractions(new LegislatorBillInteractionList()));
     	

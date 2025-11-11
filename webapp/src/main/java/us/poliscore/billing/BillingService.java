@@ -16,7 +16,9 @@ import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.val;
+import us.poliscore.WebappDatabase;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
+import us.poliscore.service.storage.ObjectStorageServiceIF;
 
 @ApplicationScoped
 public class BillingService {
@@ -28,7 +30,8 @@ public class BillingService {
 	String cancelUrl;
 
 	@Inject
-	DynamoDbPersistenceService ddb;
+	@WebappDatabase
+	ObjectStorageServiceIF ddb;
 
 	@PostConstruct
 	void init() {

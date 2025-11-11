@@ -23,5 +23,7 @@ public interface ObjectStorageServiceIF
 	 */
 	public <T extends Persistable> List<T> query(Class<T> clazz);
 	
+	public <T extends Persistable> List<T> query(Class<T> clazz, int pageSize, String index, Boolean ascending, String startKey, String sortKey, String storageBucket);
+	
 	public <T extends Persistable> long count(Class<T> clazz);
 }

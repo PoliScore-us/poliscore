@@ -329,4 +329,135 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	    return total;
 	}
 
+	@Override
+	@SneakyThrows
+	public <T extends Persistable> List<T> query(
+	    Class<T> clazz,
+	    int pageSize,
+	    String index,
+	    Boolean ascending,
+	    String startKey,
+	    String sortKey,
+	    String storageBucket
+	) {
+	    // Determine S3 prefix for this class (use provided storageBucket if present)
+	    final String prefix = (storageBucket != null && !storageBucket.isBlank())
+	        ? storageBucket
+	        : Persistable.getClassStorageBucket(clazz, null);
+
+	    // 1) List all keys under the prefix
+	    final java.util.ArrayList<String> keys = new java.util.ArrayList<>();
+	    String continuationToken = null;
+	    do {
+	        var reqBuilder = ListObjectsV2Request.builder()
+	            .bucket(BUCKET_NAME)
+	            .prefix(prefix)
+	            .maxKeys(1000);
+
+	        if (continuationToken != null) reqBuilder = reqBuilder.continuationToken(continuationToken);
+
+	        var resp = getClient().listObjectsV2(reqBuilder.build());
+	        for (var obj : resp.contents()) {
+	            keys.add(obj.key());
+	        }
+	        continuationToken = resp.nextContinuationToken();
+	    } while (continuationToken != null);
+
+	    if (keys.isEmpty()) return List.of();
+
+	    // 2) Load objects
+	    final var all = new java.util.ArrayList<T>(keys.size());
+	    for (var s3Key : keys) {
+	        var getReq = GetObjectRequest.builder()
+	            .bucket(BUCKET_NAME)
+	            .key(s3Key)
+	            .build();
+
+	        @Cleanup var in = getClient().getObject(getReq);
+	        var obj = PoliscoreUtil.getObjectMapper().readValue(in, clazz);
+	        all.add(obj);
+	    }
+
+	    // 3) Build comparator: by sortKey if provided, else by Persistable#getId()
+	    java.util.Comparator<T> cmp;
+	    if (sortKey != null && !sortKey.isBlank()) {
+	        cmp = java.util.Comparator.comparing(
+	            (T o) -> readProperty(o, sortKey),
+	            java.util.Comparator.nullsFirst(S3PersistenceService::compareObjects)
+	        );
+	    } else {
+	        cmp = java.util.Comparator.comparing(
+	            (T o) -> ((Persistable) o).getId(),
+	            java.util.Comparator.nullsFirst(java.util.Comparator.naturalOrder())
+	        );
+	    }
+	    if (!ascending) cmp = cmp.reversed();
+
+	    // 4) Sort
+	    all.sort(cmp);
+
+	    // 5) Cursor: advance past startKey (by id)
+	    int startIdx = 0;
+	    if (startKey != null && !startKey.isBlank()) {
+	        for (int i = 0; i < all.size(); i++) {
+	            var p = (Persistable) all.get(i);
+	            if (startKey.equals(p.getId())) {
+	                startIdx = i + 1;
+	                break;
+	            }
+	        }
+	        if (startIdx >= all.size()) return List.of();
+	    }
+
+	    // 6) Page
+	    int limit = pageSize > 0 ? pageSize : (all.size() - startIdx);
+	    int endIdx = Math.min(all.size(), startIdx + limit);
+	    return all.subList(startIdx, endIdx);
+	}
+
+	/** Read a property via getter or field; may return any Object (possibly null). */
+	@SneakyThrows
+	private static Object readProperty(Object target, String name) {
+	    String suffix = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+
+	    // Try getters first
+	    for (String prefix : new String[] {"get", "is"}) {
+	        try {
+	            var m = target.getClass().getMethod(prefix + suffix);
+	            m.setAccessible(true);
+	            return m.invoke(target);
+	        } catch (NoSuchMethodException ignore) {}
+	    }
+
+	    // Try field up the hierarchy
+	    Class<?> c = target.getClass();
+	    while (c != null && c != Object.class) {
+	        try {
+	            var f = c.getDeclaredField(name);
+	            f.setAccessible(true);
+	            return f.get(target);
+	        } catch (NoSuchFieldException ignore) {
+	            c = c.getSuperclass();
+	        }
+	    }
+
+	    // Fallback to id when available
+	    if (target instanceof Persistable p) return p.getId();
+	    return null;
+	}
+
+	/** Null-safe comparison that prefers Comparable, else falls back to toString(). */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private static int compareObjects(Object a, Object b) {
+	    if (a == b) return 0;
+	    if (a == null) return -1;
+	    if (b == null) return 1;
+
+	    if (a instanceof Comparable && a.getClass().isInstance(b)) {
+	        return ((Comparable) a).compareTo(b);
+	    }
+	    return a.toString().compareTo(b.toString());
+	}
+
+
 }

@@ -2,7 +2,7 @@ package us.poliscore.service.storage;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,7 +10,6 @@ import org.apache.commons.io.FileUtils;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import lombok.SneakyThrows;
-import lombok.val;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.Persistable;
 
@@ -89,24 +88,6 @@ public class LocalFilePersistenceService implements ObjectStorageServiceIF
 		File f = fileFor(id);
 		return f.exists();
 	}
-	
-	@Override
-	@SneakyThrows
-	public <T extends Persistable> List<T> query(Class<T> clazz) {
-//		val idClassPrefix =(String) clazz.getField("ID_CLASS_PREFIX").get(null);
-//		File objectStore = getStore(idClassPrefix);
-//		
-//		val mapper = PoliscoreUtil.getObjectMapper();
-//		return Arrays.asList(objectStore.listFiles()).stream().map(f -> {
-//			try {
-//				return mapper.readValue(FileUtils.readFileToString(f, "UTF-8"), clazz);
-//			} catch (IOException e) {
-//				throw new RuntimeException(e);
-//			}
-//		}).toList();
-		
-		throw new UnsupportedOperationException();
-	}
 
 	@Override
 	@SneakyThrows
@@ -121,6 +102,127 @@ public class LocalFilePersistenceService implements ObjectStorageServiceIF
 
 	    // Count all JSON files recursively (ids may create nested directories).
 	    return (long) FileUtils.listFiles(objectStore, new String[]{"json"}, true).size();
+	}
+
+	@Override
+	@SneakyThrows
+	public <T extends Persistable> List<T> query(Class<T> clazz) {
+	    final String idClassPrefix = (String) clazz.getField("ID_CLASS_PREFIX").get(null);
+	    final File objectStore = getStore(idClassPrefix);
+
+	    if (!objectStore.exists()) return List.of();
+
+	    var mapper = PoliscoreUtil.getObjectMapper();
+
+	    // Read all *.json under the prefix directory (recursively)
+	    return FileUtils
+	        .listFiles(objectStore, new String[] { "json" }, true)
+	        .stream()
+	        .map(f -> {
+	            try {
+	                return mapper.readValue(f, clazz);
+	            } catch (IOException e) {
+	                throw new RuntimeException("Failed to read " + f.getAbsolutePath(), e);
+	            }
+	        })
+	        .toList();
+	}
+
+	@Override
+	@SneakyThrows
+	public <T extends Persistable> List<T> query(
+	    Class<T> clazz,
+	    int pageSize,
+	    String index,
+	    Boolean ascending,
+	    String startKey,
+	    String sortKey,
+	    String storageBucket
+	) {
+	    // Load everything of this type from disk
+	    List<T> all = this.query(clazz);
+	    if (all.isEmpty()) return all;
+
+	    // Build comparator: by sortKey if provided, else by Persistable#getId()
+	    Comparator<T> cmp;
+	    if (sortKey != null && !sortKey.isBlank()) {
+	        // Extract arbitrary property via getter/field; handle Comparable vs toString
+	        cmp = Comparator.comparing(
+	            (T o) -> readProperty(o, sortKey),
+	            Comparator.nullsFirst(LocalFilePersistenceService::compareObjects)
+	        );
+	    } else {
+	        cmp = Comparator.comparing(
+	            (T o) -> ((Persistable) o).getId(),
+	            Comparator.nullsFirst(Comparator.naturalOrder())
+	        );
+	    }
+	    if (!ascending) cmp = cmp.reversed();
+
+	    // Sort
+	    List<T> sorted = new java.util.ArrayList<>(all);
+	    sorted.sort(cmp);
+
+	    // If a startKey (cursor) is provided, advance to the first item AFTER it (by id)
+	    int startIdx = 0;
+	    if (startKey != null && !startKey.isBlank()) {
+	        for (int i = 0; i < sorted.size(); i++) {
+	            Persistable p = (Persistable) sorted.get(i);
+	            if (startKey.equals(p.getId())) {
+	                startIdx = i + 1;
+	                break;
+	            }
+	        }
+	        if (startIdx >= sorted.size()) return List.of();
+	    }
+
+	    // Page size handling
+	    int limit = pageSize > 0 ? pageSize : sorted.size();
+	    int endIdx = Math.min(sorted.size(), startIdx + limit);
+	    return sorted.subList(startIdx, endIdx);
+	}
+
+	/** Read a property via getter or field; may return any Object (possibly null). */
+	@SneakyThrows
+	private static Object readProperty(Object target, String name) {
+	    String suffix = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+	    // Try JavaBean getters first
+	    for (String prefix : new String[] {"get", "is"}) {
+	        try {
+	            var m = target.getClass().getMethod(prefix + suffix);
+	            m.setAccessible(true);
+	            return m.invoke(target);
+	        } catch (NoSuchMethodException ignore) {}
+	    }
+	    // Try declared field, walking up the hierarchy
+	    Class<?> c = target.getClass();
+	    while (c != null && c != Object.class) {
+	        try {
+	            var f = c.getDeclaredField(name);
+	            f.setAccessible(true);
+	            return f.get(target);
+	        } catch (NoSuchFieldException ignore) {
+	            c = c.getSuperclass();
+	        }
+	    }
+	    // Fallback: id if Persistable
+	    if (target instanceof Persistable p) return p.getId();
+	    return null;
+	}
+
+	/** Null-safe comparison that prefers Comparable, else falls back to toString(). */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private static int compareObjects(Object a, Object b) {
+	    if (a == b) return 0;
+	    if (a == null) return -1;
+	    if (b == null) return 1;
+
+	    // If same class and Comparable, use it
+	    if (a instanceof Comparable && a.getClass().isInstance(b)) {
+	        return ((Comparable) a).compareTo(b);
+	    }
+	    // Fallback to string compare
+	    return a.toString().compareTo(b.toString());
 	}
 	
 }
