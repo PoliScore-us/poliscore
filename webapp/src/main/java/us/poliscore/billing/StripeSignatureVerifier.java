@@ -8,9 +8,19 @@ import com.stripe.net.Webhook;
 
 @ApplicationScoped
 public class StripeSignatureVerifier {
-  @ConfigProperty(name="stripe.webhook-secret") String webhookSecret;
+	@ConfigProperty(name = "stripe.webhook-secret-ps1")
+	String webhookSecretPs1;
 
-  public Event verifyAndParse(String payload, String signatureHeader) throws SignatureVerificationException {
-    return Webhook.constructEvent(payload, signatureHeader, webhookSecret);
-  }
+	@ConfigProperty(name = "stripe.webhook-secret-ps2")
+	String webhookSecretPs2;
+	
+	@ConfigProperty(name = "ddb.table")
+	String ddbTableName;
+
+	public Event verifyAndParse(String payload, String signatureHeader) throws SignatureVerificationException {
+		if ("poliscore1".equals(ddbTableName))
+			return Webhook.constructEvent(payload, signatureHeader, webhookSecretPs1);
+		else
+			return Webhook.constructEvent(payload, signatureHeader, webhookSecretPs2);
+	}
 }

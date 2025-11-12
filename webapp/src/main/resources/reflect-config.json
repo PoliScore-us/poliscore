@@ -1,0 +1,61 @@
+[
+  { "name": "com.stripe.model.Event",                        "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.EventData",                    "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.EventDataObjectDeserializer",  "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+
+  { "name": "com.stripe.model.Customer",                     "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Customer$InvoiceSettings",     "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Customer$Tax",                 "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+
+  { "name": "com.stripe.model.Subscription",                 "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Subscription$AutomaticTax",    "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Subscription$BillingCycleAnchorConfig", "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Subscription$BillingMode",     "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Subscription$BillingSchedule", "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Subscription$BillingThresholds","allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Subscription$CancellationDetails","allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Subscription$InvoiceSettings", "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Subscription$PauseCollection", "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Subscription$PaymentSettings", "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Subscription$PendingInvoiceItemInterval","allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Subscription$PendingUpdate",   "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Subscription$Prebilling",      "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Subscription$TransferData",    "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Subscription$TrialSettings",   "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+
+  { "name": "com.stripe.model.SubscriptionItem",             "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+
+  { "name": "com.stripe.model.Invoice",                      "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$AmountsDue",           "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$AutomaticTax",         "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$ConfirmationSecret",   "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$CustomerTaxId",        "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$CustomField",          "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$FromInvoice",          "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$Issuer",               "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$Parent",               "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$PaymentSettings",      "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$Rendering",            "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$ShippingCost",         "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$StatusTransitions",    "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$ThresholdReason",      "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$TotalDiscountAmount",  "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$TotalMarginAmount",    "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$TotalPretaxCreditAmount","allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Invoice$TotalTax",             "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+
+  { "name": "com.stripe.model.InvoiceLineItem",              "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.InvoiceLineItem$Period",       "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+
+  { "name": "com.stripe.model.checkout.Session",             "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+
+  { "name": "com.stripe.model.Price",                        "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Plan",                         "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Product",                      "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+
+  { "name": "com.stripe.model.Address",                      "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Discount",                     "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.Coupon",                       "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.TaxRate",                      "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true },
+  { "name": "com.stripe.model.StripeError",                  "allDeclaredConstructors": true, "allDeclaredFields": true, "allDeclaredMethods": true, "unsafeAllocated": true }
+]

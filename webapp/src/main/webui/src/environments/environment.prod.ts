@@ -3,7 +3,7 @@ let baseUrl = "https://poliscore.us/";
 export const environment = {
   production: true,
   baseUrl: baseUrl,
-  apiUrl: 'https://5hta4jxn7q6cfcyxnvz4qmkyli0tambn.lambda-url.us-east-1.on.aws/',
+  apiUrl: 'https://y5i3jhm7k5vy67elvzly4b3b240kjwlp.lambda-url.us-east-1.on.aws/',
   
   cognito: {
     domain: "https://us-east-1ukl1ofrmk.auth.us-east-1.amazoncognito.com",
@@ -15,7 +15,7 @@ export const environment = {
 
   stripe: {
     publicKey: 'pk_live_51PfR5YE3jV2gS3sQhMAmdY1j4B1INHpdA1m5jR3ZoQPAUGxNbTqDVgYjhWQQlWeC6WB22yo6NGJG9IBEElysdW5i00XreDbaPi',
-    productPremium: "prod_TMERVtegl3x9zM"
+    productPremium: "price_1SSQLvE3jV2gS3sQjvzSHJQl"
   }
 };
 

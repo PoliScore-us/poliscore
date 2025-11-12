@@ -23,9 +23,6 @@ import us.poliscore.service.storage.DynamoDbPersistenceService;
 @Path("/stripe/webhook")
 public class StripeWebhookResource {
 
-  @ConfigProperty(name = "stripe.webhook-secret")
-  String webhookSecret;
-
   @Inject StripeSignatureVerifier verifier;
   @Inject DynamoDbPersistenceService ddb;
 
