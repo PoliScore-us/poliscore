@@ -1,14 +1,15 @@
 package us.poliscore.billing;
 
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.Stripe;
 import com.stripe.model.Customer;
 import com.stripe.model.checkout.Session;
-import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.checkout.SessionCreateParams;
 
 import io.quarkus.logging.Log;
@@ -17,34 +18,46 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.val;
 import us.poliscore.WebappDatabase;
-import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.ObjectStorageServiceIF;
 
 @ApplicationScoped
 public class BillingService {
 	@ConfigProperty(name = "stripe.secret")
 	String stripeSecret;
-	@ConfigProperty(name = "app.success-url")
+	@ConfigProperty(name = "stripe.success.url")
 	String successUrl;
-	@ConfigProperty(name = "app.cancel-url")
+	@ConfigProperty(name = "stripe.cancel.url")
 	String cancelUrl;
 
 	@Inject
 	@WebappDatabase
 	ObjectStorageServiceIF ddb;
+	
+	@Inject
+	ObjectMapper mapper;
 
 	@PostConstruct
 	void init() {
 		Stripe.apiKey = stripeSecret;
+		
+		// Fail fast if any required URLs are missing
+		  if (StringUtils.isBlank(successUrl) || StringUtils.isBlank(cancelUrl)) {
+		    Log.errorf("BillingService config missing: successUrl='%s' cancelUrl='%s'", successUrl, cancelUrl);
+		    throw new IllegalStateException("BillingService misconfigured: success/cancel URLs must be set");
+		  }
 	}
 
 	public String ensureCustomer(String userId, String email) throws Exception {
 		if (StringUtils.isBlank(userId))
 			throw new IllegalArgumentException("userId cannot be blank");
 
+		UserAccount ua = null;
+		
 		val op = ddb.get(userId, UserAccount.class);
-		if (op.isPresent())
+		if (op.isPresent() && StringUtils.isNotBlank(op.get().getStripeCustomerId()))
 			return op.get().getStripeCustomerId();
+		else
+			ua = op.orElse(new UserAccount());
 
 		// Email is technically only required if the user doesn't already exist and we need to create it.
 		if (StringUtils.isBlank(email))
@@ -52,12 +65,12 @@ public class BillingService {
 
 		var customer = Customer.create(Map.of("email", email, "metadata", Map.of("app_user_id", userId)));
 
-		var ub = new UserAccount();
-		ub.setId(userId);
-		ub.setEmail(email);
-		ub.setStripeCustomerId(customer.getId());
-		ub.setUpdatedAt(java.time.Instant.now());
-		ddb.put(ub);
+		ua.setId(userId);
+		ua.setEmail(email);
+		ua.setStripeCustomerId(customer.getId());
+		ddb.put(ua);
+		
+		Log.info(mapper.writeValueAsString(ua));
 
 		return customer.getId();
 	}
@@ -72,7 +85,7 @@ public class BillingService {
 				.setClientReferenceId(userId).putMetadata("app_user_id", userId)
 				.setSubscriptionData(
 						SessionCreateParams.SubscriptionData.builder().putMetadata("userId", userId).build())
-				.setSuccessUrl(successUrl + "?session_id={CHECKOUT_SESSION_ID}").setCancelUrl(cancelUrl).build();
+				.setSuccessUrl(Objects.requireNonNull(successUrl) + "?session_id={CHECKOUT_SESSION_ID}").setCancelUrl(Objects.requireNonNull(cancelUrl)).build();
 
 		Session session = Session.create(params);
 		return session.getUrl(); // Redirect user here

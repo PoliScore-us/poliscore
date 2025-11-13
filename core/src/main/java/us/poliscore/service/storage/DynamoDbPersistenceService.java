@@ -1,6 +1,7 @@
 package us.poliscore.service.storage;
 
 import java.lang.reflect.Method;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -12,7 +13,6 @@ import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import io.quarkus.arc.profile.UnlessBuildProfile;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -33,10 +33,10 @@ import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
-import us.poliscore.WebappDatabase;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.dynamodb.DdbDataPage;
 import us.poliscore.model.dynamodb.DdbKeyProvider;
@@ -107,121 +107,122 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 		return (BeanTableSchema<T>) schemas.get(clazz);
 	}
 	
-	@SuppressWarnings("unchecked")
 	@SneakyThrows
-	public <T extends Persistable> void put(T obj)
-	{
-		Persistable.validate(obj);
-		
-//		val table = ((DynamoDbTable<T>) ddbe.table(TABLE_NAME, getSchema(obj.getClass())));
-		
-		Map<String, Map<String, AttributeValue>> pages = new HashMap<String, Map<String, AttributeValue>>();
-		val schema = (BeanTableSchema<T>) getSchema(obj.getClass());
-		
-		var hasSortKey = schema.tableMetadata().primarySortKey().isPresent();
-		
-		if (!hasSortKey) {
-			for (Method getter : obj.getClass().getDeclaredMethods())
-			{
-			    if (getter.isAnnotationPresent(DdbDataPage.class) || getter.isAnnotationPresent(DdbListPage.class))
-		        {
-			    	val attr = StringUtils.uncapitalize(getter.getName().replace("get", ""));
-			    	
-	//		    	getter.setAccessible(true); // TODO : Necessary? Not sure.
-			    	Object rawValue = getter.invoke(obj);
-			    	
-			    	if (getter.isAnnotationPresent(DdbDataPage.class)) {
-			    		val page = getter.getAnnotation(DdbDataPage.class).value();
-			    		
-			    		// incompatible types: software.amazon.awssdk.enhanced.dynamodb.AttributeConverter<T> cannot be converted to software.amazon.awssdk.enhanced.dynamodb.AttributeConverter<java.lang.Object>
-//			    		val val = ((AttributeConverter<Object>) schema.converterForAttribute(attr)).transformFrom(rawValue);
-			    		
-			    		AttributeValue val;
-				    	
-				    	if (getter.isAnnotationPresent(DynamoDbConvertedBy.class)) {
-				    		val a2 = getter.getAnnotation(DynamoDbConvertedBy.class);
-				    		
-				    		val converter = a2.value().getDeclaredConstructor().newInstance();
-				    		
-				    		val = converter.transformFrom(rawValue);
-				    	} else {
-				            @SuppressWarnings("unchecked")
-				            AttributeConverter<Object> converter = (AttributeConverter<Object>) new DefaultAttributeConverterProvider()
-				                    .converterFor(EnhancedType.of(rawValue.getClass()));
+	private <T extends Persistable> void putInternal(T obj, boolean conditional) {
+	    Persistable.validate(obj);
 
-				            val = converter.transformFrom(rawValue);
-				    	}
-			    		
-				    	
-				    	val values = pages.getOrDefault(page, new HashMap<String, AttributeValue>());
-				    	values.put(attr, val);
-				    	pages.put(page, values);
-			    	} else {
-			    		throw new UnsupportedOperationException();
-			    		
-	//		    		val limit = getter.getAnnotation(DdbListPage.class).value();
-	//		    		val all = (Collection<?>) rawValue;
-	//		    		
-	//		    		val it = all.iterator();
-	//		    		var page = new ArrayList<Object>();
-	//		    		int i = 0;
-	//		    		int pnum = 1;
-	//		    		while (it.hasNext()) {
-	//		    			if (i >= limit) {
-	////		    				pages.put(String.valueOf(pnum), page);
-	////		    				val val = schema.converterForAttribute(attr).transformFrom((T) rawValue);
-	//		    				
-	//					    	val values = pages.getOrDefault(page, new HashMap<String, AttributeValue>());
-	//					    	values.put(attr, val);
-	//					    	pages.put(page, values);
-	//		    				
-	//		    				i = 0;
-	//		    				page = new ArrayList<Object>();
-	//		    				pnum++;
-	//		    			}
-	//		    			page.add(it.next());
-	//		    			i++;
-	//		    		}
-			    	}
-		        }
-			}
-		}
-		
-		@SuppressWarnings("rawtypes")
-		Class clazz = obj.getClass();
-		
-		@SuppressWarnings("unchecked")
-		Map<String, AttributeValue> objAttrs = new HashMap<String, AttributeValue>(getSchema(clazz).itemToMap(clazz.cast(obj), true));
-		
-//		if (!hasSortKey) {
-			objAttrs.put("page", AttributeValue.fromS(HEAD_PAGE));
-			
-			// Remove all page data from head object
-			for (String fieldName : pages.values().stream().map(v -> v.keySet()).reduce(new HashSet<String>(), (a,b) -> { a.addAll(b); return a; })) {
-				objAttrs.remove(fieldName);
-			}
-//		}
-		
-		// Apply head object
-		ddb.putItem(PutItemRequest.builder()
-				.tableName(TABLE_NAME)
-				.item(objAttrs)
-				.build());
-		
-//		if (!hasSortKey) {
-			// Apply all pages
-			for (String page : pages.keySet()) {
-				val pageAttrs = pages.get(page);
-				
-				pageAttrs.put("id", AttributeValue.fromS(obj.getId()));
-				pageAttrs.put("page", AttributeValue.fromS(page));
-				
-				ddb.putItem(PutItemRequest.builder()
-						.tableName(TABLE_NAME)
-						.item(pageAttrs)
-						.build());
-			}
-//		}
+	    Map<String, Map<String, AttributeValue>> pages = new HashMap<>();
+	    @SuppressWarnings("unchecked")
+	    var schema = (BeanTableSchema<T>) getSchema(obj.getClass());
+
+	    var hasSortKey = schema.tableMetadata().primarySortKey().isPresent();
+
+	    if (!hasSortKey) {
+	        for (Method getter : obj.getClass().getDeclaredMethods()) {
+	            if (getter.isAnnotationPresent(DdbDataPage.class) || getter.isAnnotationPresent(DdbListPage.class)) {
+	                val attr = StringUtils.uncapitalize(getter.getName().replace("get", ""));
+	                Object rawValue = getter.invoke(obj);
+
+	                if (getter.isAnnotationPresent(DdbDataPage.class)) {
+	                    val page = getter.getAnnotation(DdbDataPage.class).value();
+
+	                    AttributeValue val;
+	                    if (getter.isAnnotationPresent(DynamoDbConvertedBy.class)) {
+	                        val a2 = getter.getAnnotation(DynamoDbConvertedBy.class);
+	                        val converter = a2.value().getDeclaredConstructor().newInstance();
+	                        val = converter.transformFrom(rawValue);
+	                    } else {
+	                        @SuppressWarnings("unchecked")
+	                        AttributeConverter<Object> converter =
+	                                (AttributeConverter<Object>) new DefaultAttributeConverterProvider()
+	                                        .converterFor(EnhancedType.of(rawValue.getClass()));
+	                        val = converter.transformFrom(rawValue);
+	                    }
+
+	                    val values = pages.getOrDefault(page, new HashMap<String, AttributeValue>());
+	                    values.put(attr, val);
+	                    pages.put(page, values);
+	                } else {
+	                    throw new UnsupportedOperationException(); // DdbListPage not implemented yet
+	                }
+	            }
+	        }
+	    }
+
+	    @SuppressWarnings("rawtypes")
+	    Class clazz = obj.getClass();
+
+	    @SuppressWarnings("unchecked")
+	    Map<String, AttributeValue> objAttrs =
+	            new HashMap<>(getSchema(clazz).itemToMap(clazz.cast(obj), true));
+
+	    // head row always page=0
+	    objAttrs.put("page", AttributeValue.fromS(HEAD_PAGE));
+
+	    // remove paged fields from head object
+	    for (String fieldName : pages.values().stream()
+	            .map(Map::keySet)
+	            .reduce(new HashSet<String>(), (a, b) -> { a.addAll(b); return a; })) {
+	        objAttrs.remove(fieldName);
+	    }
+	    
+	    if (schema.attributeNames().contains("lastUpdate"))
+	        objAttrs.put("lastUpdate", AttributeValue.fromS(Instant.now().toString()));
+
+
+	    // ----- HEAD WRITE (with optional condition) -----
+	    PutItemRequest.Builder headPut = PutItemRequest.builder()
+	            .tableName(TABLE_NAME)
+	            .item(objAttrs);
+
+	    if (conditional) {
+	    	if (!objAttrs.containsKey("lastUpdate"))
+	    		throw new RuntimeException("Attribute 'lastUpdate' required for conditional put on class " + obj.getClass().getName());
+	    	
+	        AttributeValue versionVal = objAttrs.get("lastUpdate");
+
+	        Map<String, String> names = new HashMap<>();
+	        names.put("#v", "lastUpdate");
+
+	        Map<String, AttributeValue> values = new HashMap<>();
+	        values.put(":newV", versionVal);
+
+	        // Only write if item doesn't exist OR existing version is older
+	        headPut = headPut
+	                .conditionExpression("attribute_not_exists(#v) OR #v <= :newV")
+	                .expressionAttributeNames(names)
+	                .expressionAttributeValues(values);
+	    }
+
+	    ddb.putItem(headPut.build());
+
+	    // ----- PAGE WRITES (no condition needed; they follow the head) -----
+	    for (String page : pages.keySet()) {
+	        val pageAttrs = pages.get(page);
+	        pageAttrs.put("id", AttributeValue.fromS(obj.getId()));
+	        pageAttrs.put("page", AttributeValue.fromS(page));
+
+	        ddb.putItem(PutItemRequest.builder()
+	                .tableName(TABLE_NAME)
+	                .item(pageAttrs)
+	                .build());
+	    }
+	}
+	
+	@Override
+	public <T extends Persistable> void put(T obj) {
+	    putInternal(obj, false);
+	}
+	
+	/**
+	 * Performs a conditional dynamodb put if our object is the latest version. Assumes the persistable has a 'lastUpdate' attribute.
+	 * 
+	 * @param <T>
+	 * @param obj
+	 * @return
+	 */
+	public <T extends Persistable> void putIfLatest(T obj) throws ConditionalCheckFailedException {
+	    putInternal(obj, true);
 	}
 	
 	@Override
@@ -330,7 +331,8 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 	@Override
 	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz)
 	{
-		throw new UnsupportedOperationException();
+	    final String storageBucket = Persistable.getClassStorageBucket(clazz, null);
+	    return query(clazz, -1, null, null, null, null, storageBucket);
 	}
 	
 	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, String sessionKey)

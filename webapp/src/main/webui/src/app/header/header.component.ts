@@ -40,6 +40,8 @@ export class HeaderComponent implements OnInit {
   public namespaces = ["us/congress", "us/co"];
 
   private sub?: Subscription;
+
+  subscriptionLoaded: boolean = false;
   
   isSubscribed: boolean = false;
 
@@ -59,7 +61,11 @@ export class HeaderComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.subscriptionLoaded = false;
+
     this.sub = this.entitlement.status$.subscribe(s => {
+      this.subscriptionLoaded = true;
+      console.log("entitlement ", s);
       this.isSubscribed = s.isSubscribed;
      });
 

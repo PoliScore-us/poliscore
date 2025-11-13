@@ -25,7 +25,7 @@
                 <mat-option (click)="auth.login()">Login</mat-option>
                 <mat-option [routerLink]="'/signup'">Signup</mat-option>
               </mat-select>
-              <label *ngIf="(auth.isAuthenticated$ | async) && !isSubscribed" style="color:red; cursor: pointer;" (click)="signUp()" class="sub-expired">Your subscription has expired!</label>
+              <label *ngIf="subscriptionLoaded && (auth.isAuthenticated$ | async) && !isSubscribed" style="color:red; cursor: pointer;" (click)="signUp()" class="sub-expired">Your subscription has expired!</label>
             </div>
           </div>
 
@@ -38,7 +38,7 @@
               <mat-option (click)="auth.login()">Login</mat-option>
               <mat-option [routerLink]="'/signup'">Signup</mat-option>
             </mat-select>
-            <label *ngIf="(auth.isAuthenticated$ | async) && !isSubscribed" style="color:red; cursor: pointer;" (click)="signUp()" class="sub-expired">Your subscription has expired!</label>
+            <label *ngIf="subscriptionLoaded && (auth.isAuthenticated$ | async) && !isSubscribed" style="color:red; cursor: pointer;" (click)="signUp()" class="sub-expired">Your subscription has expired!</label>
           </div>
        </div>
        <div class="horizontal-layout" style="flex-direction: row-reverse !important;">

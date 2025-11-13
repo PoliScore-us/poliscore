@@ -18,9 +18,13 @@ public class StripeSignatureVerifier {
 	String ddbTableName;
 
 	public Event verifyAndParse(String payload, String signatureHeader) throws SignatureVerificationException {
+		return Webhook.constructEvent(payload, signatureHeader, getWebhookSecret());
+	}
+	
+	public String getWebhookSecret() {
 		if ("poliscore1".equals(ddbTableName))
-			return Webhook.constructEvent(payload, signatureHeader, webhookSecretPs1);
+			return webhookSecretPs1;
 		else
-			return Webhook.constructEvent(payload, signatureHeader, webhookSecretPs2);
+			return webhookSecretPs2;
 	}
 }

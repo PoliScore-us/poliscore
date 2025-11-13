@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { Subject } from 'rxjs';
 
 export interface EntitlementStatus {
   isAuthenticated: boolean;
@@ -8,18 +8,19 @@ export interface EntitlementStatus {
 
 @Injectable({ providedIn: 'root' })
 export class EntitlementService {
-  private readonly _status$ = new BehaviorSubject<EntitlementStatus>({
-    isAuthenticated: false,
-    isSubscribed: false,
-  });
+  // internal state
+  private _status: EntitlementStatus | null = null;
 
+  // no constructor args — SSR safe
+  private readonly _status$ = new Subject<EntitlementStatus>();
   readonly status$ = this._status$.asObservable();
 
-  get snapshot(): EntitlementStatus {
-    return this._status$.value;
+  get snapshot(): EntitlementStatus | null {
+    return this._status;
   }
 
   update(partial: Partial<EntitlementStatus>) {
-    this._status$.next({ ...this._status$.value, ...partial });
+    this._status = { ...(this._status ?? {} as EntitlementStatus), ...partial };
+    this._status$.next(this._status);
   }
 }

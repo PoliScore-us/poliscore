@@ -1,6 +1,7 @@
 package us.poliscore.billing;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -13,6 +14,7 @@ import lombok.NonNull;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
 import us.poliscore.model.Persistable;
 
 @DynamoDbBean
@@ -33,7 +35,7 @@ public class UserAccount implements Persistable {
 	protected String stripeCustomerId;
 	protected String plan;
 	protected String status;
-	protected Instant updatedAt;
+	protected Instant lastUpdate;
 	
 	protected Long currentPeriodEnd;     // epoch seconds
 	protected Boolean cancelAtPeriodEnd; // true if set to cancel at term end
@@ -59,10 +61,18 @@ public class UserAccount implements Persistable {
 	public String getStatus() { return status; }
 	public void setStatus(String status) { this.status = status; }
 	
-	public Instant getUpdatedAt() { return updatedAt; }
-	public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+	// We're overloading an index here so we can reuse an existing index. This is to allow lookup by stripe id.
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_LOCATION_INDEX }) public String getLocation() { return stripeCustomerId; }
+	@JsonIgnore public void setLocation(String location) { this.stripeCustomerId = location; }
 	
-	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public String getStorageBucket() {
+	// These date fields are required for DDB otherwise the object won't have a 'date' field and won't participate in our index
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public Instant getDate() { return lastUpdate; }
+	@JsonIgnore public void setDate(Instant updatedAt) { this.lastUpdate = updatedAt; }
+	
+	public Instant getLastUpdate() { return lastUpdate; }
+	public void setLastUpdate(Instant updatedAt) { this.lastUpdate = updatedAt; }
+	
+	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_LOCATION_INDEX }) public String getStorageBucket() {
 		return this.getId().substring(0, StringUtils.ordinalIndexOf(getId(), "/", 1));
 	}
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }

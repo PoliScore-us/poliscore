@@ -58,6 +58,7 @@
 	</dependencyManagement>
 
 	<dependencies>
+		<!-- If you ever update Stripe, you'll probably need to re-run 'GenerateStripeReflectionConfig', which spits out a reflect-config.json file which is needed for quarkus native -->
 		<dependency>
 		    <groupId>com.stripe</groupId>
 		    <artifactId>stripe-java</artifactId>

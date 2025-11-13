@@ -1,10 +1,10 @@
 package us.poliscore.model;
 
+import java.time.LocalDate;
 import java.util.Objects;
 
 import lombok.SneakyThrows;
 import lombok.val;
-import us.poliscore.model.bill.Bill;
 
 public interface Persistable {
 	
@@ -35,7 +35,10 @@ public interface Persistable {
 	@SneakyThrows
 	public static String getClassStorageBucket(Class<?> clazz, String sessionKey)
 	{
-		return getIdClassPrefix(clazz) + "/" + sessionKey;
+		if (sessionKey != null)
+			return getIdClassPrefix(clazz) + "/" + sessionKey;
+		else
+			return getIdClassPrefix(clazz);
 	}
 	
 	@SneakyThrows
