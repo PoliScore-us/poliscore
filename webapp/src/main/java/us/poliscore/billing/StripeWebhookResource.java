@@ -1,6 +1,8 @@
 package us.poliscore.billing;
 
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
@@ -18,6 +20,8 @@ import com.stripe.param.InvoiceRetrieveParams;
 import com.stripe.param.SubscriptionListParams;
 import com.stripe.param.SubscriptionRetrieveParams;
 
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
@@ -27,6 +31,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import lombok.SneakyThrows;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import us.poliscore.model.Persistable;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 
@@ -64,133 +69,77 @@ public class StripeWebhookResource {
 
 		Log.info("Stripe webhook invoked. Event type is " + type);
 
-//		final var dod = event.getDataObjectDeserializer();
-//		if (dod.getObject().isEmpty()) {
-//			Exception e = null;
-//		  try {
-//		    // Will throw with the underlying reason (missing reflection, unknown field, etc.)
-//		    dod.deserializeUnsafe();
-//		  } catch (Exception de) {
-//		    e = de;
-//		  }
-//		  io.quarkus.logging.Log.errorf(e, "Stripe DataObject deserialization failed for type %s", event.getType());
-//		  
-//		  return Response.ok().build();
-//		}
-//		
-//		StripeObject obj = dod.getObject().get();
-
 		StripeObject obj = event.getDataObjectDeserializer().deserializeUnsafe();
 
 		if (obj == null)
 			throw new NullPointerException("stripe data object was null...");
 
-		try {
-			switch (type) {
+		switch (type) {
 
 			// After Checkout completes: attach Stripe IDs to your user record
 			case "checkout.session.completed" -> {
 				final var s = (Session) obj;
-
+	
 				String userId = firstNonBlank(s.getClientReferenceId(),
 						s.getMetadata() != null ? s.getMetadata().get("userId") : null,
 						s.getMetadata() != null ? s.getMetadata().get("app_user_id") : null);
-				if (isBlank(userId))
-					userId = "unknown";
-
+	
 				final String customerId = s.getCustomer();
 				final String subId = s.getSubscription();
-
-				// quick upsert so UI can reflect something immediately
-				UserAccount acct = ddb.get(userId, UserAccount.class)
-						.orElseGet(() -> getByStripeId(customerId).orElse(new UserAccount()));
-				acct.setId(userId);
-				acct.setStripeCustomerId(customerId);
-				acct.setSubscriptionId(subId);
-				acct.setPlan("premium");
-				acct.setStatus("incomplete");
-				ddb.putIfLatest(acct);
-
-				// now fetch canonical state from Stripe (order-proof)
-				if (!isBlank(subId)) {
-					try {
-						Subscription fresh = retrieveSubscription(subId);
-						upsertFromSubscription(fresh, userId);
-					} catch (Exception e) {
-						Log.warnf(e, "failed to sync sub after checkout.session.completed sub=%s", subId);
-					}
-				}
-
+				
+				syncSubscriptionFromStripe(subId, customerId, userId);
+	
 				Log.infof("checkout.session.completed: upserted user=%s customer=%s sub=%s", userId, customerId, subId);
 			}
-
+	
 			// Authoritative lifecycle events for the Subscription
 			case "customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted" -> {
-				final var sub = (Subscription) obj; // from event (may be stale)
-				try {
-					Subscription fresh = retrieveSubscription(sub.getId()); // canonical
-					String hintedUserId = firstNonBlank(
-							fresh.getMetadata() != null ? fresh.getMetadata().get("userId") : null,
-							fresh.getMetadata() != null ? fresh.getMetadata().get("app_user_id") : null);
-					upsertFromSubscription(fresh, hintedUserId);
-				} catch (Exception e) {
-					Log.warnf(e, "failed to retrieve/sync subscription %s from stripe", sub.getId());
-				}
-			}
+	
+				RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
+						.handle(ConditionalCheckFailedException.class, IllegalArgumentException.class)
+						.withBackoff(1, 16, ChronoUnit.SECONDS).withMaxRetries(5)
+						.onRetry(e -> Log.warn("Retrying due to conditional check failed"))
+						.onFailure(e -> Log.error("Retries exhausted", e.getException())).build();
+				
+				Failsafe.with(retryPolicy).run(() -> {
+			        final var sub = (Subscription) obj;
+			        String userId = (sub.getMetadata() != null) ? firstNonBlank(sub.getMetadata().get("userId"), sub.getMetadata().get("app_user_id")) : null;
+			        String customer = sub.getCustomer();
 
+			        syncSubscriptionFromStripe(sub.getId(), customer, userId);
+			    });
+			}
+	
 			// Payment for the current term succeeded
 			case "invoice.paid" -> {
-				  final var inv = (Invoice) obj;
+				RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
+						.handle(ConditionalCheckFailedException.class, IllegalArgumentException.class)
+						.withBackoff(1, 16, ChronoUnit.SECONDS).withMaxRetries(5)
+						.onRetry(e -> Log.warn("Retrying due to " + e.getClass().getName()))
+						.onFailure(e -> Log.error("Retries exhausted", e.getException())).build();
+				
+				Failsafe.with(retryPolicy).run(() -> {
+			        final var inv = (Invoice) obj;
+			        String customerId = inv.getCustomer();
+			        String invoiceId  = inv.getId();
 
-				  String customerId = inv.getCustomer();       // this exists in all versions
-				  String invoiceId  = inv.getId();
-
-				  String subId = null;
-				  try {
-				    subId = resolveSubIdForInvoice(customerId, invoiceId).orElse(null);
-				  } catch (Exception e) {
-				    Log.warnf(e, "Could not resolve subscription by latest_invoice for invoice %s", invoiceId);
-				  }
-
-				  if (subId != null && !subId.isBlank()) {
-				    try {
-				      Subscription fresh = retrieveSubscription(subId); // your helper that fetches + expands items.price/plan
-				      upsertFromSubscription(fresh, null);              // your canonical sync
-				      break;
-				    } catch (Exception e) {
-				      Log.warnf(e, "Failed to retrieve subscription %s for invoice %s; falling back.", subId, invoiceId);
-				    }
-				  }
-
-				  // Fallback: mark active by customer (still safe/order-proof enough)
-				  Long periodEnd = null;
-				  if (inv.getLines() != null && inv.getLines().getData() != null && !inv.getLines().getData().isEmpty()
-				      && inv.getLines().getData().get(0).getPeriod() != null) {
-				    periodEnd = inv.getLines().getData().get(0).getPeriod().getEnd();
-				  }
-
-				  UserAccount acc = getByStripeId(customerId).orElseGet(() -> {
-				    var ua = new UserAccount();
-				    ua.setStripeCustomerId(customerId);
-				    return ua;
-				  });
-
-				  acc.setStatus("active");
-				  if (periodEnd != null) acc.setCurrentPeriodEnd(periodEnd);
-				  ddb.putIfLatest(acc);
-
-				  Log.infof("invoice.paid (fallback): customer=%s active; cpe=%s",
-				      acc.getStripeCustomerId(), String.valueOf(periodEnd));
-				}
-
+			        // TODO : It might be possible to get the subscription id from the invoice lines. AI doesn't know how to do this because it wasn't trained on stripe 3.x
+			        String subId = null;
+					try {
+						subId = resolveSubIdForInvoice(customerId, invoiceId).orElse(null);
+					} catch (Exception e) {
+						Log.warnf(e, "Could not resolve subscription by latest_invoice for invoice %s", invoiceId);
+					}
+					if (StringUtils.isBlank(subId)) throw new IllegalArgumentException();
+					
+					syncSubscriptionFromStripe(subId, customerId, null);
+			    });
+			}
+	
 			default -> {
 				// ignore others
 				Log.warnf("No built-in handler for stripe event %s", type);
 			}
-			}
-		} catch (Exception ex) {
-			Log.warnf(ex, "stripe webhook handling failed for type %s", type);
-			return Response.ok().build();
 		}
 
 		return Response.ok().build();
@@ -241,24 +190,34 @@ public class StripeWebhookResource {
 		}
 		return Optional.empty();
 	}
+	
+	private void syncSubscriptionFromStripe(String subId, String stripeCustomerId, String maybeUserId) throws Exception {
+		// First we fetch the user account. It's important this happens first, because it also sets our 'lastUpdate' date, which will be used to determine how 'fresh' our stripe response is.
+		UserAccount acct;
+	    if (!isBlank(maybeUserId)) {
+	        // Prefer explicit user id if you have one
+	        acct = ddb.get(maybeUserId, UserAccount.class)
+	                  .orElseGet(() -> getByStripeId(stripeCustomerId).orElse(new UserAccount()));
+	        acct.setId(maybeUserId);
+	    } else {
+	        // Fallback: purely by stripe customer
+	        acct = getByStripeId(stripeCustomerId).orElse(new UserAccount());
+	    }
+	    
+	    // Now we fetch the latest stripe subscription data.
+	    Subscription fresh = retrieveSubscription(subId);
+
+	    // Update account with the data from the subscription, then apply account if nobody else has beaten us to it with newer sub data.
+	    upsertFromSubscription(fresh, acct);
+	}
+
 
 	private RequestOptions stripeOpts() {
 		return RequestOptions.builder().setApiKey(stripeSecret).build();
 	}
 
-	private void upsertFromSubscription(Subscription sub, String hintedUserId) {
-		// Try to resolve user id from metadata if not provided
-		String userId = firstNonBlank(hintedUserId,
-				sub.getMetadata() != null ? sub.getMetadata().get("app_user_id") : null,
-				sub.getMetadata() != null ? sub.getMetadata().get("userId") : null);
+	private void upsertFromSubscription(Subscription sub, UserAccount acc) {
 
-		UserAccount acc = (userId != null ? ddb.get(userId, UserAccount.class).orElse(null) : null);
-		if (acc == null) {
-			acc = getByStripeId(sub.getCustomer()).orElse(new UserAccount());
-		}
-
-		if (userId != null)
-			acc.setId(userId);
 		acc.setStripeCustomerId(sub.getCustomer());
 		acc.setSubscriptionId(sub.getId());
 		acc.setStatus(sub.getStatus());
@@ -286,7 +245,11 @@ public class StripeWebhookResource {
 			acc.setCurrentPeriodEnd(maxCpe);
 
 		acc.setCancelAtPeriodEnd(Boolean.TRUE.equals(sub.getCancelAtPeriodEnd()));
-
+		
+		// Even though we expect the core to do this, it's best to be explicit, just in case the core changes in the future.
+		if (StringUtils.isBlank(acc.getId())) throw new IllegalArgumentException();
+		
+		// Throws if somebody applied new data while we were working. 
 		ddb.putIfLatest(acc);
 
 		Log.infof("sync sub: user=%s sub=%s status=%s cpe=%s cape=%s", acc.getId(), acc.getSubscriptionId(),
@@ -294,11 +257,11 @@ public class StripeWebhookResource {
 	}
 
 	private Optional<UserAccount> getByStripeId(String stripeCustomerId) {
-		if (StringUtils.isEmpty(stripeCustomerId)) return Optional.empty();
-		
-		return ddb
-				.query(UserAccount.class, -1, Persistable.OBJECT_BY_LOCATION_INDEX, null, null, stripeCustomerId, UserAccount.ID_CLASS_PREFIX)
-				.stream()
+		if (StringUtils.isEmpty(stripeCustomerId))
+			return Optional.empty();
+
+		return ddb.query(UserAccount.class, -1, Persistable.OBJECT_BY_LOCATION_INDEX, null, null, stripeCustomerId,
+				UserAccount.ID_CLASS_PREFIX).stream()
 //				.filter(ua -> Objects.equals(ua.getStripeCustomerId(), inv.getCustomer()))
 				.findFirst();
 	}
@@ -314,19 +277,5 @@ public class StripeWebhookResource {
 
 	private static boolean isBlank(String s) {
 		return s == null || s.trim().isEmpty();
-	}
-
-	private String scrapeUserId(Map<String, String>... metadatas) {
-		if (metadatas == null)
-			return null;
-		for (var metadata : metadatas) {
-			if (metadata == null)
-				continue;
-			if (metadata.containsKey("app_user_id"))
-				return metadata.get("app_user_id");
-			if (metadata.containsKey("userId"))
-				return metadata.get("userId");
-		}
-		return null;
 	}
 }

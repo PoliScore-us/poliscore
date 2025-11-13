@@ -166,10 +166,6 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 	        objAttrs.remove(fieldName);
 	    }
 	    
-	    if (schema.attributeNames().contains("lastUpdate"))
-	        objAttrs.put("lastUpdate", AttributeValue.fromS(Instant.now().toString()));
-
-
 	    // ----- HEAD WRITE (with optional condition) -----
 	    PutItemRequest.Builder headPut = PutItemRequest.builder()
 	            .tableName(TABLE_NAME)
@@ -193,6 +189,10 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 	                .expressionAttributeNames(names)
 	                .expressionAttributeValues(values);
 	    }
+	    
+	    // Important to do this after our conditional happens
+	    if (schema.attributeNames().contains("lastUpdate"))
+	        objAttrs.put("lastUpdate", AttributeValue.fromS(Instant.now().toString()));
 
 	    ddb.putItem(headPut.build());
 
@@ -228,6 +228,8 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 	@Override
 	public <T extends Persistable> Optional<T> get(String id, Class<T> clazz)
 	{
+		if (StringUtils.isEmpty(id)) return Optional.empty();
+		
 		return get(id, clazz, DdbPage.ALL);
 	}
 	

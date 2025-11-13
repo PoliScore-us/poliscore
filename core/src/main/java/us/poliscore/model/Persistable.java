@@ -55,10 +55,10 @@ public interface Persistable {
 	
 	public static void validate(Persistable p) {
 		if (p.getId() == null)
-			throw new UnsupportedOperationException("Persistable's id field is required.");
+			throw new IllegalArgumentException("Persistable's id field is required.");
 		
 		val expectedPrefix = getIdClassPrefix(p.getClass());
 		if (!Objects.equals(expectedPrefix, p.getId().split("/")[0]))
-			throw new UnsupportedOperationException("Object's id class prefix does not match expected value. Exepected prefix [" + expectedPrefix + "] on id [" + p.getId() + "]");
+			throw new IllegalArgumentException("Object's id class prefix does not match expected value. Exepected prefix [" + expectedPrefix + "] on id [" + p.getId() + "]");
 	}
 }

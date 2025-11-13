@@ -35,7 +35,7 @@ public class UserAccount implements Persistable {
 	protected String stripeCustomerId;
 	protected String plan;
 	protected String status;
-	protected Instant lastUpdate;
+	protected Instant lastUpdate = Instant.now();
 	
 	protected Long currentPeriodEnd;     // epoch seconds
 	protected Boolean cancelAtPeriodEnd; // true if set to cancel at term end
