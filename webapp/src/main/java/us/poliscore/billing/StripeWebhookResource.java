@@ -87,53 +87,34 @@ public class StripeWebhookResource {
 				final String customerId = s.getCustomer();
 				final String subId = s.getSubscription();
 				
-				syncSubscriptionFromStripe(subId, customerId, userId);
-	
-				Log.infof("checkout.session.completed: upserted user=%s customer=%s sub=%s", userId, customerId, subId);
+				syncSubscriptionFromStripe(type, subId, customerId, userId);
 			}
 	
 			// Authoritative lifecycle events for the Subscription
 			case "customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted" -> {
-	
-				RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
-						.handle(ConditionalCheckFailedException.class, IllegalArgumentException.class)
-						.withBackoff(1, 16, ChronoUnit.SECONDS).withMaxRetries(5)
-						.onRetry(e -> Log.warn("Retrying due to conditional check failed"))
-						.onFailure(e -> Log.error("Retries exhausted", e.getException())).build();
-				
-				Failsafe.with(retryPolicy).run(() -> {
-			        final var sub = (Subscription) obj;
-			        String userId = (sub.getMetadata() != null) ? firstNonBlank(sub.getMetadata().get("userId"), sub.getMetadata().get("app_user_id")) : null;
-			        String customer = sub.getCustomer();
+		        final var sub = (Subscription) obj;
+		        String userId = (sub.getMetadata() != null) ? firstNonBlank(sub.getMetadata().get("userId"), sub.getMetadata().get("app_user_id")) : null;
+		        String customer = sub.getCustomer();
 
-			        syncSubscriptionFromStripe(sub.getId(), customer, userId);
-			    });
+		        syncSubscriptionFromStripe(type, sub.getId(), customer, userId);
 			}
 	
 			// Payment for the current term succeeded
 			case "invoice.paid" -> {
-				RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
-						.handle(ConditionalCheckFailedException.class, IllegalArgumentException.class)
-						.withBackoff(1, 16, ChronoUnit.SECONDS).withMaxRetries(5)
-						.onRetry(e -> Log.warn("Retrying due to " + e.getClass().getName()))
-						.onFailure(e -> Log.error("Retries exhausted", e.getException())).build();
-				
-				Failsafe.with(retryPolicy).run(() -> {
-			        final var inv = (Invoice) obj;
-			        String customerId = inv.getCustomer();
-			        String invoiceId  = inv.getId();
+		        final var inv = (Invoice) obj;
+		        String customerId = inv.getCustomer();
+		        String invoiceId  = inv.getId();
 
-			        // TODO : It might be possible to get the subscription id from the invoice lines. AI doesn't know how to do this because it wasn't trained on stripe 3.x
-			        String subId = null;
-					try {
-						subId = resolveSubIdForInvoice(customerId, invoiceId).orElse(null);
-					} catch (Exception e) {
-						Log.warnf(e, "Could not resolve subscription by latest_invoice for invoice %s", invoiceId);
-					}
-					if (StringUtils.isBlank(subId)) throw new IllegalArgumentException();
-					
-					syncSubscriptionFromStripe(subId, customerId, null);
-			    });
+		        // TODO : It might be possible to get the subscription id from the invoice lines. AI doesn't know how to do this because it wasn't trained on stripe 3.x
+		        String subId = null;
+				try {
+					subId = resolveSubIdForInvoice(customerId, invoiceId).orElse(null);
+				} catch (Exception e) {
+					Log.warnf(e, "Could not resolve subscription by latest_invoice for invoice %s", invoiceId);
+				}
+				if (StringUtils.isBlank(subId)) throw new IllegalArgumentException();
+				
+				syncSubscriptionFromStripe(type, subId, customerId, null);
 			}
 	
 			default -> {
@@ -167,15 +148,6 @@ public class StripeWebhookResource {
 		return Subscription.retrieve(subId, params, opts);
 	}
 
-	private Invoice retrieveInvoiceWithSubscription(String invoiceId) throws Exception {
-		InvoiceRetrieveParams params = InvoiceRetrieveParams.builder().addExpand("subscription") // ensures
-																									// getSubscriptionObject()
-																									// is populated
-				.addExpand("lines.data.price") // optional: handy for price/plan info
-				.build();
-		return Invoice.retrieve(invoiceId, params, stripeOpts());
-	}
-
 	private Optional<String> resolveSubIdForInvoice(String customerId, String invoiceId) throws Exception {
 		// Expand latest_invoice so we can match it to this invoice
 		SubscriptionListParams params = SubscriptionListParams.builder().setCustomer(customerId)
@@ -191,24 +163,34 @@ public class StripeWebhookResource {
 		return Optional.empty();
 	}
 	
-	private void syncSubscriptionFromStripe(String subId, String stripeCustomerId, String maybeUserId) throws Exception {
-		// First we fetch the user account. It's important this happens first, because it also sets our 'lastUpdate' date, which will be used to determine how 'fresh' our stripe response is.
-		UserAccount acct;
-	    if (!isBlank(maybeUserId)) {
-	        // Prefer explicit user id if you have one
-	        acct = ddb.get(maybeUserId, UserAccount.class)
-	                  .orElseGet(() -> getByStripeId(stripeCustomerId).orElse(new UserAccount()));
-	        acct.setId(maybeUserId);
-	    } else {
-	        // Fallback: purely by stripe customer
-	        acct = getByStripeId(stripeCustomerId).orElse(new UserAccount());
-	    }
-	    
-	    // Now we fetch the latest stripe subscription data.
-	    Subscription fresh = retrieveSubscription(subId);
-
-	    // Update account with the data from the subscription, then apply account if nobody else has beaten us to it with newer sub data.
-	    upsertFromSubscription(fresh, acct);
+	private void syncSubscriptionFromStripe(String eventType, String subId, String stripeCustomerId, String maybeUserId) throws Exception {
+		RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
+				.handle(ConditionalCheckFailedException.class, IllegalArgumentException.class)
+				.withBackoff(1, 16, ChronoUnit.SECONDS).withMaxRetries(5)
+				.onRetry(e -> Log.warn("Retrying due to conditional check failed"))
+				.onFailure(e -> Log.error("Retries exhausted", e.getException())).build();
+		
+		Failsafe.with(retryPolicy).run(() -> {
+			// First we fetch the user account. It's important this happens first, because it also sets our 'lastUpdate' date, which will be used to determine how 'fresh' our stripe response is.
+			UserAccount acct;
+		    if (!StringUtils.isBlank(maybeUserId)) {
+		        // Prefer explicit user id if you have one
+		        acct = ddb.get(maybeUserId, UserAccount.class)
+		                  .orElseGet(() -> getByStripeId(stripeCustomerId).orElse(new UserAccount()));
+		        acct.setId(maybeUserId);
+		    } else {
+		        // Fallback: purely by stripe customer
+		        acct = getByStripeId(stripeCustomerId).orElse(new UserAccount());
+		    }
+		    
+		    // Now we fetch the latest stripe subscription data.
+		    Subscription fresh = retrieveSubscription(subId);
+	
+		    // Update account with the data from the subscription, then apply account if nobody else has beaten us to it with newer sub data.
+		    upsertFromSubscription(fresh, acct);
+		});
+		
+		Log.infof(eventType + ": synced user with remote stripe server. cognitoId=%s stripeId=%s sub=%s", maybeUserId, stripeCustomerId, subId);
 	}
 
 
@@ -270,12 +252,8 @@ public class StripeWebhookResource {
 		if (vals == null)
 			return null;
 		for (String v : vals)
-			if (!isBlank(v))
+			if (!StringUtils.isBlank(v))
 				return v;
 		return null;
-	}
-
-	private static boolean isBlank(String s) {
-		return s == null || s.trim().isEmpty();
 	}
 }

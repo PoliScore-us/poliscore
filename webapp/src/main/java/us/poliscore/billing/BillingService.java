@@ -53,6 +53,9 @@ public class BillingService {
 
 		UserAccount ua = null;
 		
+		if (!userId.startsWith(UserAccount.ID_CLASS_PREFIX + "/"))
+			userId = UserAccount.ID_CLASS_PREFIX + "/" + userId;
+		
 		val op = ddb.get(userId, UserAccount.class);
 		if (op.isPresent() && StringUtils.isNotBlank(op.get().getStripeCustomerId()))
 			return op.get().getStripeCustomerId();
@@ -69,13 +72,14 @@ public class BillingService {
 		ua.setEmail(email);
 		ua.setStripeCustomerId(customer.getId());
 		ddb.put(ua);
-		
-		Log.info(mapper.writeValueAsString(ua));
 
 		return customer.getId();
 	}
 
 	public String createCheckoutUrl(String priceId, String userId, String email) throws Exception {
+		if (!userId.startsWith(UserAccount.ID_CLASS_PREFIX + "/"))
+			userId = UserAccount.ID_CLASS_PREFIX + "/" + userId;
+		
 		Log.info("Checkout resource invoked with userid " + userId + ", priceid " + priceId + ", and email " + email);
 		String customerId = ensureCustomer(userId, email);
 
@@ -92,6 +96,9 @@ public class BillingService {
 	}
 
 	public String createPortalUrl(String userId, String email) throws Exception {
+		if (!userId.startsWith(UserAccount.ID_CLASS_PREFIX + "/"))
+			userId = UserAccount.ID_CLASS_PREFIX + "/" + userId;
+		
 		String customerId = ensureCustomer(userId, email);
 
 		com.stripe.param.billingportal.SessionCreateParams params = com.stripe.param.billingportal.SessionCreateParams
