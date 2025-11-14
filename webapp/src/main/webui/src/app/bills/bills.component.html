@@ -44,7 +44,7 @@
                 </mat-autocomplete>
             </div>
             
-            <mat-card *ngFor="let bill of bills" class="example-card" appearance="outlined" [ngClass]="{'gold-border': bill.status.description.trim().toLowerCase() === 'law'}">
+            <mat-card *ngFor="let bill of bills" class="bill" appearance="outlined" [ngClass]="{'gold-border': bill.status.description.trim().toLowerCase() === 'law'}">
                 <a [href]="config.billIdToAbsolutePath(bill.id ?? bill.billId!)">
                     <mat-card-header>
                         <mat-card-title-group>
@@ -63,7 +63,7 @@
                 </a>
             </mat-card>
 
-            <mat-card *ngIf="hasMoreContent && isRequestingData" class="loading-card vertical-layout" appearance="outlined">
+            <mat-card *ngIf="hasMoreContent && isRequestingData" class="bill loading-card vertical-layout" appearance="outlined">
                 <div class="loading">
                 </div>
             </mat-card>
