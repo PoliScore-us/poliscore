@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, HostListener, Inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, inject, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { AppService } from '../app.service';
 import convertStateCodeToName, { Legislator, gradeForStats, issueKeyToLabel, colorForGrade, issueKeyToLabelSmall, subtitleForStats, Page, states, getBenefitToSocietyIssue, Bill, issueMap, PageIndex } from '../model';
 import { CommonModule, isPlatformBrowser, KeyValuePipe } from '@angular/common';
@@ -10,13 +10,14 @@ import { MatButtonModule } from '@angular/material/button';
 import {MatButtonToggleModule} from '@angular/material/button-toggle'; 
 import {MatAutocompleteModule} from '@angular/material/autocomplete';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Observable, debounceTime, distinctUntilChanged, map, startWith, switchMap } from 'rxjs';
+import { Observable, Subscription, debounceTime, distinctUntilChanged, map, startWith, switchMap } from 'rxjs';
 import { BillComponent } from '../bill/bill.component';
 import { Meta, Title } from '@angular/platform-browser';
 import { descriptionForBill, gradeForBill, shortNameForBill, subtitleForBill } from '../bills';
 import { ConfigService } from '../config.service';
 import { HeaderComponent } from '../header/header.component';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
+import { EntitlementService } from '../billing/entitlement.service';
 
 @Component({
   selector: 'bills',
@@ -42,6 +43,11 @@ export class BillsComponent implements OnInit {
 
   private lastDataFetchSequence: number = 0;
 
+  public resultsPaywalled: boolean = false;
+  isSubscribed: boolean = false;
+  ent = inject(EntitlementService);
+  private sub?: Subscription;
+
   issueMap = issueMap;
 
   public page: Page = {
@@ -55,6 +61,11 @@ export class BillsComponent implements OnInit {
   ngOnInit(): void
   {
     this.updateMetaTags();
+
+    this.sub = this.ent.status$.subscribe(s => {
+      this.isSubscribed = s.isSubscribed && s.isAuthenticated;
+      this.recalcPaywall();
+     });
 
     // We don't want to cache any of the returned bill data because it will display the wrong data for a second if they load
     // the page with query parameters
@@ -102,6 +113,10 @@ export class BillsComponent implements OnInit {
           })       
         );
     }
+  }
+  
+  ngOnDestroy(): void {
+    this.sub?.unsubscribe();
   }
 
   private filter(value: string): Observable<[string, string][]> {
@@ -284,6 +299,8 @@ export class BillsComponent implements OnInit {
       if (bills.length == 0) {
         this.hasMoreContent = false;
       }
+
+      this.recalcPaywall();
     }).finally(() => {
       if (fetchSeq != this.lastDataFetchSequence) return;
       this.isRequestingData = false;
@@ -295,4 +312,13 @@ export class BillsComponent implements OnInit {
   subtitleForBill(bill: Bill) { return subtitleForBill(bill); }
   descriptionForBill(bill: Bill) { return descriptionForBill(bill); }
   colorForGrade(grade: string): string { return colorForGrade(grade); }
+
+  private recalcPaywall(): void {
+    const viewingPaywalledContent = this.page.index === "ObjectsByIssueRating";
+
+    this.resultsPaywalled = !this.isSubscribed && viewingPaywalledContent;
+
+    if (this.resultsPaywalled)
+      this.bills = [];
+  }
 }

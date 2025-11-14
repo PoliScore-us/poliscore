@@ -67,6 +67,18 @@
                 <div class="loading">
                 </div>
             </mat-card>
+
+            <mat-card *ngIf="resultsPaywalled && !isRequestingData" class="bill loading-card vertical-layout signup-overlay" appearance="outlined">
+                <div class="signup-inner">
+                    <div class="message">
+                        <strong>You've hit a premium feature</strong>
+                        <p style="margin-top:5px;">Sign up to access premium features — unlock in-depth commentary and analysis.</p>
+                    </div>
+                    <div class="buttons">
+                        <button mat-flat-button color="primary" [routerLink]="'/signup'">Sign up</button>
+                    </div>
+                </div> 
+            </mat-card>
        
         </div>
 

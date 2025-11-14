@@ -43,6 +43,33 @@
     color: #81548f !important
 }
 
+.signup-overlay {
+  display: flex;
+  justify-content: center;
+  pointer-events: none; /* allow underlying scroll; inner restores pointer events */
+  // padding: 1rem 0;
+
+  .signup-inner {
+    pointer-events: auto;
+    // background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 5%);
+    background:white;
+    border-radius: 8px;
+    color: initial;
+    padding: 1rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    justify-content: space-between;
+    // width: min(880px, 94%);
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .message { flex: 1; }
+  .buttons { display: flex; gap: 0.5rem; align-items: center; }
+}
+
 @media screen and (min-width: 450px) {
     .sorting {
         display: flex !important;

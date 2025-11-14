@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, HostListener, Inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { AfterViewInit, Component, HostListener, inject, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { AppService } from '../app.service';
 import convertStateCodeToName, { Legislator, gradeForStats, issueKeyToLabel, colorForGrade, issueKeyToLabelSmall, subtitleForStats, Page, states, getBenefitToSocietyIssue, issueMap, PageIndex } from '../model';
 import { CommonModule, KeyValuePipe, isPlatformBrowser } from '@angular/common';
@@ -10,13 +10,14 @@ import { MatButtonModule } from '@angular/material/button';
 import {MatButtonToggleModule} from '@angular/material/button-toggle'; 
 import {MatAutocompleteModule} from '@angular/material/autocomplete';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Observable, map, startWith } from 'rxjs';
+import { Observable, Subscription, map, startWith } from 'rxjs';
 import { Meta, Title } from '@angular/platform-browser';
 import { descriptionForLegislator, gradeForLegislator, subtitleForLegislator, upForReelection } from '../legislators';
 import { HeaderComponent } from '../header/header.component';
 import { ConfigService } from '../config.service';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import Fuse from 'fuse.js';
+import { EntitlementService } from '../billing/entitlement.service';
 
 @Component({
   selector: 'legislators',
@@ -50,6 +51,11 @@ export class LegislatorsComponent implements OnInit {
 
   private fuse!: Fuse<{ id: string, name: string, alias: string }>;
 
+  public resultsPaywalled: boolean = false;
+    isSubscribed: boolean = false;
+    ent = inject(EntitlementService);
+    private sub?: Subscription;
+
   issueMap = issueMap;
 
   public page: Page = {
@@ -63,6 +69,11 @@ export class LegislatorsComponent implements OnInit {
   ngOnInit(): void {
     this.updateMetaTags();
     this.namespace = this.config.getNamespace();
+
+    this.sub = this.ent.status$.subscribe(s => {
+      this.isSubscribed = s.isSubscribed && s.isAuthenticated;
+      this.recalcPaywall();
+     });
 
     if (this.namespace !== 'us/congress') {
       this.page.index = "ObjectsByRating";
@@ -324,6 +335,8 @@ export class LegislatorsComponent implements OnInit {
       if (legs.length < (this.page.pageSize == null ? 25 : this.page.pageSize)) {
         this.hasMoreContent = false;
       }
+
+      this.recalcPaywall();
     }).finally(() => {
       if (fetchSeq != this.lastDataFetchSequence) return;
       this.isRequestingData = false;
@@ -363,6 +376,8 @@ export class LegislatorsComponent implements OnInit {
 
       let hasntChangedUrl = (this.router.url == "" || this.router.url == "/" || this.router.url == "/legislators");
 
+      this.recalcPaywall();
+
       if (state == null && !routeParams && hasntChangedUrl) {
         
         // this.router.navigate(['/legislators/state/' + this.myLocation.toLowerCase()]);
@@ -401,4 +416,13 @@ export class LegislatorsComponent implements OnInit {
   subtitleForLegislator(leg: Legislator) { return subtitleForLegislator(leg); }
   descriptionForLegislator(leg: Legislator) { return descriptionForLegislator(leg, isPlatformBrowser(this._platformId) && window.innerWidth < 480); }
   upForReelection(leg: Legislator): any { return upForReelection(leg); }
+
+  private recalcPaywall(): void {
+    const viewingPaywalledContent = this.page.index === "ObjectsByIssueRating";
+
+    this.resultsPaywalled = !this.isSubscribed && viewingPaywalledContent;
+
+    if (this.resultsPaywalled)
+      this.legs = [];
+  }
 }
