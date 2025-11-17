@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { OidcSecurityService, UserDataResult } from 'angular-auth-oidc-client';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { Router } from '@angular/router';
 
 @Injectable({
   providedIn: 'root'
@@ -9,6 +10,7 @@ import { environment } from '../../environments/environment';
 export class AuthService {
 
   private oidc = inject(OidcSecurityService);
+  private router = inject(Router);
 
   constructor() { }
 
@@ -29,8 +31,9 @@ export class AuthService {
   );
 
   login(returnTo: string | null = null): void {
-    if (returnTo == null)
-      returnTo = location.pathname + location.search + location.hash;
+    if (returnTo == null) {
+      returnTo = this.router.url;
+    }
 
     localStorage.setItem('ps:returnTo', returnTo);
     this.oidc.authorize();
