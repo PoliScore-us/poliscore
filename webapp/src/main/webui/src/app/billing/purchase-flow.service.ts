@@ -27,12 +27,27 @@ export class PurchaseFlowService {
     sessionStorage.setItem(PENDING_PRICE_KEY, priceId);
     localStorage.setItem(RETURN_TO_KEY, '/billing/resume');
 
-    // IMPORTANT: let the library generate state/nonce and redirect
-    // "screen_hint=signup" nudges Cognito Hosted UI to the Sign up screen
     this.oidc.authorize(undefined, {
-      customParams: { screen_hint: 'signup' },   // Cognito-friendly
-      // Optional: ensure it uses window.location (default does anyway)
-      urlHandler: (url: string) => window.location.href = url,
+      // Take them to the /signup page so they can create a new user (not log in)
+      urlHandler: (url: string) => {
+        try {
+          const u = new URL(url);
+
+          // Cognito docs: /signup accepts the same query params as /oauth2/authorize
+          if (
+            u.pathname.endsWith('/login') ||
+            u.pathname.endsWith('/oauth2/authorize')
+          ) {
+            u.pathname = '/signup';
+            window.location.href = u.toString();
+          } else {
+            window.location.href = url;
+          }
+        } catch {
+          // Fallback if URL parsing fails for some reason
+          window.location.href = url;
+        }
+      },
     });
   }
 
