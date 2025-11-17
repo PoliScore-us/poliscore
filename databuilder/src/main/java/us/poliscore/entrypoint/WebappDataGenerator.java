@@ -110,7 +110,9 @@ public class WebappDataGenerator implements QuarkusApplication
 		final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/webui/src/assets/sitemap.txt");
 		val routes = new ArrayList<String>();
 		
-//		routes.add(url + "/about");
+		// Hardcoded root-level urls
+		routes.add(url + "/legal/privacy");
+		routes.add(url + "/legal/terms");
 		
 		for (var dataset : datasets)
 		{

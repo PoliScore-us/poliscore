@@ -43,6 +43,11 @@ public class WebappRoutesGenerator implements QuarkusApplication {
 		final File out = new File(Environment.getDeployedPath(), WebappDataGenerator.WEBAPP_PATH + "/src/main/webui/routes.txt");
 		val routes = new ArrayList<String>();
 		
+		// Hardcoded routes
+		routes.add("/legal/terms");
+		routes.add("/legal/privacy");
+		routes.add("/auth-callback");
+		
 		// Party Stats
 		routes.add("/party/democrat");
 		routes.add("/party/republican");
