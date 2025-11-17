@@ -17,43 +17,99 @@
           <button class="ps-btn ps-btn-secondary" (click)="auth.login('/legislators')">
             I already have an account
           </button> -->
-          <button class="ps-btn ps-btn-primary" (click)="onSignup()">Sign Up</button>
-          <button class="ps-btn ps-btn-secondary" (click)="auth.login()">Log in</button>
+          <button class="ps-btn ps-btn-primary" (click)="onSignup()">Join The Movement</button>
+          <button *ngIf="!isLoggedIn" class="ps-btn ps-btn-secondary" (click)="auth.login()">Log in</button>
           <button class="ps-btn ps-btn-secondary" (click)="goHome()">Take Me Home</button>
         </section>
 
         <section class="ps-features">
-          <h3 class="ps-section-title">What you get</h3>
 
-          <ul class="ps-list">
-            <li *ngFor="let f of features" [class.soon]="f.soon">
+          <!-- AVAILABLE TODAY -->
+          <h3 class="ps-section-title" *ngIf="availableFeatures.length">
+            Available Today
+          </h3>
+          <ul class="ps-list" *ngIf="availableFeatures.length">
+            <li *ngFor="let f of availableFeatures">
               <span class="dot"></span>
               <div>
                 <details class="ps-accordion">
-                <summary class="ps-accordion-summary">
+                  <summary class="ps-accordion-summary">
                     <strong>
-                    {{ f.title }}
-                    <span *ngIf="f.soon" class="badge">Coming soon</span>
-                    <span *ngIf="f.eventually" class="badge">Long-term goal</span>
-                    <span *ngIf="f.completed" class="badge sneak-peek">Sneak Peek</span>
+                      {{ f.title }}
+                      <span *ngIf="f.completed" class="badge sneak-peek">Sneak Peek</span>
                     </strong>
                     <div class="subtitle">{{ f.teaser }}</div>
                     <span class="caret" aria-hidden="true"></span>
-                </summary>
-                <div class="ps-accordion-panel">
+                  </summary>
+                  <div class="ps-accordion-panel">
                     {{ f.details }}
-                </div>
+                  </div>
                 </details>
               </div>
             </li>
           </ul>
+
+          <!-- COMING SOON -->
+          <h3 class="ps-section-title" *ngIf="comingSoonFeatures.length">
+            Coming Soon
+          </h3>
+          <ul class="ps-list" *ngIf="comingSoonFeatures.length">
+            <li *ngFor="let f of comingSoonFeatures">
+              <span class="dot"></span>
+              <div>
+                <details class="ps-accordion">
+                  <summary class="ps-accordion-summary">
+                    <strong>
+                      {{ f.title }}
+                      <!-- <span class="badge">Coming soon</span> -->
+                    </strong>
+                    <div class="subtitle">{{ f.teaser }}</div>
+                    <span class="caret" aria-hidden="true"></span>
+                  </summary>
+                  <div class="ps-accordion-panel">
+                    {{ f.details }}
+
+                    <button *ngIf="f.soon || f.eventually" class="ps-btn ps-btn-secondary want-btn" (click)="onWantFeature(f)">I want this!</button>
+                  </div>
+                </details>
+              </div>
+            </li>
+          </ul>
+
+          <!-- LONG-TERM GOALS -->
+          <h3 class="ps-section-title" *ngIf="longTermFeatures.length">
+            Long-term Goals
+          </h3>
+          <ul class="ps-list" *ngIf="longTermFeatures.length">
+            <li *ngFor="let f of longTermFeatures">
+              <span class="dot"></span>
+              <div>
+                <details class="ps-accordion">
+                  <summary class="ps-accordion-summary">
+                    <strong>
+                      {{ f.title }}
+                      <!-- <span class="badge">Long-term goal</span> -->
+                    </strong>
+                    <div class="subtitle">{{ f.teaser }}</div>
+                    <span class="caret" aria-hidden="true"></span>
+                  </summary>
+                  <div class="ps-accordion-panel">
+                    {{ f.details }}
+
+                    <button *ngIf="f.soon || f.eventually" class="ps-btn ps-btn-secondary want-btn" (click)="onWantFeature(f)">I want this!</button>
+                  </div>
+                </details>
+              </div>
+            </li>
+          </ul>
+
         </section>
 
         <footer class="ps-footer">
           <small>
             By continuing you agree to our
-            <a [routerLink]="termsRouterLink">Terms</a> and
-            <a [routerLink]="privacyRouterLink">Privacy Policy</a>.
+            <a routerLink="/legal/terms">Terms of Service</a> and
+            <a routerLink="/legal/privacy">Privacy Policy</a>.
           </small>
         </footer>
       </div>

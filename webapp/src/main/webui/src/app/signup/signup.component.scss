@@ -88,6 +88,11 @@
   will-change: transform;
 }
 
+.want-btn {
+  display:block;
+  margin-top:5px;
+}
+
 .ps-btn:active {
   transform: translateY(1px);
 }

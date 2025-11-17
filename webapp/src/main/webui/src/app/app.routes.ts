@@ -12,6 +12,8 @@ import { SignupComponent } from './signup/signup.component';
 import { PurchaseResumeComponent } from './billing/purchase-resume.component';
 import { CheckoutSuccessComponent } from './billing/checkout-success.component';
 import { CheckoutCancelComponent } from './billing/checkout-cancel.component';
+import { TermsOfServiceComponent } from './legal/terms-of-service.component';
+import { PrivacyPolicyComponent } from './legal/privacy-policy.component';
 
 function idPathMatcher(path: string) {
   let p = path;
@@ -72,5 +74,10 @@ export const routes: Routes = [
   { path: 'billing/resume', component: PurchaseResumeComponent }, // Cognito callback
   { path: 'billing/success', component: CheckoutSuccessComponent },
   { path: 'billing/cancel', component: CheckoutCancelComponent },
+
+  { path: 'legal/terms', component: TermsOfServiceComponent },
+  { path: 'legal/privacy', component: PrivacyPolicyComponent },
+
+  
   // { path: 'about', component: PromoComponent, title: "About - PoliScore: AI Political Rating Service", data: { animation: 'about' } }
 ];
