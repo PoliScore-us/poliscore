@@ -11,11 +11,12 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { SafeHtml } from '@angular/platform-browser';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'expert-preview',
   standalone: true,
-  imports: [CommonModule, MatButtonModule],
+  imports: [CommonModule, RouterModule, MatButtonModule],
   templateUrl: './expert-preview.component.html',
   styleUrl: './expert-preview.component.scss'
 })
@@ -24,10 +25,6 @@ export class ExpertPreviewComponent {
   @Input() isAuthenticated = false;
 
   readonly maxParagraphs = 3;
-
-  aler(str: string): void {
-    alert(str);
-  }
 
   // compute CSS filter for paragraph at index i
   filterForIndex(i: number): string {
