@@ -7,7 +7,10 @@ export function shortNameForBill(bill: Bill) {
     //   return bill.name;
     // }
 
-    return bill.shortName;
+    if (bill.shortName && bill.shortName.length > 0)
+      return bill.shortName;
+    else
+      return bill.name;
   }
 
 export function descriptionForBill(bill: Bill): string
