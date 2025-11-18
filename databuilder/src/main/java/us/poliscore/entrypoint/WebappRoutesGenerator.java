@@ -47,6 +47,9 @@ public class WebappRoutesGenerator implements QuarkusApplication {
 		routes.add("/legal/terms");
 		routes.add("/legal/privacy");
 		routes.add("/auth-callback");
+		routes.add("/billing/resume");
+		routes.add("/billing/cancel");
+		routes.add("/billing/success");
 		
 		// Party Stats
 		routes.add("/party/democrat");
