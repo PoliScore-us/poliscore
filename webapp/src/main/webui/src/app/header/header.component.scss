@@ -40,9 +40,13 @@
     font-weight: bold;
     padding-left: 20px;
 }
+.year-and-namespace .account.bigScreen {
+  flex: 0 0 10rem;
+}
 .account.smallScreen {
     padding-left: 16px;
     padding-top: 5px;
+    width: 100%;
 }
 .account.smallScreen .select {
     font-size: 13px;
@@ -63,7 +67,7 @@
     display: inline-block !important;
 }
 ::ng-deep .account.smallScreen .select.loggedin .mat-mdc-select-placeholder {
-    white-space: normal !important;
+    // white-space: normal !important;
     display: inline-block !important;
 }
 
@@ -71,6 +75,10 @@
     min-width: 12em !important; /* Ensures dropdown is wide enough */
     max-width: none !important; /* Allows expansion */
     white-space: nowrap; /* Prevents text from wrapping */
+}
+
+::ng-deep .mat-mdc-select-placeholder {
+  white-space: pre-line !important; /* critical */
 }
 
 ::ng-deep .cdk-overlay-pane.ps-disclaimer {

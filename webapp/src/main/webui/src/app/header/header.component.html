@@ -17,7 +17,7 @@
             </mat-select>
 
             <div *ngIf="!isSmallScreen" class="account bigScreen vertical-layout">
-              <mat-select *ngIf="auth.isAuthenticated$ | async" class="select loggedin" [placeholder]="'logged in as ' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
+              <mat-select *ngIf="auth.isAuthenticated$ | async" class="select loggedin" [placeholder]="'logged in as\n' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
                 <mat-option (click)="onManageSubscription()">Manage Account</mat-option>
                 <mat-option (click)="auth.logout()">Logout</mat-option>
               </mat-select>
@@ -30,7 +30,7 @@
           </div>
 
           <div *ngIf="isSmallScreen" class="account smallScreen vertical-layout align-left">
-            <mat-select *ngIf="auth.isAuthenticated$ | async" class="select loggedin" [placeholder]="'logged in as ' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
+            <mat-select *ngIf="auth.isAuthenticated$ | async" class="select loggedin" [placeholder]="'logged in as\n' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
               <mat-option (click)="onManageSubscription()">Manage Account</mat-option>
               <mat-option (click)="auth.logout()">Logout</mat-option>
             </mat-select>
