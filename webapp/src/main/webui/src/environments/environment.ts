@@ -3,7 +3,7 @@ let baseUrl = "http://localhost:4200/";
 export const environment = {
   production: false,
   baseUrl: baseUrl,
-  apiUrl: 'https://5hta4jxn7q6cfcyxnvz4qmkyli0tambn.lambda-url.us-east-1.on.aws/',
+  apiUrl: 'https://y5i3jhm7k5vy67elvzly4b3b240kjwlp.lambda-url.us-east-1.on.aws/',
   
   cognito: {
     domain: "https://us-east-1ukl1ofrmk.auth.us-east-1.amazoncognito.com",

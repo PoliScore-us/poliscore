@@ -104,51 +104,63 @@ public class WebappDataGenerator implements QuarkusApplication
 		FileUtils.write(new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/webui/src/assets/sessions.json"), PoliscoreUtil.getObjectMapper().writeValueAsString(result), "UTF-8");
 	}
 	
+	/**
+	 * We actually DON'T want historical bills or data in our sitemap because it will affect our rankings. Google only has a limited crawl budget, and we want to rank on fresh data, not historical.
+	 * We also need to rank against canonical urls for legislators (not for every year), due to again, limited crawl budget, and a desire to accumulate page rank consistently over time (not fractured for each year).
+	 * 
+	 * @param datasets
+	 */
 	@SneakyThrows
 	private void generateSiteMap(List<PoliscoreDatasetIF> datasets) {
-		final String url = "https://poliscore.us";
+		final String baseUrl = "https://poliscore.us";
 		final File out = new File(Environment.getDeployedPath(), WEBAPP_PATH + "/src/main/webui/src/assets/sitemap.txt");
 		val routes = new ArrayList<String>();
 		
 		// Hardcoded root-level urls
-		routes.add(url + "/legal/privacy");
-		routes.add(url + "/legal/terms");
+		routes.add(baseUrl + "/legal/privacy");
+		routes.add(baseUrl + "/legal/terms");
 		
 		for (var dataset : datasets)
 		{
-//			int lastYearOfSession = 1789 + (congress.getNumber() * 2) - 1;
 			int lastYearOfSession = dataset.getEndYear();
 			
-			String prefix = "/" + lastYearOfSession;
+			String yearAndState = "/" + lastYearOfSession;
 			String state = dataset.getNamespace().toAbbreviation().toLowerCase().replace("us", "congress");
 			
-			if (!dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-				prefix = prefix + "/" + state;
-			final String finalPrefix = prefix;
+			if (!dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
+				yearAndState = yearAndState + "/" + state;
+			}
+			final String finalPrefix = yearAndState;
+			final String statePrefix = (!dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) ? "/" + state : "";
 			
-			// Party Stats
-			routes.add(url + prefix + "/party/democrat");
-			routes.add(url + prefix + "/party/republican");
 			
-			if (dataset.hasIndependentPartyMembers())
-				routes.add(url + prefix + "/party/independent");
-			
-			// All states
-//			Arrays.asList(states).stream().forEach(s -> routes.add(url + prefix + "/legislators/state/" + s.toLowerCase()));
-			
-			// All legislator routes
-			routes.add(url + prefix + "/legislators");
+			// We publish ALL legislators
+			Set<String> publishedLegs = new HashSet<String>();
+			routes.add(baseUrl + statePrefix + "/legislators");
 			dataset.query(Legislator.class).stream()
-				.filter(l -> l.isMemberOfSession(dataset.getRegularSession())) //  && s3.exists(LegislatorInterpretation.generateId(l.getId(), congress.getNumber()), LegislatorInterpretation.class)
+				.filter(l -> l.isMemberOfSession(dataset.getRegularSession()) && !publishedLegs.contains(l.getId())) //  && s3.exists(LegislatorInterpretation.generateId(l.getId(), congress.getNumber()), LegislatorInterpretation.class)
 				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
-				.forEach(l -> routes.add(url + finalPrefix + "/legislator/" + l.getCode()));
+				.forEach(l -> { routes.add(baseUrl + statePrefix + "/legislator/" + l.getCode()); publishedLegs.add(l.getId()); } );
 			
-			// All bills
-			routes.add(url + prefix + "/bills");
-			dataset.query(Bill.class).stream()
-				.filter(b -> s3.exists(getBillInterpId(b), BillInterpretation.class))
-				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
-				.forEach(b -> routes.add(url + finalPrefix + "/" + b.getWebappUrlPath()));
+			// We only publish the most current of bills
+			if (dataset.isCurrent()) {
+				// Party Stats
+				routes.add(baseUrl + yearAndState + "/party/democrat");
+				routes.add(baseUrl + yearAndState + "/party/republican");
+				
+				if (dataset.hasIndependentPartyMembers())
+					routes.add(baseUrl + yearAndState + "/party/independent");
+				
+				// All states
+	//			Arrays.asList(states).stream().forEach(s -> routes.add(url + prefix + "/legislators/state/" + s.toLowerCase()));
+				
+				// All bills
+				routes.add(baseUrl + yearAndState + "/bills");
+				dataset.query(Bill.class).stream()
+					.filter(b -> s3.exists(getBillInterpId(b), BillInterpretation.class))
+					.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
+					.forEach(b -> routes.add(baseUrl + finalPrefix + "/" + b.getWebappUrlPath()));
+			}
 		}
 		
 		FileUtils.write(out, String.join("\n", routes), "UTF-8");

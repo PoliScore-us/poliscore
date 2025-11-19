@@ -54,6 +54,33 @@ export class AppService {
         return firstValueFrom(this.http.get<Legislator>(backendUrl + "/getLegislator", { params: params }));
     }
 
+    getLegislatorByCode(code: string, page: Page): Promise<Legislator | undefined> {
+        let params: HttpParams = new HttpParams();
+        params = params.set("code", code);
+
+        if (page.index!= null) {
+            params = params.set("index", page.index);
+        }
+        
+        if (page.pageSize!= null) {
+            params = params.set("pageSize", page.pageSize.toString());
+        }
+
+        if (page.exclusiveStartKey!= null) {
+            params = params.set("exclusiveStartKey", page.exclusiveStartKey);
+        }
+
+        if (page.ascending!= null) {
+            params = params.set("ascending", page.ascending.toString());
+        }
+
+        if (page.sortKey!= null) {
+            params = params.set("sortKey", page.sortKey);
+        }
+
+        return firstValueFrom(this.http.get<Legislator>(backendUrl + "/getLegislatorByCode", { params: params }));
+    }
+
     getLegislatorInteractions(id: string, page: Page): Promise<AppDataPage> {
         let params: HttpParams = new HttpParams();
         params = params.set("id", id);

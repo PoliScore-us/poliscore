@@ -55,10 +55,38 @@ function idPathMatcher(path: string) {
 //   };
 // }
 
+function stateLegislatorMatcher(
+  segments: UrlSegment[],
+  group: UrlSegmentGroup,
+  route: Route
+): UrlMatchResult | null {
+  // Expect: { state } / legislator / { id... }
+  // Example URL path: "co/legislator/22225"
+  if (
+    segments.length >= 3 &&
+    /^[a-zA-Z]{2}$/.test(segments[0].path) && // "co", "tx", etc.
+    segments[1].path === 'legislator'
+  ) {
+    const state = segments[0].path.toLowerCase();
+    const id = segments.slice(2).map(s => s.path).join('/'); // "22225" (or anything beyond)
+
+    return {
+      consumed: segments,
+      posParams: {
+        state: new UrlSegment(state, {}),
+        id: new UrlSegment(id, {})
+      }
+    };
+  }
+
+  return null;
+}
+
 export const routes: Routes = [
   { path: "", component: PromoComponent, data: { animation: 'promoPage' } },
   { path: 'auth-callback', component: AuthCallbackComponent },
   { matcher: idPathMatcher('legislator'), component: LegislatorComponent, data: { animation: 'legislatorPage' } },
+  { matcher: stateLegislatorMatcher, component: LegislatorComponent, data: { animation: 'legislatorPage' } },
   { path: 'legislators', component: LegislatorsComponent, data: { animation: 'legislatorsPage' } },
   { path: 'legislators/:index/:ascending', component: LegislatorsComponent, data: { animation: 'legislatorsPage' } },
   { path: 'bills', component: BillsComponent, data: { animation: 'billsPage' } },

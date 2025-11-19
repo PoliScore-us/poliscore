@@ -1,5 +1,6 @@
 package us.poliscore;
 
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -142,6 +143,11 @@ public class PoliscoreCompositeDataset implements ObjectStorageServiceIF, Polisc
 	@Override
 	public boolean isYearWithin(int year) {
 		return this.getStartYear() <= year && this.getEndYear() >= year;
+	}
+	
+	@Override
+	public boolean isCurrent() {
+		return isYearWithin(Year.now().getValue());
 	}
 
 	@Override

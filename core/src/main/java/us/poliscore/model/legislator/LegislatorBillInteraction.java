@@ -165,7 +165,7 @@ public abstract class LegislatorBillInteraction implements Comparable<Legislator
 	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public Integer getRating() { return this.rating; }
 	public void setRating(Integer rating) { this.rating = rating; }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_ABS_INDEX }) public Integer getRatingAbs() { return Math.abs(getRating()); }
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_ABS_INDEX }) public Integer getRatingAbs() { return getRating() == null ? getImpact() : Math.abs(getRating()); }
 	@JsonIgnore public void setRatingAbs(Integer rating) { }
 	
 	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_IMPACT_INDEX })

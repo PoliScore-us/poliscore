@@ -70,6 +70,8 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
 
   private legId?: string;
 
+  private code: string = "";
+
   public loading: boolean = true;
 
   public isRequestingData: boolean = false;
@@ -165,9 +167,9 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
   constructor(private sanitizer: DomSanitizer, public config: ConfigService, private meta: Meta, private service: AppService, private route: ActivatedRoute, private router: Router, @Inject(PLATFORM_ID) private _platformId: Object, private titleService: Title) { }
 
   ngOnInit(): void {
-    this.legId = this.route.snapshot.paramMap.get('id') as string;
-    if (!this.legId.startsWith("LEG/" + this.config.getNamespace())) {
-      this.legId = this.config.pathToLegislatorId(this.legId);
+    this.code = this.route.snapshot.paramMap.get('id') as string;
+    if (!this.code.startsWith("LEG/" + this.config.getNamespace())) {
+      this.legId = this.config.pathToLegislatorId(this.code);
     }
   
     // Parse hash fragment for parameters
@@ -194,8 +196,9 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
 
     this.page.ascending = routeAscending;
   
-    this.service.getLegislator(this.legId, this.page).then((leg) => {
+    this.service.getLegislatorByCode(this.code, this.page).then((leg) => {
       this.leg = leg;
+      this.legId = leg?.id;
       
       if (leg == null) return;
       this.loading = false;
@@ -290,7 +293,10 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
   }
 
   photoForLegislator(): string {
-    return 'https://poliscore-prod-public.s3.amazonaws.com/' + this.leg?.id + '.webp';
+    if (this.leg?.id?.startsWith("LEG/us/congress/118"))
+      return 'https://poliscore-prod-public.s3.amazonaws.com/' + this.leg?.id + '.jpg';
+    else
+      return 'https://poliscore-prod-public.s3.amazonaws.com/' + this.leg?.id + '.webp';
   }
 
   gradeForLegislator(): string {

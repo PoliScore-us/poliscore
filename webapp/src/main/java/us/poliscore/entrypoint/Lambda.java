@@ -97,6 +97,8 @@ public class Lambda {
     @GET
     @Path("getLegislator")
     public Legislator getLegislator(@NonNull @RestQuery String id, @RestQuery("pageSize") Integer _pageSize, @RestQuery("index") String _index, @RestQuery("ascending") Boolean _ascending, @RestQuery("exclusiveStartKey") Integer _exclusiveStartKey, @RestQuery String sortKey) {
+    	if (StringUtils.isEmpty(id)) return null;
+    		
     	val index = StringUtils.isNotBlank(_index) ? _index : Persistable.OBJECT_BY_RATING_ABS_INDEX;
     	var pageSize = _pageSize == null ? 25 : _pageSize;
     	Boolean ascending = _ascending == null ? Boolean.FALSE : _ascending;
@@ -118,6 +120,13 @@ public class Lambda {
     	}
     	
     	return op.orElse(null);
+    }
+    
+    @GET
+    @Path("getLegislatorByCode")
+    public Legislator getLegislatorByCode(@NonNull @RestQuery String code, @RestQuery("pageSize") Integer _pageSize, @RestQuery("index") String _index, @RestQuery("ascending") Boolean _ascending, @RestQuery("exclusiveStartKey") Integer _exclusiveStartKey, @RestQuery String sortKey) {
+    	String id = lookupLegislatorByCode(code);
+    	return getLegislator(id, _pageSize, _index, _ascending, _exclusiveStartKey, sortKey);
     }
     
     @GET
@@ -270,6 +279,16 @@ public class Lambda {
     	}
     	
     	return cachedAllLegs;
+    }
+    
+    private String lookupLegislatorByCode(String code) {
+    	for (var data : getAllLegs()) {
+    		if (data.get(0).endsWith(code)) {
+    			return data.get(0);
+    		}
+    	}
+    	
+    	return null;
     }
     
     @GET

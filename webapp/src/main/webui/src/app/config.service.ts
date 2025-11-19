@@ -159,7 +159,10 @@ export class ConfigService {
       if (path.startsWith("bill/" + this.currentSessionCode))
         path = path.replace("bill/" + this.currentSessionCode, "bill");
 
-      return "/" + year + "/" + path;
+      if (path.startsWith("legislator"))
+        return "/" + path;
+      else
+        return "/" + year + "/" + path;
     } else {
       return "/" + year + "/" + namespace.split("/")[1] + "/" + path;
     }

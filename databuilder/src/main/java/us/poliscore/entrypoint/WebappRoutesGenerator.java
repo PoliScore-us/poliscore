@@ -3,6 +3,8 @@ package us.poliscore.entrypoint;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 
@@ -14,7 +16,6 @@ import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.Environment;
-import us.poliscore.PoliscoreDataset;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
@@ -61,12 +62,16 @@ public class WebappRoutesGenerator implements QuarkusApplication {
 		// All states
 //		Arrays.asList(states).stream().forEach(s -> routes.add("/legislators/state/" + s.toLowerCase()));
 		
-		// All legislator routes
-		routes.add("/legislators");
-		dataset.query(Legislator.class).stream()
-//			.filter(l -> l.isMemberOfSession(PoliscoreUtil.CURRENT_SESSION)) // && s3.exists(LegislatorInterpretation.generateId(l.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class)
-			.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
-			.forEach(l -> routes.add("/legislator/" + l.getCode()));
+		// We need to generate pages for EVERY legislator. This is mostly for SEO reasons and so we can always have an up-to-date page on a legislator
+		Set<String> processedLegs = new HashSet<String>();
+		for (var ds : data.getAllImportedDatasets()) { 
+			routes.add("/legislators");
+			ds.query(Legislator.class).stream()
+	//			.filter(l -> l.isMemberOfSession(PoliscoreUtil.CURRENT_SESSION)) // && s3.exists(LegislatorInterpretation.generateId(l.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class)
+				.filter(l -> !processedLegs.contains(l.getId()))
+				.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
+				.forEach(l -> { routes.add("/legislator/" + l.getCode()); processedLegs.add(l.getId()); });
+		}
 		
 		// All bills
 		routes.add("/bills");
