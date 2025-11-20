@@ -47,9 +47,19 @@ export class HeaderComponent implements OnInit {
 
   isSmallScreen: boolean = false;
 
+  public routingNamespace = "/";
+
+  public assetPrefix = "";
+
   constructor(public config: ConfigService, private router: Router, @Inject(PLATFORM_ID) private _platformId: Object) { 
     this.year = config.getYear();
     this.namespace = config.getNamespace();
+    this.assetPrefix = config.getAssetRoutingPrefix();
+
+    if (this.namespace === "us/congress")
+      this.routingNamespace = "/";
+    else
+      this.routingNamespace = "/" + this.namespace.substring(3);
 
     if (this.namespace === 'us/congress') {
       this.years = [2026, 2024];
@@ -122,7 +132,10 @@ export class HeaderComponent implements OnInit {
       const resetCategories = ['bill', 'legislator'];
 
       // Determine new URL
-      let newUrl = `/${year}`;
+      // TODO : Hardcoded to current setup
+      let newUrl: string = "";
+      if (year != 2025 && year != 2026)
+        newUrl = `/${year}`;
 
       if (!resetCategories.includes(mainCategory)) {
           newUrl += '/' + pathSegments.slice(1).join('/'); // Preserve pathing if relevant
@@ -140,11 +153,11 @@ export class HeaderComponent implements OnInit {
   onChangeNamespace(ns: string) {
     let newUrl = "";
 
-    // TODO : Way too hardcoded over here but a year for one namespace might not be relevant for a year for a different namespace
+    // TODO : And what about other years??
     if (ns === 'us/congress') {
-      newUrl = "/2026/legislators";
+      newUrl = "/legislators";
     } else {
-      newUrl = "/2025/" + ns.split("/")[1] + "/legislators";
+      newUrl = ns.split("/")[1] + "/legislators";
     }
 
     // Navigate to the new URL

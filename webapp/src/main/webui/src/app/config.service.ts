@@ -153,7 +153,7 @@ export class ConfigService {
    */
   public routePath(namespace: string, year: string, path: string) {
     let sameApp = namespace === this.getNamespace() && year === String(this.getYear());
-    if (sameApp) return path;
+    if (sameApp && !path.startsWith("bill/") && !(path.startsWith("legislator/") && namespace != "us/congress")) return path;
 
     if (namespace === "us/congress") {
       if (path.startsWith("bill/" + this.currentSessionCode))
@@ -164,7 +164,16 @@ export class ConfigService {
       else
         return "/" + year + "/" + path;
     } else {
-      return "/" + year + "/" + namespace.split("/")[1] + "/" + path;
+      if (path.startsWith("legislator"))
+        return "/" + namespace.split("/")[1] + "/" + path;
+      else
+        return "/" + year + "/" + namespace.split("/")[1] + "/" + path;
     }
+  }
+
+  getAssetRoutingPrefix(): string {
+    var nspfx = this.getNamespace().substring(3);
+
+    return "/" + this.getYear() + "/" + nspfx + "/";
   }
 }

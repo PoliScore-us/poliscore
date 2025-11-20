@@ -33,9 +33,9 @@
 						<!-- <button class="button primary icon solid show-me image"><a [routerLink]="'/about'" class="unstyled" style="color: #81548f">Methodology</a></button> -->
 						 <button class="button primary icon solid show-me image"><a [routerLink]="'/signup'" class="unstyled" style="color: #81548f"><span style="margin-left: 10px;">Stand With Us</span></a></button>
 						<button class="button primary icon solid show-me image"><a (click)="clickContact()" class="unstyled" style="color: #81548f"><span style="margin-left: 10px;">Contact<i class="icon solid fa-solid fa-envelope" style="margin-left: 20px; margin-bottom:-6px; display:inline-block; color: #81548f !important;"></i></span></a></button>
-						<!-- <button class="button primary icon solid show-me image"><a href="https://ko-fi.com/poliscore" class="unstyled" style="min-width: 175px; color: #81548f;"><span style="margin-left:30px;">Donate<img src="images/kofi.png" class="kofi" style="margin-left: 23px; margin-bottom:-6px; display:inline-block;"></span></a></button> -->
+						<!-- <button class="button primary icon solid show-me image"><a href="https://ko-fi.com/poliscore" class="unstyled" style="min-width: 175px; color: #81548f;"><span style="margin-left:30px;">Donate<img [src]="assetPrefix + 'images/kofi.png" class="kofi" style="margin-left: 23px; margin-bottom:-6px; display:inline-block;"></span></a></button> -->
                     </span>
-					<!-- <div class="image phone"><div class="inner"><img src="images/screen.jpg" alt="" /></div></div> -->
+					<!-- <div class="image phone"><div class="inner"><img [src]="assetPrefix + 'images/screen.jpg" alt="" /></div></div> -->
 				</div>
 
 				<!--<a class="fork-me" href="https://github.com/PoliScore-us/poliscore"><img decoding="async" width="149" height="149" src="https://github.blog/wp-content/uploads/2008/12/forkme_right_gray_6d6d6d.png?resize=149%2C149" class="attachment-full size-full" alt="Fork me on GitHub" loading="lazy" data-recalc-dims="1"></a>-->
@@ -109,7 +109,7 @@
 				<div class="inner alt">
 					<section class="spotlight" id="motivations">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="motivations"><img src="images/roadmap.png" alt="A robot conquering a mountain" /></a>
+                            <a [routerLink]="'/about'" fragment="motivations"><img [src]="assetPrefix + 'images/roadmap.png'" alt="A robot conquering a mountain" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="motivations">Motivations</a></h3>
@@ -135,7 +135,7 @@
 
 					<section class="spotlight" id="rooted-in-policy">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="rooted-in-policy"><img src="images/poliscore2.png" alt="A robot speaking to a crowd" /></a>
+                            <a [routerLink]="'/about'" fragment="rooted-in-policy"><img [src]="assetPrefix + 'images/poliscore2.png'" alt="A robot speaking to a crowd" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="rooted-in-policy">How Does It Work?</a></h3>
@@ -152,7 +152,7 @@
 
                     <section class="spotlight" id="ai-voting">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="ai-voting"><img src="images/robot-speaker.png" alt="A Robot Judge" /></a>
+                            <a [routerLink]="'/about'" fragment="ai-voting"><img [src]="assetPrefix + 'images/robot-speaker.png'" alt="A Robot Judge" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="ai-voting">How is "Good Policy" Decided?</a></h3>
@@ -180,7 +180,7 @@
 					<!--
 					<section class="spotlight" id="ai-voting">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="ai-voting"><img src="images/robot-speaker.png" alt="A Robot Judge" /></a>
+                            <a [routerLink]="'/about'" fragment="ai-voting"><img [src]="assetPrefix + 'images/robot-speaker.png" alt="A Robot Judge" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="ai-voting">The Power of Open Source</a></h3>
@@ -194,7 +194,7 @@
 
 					<section class="spotlight" id="ai-bias">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="ai-bias"><img src="images/robot-judge.png" alt="A robot speaking to a crowd" /></a>
+                            <a [routerLink]="'/about'" fragment="ai-bias"><img [src]="assetPrefix + 'images/robot-judge.png'" alt="A robot speaking to a crowd" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="ai-bias">Are the Grades Non-Partisan?</a></h3>
@@ -267,7 +267,7 @@
 					<!--
 					<section class="spotlight" id="how-it-works">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="how-it-works"><img src="images/local-data.png" alt="Data on a map" /></a>
+                            <a [routerLink]="'/about'" fragment="how-it-works"><img [src]="assetPrefix + 'images/local-data.png" alt="Data on a map" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="how-it-works">How Does It Work?</a></h3>
@@ -280,7 +280,7 @@
                     <!--
 					<section class="spotlight" id="local-data">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="local-data"><img src="images/local-data.png" alt="Data on a map" /></a>
+                            <a [routerLink]="'/about'" fragment="local-data"><img [src]="assetPrefix + 'images/local-data.png" alt="Data on a map" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="local-data">I Want State / Local Data</a></h3>
@@ -294,7 +294,7 @@
 
 					<!-- <section class="spotlight" id="verifiable-ratings">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="verifiable-ratings"><img src="images/poliscore2.png" alt="PoliScore searching through bills" /></a>
+                            <a [routerLink]="'/about'" fragment="verifiable-ratings"><img [src]="assetPrefix + 'images/poliscore2.png" alt="PoliScore searching through bills" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="verifiable-ratings">Ratings Are Rooted in Verifiable Policy Decisions</a></h3>
@@ -311,7 +311,7 @@
 					<!--
 					<section class="spotlight" id="ai-bias">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="ai-bias"><img src="images/robot-speaker.png" alt="A robot speaking to a crowd" /></a>
+                            <a [routerLink]="'/about'" fragment="ai-bias"><img [src]="assetPrefix + 'images/robot-speaker.png" alt="A robot speaking to a crowd" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="ai-bias">Does AI Have a Political Bias?</a></h3>
@@ -346,7 +346,7 @@
 
 					<section class="spotlight" id="bill-scoring">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="bill-scoring"><img src="images/bill-scoring-details.png" alt="Political dashboard" /></a>
+                            <a [routerLink]="'/about'" fragment="bill-scoring"><img [src]="assetPrefix + 'images/bill-scoring-details.png'" alt="Political dashboard" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="bill-scoring">Specifics on Bill Scoring</a></h3>
@@ -401,7 +401,7 @@
 
 					<section class="spotlight" id="legislator-scoring">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="legislator-scoring"><img src="images/legislator-scoring.png" alt="Bill scoring" /></a>
+                            <a [routerLink]="'/about'" fragment="legislator-scoring"><img [src]="assetPrefix + 'images/legislator-scoring.png'" alt="Bill scoring" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="legislator-scoring">Specifics on Legislator Scoring</a></h3>
@@ -421,7 +421,7 @@
 
 					<section class="spotlight" id="letter-grades">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="letter-grades"><img src="images/lettergrades2.png" alt="Letter grades" /></a>
+                            <a [routerLink]="'/about'" fragment="letter-grades"><img [src]="assetPrefix + 'images/lettergrades2.png'" alt="Letter grades" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="letter-grades">Legislator and Bill Letter Grades</a></h3>
@@ -440,7 +440,7 @@
 
 					<section class="spotlight" id="legislator-prompt">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="legislator-prompt"><img src="images/legislator-prompt.png" alt="Legislator prompt" /></a>
+                            <a [routerLink]="'/about'" fragment="legislator-prompt"><img [src]="assetPrefix + 'images/legislator-prompt.png'" alt="Legislator prompt" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="legislator-prompt">Parameterized Legislator Summaries</a></h3>
@@ -478,7 +478,7 @@ Based on these scores, this legislator has received the overall letter grade: {{
                     <!--
 					<section class="spotlight" id="roadmap">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="roadmap"><img src="images/roadmap.png" alt="A robot conquering a mountain" /></a>
+                            <a [routerLink]="'/about'" fragment="roadmap"><img [src]="assetPrefix + 'images/roadmap.png" alt="A robot conquering a mountain" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="roadmap">Roadmap</a></h3>
@@ -499,7 +499,7 @@ Based on these scores, this legislator has received the overall letter grade: {{
 
 					<section class="spotlight" id="mission">
 						<div class="image">
-                            <a [routerLink]="'/about'" fragment="mission"><img src="images/donate.png" alt="Please donate" /></a>
+                            <a [routerLink]="'/about'" fragment="mission"><img [src]="assetPrefix + 'images/donate.png'" alt="Please donate" /></a>
                         </div>
 						<div class="content">
 							<h3 class="content-header"><a [routerLink]="'/about'" fragment="mission">A Mission to Serve Voters</a></h3>
@@ -523,7 +523,7 @@ Based on these scores, this legislator has received the overall letter grade: {{
 				<ul class="actions special">
 					<li><a [routerLink]="'/signup'" class="vertical-layout button primary icon solid">
 						<div class="horizontal-layout">
-							<!-- <img src="images/kofi.png" class="kofi"> -->
+							<!-- <img [src]="assetPrefix + 'images/kofi.png" class="kofi"> -->
 							 <!-- <i class="icon solid fa-solid fa-flask" style="margin-right:10px; color: white !important;"></i> -->
 							Stand With Us
 						</div>
@@ -851,21 +851,21 @@ print 'It took ' + i + ' iterations to sort the deck.';</code></pre>
 						<h5>Fit</h5>
 						<div class="box alt">
 							<div class="row gtr-uniform">
-								<div class="col-12"><span class="image fit"><img src="images/pic04.jpg" alt="" /></span></div>
-								<div class="col-4"><span class="image fit"><img src="images/pic01.jpg" alt="" /></span></div>
-								<div class="col-4"><span class="image fit"><img src="images/pic02.jpg" alt="" /></span></div>
-								<div class="col-4"><span class="image fit"><img src="images/pic03.jpg" alt="" /></span></div>
-								<div class="col-4"><span class="image fit"><img src="images/pic02.jpg" alt="" /></span></div>
-								<div class="col-4"><span class="image fit"><img src="images/pic03.jpg" alt="" /></span></div>
-								<div class="col-4"><span class="image fit"><img src="images/pic01.jpg" alt="" /></span></div>
-								<div class="col-4"><span class="image fit"><img src="images/pic03.jpg" alt="" /></span></div>
-								<div class="col-4"><span class="image fit"><img src="images/pic01.jpg" alt="" /></span></div>
-								<div class="col-4"><span class="image fit"><img src="images/pic02.jpg" alt="" /></span></div>
+								<div class="col-12"><span class="image fit"><img [src]="assetPrefix + 'images/pic04.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img [src]="assetPrefix + 'images/pic01.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img [src]="assetPrefix + 'images/pic02.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img [src]="assetPrefix + 'images/pic03.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img [src]="assetPrefix + 'images/pic02.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img [src]="assetPrefix + 'images/pic03.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img [src]="assetPrefix + 'images/pic01.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img [src]="assetPrefix + 'images/pic03.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img [src]="assetPrefix + 'images/pic01.jpg" alt="" /></span></div>
+								<div class="col-4"><span class="image fit"><img [src]="assetPrefix + 'images/pic02.jpg" alt="" /></span></div>
 							</div>
 						</div>
 						<h5>Left &amp; Right</h5>
-						<p><span class="image left"><img src="images/pic05.jpg" alt="" /></span>Fringilla nisl. Donec accumsan interdum nisi, quis tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent. Donec accumsan interdum nisi, quis tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent.</p>
-						<p><span class="image right"><img src="images/pic05.jpg" alt="" /></span>Fringilla nisl. Donec accumsan interdum nisi, quis tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent. Donec accumsan interdum nisi, quis tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent.</p>
+						<p><span class="image left"><img [src]="assetPrefix + 'images/pic05.jpg" alt="" /></span>Fringilla nisl. Donec accumsan interdum nisi, quis tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent. Donec accumsan interdum nisi, quis tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent.</p>
+						<p><span class="image right"><img [src]="assetPrefix + 'images/pic05.jpg" alt="" /></span>Fringilla nisl. Donec accumsan interdum nisi, quis tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent. Donec accumsan interdum nisi, quis tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent.</p>
 					</section>
 
 				</div>
@@ -874,7 +874,7 @@ print 'It took ' + i + ' iterations to sort the deck.';</code></pre>
 
 		<!-- Donate bar -->
 		 <!-- <div class="popup-donate vertical-layout" [class]="donateBarHidden ? 'hidden' : ''"><div class="vertical-layout" style="height: 100%;">
-			<a href="https://ko-fi.com/poliscore" class="horizontal-layout button primary icon solid" style="min-width: 175px;"><img src="images/kofi.png" class="kofi" style="margin-left: 10px;">Support on Ko-Fi</a>
+			<a href="https://ko-fi.com/poliscore" class="horizontal-layout button primary icon solid" style="min-width: 175px;"><img [src]="assetPrefix + 'images/kofi.png" class="kofi" style="margin-left: 10px;">Support on Ko-Fi</a>
 		</div></div> -->
 
 		<!-- Footer -->

@@ -55,57 +55,184 @@ function idPathMatcher(path: string) {
 //   };
 // }
 
-function stateLegislatorMatcher(
+function billPathMatcher(
   segments: UrlSegment[],
   group: UrlSegmentGroup,
   route: Route
 ): UrlMatchResult | null {
-  // Expect: { state } / legislator / { id... }
-  // Example URL path: "co/legislator/22225"
-  if (
-    segments.length >= 3 &&
-    /^[a-zA-Z]{2}$/.test(segments[0].path) && // "co", "tx", etc.
-    segments[1].path === 'legislator'
-  ) {
-    const state = segments[0].path.toLowerCase();
-    const id = segments.slice(2).map(s => s.path).join('/'); // "22225" (or anything beyond)
+  if (!segments.length) return null;
 
-    return {
-      consumed: segments,
-      posParams: {
-        state: new UrlSegment(state, {}),
-        id: new UrlSegment(id, {})
-      }
-    };
+  const { index, year, state } = parseYearState(segments);
+  let i = index;
+
+  // Expect "bill"
+  if (!segments[i] || segments[i].path !== 'bill') return null;
+
+  // Everything after "bill" is the bill id (e.g. "s/123")
+  const idSegments = segments.slice(i + 1);
+  if (!idSegments.length) return null;
+
+  const posParams: { [key: string]: UrlSegment } = {
+    id: new UrlSegment(idSegments.map(s => s.path).join('/'), {})
+  };
+
+  if (year) posParams['year'] = year;
+  if (state) posParams['state'] = state;
+
+  return { consumed: segments, posParams };
+}
+
+function legislatorPathMatcher(
+  segments: UrlSegment[],
+  group: UrlSegmentGroup,
+  route: Route
+): UrlMatchResult | null {
+  if (!segments.length) return null;
+
+  const { index, year, state } = parseYearState(segments);
+  let i = index;
+
+  // Expect "legislator"
+  if (!segments[i] || segments[i].path !== 'legislator') return null;
+
+  // Everything after "legislator" is the legislator id
+  const idSegments = segments.slice(i + 1);
+  if (!idSegments.length) return null;
+
+  const posParams: { [key: string]: UrlSegment } = {
+    id: new UrlSegment(idSegments.map(s => s.path).join('/'), {})
+  };
+
+  if (year) posParams['year'] = year;
+  if (state) posParams['state'] = state;
+
+  return { consumed: segments, posParams };
+}
+
+function legislatorsPathMatcher(
+  segments: UrlSegment[],
+  group: UrlSegmentGroup,
+  route: Route
+): UrlMatchResult | null {
+  if (!segments.length) return null;
+
+  const { index, year, state } = parseYearState(segments);
+  let i = index;
+
+  // Expect "legislators"
+  if (!segments[i] || segments[i].path !== 'legislators') return null;
+
+  const rest = segments.slice(i + 1); // [index?, ascending?]
+
+  const posParams: { [key: string]: UrlSegment } = {};
+
+  if (year) posParams['year'] = year;
+  if (state) posParams['state'] = state;
+  if (rest[0]) posParams['index'] = rest[0];
+  if (rest[1]) posParams['ascending'] = rest[1];
+
+  return { consumed: segments, posParams };
+}
+
+function billsPathMatcher(
+  segments: UrlSegment[],
+  group: UrlSegmentGroup,
+  route: Route
+): UrlMatchResult | null {
+  if (!segments.length) return null;
+
+  const { index, year, state } = parseYearState(segments);
+  let i = index;
+
+  // Expect "bills"
+  if (!segments[i] || segments[i].path !== 'bills') return null;
+
+  const rest = segments.slice(i + 1); // [index?, ascending?]
+
+  const posParams: { [key: string]: UrlSegment } = {};
+
+  if (year) posParams['year'] = year;
+  if (state) posParams['state'] = state;
+  if (rest[0]) posParams['index'] = rest[0];
+  if (rest[1]) posParams['ascending'] = rest[1];
+
+  return { consumed: segments, posParams };
+}
+
+function partyPathMatcher(
+  segments: UrlSegment[],
+  group: UrlSegmentGroup,
+  route: Route
+): UrlMatchResult | null {
+  if (!segments.length) return null;
+
+  const { index, year, state } = parseYearState(segments);
+  let i = index;
+
+  // Expect "party"
+  if (!segments[i] || segments[i].path !== 'party') return null;
+
+  const rest = segments.slice(i + 1); // [party?, sort?]
+
+  const posParams: { [key: string]: UrlSegment } = {};
+
+  if (year) posParams['year'] = year;
+  if (state) posParams['state'] = state;
+  if (rest[0]) posParams['party'] = rest[0];
+  if (rest[1]) posParams['sort'] = rest[1];
+
+  return { consumed: segments, posParams };
+}
+
+function parseYearState(
+  segments: UrlSegment[],
+  startIndex = 0
+): { index: number; year?: UrlSegment; state?: UrlSegment } {
+  let index = startIndex;
+  let year: UrlSegment | undefined;
+  let state: UrlSegment | undefined;
+
+  // Optional year: 4 digits
+  if (segments[index] && /^\d{4}$/.test(segments[index].path)) {
+    year = segments[index];
+    index++;
   }
 
-  return null;
+  // Optional state: 2 letters
+  if (segments[index] && /^[a-z]{2}$/i.test(segments[index].path)) {
+    state = segments[index];
+    index++;
+  }
+
+  return { index, year, state };
 }
 
 export const routes: Routes = [
   { path: "", component: PromoComponent, data: { animation: 'promoPage' } },
   { path: 'auth-callback', component: AuthCallbackComponent },
-  { matcher: idPathMatcher('legislator'), component: LegislatorComponent, data: { animation: 'legislatorPage' } },
-  { matcher: stateLegislatorMatcher, component: LegislatorComponent, data: { animation: 'legislatorPage' } },
-  { path: 'legislators', component: LegislatorsComponent, data: { animation: 'legislatorsPage' } },
-  { path: 'legislators/:index/:ascending', component: LegislatorsComponent, data: { animation: 'legislatorsPage' } },
-  { path: 'bills', component: BillsComponent, data: { animation: 'billsPage' } },
-  { path: 'bills/:index/:ascending', component: BillsComponent, data: { animation: 'billsPage' } },
-  { matcher: idPathMatcher("bill"), component: BillComponent, data: { animation: 'billPage' } },
-  { path: 'party', component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
-  { path: 'party/:party', component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
-  { path: 'party/:party/:sort', component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
+
+  // Single legislator with optional year/state
+  { matcher: legislatorPathMatcher, component: LegislatorComponent, data: { animation: 'legislatorPage' } },
+
+  // Legislators list with optional year/state and optional index/ascending
+  { matcher: legislatorsPathMatcher, component: LegislatorsComponent, data: { animation: 'legislatorsPage' } },
+
+  // Bills list with optional year/state and optional index/ascending
+  { matcher: billsPathMatcher, component: BillsComponent, data: { animation: 'billsPage' } },
+
+  // Single bill with optional year/state
+  { matcher: billPathMatcher, component: BillComponent, data: { animation: 'billPage' } },
+
+  // Party stats with optional year/state and optional party/sort
+  { matcher: partyPathMatcher, component: SessionStatsComponent, data: { animation: 'sessionStatsPage' } },
 
   { path: "about", redirectTo: "", pathMatch: "full" },
   { path: "signup", component: SignupComponent },
 
-  { path: 'billing/resume', component: PurchaseResumeComponent }, // Cognito callback
+  { path: 'billing/resume', component: PurchaseResumeComponent },
   { path: 'billing/success', component: CheckoutSuccessComponent },
   { path: 'billing/cancel', component: CheckoutCancelComponent },
 
   { path: 'legal/terms', component: TermsOfServiceComponent },
   { path: 'legal/privacy', component: PrivacyPolicyComponent },
-
-  
-  // { path: 'about', component: PromoComponent, title: "About - PoliScore: AI Political Rating Service", data: { animation: 'about' } }
 ];

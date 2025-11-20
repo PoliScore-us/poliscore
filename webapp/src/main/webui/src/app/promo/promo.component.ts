@@ -17,8 +17,12 @@ export class PromoComponent {
   public isPreload = true;
   
     public donateBarHidden = true;
+
+    public assetPrefix = "";
   
-    constructor(public config: ConfigService, public dialog: MatDialog, private meta: Meta, private titleService: Title, @Inject(PLATFORM_ID) private platformId: Object) { }
+    constructor(public config: ConfigService, public dialog: MatDialog, private meta: Meta, private titleService: Title, @Inject(PLATFORM_ID) private platformId: Object) {
+      this.assetPrefix = config.getAssetRoutingPrefix();
+    }
   
     ngOnInit(): void {
       this.updateMetaTags();

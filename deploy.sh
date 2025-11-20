@@ -65,9 +65,9 @@ DEPLOY_VIEW() {
     fi
 
 	if [ "$DEPLOYMENT_NAMESPACE" == "us/congress" ]; then
-      ng build --configuration production --base-href /$DEPLOYMENT_YEAR/
+      ng build --configuration production --deploy-url /$DEPLOYMENT_YEAR/congress/
     else
-      ng build --configuration production --base-href /$DEPLOYMENT_YEAR/$DEPLOYMENT_STATE/
+      ng build --configuration production --deploy-url /$DEPLOYMENT_YEAR/$DEPLOYMENT_STATE/
     fi
     
     cd ../../../../
