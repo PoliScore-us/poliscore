@@ -4,6 +4,7 @@
 /billing/resume
 /billing/cancel
 /billing/success
+/party
 /party/democrat
 /party/republican
 /legislators

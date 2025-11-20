@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { namespace, year } from './app.config';
 import sessionsData from '../assets/sessions.json';
 import { Session } from './model';
+import { environment } from '../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -172,6 +173,8 @@ export class ConfigService {
   }
 
   getAssetRoutingPrefix(): string {
+    if (!environment.production) return "/";
+
     var nspfx = this.getNamespace().substring(3);
 
     return "/" + this.getYear() + "/" + nspfx + "/";

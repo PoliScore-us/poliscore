@@ -53,6 +53,7 @@ public class WebappRoutesGenerator implements QuarkusApplication {
 		routes.add("/billing/success");
 		
 		// Party Stats
+		routes.add("/party");
 		routes.add("/party/democrat");
 		routes.add("/party/republican");
 		

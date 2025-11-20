@@ -4,7 +4,7 @@
           <div class="ps-lockup">
             <!-- <div class="ps-logo-dot"></div> -->
             <!-- <h1 class="ps-title">PoliScore</h1> -->
-            <a class="unstyled" href="/"><img class="logo" src="images/poliscore-word.png" alt="PoliScore Logo"></a>
+            <a class="unstyled" href="/"><img class="logo" [src]="config.getAssetRoutingPrefix() + 'images/poliscore-word.png'" alt="PoliScore Logo"></a>
           </div>
           <h2 class="ps-headline">{{ headline }}</h2>
           <p class="ps-sub">{{ headlineDescriptor }}</p>

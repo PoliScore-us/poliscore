@@ -145,17 +145,18 @@ public class WebappDataGenerator implements QuarkusApplication
 			// We only publish the most current of bills
 			if (dataset.isCurrent()) {
 				// Party Stats
-				routes.add(baseUrl + yearAndState + "/party/democrat");
-				routes.add(baseUrl + yearAndState + "/party/republican");
+				routes.add(baseUrl + statePrefix + "/party");
+				routes.add(baseUrl + statePrefix + "/party/democrat");
+				routes.add(baseUrl + statePrefix + "/party/republican");
 				
 				if (dataset.hasIndependentPartyMembers())
-					routes.add(baseUrl + yearAndState + "/party/independent");
+					routes.add(baseUrl + statePrefix + "/party/independent");
 				
 				// All states
 	//			Arrays.asList(states).stream().forEach(s -> routes.add(url + prefix + "/legislators/state/" + s.toLowerCase()));
 				
 				// All bills
-				routes.add(baseUrl + yearAndState + "/bills");
+				routes.add(baseUrl + statePrefix + "/bills");
 				dataset.query(Bill.class).stream()
 					.filter(b -> s3.exists(getBillInterpId(b), BillInterpretation.class))
 					.sorted((a,b) -> a.getDate().compareTo(b.getDate()))
