@@ -1,10 +1,11 @@
 // src/app/billing/purchase-flow.service.ts
-import { Injectable, inject } from '@angular/core';
+import { Inject, Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { firstValueFrom, of } from 'rxjs';
 import { catchError, take } from 'rxjs/operators';
 import { BillingService } from './billing.service';
 import { AuthService } from '../auth/auth.service';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { isPlatformBrowser } from '@angular/common';
 
 const PENDING_PRICE_KEY = 'pendingCheckoutPriceId';
 const RETURN_TO_KEY = 'ps:returnTo';
@@ -14,8 +15,12 @@ export class PurchaseFlowService {
   private auth = inject(AuthService);               // your wrapper that exposes isAuthenticated$
   private billing = inject(BillingService);
   private oidc = inject(OidcSecurityService);
+  private _platformId = inject(PLATFORM_ID);
 
   async start(priceId: string) {
+    if (!isPlatformBrowser(this._platformId))
+      return;
+
     const authed = await firstValueFrom(
       this.auth.isAuthenticated$.pipe(take(1), catchError(() => of(false)))
     );
@@ -52,6 +57,9 @@ export class PurchaseFlowService {
   }
 
   async resumeAfterLogin() {
+    if (!isPlatformBrowser(this._platformId))
+      return;
+
     // by the time this runs (after auth-callback), tokens should be valid
     const authed = await firstValueFrom(
       this.auth.isAuthenticated$.pipe(take(1), catchError(() => of(false)))

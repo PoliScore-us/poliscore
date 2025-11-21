@@ -3,7 +3,6 @@ import { provideClientHydration } from '@angular/platform-browser';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { sharedAppConfig } from './app.config';
-import { provideRouter, withEnabledBlockingInitialNavigation } from '@angular/router';
 import { routes } from './app.routes';
 import { provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
 import { AbstractSecurityStorage, DefaultLocalStorageService, OidcSecurityService, provideAuth, withAppInitializerAuthCheck } from 'angular-auth-oidc-client';
@@ -29,7 +28,6 @@ export const AUTH_INIT: Provider = {
 export const clientOnlyConfig: ApplicationConfig = {
   providers: [
     AUTH_INIT,
-    provideRouter(routes), // withEnabledBlockingInitialNavigation()
   //   provideClientHydration(), provideAnimations(), provideAnimationsAsync(),
   //   provideRouter(routes),                // animations OK on client
     provideAuth({ config: makeAuthConfig(redirectBase)}), // withAppInitializerAuthCheck()

@@ -12,9 +12,10 @@ import { environment } from '../environments/environment';
 export const sharedAppConfig: ApplicationConfig = {
   // providers: [ provideHttpClient(withFetch(), withInterceptorsFromDi()) ]
   providers: [
+    provideRouter(routes), // Do NOT disable initial navigation. It breaks SSG
     provideAnimations(),
     provideClientHydration(),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor, entitlementInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor, entitlementInterceptor]))
   ]
 };
 

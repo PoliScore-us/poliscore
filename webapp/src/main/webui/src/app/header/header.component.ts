@@ -75,7 +75,6 @@ export class HeaderComponent implements OnInit {
 
     this.sub = this.entitlement.status$.subscribe(s => {
       this.subscriptionLoaded = true;
-      console.log("entitlement ", s);
       this.isSubscribed = s.isSubscribed;
      });
 
