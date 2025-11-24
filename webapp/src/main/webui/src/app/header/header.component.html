@@ -17,27 +17,27 @@
             </mat-select>
 
             <div *ngIf="!isSmallScreen" class="account bigScreen vertical-layout">
-              <mat-select *ngIf="auth.isAuthenticated$ | async" class="select loggedin" [placeholder]="'logged in as\n' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
+              <mat-select *ngIf="auth.isAuthenticated$ | async as isAuthed; else loggedOut" class="select loggedin" [placeholder]="'logged in as\n' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
                 <mat-option (click)="onManageSubscription()">Manage Account</mat-option>
                 <mat-option (click)="auth.logout()">Logout</mat-option>
               </mat-select>
-              <mat-select *ngIf="!(auth.isAuthenticated$ | async)" class="select loggedout" [placeholder]="'login or signup'" [panelClass]="'dropdown-panel'">
+              <ng-template #loggedOut><mat-select class="select loggedout" [placeholder]="'login or signup'" [panelClass]="'dropdown-panel'">
                 <mat-option (click)="auth.login()">Login</mat-option>
                 <mat-option [routerLink]="'/signup'">Signup</mat-option>
-              </mat-select>
+              </mat-select></ng-template>
               <label *ngIf="subscriptionLoaded && (auth.isAuthenticated$ | async) && !isSubscribed" style="color:red; cursor: pointer;" (click)="signUp()" class="sub-expired">Your subscription has expired!</label>
             </div>
           </div>
 
           <div *ngIf="isSmallScreen" class="account smallScreen vertical-layout align-left">
-            <mat-select *ngIf="auth.isAuthenticated$ | async" class="select loggedin" [placeholder]="'logged in as\n' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
+            <mat-select *ngIf="auth.isAuthenticated$ | async as isAuthed; else loggedOut" class="select loggedin" [placeholder]="'logged in as\n' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
               <mat-option (click)="onManageSubscription()">Manage Account</mat-option>
               <mat-option (click)="auth.logout()">Logout</mat-option>
             </mat-select>
-            <mat-select *ngIf="!(auth.isAuthenticated$ | async)" class="select loggedout" [placeholder]="'login or signup'" [panelClass]="'dropdown-panel'">
+            <ng-template #loggedOut><mat-select class="select loggedout" [placeholder]="'login or signup'" [panelClass]="'dropdown-panel'">
               <mat-option (click)="auth.login()">Login</mat-option>
               <mat-option [routerLink]="'/signup'">Signup</mat-option>
-            </mat-select>
+            </mat-select></ng-template>
             <label *ngIf="subscriptionLoaded && (auth.isAuthenticated$ | async) && !isSubscribed" style="color:red; cursor: pointer;" (click)="signUp()" class="sub-expired">Your subscription has expired!</label>
           </div>
        </div>
