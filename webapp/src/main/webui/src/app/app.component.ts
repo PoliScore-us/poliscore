@@ -29,12 +29,16 @@ export class AppComponent implements OnInit {
   constructor(public router: Router, private contexts: ChildrenOutletContexts, @Inject(PLATFORM_ID) private _platformId: Object){
     if (isPlatformBrowser(this._platformId)) {
       this.router.events.subscribe(event => {
-        if(event instanceof NavigationEnd){
-            gtag('config', 'G-7DY6Y1SM6W',
+        if(event instanceof NavigationEnd && typeof (window as any).gtag === 'function'){
+          if (!event.urlAfterRedirects.includes('/bill/') && !event.urlAfterRedirects.includes('/legislator/')) {
+            gtag('event', 'page_view',
                   {
-                    'page_path': event.urlAfterRedirects
+                    page_path: event.urlAfterRedirects,
+                    page_title: document.title,
+                    page_location: window.location.href
                   }
                   );
+            }
           }
       });
      }

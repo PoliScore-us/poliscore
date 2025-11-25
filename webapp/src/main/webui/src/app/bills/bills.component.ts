@@ -18,11 +18,12 @@ import { ConfigService } from '../config.service';
 import { HeaderComponent } from '../header/header.component';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { EntitlementService } from '../billing/entitlement.service';
+import { TrackClickDirective } from '../track-click.directive';
 
 @Component({
   selector: 'bills',
   standalone: true,
-  imports: [MatMenuModule, HeaderComponent, KeyValuePipe, CommonModule, RouterModule, MatCardModule, MatPaginatorModule, MatButtonToggleModule, MatAutocompleteModule, ReactiveFormsModule, MatButtonModule],
+  imports: [MatMenuModule, HeaderComponent, KeyValuePipe, CommonModule, RouterModule, MatCardModule, MatPaginatorModule, MatButtonToggleModule, MatAutocompleteModule, ReactiveFormsModule, MatButtonModule, TrackClickDirective],
   providers: [AppService, HttpClient],
   templateUrl: './bills.component.html',
   styleUrl: './bills.component.scss'

@@ -11,6 +11,8 @@ import lombok.Data;
 @AllArgsConstructor
 public class OpenAIModel {
 	
+	public static final OpenAIModel GPT51 = new OpenAIModel("gpt-5.1", 400_000, 128_000, false, true, ReasoningEffort.MEDIUM, new RateLimit(40_000_000, 15_000));
+	
 	public static final OpenAIModel GPT5 = new OpenAIModel("gpt-5", 400_000, 128_000, false, true, ReasoningEffort.MEDIUM, new RateLimit(40_000_000, 15_000));
 	
 	public static final OpenAIModel GPT41 = new OpenAIModel("gpt-4.1", 950_000, 32_768, true, true, null, new RateLimit(30_000_000, 10_000));
@@ -23,7 +25,7 @@ public class OpenAIModel {
 	
 	public static final OpenAIModel o3DeepResearch = new OpenAIModel("o3-deep-research", 190_000, 95_000, false, true, null, new RateLimit(30_000_000, 10_000));
 	
-	public static final OpenAIModel DEFAULT_MODEL = GPT5;
+	public static final OpenAIModel DEFAULT_MODEL = GPT51;
 	
 	public static OpenAIModel fromString(String _id) {
 		if (_id.equals(GPT41.getId())) {

@@ -19,6 +19,7 @@ import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { getDistrictLabel } from '../legislators';
 
 import { marked } from 'marked';
+import { AnalyticsService } from '../service/analytics.service';
 marked.setOptions({
   async: false
 });
@@ -164,7 +165,7 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
     pageSize: 25
   };
 
-  constructor(private sanitizer: DomSanitizer, public config: ConfigService, private meta: Meta, private service: AppService, private route: ActivatedRoute, private router: Router, @Inject(PLATFORM_ID) private _platformId: Object, private titleService: Title) { }
+  constructor(private sanitizer: DomSanitizer, public config: ConfigService, private meta: Meta, private service: AppService, private analytics: AnalyticsService, private route: ActivatedRoute, private router: Router, @Inject(PLATFORM_ID) private _platformId: Object, private titleService: Title) { }
 
   ngOnInit(): void {
     this.code = this.route.snapshot.paramMap.get('id') as string;
@@ -214,6 +215,7 @@ export class LegislatorComponent implements OnInit, AfterViewInit {
       }
 
       this.updateMetaTags();
+      this.analytics.fireGAPageView();
   
       this.refreshBillData();
   

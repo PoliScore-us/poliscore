@@ -13,11 +13,12 @@ import { EntitlementService } from '../billing/entitlement.service';
 import { Subscription } from 'rxjs';
 import { PurchaseFlowService } from '../billing/purchase-flow.service';
 import { environment } from '../../environments/environment';
+import { TrackClickDirective } from '../track-click.directive';
 
 @Component({
   selector: 'header',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, RouterModule, MatSelectModule, MatMenuModule, MatIconModule],
+  imports: [CommonModule, MatButtonModule, RouterModule, MatSelectModule, MatMenuModule, MatIconModule, TrackClickDirective],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
 })

@@ -30,6 +30,11 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
+
+  // We're disabling GA's default 'pageView' event because it doesn't work with angular client-side navigation.
+  gtag('config', 'G-7DY6Y1SM6W', {
+    send_page_view: false
+  });
 </script>
 
 <body class="mat-typography">

@@ -1,11 +1,13 @@
 
-import { Injectable } from '@angular/core';
+import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { HttpHeaders, HttpClient, HttpParams } from '@angular/common/http';
 import { backendUrl } from './app.config';
 import { Bill, BillInteraction, Legislator, LegislatorPageData, Page, SessionStats } from './model';
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
 import { Observable } from 'rxjs';
 import { ConfigService } from './config.service';
+import { isPlatformBrowser } from '@angular/common';
+import { Title } from '@angular/platform-browser';
 
 export class AppDataPage {
     data!: any[];
@@ -16,7 +18,7 @@ export class AppDataPage {
 @Injectable()
 export class AppService {
     
-    constructor(private http: HttpClient, private config: ConfigService) { }
+    constructor(private http: HttpClient, private config: ConfigService, @Inject(PLATFORM_ID) private _platformId: Object, private titleService: Title) { }
 
     getSessionStats(): Promise<SessionStats | undefined> {
         let params: HttpParams = new HttpParams();

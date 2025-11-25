@@ -18,11 +18,12 @@ import { ConfigService } from '../config.service';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import Fuse from 'fuse.js';
 import { EntitlementService } from '../billing/entitlement.service';
+import { TrackClickDirective } from '../track-click.directive';
 
 @Component({
   selector: 'legislators',
   standalone: true,
-  imports: [MatMenuModule, HeaderComponent, KeyValuePipe, CommonModule, RouterModule, MatCardModule, MatPaginatorModule, MatButtonToggleModule, MatAutocompleteModule, ReactiveFormsModule, MatButtonModule],
+  imports: [MatMenuModule, HeaderComponent, KeyValuePipe, CommonModule, RouterModule, MatCardModule, MatPaginatorModule, MatButtonToggleModule, MatAutocompleteModule, ReactiveFormsModule, MatButtonModule, TrackClickDirective],
   providers: [AppService, HttpClient],
   templateUrl: './legislators.component.html',
   styleUrl: './legislators.component.scss'

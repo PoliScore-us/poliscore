@@ -24,6 +24,7 @@ import { AuthService } from '../auth/auth.service';
 import { ExpertPreviewComponent } from '../expert-preview/expert-preview.component';
 import { Subscription } from 'rxjs';
 import { EntitlementService } from '../billing/entitlement.service';
+import { AnalyticsService } from '../service/analytics.service';
 marked.setOptions({
   async: false
 });
@@ -61,6 +62,7 @@ export class BillComponent implements OnInit, OnDestroy {
   isSubscribed: boolean = false;
 
   ent = inject(EntitlementService);
+  analytics = inject(AnalyticsService);
 
   public barChartData: ChartConfiguration<'bar'>['data'] = {
     labels: [],
@@ -136,6 +138,7 @@ export class BillComponent implements OnInit, OnDestroy {
 
       this.loading = false;
       this.updateMetaTags();
+      this.analytics.fireGAPageView();
       this.buildBarChartData();
       this.formattedExpertReport = this.getFormattedParagraphs(this.bill!.interpretation.longExplain);
       this.formattedLaymansReport = this.getFormattedParagraphs(this.bill!.interpretation.laymansReport);

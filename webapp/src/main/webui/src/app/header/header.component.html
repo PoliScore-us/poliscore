@@ -9,20 +9,20 @@
 
           <div class="horizontal-layout year-and-namespace">
             <mat-select class="namespace" [(value)]="namespace" [panelClass]="'dropdown-panel'">
-              <mat-option *ngFor="let ns of namespaces" [value]="ns" (click)="onChangeNamespace(ns)">{{ namespaceDisplayLabel(ns) }}</mat-option>
+              <mat-option *ngFor="let ns of namespaces" [value]="ns" (click)="onChangeNamespace(ns)" psTrackClick [psTrackClickId]="'change_namespace'">{{ namespaceDisplayLabel(ns) }}</mat-option>
             </mat-select>
           
             <mat-select class="year" [(value)]="year" [panelClass]="'dropdown-panel'">
-              <mat-option *ngFor="let y of years" [value]="y" (click)="onChangeYear(y)">{{ yearDisplayLabel(y) }}</mat-option>
+              <mat-option *ngFor="let y of years" [value]="y" (click)="onChangeYear(y)" psTrackClick [psTrackClickId]="'change_year'">{{ yearDisplayLabel(y) }}</mat-option>
             </mat-select>
 
             <div *ngIf="!isSmallScreen" class="account bigScreen vertical-layout">
               <mat-select *ngIf="auth.isAuthenticated$ | async as isAuthed; else loggedOut" class="select loggedin" [placeholder]="'logged in as\n' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
-                <mat-option (click)="onManageSubscription()">Manage Account</mat-option>
-                <mat-option (click)="auth.logout()">Logout</mat-option>
+                <mat-option (click)="onManageSubscription()" psTrackClick [psTrackClickId]="'manage_account'">Manage Account</mat-option>
+                <mat-option (click)="auth.logout()" psTrackClick [psTrackClickId]="'logout'">Logout</mat-option>
               </mat-select>
               <ng-template #loggedOut><mat-select class="select loggedout" [placeholder]="'login or signup'" [panelClass]="'dropdown-panel'">
-                <mat-option (click)="auth.login()">Login</mat-option>
+                <mat-option (click)="auth.login()" psTrackClick [psTrackClickId]="'login'">Login</mat-option>
                 <mat-option [routerLink]="'/signup'">Signup</mat-option>
               </mat-select></ng-template>
               <label *ngIf="subscriptionLoaded && (auth.isAuthenticated$ | async) && !isSubscribed" style="color:red; cursor: pointer;" (click)="signUp()" class="sub-expired">Your subscription has expired!</label>
@@ -31,11 +31,11 @@
 
           <div *ngIf="isSmallScreen" class="account smallScreen vertical-layout align-left">
             <mat-select *ngIf="auth.isAuthenticated$ | async as isAuthed; else loggedOut" class="select loggedin" [placeholder]="'logged in as\n' + (auth.displayName$ | async)" [panelClass]="'dropdown-panel'">
-              <mat-option (click)="onManageSubscription()">Manage Account</mat-option>
-              <mat-option (click)="auth.logout()">Logout</mat-option>
+              <mat-option (click)="onManageSubscription()" psTrackClick [psTrackClickId]="'manage_account'">Manage Account</mat-option>
+              <mat-option (click)="auth.logout()" psTrackClick [psTrackClickId]="'logout'">Logout</mat-option>
             </mat-select>
             <ng-template #loggedOut><mat-select class="select loggedout" [placeholder]="'login or signup'" [panelClass]="'dropdown-panel'">
-              <mat-option (click)="auth.login()">Login</mat-option>
+              <mat-option (click)="auth.login()" psTrackClick [psTrackClickId]="'login'">Login</mat-option>
               <mat-option [routerLink]="'/signup'">Signup</mat-option>
             </mat-select></ng-template>
             <label *ngIf="subscriptionLoaded && (auth.isAuthenticated$ | async) && !isSubscribed" style="color:red; cursor: pointer;" (click)="signUp()" class="sub-expired">Your subscription has expired!</label>

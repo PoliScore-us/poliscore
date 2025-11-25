@@ -17,8 +17,8 @@
           <button class="ps-btn ps-btn-secondary" (click)="auth.login('/legislators')">
             I already have an account
           </button> -->
-          <button class="ps-btn ps-btn-primary" (click)="onSignup()">Join The Movement</button>
-          <button *ngIf="!isLoggedIn" class="ps-btn ps-btn-secondary" (click)="auth.login()">Log in</button>
+          <button class="ps-btn ps-btn-primary" (click)="onSignup()" psTrackClick psTrackClickId="signup">Join The Movement</button>
+          <button *ngIf="!isLoggedIn" class="ps-btn ps-btn-secondary" (click)="auth.login()" psTrackClick psTrackClickId="login">Log in</button>
           <button class="ps-btn ps-btn-secondary" (click)="goHome()">Take Me Home</button>
         </section>
 
@@ -69,7 +69,7 @@
                   <div class="ps-accordion-panel">
                     {{ f.details }}
 
-                    <button *ngIf="f.soon || f.eventually" class="ps-btn ps-btn-secondary want-btn" (click)="onWantFeature(f)">I want this!</button>
+                    <button *ngIf="f.soon || f.eventually" class="ps-btn ps-btn-secondary want-btn" (click)="onWantFeature(f)" psTrackClick psTrackClickId="want_feature">I want this!</button>
                   </div>
                 </details>
               </div>
@@ -96,7 +96,7 @@
                   <div class="ps-accordion-panel">
                     {{ f.details }}
 
-                    <button *ngIf="f.soon || f.eventually" class="ps-btn ps-btn-secondary want-btn" (click)="onWantFeature(f)">I want this!</button>
+                    <button *ngIf="f.soon || f.eventually" class="ps-btn ps-btn-secondary want-btn" (click)="onWantFeature(f)" psTrackClick psTrackClickId="want_feature">I want this!</button>
                   </div>
                 </details>
               </div>

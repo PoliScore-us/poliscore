@@ -11,6 +11,7 @@ import { environment } from '../../environments/environment';
 import { Subscription } from 'rxjs';
 import { EntitlementService } from '../billing/entitlement.service';
 import { LabsService } from '../service/labs.service';
+import { TrackClickDirective } from '../track-click.directive';
 
 type Feature = {
   title: string;
@@ -38,7 +39,7 @@ type Feature = {
 @Component({
   selector: 'app-signup',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TrackClickDirective],
   templateUrl: './signup.component.html',
   styleUrl: './signup.component.scss'
 })
