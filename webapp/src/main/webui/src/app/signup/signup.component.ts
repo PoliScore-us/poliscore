@@ -215,12 +215,17 @@ export class SignupComponent implements OnInit {
       alert(`Thanks for helping us prioritize new features!`);
       this.labs.requestFeature(f.title).subscribe();
     } else {
-      alert(`Log in or sign up to request a feature.`);
+      // alert(`Log in or sign up to request a feature.`);
+      this.dialog.open(LogInDialogComponent);
     }
   }
 
+  showMe() {
+    window.location.href = '/legislators';
+  }
+
   goHome() {
-    window.location.href = '/';
+    window.location.href = '/#how-it-works';
   }
 
   onSignup() {
@@ -245,4 +250,101 @@ export class SignupComponent implements OnInit {
     return this.features.filter(f => f.eventually);
   }
 
+}
+
+@Component({
+  selector: 'not-logged-in-dialog',
+  standalone: true,
+  imports: [CommonModule, MatDialogModule, MatButtonModule],
+  template: `
+    <div class="login-dialog">
+      <h2 mat-dialog-title>Log in to request features</h2>
+
+      <mat-dialog-content>
+        <p class="login-dialog__lead">
+          Create a free account or log in so we can link your feedback to your profile.
+        </p>
+
+        <!-- <div class="login-dialog__highlight">
+          <strong>Why log in?</strong>
+          <ul>
+            <li>Track the status of your feature requests</li>
+            <li>Get notified when we ship something you asked for</li>
+            <li>Help us prioritize what matters most to you</li>
+          </ul>
+        </div> -->
+
+        <div *ngIf="data?.disclaimerComponent" class="login-dialog__disclaimer">
+          <ng-container *ngComponentOutlet="data.disclaimerComponent"></ng-container>
+        </div>
+      </mat-dialog-content>
+
+      <mat-dialog-actions align="end">
+        <button mat-button (click)="onClose()">Not now</button>
+        <button mat-flat-button color="primary" (click)="onLogIn()">
+          Log in / Sign up
+        </button>
+      </mat-dialog-actions>
+    </div>
+  `,
+  styles: [`
+    .login-dialog {
+      max-width: 480px;
+    }
+
+    .login-dialog__lead {
+      margin: 0 0 12px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .login-dialog__highlight {
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: #f3f0ff; /* soft purple-ish */
+      border-left: 4px solid #7b61ff;
+      font-size: 13px;
+    }
+
+    .login-dialog__highlight ul {
+      margin: 6px 0 0;
+      padding-left: 18px;
+    }
+
+    .login-dialog__highlight li {
+      margin-bottom: 4px;
+    }
+
+    .login-dialog__disclaimer {
+      margin-top: 12px;
+      font-size: 11px;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    mat-dialog-content {
+      padding-top: 0;
+      padding-bottom: 8px;
+    }
+
+    mat-dialog-actions {
+      margin-top: 8px;
+      padding-bottom: 4px;
+    }
+  `]
+})
+export class LogInDialogComponent {
+  auth = inject(AuthService);
+
+  constructor(
+    @Inject(MAT_DIALOG_DATA) public data: { large: string; disclaimerComponent: any },
+    public dialogRef: MatDialogRef<LogInDialogComponent>
+  ) {}
+
+  onLogIn(): void {
+    this.auth.login();
+  }
+
+  onClose(): void {
+    this.dialogRef.close();
+  }
 }

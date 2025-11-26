@@ -238,7 +238,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	    }
 
 	    String userPrompt = sb.toString();
-	    String response = openai.chat(BIRTHDAY_LOOKUP_SYSTEM_PROMPT, userPrompt, OpenAIModel.o3DeepResearch);
+	    String response = openai.chat(BIRTHDAY_LOOKUP_SYSTEM_PROMPT, userPrompt, OpenAIModel.O3_DEEP_RESEARCH);
 
 	    Log.info("OpenAI response:\n" + response);
 
