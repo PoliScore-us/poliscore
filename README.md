@@ -109,7 +109,7 @@ If you use PoliScore or PoliBench in academic work, please cite the project. A s
 
     @misc{rowlands_poliscrore_2025,
       title        = {PoliScore: A Framework and Benchmark Suite for Policy Quality Engineering},
-      author       = {Richard Rowlands},
+      author       = {PoliScore},
       year         = {2025},
       note         = {Working paper},
       howpublished = {\url{<INSERT PROJECT OR PAPER URL HERE>}}
