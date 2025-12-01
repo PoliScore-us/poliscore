@@ -1,38 +1,138 @@
-# poliscore
-
-This is the official codebase which powers https://poliscore.us.
-
-Poliscore is the world's first LLM-powered legislative rating service.
-
-The website is built upon the following technologies and is a fully serverless application:
-
-- Lambda with Quarkus
-- Angular SSG
-- DynamoDB
-- S3
-
-The project is fully open-sourced under MIT license.
+# PoliScore
+*A Framework and Benchmark Suite for Policy Quality Engineering*
 
 
-This repo operates in two separate stages:
+PoliScore is a 🚨**WORK IN PROGRESS**🚨. Much of the published website was NOT generated with these principles in mind (yet). What you're about to read is more of  a roadmap than a description of how the current website works.
 
-1. Database builder
-2. Webapp
 
-In the database builder stage, congressional data is fetched from congress using the open source github library "United States/Congress", also known as USC. This library is run in a sibling directory to the "poliscore" directory. The entrypoint for this database builder process is a shell script called "update.sh" which is at the root of the repo.
+PoliScore is a first-principles framework for evaluating the structural quality of public policy, together with **PoliBench**, a benchmark suite for assessing whether AI systems can reason reliably about legislation.
 
-The update.sh shell script works at a high level as follows:
-1. Update the USC library and fetch data from congress, fetches to a "data" directory inside the USC project
-2. Run the "DatabaseBuilder" Java main class, inside the PoliScore project, which is the entrypoint for the PoliScore database builder routine. This routine is primarily responsible for "interpreting" bills, legislators, and political parties, by way of communicating with a remote Open AI service. The results of these interpretations are stored on S3. Bill and Legislator objects (with their inner "interpretation"s) are also built and deployed to DynamoDb, which serves as the primary webapp database. The S3 objects are primarily used for archival (and blue/green database syncing).
-3. Produce webapp artifacts (like a site map) and then kick off the angular SSG (static site generation) process which builds the PoliScore front-end and then deploys the compiled front-end to S3.
-4. A developer then manually checks the deployment, makes sure its good to go, and then runs ./switch-deployment.sh to make the changes live with a "blue / green" deployment paradigm.
+The core idea is to treat policy evaluation as an engineering discipline: **policy quality engineering**. Instead of asking whether a policy aligns with a particular ideology, PoliScore asks whether a piece of legislation is well-designed, feasible, fair, and institutionally sound according to transparent, non-partisan criteria.
 
-This repo tracks and/or manages the following distinct datasets:
-1. "Bill status" data. A bill status gives a high level overview of a bill, and includes information like the bill name, description, the current status, any actions, the sponsors and cosponsors.
-2. "Bill Text" data. This data includes the full text of the bill. For congressional data, this data is typically scraped in a custom XML format, with a specific bill XSD. This allows for front-end customizations of the rendering of bill text.
-3. Legislator data. This dataset is fetched directly from the USC 'legislators' Github Pages deployment (https://github.com/unitedstates/congress-legislators). At the moment it's downloaded and version controlled at "databuilder/src/main/resources/legislators-*.json"
-4. Roll call data. Roll call data includes information about votes and other procedural "roll call" events within congress. For our purposes only official bill pass events votes are tracked and recorded, the rest are ignored. This dataset is fetched using USC scrapers, and ultimately comes from two different sources: the House, or the Senate. Both of these two sources have slightly different quirks in the way their data is represeneted: for example, in the Senate dataset the legislators are referred to by their LIS id, instead of the more standard "Bio Guide Id".
+---
 
-The PoliScore representation of these datasets, i.e. "Bill.java" and "Legislator.java", contain a "LegislativeNamespace" concept, which allows for support of additional "namespaces" for the data. When building ids for these objects, the LegislativeNamespace portion contributes the first "us/congress" part of their id, and the rest of the object id follows. This allows for support for additional datasets, for example "us/colorado", which could be used to store state level data.
+## ✳️ Overview
 
-This repo contains a unique "ObjectStorageServiceIF" which operates on "Persistable". This allows for a somewhat unified object persistance API where storage mechanisms are interwoven to create composite combinations such as the "LocalCachedS3Service", which utilizes the "LocalFilePersistanceService" to store local copies of objects fetched from the "S3PersistenceService".
+PoliScore evaluates legislation along seven core dimensions of policy quality:
+
+1. **Problem Clarity \& Causal Validity**  
+   Does the bill clearly define the problem and target the relevant causal mechanisms?
+
+2. **Evidence Base \& Empirical Support**  
+   Is the intervention grounded in empirical research, historical precedent, or credible comparative data?
+
+3. **Implementation Feasibility**  
+   Can existing institutions realistically execute the mandates with available resources, logistics, and time?
+
+4. **Economic Efficiency \& Fiscal Sustainability**  
+   Are resources used responsibly, with sustainable funding and acceptable economic distortions?
+
+5. **Distributional Impact \& Fairness**  
+   How are benefits and burdens distributed across groups, and are any imbalances defensible?
+
+6. **Governance Integrity \& Institutional Risk**  
+   Does the policy maintain transparency, accountability, and resilience while minimizing opportunities for abuse?
+
+7. **Unintended Consequences \& Systemic Risk**  
+   Does the bill introduce fragility, perverse incentives, or cascading systemic risks?
+
+These dimensions are derived from work in political philosophy, welfare economics, institutional theory, governance studies, and systems thinking.
+
+---
+
+## 📊 PoliBench: Benchmarking AI Policy Reasoning
+
+**PoliBench** operationalizes the PoliScore framework into a set of evaluation tasks for AI models. It focuses on whether a model can:
+
+- Identify unclear or mis-specified policy problems  
+- Detect infeasible mandates and administrative overload  
+- Recognize governance risks (e.g., concentrated power, weak oversight)  
+- Reason about distributional effects and burden shifting  
+- Anticipate unintended consequences and system-level fragility  
+
+PoliBench is:
+
+- **Model-agnostic** – any LLM or policy analysis system can be evaluated against it  
+- **Dimension-aligned** – tasks are grouped by the seven PoliScore pillars  
+- **Reproducible** – designed so that results can be compared across models and over time  
+
+---
+
+## 📄 Whitepaper
+
+The full theoretical and methodological description of PoliScore and PoliBench is available in the whitepaper.
+
+- PDF: <https://raw.githubusercontent.com/PoliScore-us/PoliBench/main/whitepaper.pdf>
+
+The paper includes:
+
+- A first-principles justification for the seven dimensions  
+- Formal definitions of each pillar  
+- The design of PoliBench and example tasks  
+- The scoring and aggregation methodology  
+- Comparisons with existing institutions (CBO, think tanks, academic policy analysis, etc.)  
+- Limitations, risks, and ethical considerations  
+- Discussion of web-search integration and evidence retrieval  
+
+---
+
+## 🔍 Use Cases
+
+PoliScore and PoliBench are intended for:
+
+- **Researchers** – studying AI’s ability to reason about law, policy, and governance  
+- **Model developers** – stress-testing advanced language models on policy-specific reasoning  
+- **Policy analysts and think tanks** – adding structured, non-partisan diagnostics to existing workflows  
+- **Civic technology projects** – helping voters and journalists understand the structural quality of legislation  
+- **Educators** – teaching policy design, institutional analysis, and AI evaluation  
+
+---
+
+## 🧪 Example Workflow (Conceptual)
+
+A typical PoliScore-based workflow might look like:
+
+1. Ingest a bill or legislative proposal.  
+2. Segment it into sections, mandates, definitions, and appropriations.  
+3. For each PoliScore dimension, run a structured analysis prompt or evaluation module.  
+4. Generate per-dimension scores (0–100) plus textual explanations.  
+5. Aggregate into a composite PoliScore, with clear caveats and limitations.  
+6. Provide a human-readable report highlighting strengths, weaknesses, and cross-dimension interactions.
+
+PoliBench can then be used to benchmark and calibrate the AI models used in steps 3–5.
+
+---
+
+## 📚 Citation
+
+If you use PoliScore or PoliBench in academic work, please cite the project. A simple placeholder BibTeX entry (update details as appropriate):
+
+    @misc{rowlands_poliscrore_2025,
+      title        = {PoliScore: A Framework and Benchmark Suite for Policy Quality Engineering},
+      author       = {Richard Rowlands},
+      year         = {2025},
+      note         = {Working paper},
+      howpublished = {\url{<INSERT PROJECT OR PAPER URL HERE>}}
+    }
+
+---
+
+## 🤝 Contributing and Collaboration
+
+PoliScore is intended as a living framework. Useful forms of collaboration include:
+
+- Proposing refinements to the seven dimensions or their operational definitions  
+- Contributing additional benchmark tasks or evaluation scenarios  
+- Applying PoliScore to real-world legislation and publishing case studies  
+- Exploring domain-specific extensions (e.g., health policy, tax policy, climate policy)  
+- Investigating bias, robustness, and model behavior on PoliBench tasks  
+
+If you are interested in collaborating, open an issue or reach out to the author.
+
+---
+
+## 🛡️ Disclaimer
+
+PoliScore and PoliBench are tools for **structured analysis**, not for replacing democratic deliberation, expert judgment, or public debate. All evaluations should be interpreted as informative inputs, not as final or authoritative judgments about the merits of any particular policy or legislator.
+
+---

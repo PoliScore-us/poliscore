@@ -5,11 +5,12 @@ import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angu
 import { ConfigService } from '../config.service';
 import { Meta, Title } from '@angular/platform-browser';
 import { RouterModule } from '@angular/router';
+import { TrackClickDirective } from '../track-click.directive';
 
 @Component({
   selector: 'app-promo',
   standalone: true,
-  imports: [RouterModule, CommonModule, MatDialogModule],
+  imports: [RouterModule, CommonModule, MatDialogModule, TrackClickDirective],
   templateUrl: './promo.component.html',
   styleUrl: './promo.component.scss'
 })
