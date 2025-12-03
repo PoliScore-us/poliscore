@@ -107,7 +107,7 @@ PoliBench can then be used to benchmark and calibrate the AI models used in step
 
 If you use PoliScore or PoliBench in academic work, please cite the project. A simple placeholder BibTeX entry (update details as appropriate):
 
-    @misc{rowlands_poliscrore_2025,
+    @misc{poliscrore_2025,
       title        = {PoliScore: A Framework and Benchmark Suite for Policy Quality Engineering},
       author       = {PoliScore},
       year         = {2025},

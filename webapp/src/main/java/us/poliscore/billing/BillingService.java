@@ -87,6 +87,7 @@ public class BillingService {
 				.setCustomer(customerId)
 				.addLineItem(SessionCreateParams.LineItem.builder().setPrice(priceId).setQuantity(1L).build())
 				.setClientReferenceId(userId).putMetadata("app_user_id", userId)
+				.setAllowPromotionCodes(true)
 				.setSubscriptionData(
 						SessionCreateParams.SubscriptionData.builder().putMetadata("userId", userId).build())
 				.setSuccessUrl(Objects.requireNonNull(successUrl) + "?session_id={CHECKOUT_SESSION_ID}").setCancelUrl(Objects.requireNonNull(cancelUrl)).build();
