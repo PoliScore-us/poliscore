@@ -63,7 +63,7 @@
       <section class="spotlight" id="motivations">
         <div class="image">
           <a [routerLink]="'/about'" fragment="motivations">
-            <img [src]="assetPrefix + 'images/roadmap.png'" alt="A robot conquering a mountain" />
+            <img [src]="assetPrefix + 'images/poliscore2.png'" alt="poliscore bill analysis" />
           </a>
         </div>
         <div class="content">
@@ -76,14 +76,14 @@
           </p>
 
           <p>
-            PoliScore exists for people doing that kind of work. For every bill we cover, we ask AI to read the full text, pull in relevant research and media, and then produce a structured impact analysis: what changes in law, who pays the price, where the risks are, and how it lines up with public and scientific consensus. It’s not a replacement for your judgment — it’s a starting point that saves hours of reading and gives you something concrete to push back against.
-          </p>
-
-          <p>
             For journalists, PoliScore provides a <em>citable, traceable source</em> for AI generated outputs.
             Every analysis is timestamped, tied to a specific model version, and stored so it can be reproduced or audited.
             That means you can reference AI-assisted insights in your reporting with confidence: transparent,
             verifiable, and grounded in a workflow you can hold accountable.
+          </p>
+
+          <p>
+            PoliScore exists for people doing that kind of work. For every bill we cover, we ask AI to read the full text, pull in relevant research and media, and then produce a structured impact analysis: what changes in law, who pays the price, where the risks are, and how it lines up with public and scientific consensus. It’s not a replacement for your judgment — it’s a starting point that saves hours of reading and gives you something concrete to push back against.
           </p>
 
           <p>
@@ -96,7 +96,7 @@
       <section class="spotlight" id="how-it-works">
         <div class="image">
           <a [routerLink]="'/about'" fragment="how-it-works">
-            <img [src]="assetPrefix + 'images/poliscore2.png'" alt="A robot speaking to a crowd" />
+            <img [src]="assetPrefix + 'images/roadmap.png'" alt="A robot conquering a mountain" />
           </a>
         </div>
         <div class="content">
@@ -122,6 +122,9 @@
           <p>
             Under the hood, the math is simple and auditable: open prompts, open source code, and transparent aggregation logic. If you want to stress-test the methodology, you can — that’s the point.
           </p>
+
+          <p>Detailed specifics can be found in our whitepaper:</p>
+          <button class="button primary icon solid" psTrackClick="read-whitepaper"><a href="https://raw.githubusercontent.com/poliscore-us/poliscore/main/doc/whitepaper.pdf" class="unstyled"><span style="margin-left: 10px;">Read Whitepaper<i class="icon solid fa-solid fa-file-alt" style="margin-left: 20px; margin-bottom:-6px; display:inline-block;"></i></span></a></button>
         </div>
       </section>
 
