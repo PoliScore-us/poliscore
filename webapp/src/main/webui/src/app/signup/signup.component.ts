@@ -45,7 +45,7 @@ type Feature = {
 })
 export class SignupComponent implements OnInit {
   @Input() headline = 'Become A Founding Member';
-  @Input() headlineDescriptor = 'Join now and support our vision to use AI to hold politicians accountable. Gain exclusive access to our core analytics features: advanced bill analysis, source references, full AI reasoning, and more. Get grandfathered into a $5/month plan for life, even as we continue to add more premium content.';
+  @Input() headlineDescriptor = 'Join a growing community of policy professionals using AI to strengthen democratic accountability. Founding Members unlock premium tools for analyzing bills, understanding real-world impact, tracking legislative changes, and surfacing high-quality sources—all designed to empower advocacy groups, researchers, and legislative staff. Enroll now to be grandfathered into a $5/month plan for life as we continue expanding advanced policy-analysis features.';
 
   @Input() signupRouterLink: string | any[] = '/signup';
   @Input() loginRouterLink: string | any[] = '/login';

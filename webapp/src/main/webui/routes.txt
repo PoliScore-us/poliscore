@@ -501,6 +501,7 @@
 /legislator/O000176
 /legislator/W000831
 /legislator/G000589
+/legislator/V000139
 /legislator/R000610
 /legislator/R000617
 /legislator/S001215
