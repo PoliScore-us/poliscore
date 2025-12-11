@@ -62,7 +62,7 @@ PoliBench is:
 
 The full theoretical and methodological description of PoliScore and PoliBench is available in the whitepaper.
 
-- PDF: <https://raw.githubusercontent.com/PoliScore-us/PoliBench/main/whitepaper.pdf>
+- PDF: <https://raw.githubusercontent.com/poliscore-us/poliscore/main/doc/whitepaper.pdf>
 
 The paper includes:
 
