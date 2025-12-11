@@ -33,23 +33,38 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 public class BillInterpretationService {
 	
 	public static final String statsPromptTemplate = """
-			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, producing an impact analysis which evaluates whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Impact:') in your response. Do not include the section instructions in your response. Do not ever use 'I' language (as in, I reached this conclusion because...).
+			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, performing an impact analysis which evaluates whether or not the following bill is predicted to produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Impact:') in your response. Do not include the section instructions in your response. Do not ever use 'I' language (as in, I reached this conclusion because...).
 			
 			{searchModelInstructions1}
 
-			Reasoning Steps:
-			This is your first section, and it includes several steps. You are to fill out each step in your response, thinking carefully at each step. By the end of this reasoning section, you will have developed a more informed and accurate analysis which you will use to fill out the final analysis sections.
+			Structural Analysis:
+			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
 			
-			Step 1: Initial take - Read through the bill text and write a short summary here. Analyze the mechanisms by which the bill attempts to achieve those goals. What do you think the expected outcome will be, purely based on reading the text alone? Does it make sense at a high level? Are there any glaring problems?
-			Step 2: Gather references - Find similar laws that might already be on the books, identify overlap, contradictions, precedent or other legal context for the bill. Identify public resources - identify relevant scientific papers (if any), expert opinions, and any existing analysis or reports which might be relevant, including budgetary analysis (CBO).
-			Step 3: Identify a narrative - Apply the narratives taken from legal, media and other expert opinion to the bill. Does it align with your initial take? Do any of these media organizations exhibit any bias? Can you identify an overarching narrative about the bill which seems to be true, accounting for all the evidence you now have? 
-			Step 4: Budgetary concerns - Is the bill a good use of taxpayer dollars? How much might it cost over the short term? And the long term? Will the taxpayers experience a "net win", gaining more in services than they spend on the service(s)?
-			Step 5: Identify winners and losers - Is the bill good for some people and bad for others? Who do you think might be behind the bill?
-			Step 6: Estimate confidence and identify unknown - List any uncertainties in your analysis, questions or unknowns you might have which might change the outcome of your analysis.
-			{searchModelStep}
+			1. Problem Clarity & Causal Validity:
+			Does the policy accurately diagnose the underlying issue and target the relevant causal mech-
+			anisms? <PASS / FAIL>
+			2. Evidence Base & Empirical Support:
+			Is the proposed intervention supported by empirical research, historical precedent, or mean-
+			ingful comparative data? <PASS / FAIL>
+			3. Implementation Feasibility: <PASS / FAIL>
+			Can existing institutions realistically execute the policy given resource, logistical, adminis-
+			trative, and temporal constraints?
+			4. Economic Efficiency & Fiscal Sustainability:
+			Does the policy use resources responsibly, minimize waste, and avoid unsustainable long-
+			term obligations? <PASS / FAIL>
+			12
+			5. Distributional Impact & Fairness:
+			How are benefits and burdens distributed across populations, and does the policy unjustifi-
+			ably disadvantage certain groups? <PASS / FAIL>
+			6. Governance Integrity & Institutional Risk:
+			Does the policy maintain transparency, accountability, and resilience while minimizing op-
+			portunities for corruption or abuse? <PASS / FAIL>
+			7. Unintended Consequences & Systemic Risk:
+			Does the policy introduce fragility, perverse incentives, or cascading failures that undermine
+			the intended outcomes? <PASS / FAIL>
 
 			Impact:
-			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. There is an important distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that it will have none. Use N/A if the goals of the bill do not align at all with the policy area. Respond with only the integer and an optional sign, no commentary or units.
+			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. If the bill got a FAIL on any of the pillars of the structural analysis, the bill must be given a negative "Overall Impact to Society" score in this section. There is an important distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that it will have none. Use N/A if the goals of the bill do not align at all with the policy area. Respond with only the integer and an optional sign, no commentary or units.
 			
 			{issuesList}
 			
@@ -60,13 +75,13 @@ public class BillInterpretationService {
 			Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very concise title for the bill based on its content. If the bill has a title, but it is confusing, vague, too long, or would otherwise be poorly understood by the general public, please make up a very concise title for the bill based on its content.
 			
 			Short Report:
-			Your audience is general public voters, written at the high-school education level. A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
+			Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
 			
 			Long Report:
 			Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving your opinion on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are referenced, which are not common knowledge, please define them.  Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
 			
 			Casual Report:
-			Your audience is general public voters, written at the high-school education level. Your primary goal here is to take the insights from the long report and make them available for your average person. Begin by explaining the high level goals of the bill and a high level summary of how it attempts to achieve those goals. Then, explain all the essential logic required to understand your predicted impact to society, including any research, expert opinions, societal wisdom and/or any competing concerns which may exist. Conclude with your findings on the impact the bill will have on society. Should be between one and three paragraphs long, depending on the complexity of the bill and the topics it covers (controversial topics require more evidence to support your conclusions). Do not use ancronyms, such as GPO, CBO, etc. If you must use them, they must be defined. You may link to sources using markdown link syntax, where relevant. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
+			Your audience is the general public, written at the high-school education level. Your primary goal here is to take the insights from the long report and make them available for your average person. Begin by explaining the high level goals of the bill and a high level summary of how it attempts to achieve those goals. Then, explain all the essential logic required to understand your predicted impact to society, including any research, expert opinions, societal wisdom and/or any competing concerns which may exist. Conclude with your findings on the impact the bill will have on society. Should be between one and three paragraphs long, depending on the complexity of the bill and the topics it covers (controversial topics require more evidence to support your conclusions). Do not use ancronyms, such as GPO, CBO, etc. If you must use them, they must be defined. You may link to sources using markdown link syntax, where relevant. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
 
 			Confidence:
 			A self-rated integer from 0 to 100 measuring how confident you are that your analysis was valid and interpreted correctly.
@@ -77,18 +92,34 @@ public class BillInterpretationService {
 	public static final String slicePromptTemplate = """
 			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Impact:') in your response. Do not include the section instructions in your response. Do not ever use 'I' language (as in, I reached this conclusion because...).
 
-			Reasoning Steps:
-			This is your first section, and it includes several steps. You are to fill out each step in your response, thinking carefully at each step. By the end of this reasoning section, you will have developed a more informed and accurate analysis which you will use to fill out the final analysis sections.
+			Structural Analysis:
+			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
 			
-			Step 1: Initial take - Read through the bill text and write a short summary here. Analyze the mechanisms by which the bill attempts to achieve those goals. What do you think the expected outcome will be, purely based on reading the text alone? Does it make sense at a high level? Are there any glaring problems?
-			Step 2: Gather references - Find similar laws that might already be on the books, identify overlap or legal context to the bill. Identify public resources - identify relevant scientific papers (if any), expert opinions, and any existing analysis or reports which might be relevant, including budgetary analysis (CBO).
-			Step 3: Identify a narrative - Apply the narratives taken from legal, media and other expert opinion to the bill. Does it align with your initial take? Do any of these media organizations exhibit any bias? Can you identify an overarching narrative about the bill which seems to be true, accounting for all the evidence you now have? 
-			Step 4: Budgetary concerns - Is the bill a good use of taxpayer dollars? How much might it cost over the short term? And the long term? Will the taxpayers experience a "net win", gaining more in services than they spend on the service(s)?
-			Step 5: Identify winners and losers - Is the bill good for some people and bad for others? Who do you think might be behind the bill?
-			Step 6: Estimate confidence and identify unknown - List any uncertainties in your analysis, questions or unknowns you might have which might change the outcome of your analysis.
+			1. Problem Clarity & Causal Validity:
+			Does the policy accurately diagnose the underlying issue and target the relevant causal mech-
+			anisms? <PASS / FAIL>
+			2. Evidence Base & Empirical Support:
+			Is the proposed intervention supported by empirical research, historical precedent, or mean-
+			ingful comparative data? <PASS / FAIL>
+			3. Implementation Feasibility: <PASS / FAIL>
+			Can existing institutions realistically execute the policy given resource, logistical, adminis-
+			trative, and temporal constraints?
+			4. Economic Efficiency & Fiscal Sustainability:
+			Does the policy use resources responsibly, minimize waste, and avoid unsustainable long-
+			term obligations? <PASS / FAIL>
+			12
+			5. Distributional Impact & Fairness:
+			How are benefits and burdens distributed across populations, and does the policy unjustifi-
+			ably disadvantage certain groups? <PASS / FAIL>
+			6. Governance Integrity & Institutional Risk:
+			Does the policy maintain transparency, accountability, and resilience while minimizing op-
+			portunities for corruption or abuse? <PASS / FAIL>
+			7. Unintended Consequences & Systemic Risk:
+			Does the policy introduce fragility, perverse incentives, or cascading failures that undermine
+			the intended outcomes? <PASS / FAIL>
 			
 			Impact:
-			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. There is an important distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that it will have none. Use N/A if the goals of the bill do not align at all with the policy area. Respond with only the integer and an optional sign, no commentary or units.
+			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. If the bill got a FAIL on any of the pillars of the structural analysis, the bill must be given a negative "Overall Impact to Society" score in this section. There is an important distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that it will have none. Use N/A if the goals of the bill do not align at all with the policy area. Respond with only the integer and an optional sign, no commentary or units.
 			
 			{issuesList}
 			
@@ -106,16 +137,31 @@ public class BillInterpretationService {
 			
 			{searchModelInstructions1}
 			
-			Reasoning Steps:
-			This is your first section, and it includes several steps. You are to fill out each step in your response, thinking carefully at each step. By the end of this reasoning section, you will have developed a more informed and accurate analysis which you will use to fill out the final analysis sections.
+			Structural Analysis:
+			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
 			
-			Step 1: Initial take - Read through the bill text and write a short summary here. Analyze the mechanisms by which the bill attempts to achieve those goals. What do you think the expected outcome will be, purely based on reading the text alone? Does it make sense at a high level? Are there any glaring problems?
-			Step 2: Gather references - Find similar laws that might already be on the books, identify overlap or legal context to the bill. Identify public resources - identify relevant scientific papers (if any), expert opinions, and any existing analysis or reports which might be relevant, including budgetary analysis (CBO).
-			Step 3: Identify a narrative - Apply the narratives taken from legal, media and other expert opinion to the bill. Does it align with your initial take? Do any of these media organizations exhibit any bias? Can you identify an overarching narrative about the bill which seems to be true, accounting for all the evidence you now have? 
-			Step 4: Budgetary concerns - Is the bill a good use of taxpayer dollars? How much might it cost over the short term? And the long term? Will the taxpayers experience a "net win", gaining more in services than they spend on the service(s)?
-			Step 5: Identify winners and losers - Is the bill good for some people and bad for others? Who do you think might be behind the bill?
-			Step 6: Estimate confidence and identify unknown - List any uncertainties in your analysis, questions or unknowns you might have which might change the outcome of your analysis.
-			{searchModelStep}
+			1. Problem Clarity & Causal Validity:
+			Does the policy accurately diagnose the underlying issue and target the relevant causal mech-
+			anisms? <PASS / FAIL>
+			2. Evidence Base & Empirical Support:
+			Is the proposed intervention supported by empirical research, historical precedent, or mean-
+			ingful comparative data? <PASS / FAIL>
+			3. Implementation Feasibility: <PASS / FAIL>
+			Can existing institutions realistically execute the policy given resource, logistical, adminis-
+			trative, and temporal constraints?
+			4. Economic Efficiency & Fiscal Sustainability:
+			Does the policy use resources responsibly, minimize waste, and avoid unsustainable long-
+			term obligations? <PASS / FAIL>
+			12
+			5. Distributional Impact & Fairness:
+			How are benefits and burdens distributed across populations, and does the policy unjustifi-
+			ably disadvantage certain groups? <PASS / FAIL>
+			6. Governance Integrity & Institutional Risk:
+			Does the policy maintain transparency, accountability, and resilience while minimizing op-
+			portunities for corruption or abuse? <PASS / FAIL>
+			7. Unintended Consequences & Systemic Risk:
+			Does the policy introduce fragility, perverse incentives, or cascading failures that undermine
+			the intended outcomes? <PASS / FAIL>
 			
 			Rating:
 			Write a single integer, from -100 to 100, which represents how strongly you think the legislation should be passed, with -100 being it definitely should NOT be passed and 100 being it definitely SHOULD be passed. This rating should directly translate to a grade for the bill, as per the following grading rubric (where r is the rating): A: r >= 60, B: 60 < r >= 40, C: 40 < r >= 20, D: 20 < r >= 0, F: r < 0. If the impact to society is negative, then so too should the rating score - naturally you wouldn't recommend voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
@@ -124,13 +170,13 @@ public class BillInterpretationService {
 			Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very short title for the bill based on its content.
 			
 			Short Report:
-			Your audience is general public voters, written at the high-school education level. A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
+			Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
 			
 			Long Report:
 			Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving your opinion on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are referenced, which are not common knowledge, please define them.  Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
 			
 			Casual Report:
-			Your audience is general public voters, written at the high-school education level. Your primary goal here is to take the insights from the long report and make them available for your average person. Begin by explaining the high level goals of the bill and a high level summary of how it attempts to achieve those goals. Then, explain all the essential logic required to understand your predicted impact to society, including any research, expert opinions, societal wisdom and/or any competing concerns which may exist. Conclude with your findings on the impact the bill will have on society. Should be between one and three paragraphs long, depending on the complexity of the bill and the topics it covers (controversial topics require more evidence to support your conclusions). Do not use ancronyms, such as GPO, CBO, etc. If you must use them, they must be defined. You may link to sources using markdown link syntax, where relevant. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
+			Your audience is the general public, written at the high-school education level. Your primary goal here is to take the insights from the long report and make them available for your average person. Begin by explaining the high level goals of the bill and a high level summary of how it attempts to achieve those goals. Then, explain all the essential logic required to understand your predicted impact to society, including any research, expert opinions, societal wisdom and/or any competing concerns which may exist. Conclude with your findings on the impact the bill will have on society. Should be between one and three paragraphs long, depending on the complexity of the bill and the topics it covers (controversial topics require more evidence to support your conclusions). Do not use ancronyms, such as GPO, CBO, etc. If you must use them, they must be defined. You may link to sources using markdown link syntax, where relevant. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
 			
 			Confidence:
 			A self-rated integer from 0 to 100 measuring how confident you are that your analysis was valid and interpreted correctly.
@@ -146,9 +192,22 @@ public class BillInterpretationService {
     	slicePrompt = slicePromptTemplate.replaceFirst("\\{issuesList\\}", issues);
 	}
 	
-	public static final String SEARCH_MODEL_INSTRUCTIONS1 = " Some initial web searches may or may not have been done for you and may be included with the bill text in a 'References' section. Feel free to perform your own additional web searches during this process to gain additional context or information such as reasoning from the bill sponsor(s) or budgetary information which may not be apparent from the bill text. If you do find useful information, make sure to reference the source in the long report using markdown link syntax (in addition to placing it in the references at the bottom).";
+	public static final String SEARCH_MODEL_INSTRUCTIONS1 = """
+Supplemental Web Search:
+This is your first section, and your goal is to query the web and gather additional supplemental information, which may or may not exist. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the step number, name and a colon, exactly as written here, followed by your search results.
+
+1. Advocate / Sponsor Reasoning:
+Gather any information which may have been published on the web from the bill's sponsor or likely advocates. We're looking here for rationale which might explain their goals and reasoning process.
+2. Opposition Reasoning:
+Gather any information which may have been published on the web from the bill's opposition. We're looking here for rationale which might explain their goals and reasoning process.
+3. CBO Report:
+Search to see if a CBO report has been published on this bill. If one is found, write the findings here.
+4. Media Analysis:
+Search for existing analysis which may have been published by a news organization. Be careful to avoid introducing partisan bais into the analysis in this process.
+5. Identify Broader Context:
+Attempt to identify the broader context in which this bill exists, and any larger strategy or context it may be a part of. For example sometimes a bill can be a response to sub-optimal choices made elsewhere.
+			""";
 	public static final String SEARCH_MODEL_INSTRUCTIONS2 = " Where appropriate, please cite references from your search inside the report. References can be cited using markdown link syntax: [explanation text here](http://example.com)";
-	public static final String SEARCH_MODEL_STEP = "Step 7: Perform a web search to gather more information and answer any questions you might have.";
 	public static final String SEARCH_REFERENCES = "Search References:\nA single line JSON array payload which contains machine readable data about all the references used in your analysis. Each reference shall be represented by a JSON array with the following string fields: [\"https://example.org/full/url/here\", \"author\", \"title\", \"sentiment as an integer from -100 to 100\", \"sentiment text: a textual representation of the sentiment. Could be N/A, Mixed, Neutral, Positive, Negative, etc.\", \"summary\", \"long summary\",  \"reference type, one of : STAKEHOLDER | BUDGETARY | NEWS | ACADEMIC | LEGAL | GOVERNMENT | OTHER\"]\n"
 			+ "The long summary field must contain any and all critical information from the article which you used in your analysis, such that the analysis could be repeated in the future with only this information. Here is an example of a single cited reference (you may have more than one): [[\"https://pmc.ncbi.nlm.nih.gov/articles/PMC9677302/\", \"Sajjad et al., Canadian Journal of Kidney Health and Disease, 2022\", \"Motivators and Barriers to Living Donor Kidney Transplant as Perceived by Past and Potential Donors\", \"0\", \"N/A\", \"Peer-reviewed study citing lack of job security as a significant barrier to living donation.\", \"A large proportion of women and men reported that guaranteed job security (47% women and 38% of men), paid time off (51% of women and 42% of men), reimbursement of lost wages (49% of women and 38% of men), and protections to guarantee no impact on future insurability (62% of women and 52% of men) were significant motivators to donate.\", \"ACADEMIC\"]]";
 	
@@ -184,7 +243,6 @@ public class BillInterpretationService {
 			prompt = prompt.replaceFirst("\\{searchModelInstructions1\\}", SEARCH_MODEL_INSTRUCTIONS1);
 			prompt = prompt.replaceFirst("\\{searchModelInstructions2\\}", SEARCH_MODEL_INSTRUCTIONS2);
 			prompt = prompt.replaceFirst("\\{searchModelInstructions2\\}", SEARCH_MODEL_INSTRUCTIONS2);
-			prompt = prompt.replaceFirst("\\{searchModelStep\\}", SEARCH_MODEL_STEP);
 			prompt = prompt.replaceFirst("\\{searchReferences\\}", SEARCH_REFERENCES);
 		} else {
 			prompt = prompt.replaceFirst("\\{searchModelInstructions1\\}", "");

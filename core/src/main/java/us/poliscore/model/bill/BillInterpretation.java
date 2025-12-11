@@ -3,6 +3,7 @@ package us.poliscore.model.bill;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -16,7 +17,6 @@ import lombok.NonNull;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
 import us.poliscore.model.AIInterpretationMetadata;
@@ -27,7 +27,8 @@ import us.poliscore.model.Persistable;
 import us.poliscore.model.SessionPersistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.AIInterpretationMetadataConverter;
-import us.poliscore.model.legislator.LegislatorInterpretation;
+import us.poliscore.model.dynamodb.StructuralAnalysisPassFailAttributeConverter;
+import us.poliscore.model.dynamodb.StructuralAnalysisExplainAttributeConverter;
 import us.poliscore.model.press.PressInterpretation;
 
 @Data
@@ -75,6 +76,8 @@ public class BillInterpretation extends SessionPersistable
 	
 	protected String reasoning;
 	
+	protected String structuralAnalysisRaw;
+	
 	protected String searchReferences;
 	
 	protected String genBillTitle;
@@ -103,6 +106,12 @@ public class BillInterpretation extends SessionPersistable
 	
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(AIInterpretationMetadataConverter.class)}))
 	protected AIInterpretationMetadata metadata;
+	
+	@Getter(onMethod = @__({ @DynamoDbConvertedBy(StructuralAnalysisPassFailAttributeConverter.class)}))
+	protected Map<StructuralAnalysis, Boolean> structuralAnalysisPassFail;
+	
+	@Getter(onMethod = @__({ @DynamoDbConvertedBy(StructuralAnalysisExplainAttributeConverter.class)}))
+	private Map<StructuralAnalysis, String> structuralAnalysisExplain;
 	
 	public List<PressInterpretation> getPressInterps() {
 		if (pressInterps == null) return new ArrayList<PressInterpretation>();

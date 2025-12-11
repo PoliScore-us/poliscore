@@ -16,7 +16,7 @@
             AI Impact Analysis for Everyone
           </p>
           <div class="vertical-layout">
-            <ul>
+            <ul [class.smallScreen]="isSmallScreen">
               <li>Deep structural breakdowns of bills</li>
               <li>Comprehensive legislator portfolios</li>
               <li><a href="https://github.com/PoliScore-us/poliscore">Fully open-source &amp; independent</a></li>
@@ -72,7 +72,7 @@
           </h3>
 
           <p>
-            If you're working at a non-profit, in a newsroom, or inside a legislative office, you don’t need another shallow “AI summary.” You need to know what this bill <em>actually does</em>, who it helps, who it harms, and how it fits into the broader policy landscape — and you often need it under deadline.
+            AI's strengths are aggregation, summaries, and translation. This makes it a natural fit for politics — a world where seeing the truth through all the noise gets harder everyday. Most people don't want to read through dense legal text — they just want to know what the legislation is actually going to do, and if its going to hurt to help them. PoliScore helps you to see through the noise, and it turns dense legal text into an easy to understand impact report, made for the general public.
           </p>
 
           <p>
@@ -83,11 +83,7 @@
           </p>
 
           <p>
-            PoliScore exists for people doing that kind of work. For every bill we cover, we ask AI to read the full text, pull in relevant research and media, and then produce a structured impact analysis: what changes in law, who pays the price, where the risks are, and how it lines up with public and scientific consensus. It’s not a replacement for your judgment — it’s a starting point that saves hours of reading and gives you something concrete to push back against.
-          </p>
-
-          <p>
-            PoliScore is an independent, open-source project. There is no corporate client, no political donor, and no growth team driving the roadmap. The goal is simple: make it easier for the people already trying to make the world better to see through the noise and focus on whats actually happening in our government.
+            PoliScore is an independent, open-source project. The goal is simple: make it easier for the people already trying to make the world better to see through the noise and focus on whats actually happening in our government.
           </p>
         </div>
       </section>
@@ -122,9 +118,6 @@
           <p>
             Under the hood, the math is simple and auditable: open prompts, open source code, and transparent aggregation logic. If you want to stress-test the methodology, you can — that’s the point.
           </p>
-
-          <p>Detailed specifics can be found in our whitepaper:</p>
-          <button class="button primary icon solid" psTrackClick="read-whitepaper"><a href="https://raw.githubusercontent.com/poliscore-us/poliscore/main/doc/whitepaper.pdf" class="unstyled"><span style="margin-left: 10px;">Read Whitepaper<i class="icon solid fa-solid fa-file-alt" style="margin-left: 20px; margin-bottom:-6px; display:inline-block;"></i></span></a></button>
         </div>
       </section>
 
@@ -229,21 +222,97 @@
 
       <section class="spotlight" id="bill-scoring">
         <div class="image">
-                        <a [routerLink]="'/about'" fragment="bill-scoring"><img [src]="assetPrefix + 'images/bill-scoring-details.png'" alt="Political dashboard" /></a>
-                    </div>
+          <a [routerLink]="'/about'" fragment="bill-scoring">
+            <img [src]="assetPrefix + 'images/bill-scoring-details.png'" alt="Political dashboard" />
+          </a>
+        </div>
         <div class="content">
-          <h3 class="content-header"><a [routerLink]="'/about'" fragment="bill-scoring">Specifics on Bill Scoring</a></h3>
+          <h3 class="content-header">
+            <a [routerLink]="'/about'" fragment="bill-scoring">Specifics on Bill Scoring</a>
+          </h3>
 
-          <p>The current data loaded on this website is all bills (excluding SCONRES, HCONRES, HRES, SRES) of the selected US legislative session. Bill status data and legislator data was fetched using the <a href="https://github.com/unitedstates/congress">open source Github USC</a> project. State-level data was fetched (primarily) using our <a href="https://github.com/poliscore-us/legiscan">open-source Legiscan Java integration</a>.</p>
+          <p>
+            The current data loaded on this website is all bills (excluding SCONRES, HCONRES, HRES, SRES) of the selected US legislative session.
+            Bill status data and legislator data was fetched using the
+            <a href="https://github.com/unitedstates/congress">open source Github USC</a> project. State-level data was fetched (primarily)
+            using our <a href="https://github.com/poliscore-us/legiscan">open-source Legiscan Java integration</a>.
+          </p>
 
           <p style="text-indent: 0;">Bill text was split into sections and interpreted using AI with the following prompt:</p>
 
-          <div class="prompt">You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive Overall Impact to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Stats:') in your response. Do not include the section instructions in your response.
+          <div class="prompt">
+            You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, performing an impact
+            analysis which evaluates whether or not the following bill is predicted to produce a positive overall benefit to society. In your
+            response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill
+            it out. Make sure to include the section title (such as, 'Impact:') in your response. Do not include the section instructions in
+            your response. Do not ever use 'I' language (as in, I reached this conclusion because...).
             <br/><br/>
 
-            Stats:<br/>
-            Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant.
-            
+            Supplemental Web Search:<br/>
+            This is your first section, and your goal is to query the web and gather additional supplemental information, which may or may not
+            exist. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the step number,
+            name and a colon, exactly as written here, followed by your search results.
+            <br/><br/>
+            1. Advocate / Sponsor Reasoning:<br/>
+            Gather any information which may have been published on the web from the bill's sponsor or likely advocates. We're looking here for
+            rationale which might explain their goals and reasoning process.
+            <br/><br/>
+            2. Opposition Reasoning:<br/>
+            Gather any information which may have been published on the web from the bill's opposition. We're looking here for rationale which
+            might explain their goals and reasoning process.
+            <br/><br/>
+            3. CBO Report:<br/>
+            Search to see if a CBO report has been published on this bill. If one is found, write the findings here.
+            <br/><br/>
+            4. Media Analysis:<br/>
+            Search for existing analysis which may have been published by a news organization. Be careful to avoid introducing partisan bais
+            into the analysis in this process.
+            <br/><br/>
+            5. Identify Broader Context:<br/>
+            Attempt to identify the broader context in which this bill exists, and any larger strategy or context it may be a part of. For
+            example sometimes a bill can be a response to sub-optimal choices made elsewhere.
+            <br/><br/>
+
+            Structural Analysis:<br/>
+            Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response,
+            thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by
+            your analysis. Conclude each pillar analysis by writing either "&lt;PASS&gt;", or "&lt;FAIL&gt;", denoting that the bill has either passed or
+            failed that pillar of the structural analysis.
+            <br/><br/>
+            1. Problem Clarity &amp; Causal Validity:<br/>
+            Does the policy accurately diagnose the underlying issue and target the relevant causal mechanisms? &lt;PASS / FAIL&gt;
+            <br/><br/>
+            2. Evidence Base &amp; Empirical Support:<br/>
+            Is the proposed intervention supported by empirical research, historical precedent, or meaningful comparative data?
+            &lt;PASS / FAIL&gt;
+            <br/><br/>
+            3. Implementation Feasibility:<br/>
+            Can existing institutions realistically execute the policy given resource, logistical, administrative, and temporal constraints?
+            &lt;PASS / FAIL&gt;
+            <br/><br/>
+            4. Economic Efficiency &amp; Fiscal Sustainability:<br/>
+            Does the policy use resources responsibly, minimize waste, and avoid unsustainable long-term obligations? &lt;PASS / FAIL&gt;
+            <br/><br/>
+            5. Distributional Impact &amp; Fairness:<br/>
+            How are benefits and burdens distributed across populations, and does the policy unjustifiably disadvantage certain groups?
+            &lt;PASS / FAIL&gt;
+            <br/><br/>
+            6. Governance Integrity &amp; Institutional Risk:<br/>
+            Does the policy maintain transparency, accountability, and resilience while minimizing opportunities for corruption or abuse?
+            &lt;PASS / FAIL&gt;
+            <br/><br/>
+            7. Unintended Consequences &amp; Systemic Risk:<br/>
+            Does the policy introduce fragility, perverse incentives, or cascading failures that undermine the intended outcomes?
+            &lt;PASS / FAIL&gt;
+            <br/><br/>
+
+            Impact:<br/>
+            Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful)
+            to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. If the bill got a FAIL on any of the pillars of the
+            structural analysis, the bill must be given a negative "Overall Impact to Society" score in this section. There is an important
+            distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that
+            it will have none. Use N/A if the goals of the bill do not align at all with the policy area. Respond with only the integer and an
+            optional sign, no commentary or units.
             <br/><br/>
             Agriculture and Food: &lt;score or N/A&gt;<br/>
             Education: &lt;score or N/A&gt;<br/>
@@ -261,23 +330,73 @@
             Wildlife and Forest Management: &lt;score or N/A&gt;<br/>
             Public Lands and Natural Resources: &lt;score or N/A&gt;<br/>
             Environmental Management and climate change: &lt;score or N/A&gt;<br/>
-            Overall Impact to society: &lt;score or N/A&gt;<br/>
-            <br/>
+            Overall Impact to society: &lt;score or N/A&gt;
+            <br/><br/>
+
+            Rating:<br/>
+            Write a single integer, from -100 to 100, which represents how strongly you think the legislation should be passed, with -100
+            being it definitely should NOT be passed and 100 being it definitely SHOULD be passed. This rating should directly translate to a
+            grade for the bill, as per the following grading rubric (where r is the rating): A: r &gt;= 60, B: 60 &lt; r &gt;= 40, C: 40 &lt; r &gt;= 20, D:
+            20 &lt; r &gt;= 0, F: r &lt; 0. If the impact to society is negative, then so too should the rating score - naturally you wouldn't recommend
+            voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be
+            of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act
+            (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
+            <br/><br/>
 
             Bill Title:<br/>
-            Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very concise title for the bill based on its content. If the bill has a title, but it is confusing, vague, too long, or would otherwise be poorly understood by the general public, please make up a very concise title for the bill based on its content.
+            Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make
+            up a very concise title for the bill based on its content. If the bill has a title, but it is confusing, vague, too long, or would
+            otherwise be poorly understood by the general public, please make up a very concise title for the bill based on its content.
             <br/><br/>
-            
+
             Short Report:<br/>
-            A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.
+            Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report
+            which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not
+            include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
             <br/><br/>
-            
+
             Long Report:<br/>
-            A detailed, but not repetitive, report of the bill which references concrete, notable and specific text of the bill where possible. Make sure to explain: an overall summary of the bill; the high level goals the bill is attempting to achieve, and how it plans to achieve those goals; the impact to society the bill would have, if enacted. Your audience here is general public layman voters, so if you think they won't understand an acronym or a complex topic, please explain it. Should be between one and five paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. Keep in mind that we're trying to figure out how to spend U.S. taxpayer dollars: budgetary concerns are important. Do not include any formatting text, such as stars or dashes. Do not include non-human readable text such as XML ids.
-                            <br/><br/>
-            
+            Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will
+            explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by
+            giving your opinion on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to
+            explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and
+            identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of
+            the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include
+            the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where
+            relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are
+            referenced, which are not common knowledge, please define them. Do not include any formatting text such as stars or dashes
+            (excluding links). Do not include non-human readable text such as XML ids.Where appropriate, please cite references from your search inside the report. References can be cited using markdown link syntax: [explanation text here](http://example.com)
+            <br/><br/>
+
+            Casual Report:<br/>
+            Your audience is the general public, written at the high-school education level. Your primary goal here is to take the insights
+            from the long report and make them available for your average person. Begin by explaining the high level goals of the bill and a
+            high level summary of how it attempts to achieve those goals. Then, explain all the essential logic required to understand your
+            predicted impact to society, including any research, expert opinions, societal wisdom and/or any competing concerns which may
+            exist. Conclude with your findings on the impact the bill will have on society. Should be between one and three paragraphs long,
+            depending on the complexity of the bill and the topics it covers (controversial topics require more evidence to support your
+            conclusions). Do not use ancronyms, such as GPO, CBO, etc. If you must use them, they must be defined. You may link to sources
+            using markdown link syntax, where relevant. Do not include any formatting text such as stars or dashes (excluding links). Do not
+            include non-human readable text such as XML ids.Where appropriate, please cite references from your search inside the report. References can be cited using markdown link syntax: [explanation text here](http://example.com)
+            <br/><br/>
+
             Confidence:<br/>
-                            A self-rated number from 0 to 100 measuring how confident you are that your analysis was valid and interpreted correctly.
+            A self-rated integer from 0 to 100 measuring how confident you are that your analysis was valid and interpreted correctly.
+            <br/><br/>
+
+            Search References:<br/>
+            A single line JSON array payload which contains machine readable data about all the references used in your analysis. Each reference
+            shall be represented by a JSON array with the following string fields: ["https://example.org/full/url/here", "author", "title",
+            "sentiment as an integer from -100 to 100", "sentiment text: a textual representation of the sentiment. Could be N/A, Mixed,
+            Neutral, Positive, Negative, etc.", "summary", "long summary", "reference type, one of : STAKEHOLDER | BUDGETARY | NEWS | ACADEMIC
+            | LEGAL | GOVERNMENT | OTHER"] The long summary field must contain any and all critical information from the article which you used
+            in your analysis, such that the analysis could be repeated in the future with only this information. Here is an example of a single
+            cited reference (you may have more than one): [["https://pmc.ncbi.nlm.nih.gov/articles/PMC9677302/", "Sajjad et al., Canadian
+            Journal of Kidney Health and Disease, 2022", "Motivators and Barriers to Living Donor Kidney Transplant as Perceived by Past and
+            Potential Donors", "0", "N/A", "Peer-reviewed study citing lack of job security as a significant barrier to living donation.", "A
+            large proportion of women and men reported that guaranteed job security (47% women and 38% of men), paid time off (51% of women and
+            42% of men), reimbursement of lost wages (49% of women and 38% of men), and protections to guarantee no impact on future
+            insurability (62% of women and 52% of men) were significant motivators to donate.", "ACADEMIC"]]
           </div>
         </div>
       </section>

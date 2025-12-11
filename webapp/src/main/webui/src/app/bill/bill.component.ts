@@ -1,13 +1,14 @@
 import { Component, HostListener, inject, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { AppService } from '../app.service';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import convertStateCodeToName, { Bill, BillInterpretation, colorForGrade, getBenefitToSocietyIssue, gradeForQuality, gradeForRating, gradeForStats, issueKeyToLabel, issueKeyToLabelSmall, PressInterpretation } from '../model';
+import convertStateCodeToName, { Bill, BillInterpretation, colorForGrade, getBenefitToSocietyIssue, gradeForQuality, gradeForRating, gradeForStats, issueKeyToLabel, issueKeyToLabelSmall, PressInterpretation, STRUCTURAL_ANALYSIS_KEYS, StructuralAnalysis } from '../model';
 import { MatCardModule } from '@angular/material/card';
 import { MatTabsModule } from '@angular/material/tabs';
 import { CommonModule, isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { HttpClient, HttpHandler } from '@angular/common/http';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Chart, ChartConfiguration, BarController, CategoryScale, LinearScale, BarElement, Tooltip} from 'chart.js'
+import {MatExpansionModule} from '@angular/material/expansion';
 import { Meta, Title } from '@angular/platform-browser';
 import { MatButtonModule } from '@angular/material/button';
 import { ConfigService } from '../config.service';
@@ -34,12 +35,14 @@ Chart.register(BarController, CategoryScale, LinearScale, BarElement, ChartDataL
 @Component({
   selector: 'bill',
   standalone: true,
-  imports: [ExpertPreviewComponent, SubscribeFormComponent, MatTabsModule, MatTooltipModule, MatTableModule, DisclaimerComponent, HeaderComponent, MatCardModule, CommonModule, RouterModule, MatButtonModule],
+  imports: [MatExpansionModule, ExpertPreviewComponent, SubscribeFormComponent, MatTabsModule, MatTooltipModule, MatTableModule, DisclaimerComponent, HeaderComponent, MatCardModule, CommonModule, RouterModule, MatButtonModule],
   providers: [AppService, HttpClient],
   templateUrl: './bill.component.html',
   styleUrl: './bill.component.scss'
 })
 export class BillComponent implements OnInit, OnDestroy {
+
+  public STRUCTURAL_ANALYSIS_KEYS = STRUCTURAL_ANALYSIS_KEYS;
 
   public bill?: Bill;
 
@@ -59,7 +62,41 @@ export class BillComponent implements OnInit, OnDestroy {
 
   private sub?: Subscription;
 
-  isSubscribed: boolean = false;
+  isSubscribed: boolean = true;
+
+  structuralAnalysisTooltip: string = 
+  'The PoliScore structural analysis provides a systematic, non-partisan check on how well a bill is built, ' +
+  'not just what it promises. The seven pillars below operationalize core principles from the PoliScore ' +
+  'framework into practical evaluation dimensions — each philosophically grounded, empirically motivated, ' +
+  'institutionally relevant, computationally assessable, and directly applicable to legislative text. ' +
+  'Taken together, they form a comprehensive rubric for judging whether a policy is likely to maximize ' +
+  'societal benefit while minimizing harm, inefficiency, and unintended consequences.';
+
+  fullPillarLabels: Record<string, string> = {
+    PROBLEM_CLARITY_CAUSAL_VALIDITY: "1. Problem Clarity & Causal Validity",
+    EVIDENCE_BASE_EMPIRICAL_SUPPORT: "2. Evidence Base & Empirical Support",
+    IMPLEMENTATION_FEASIBILITY: "3. Implementation Feasibility",
+    ECONOMIC_EFFICIENCY_FISCAL_SUSTAINABILITY: "4. Economic Efficiency & Fiscal Sustainability",
+    DISTRIBUTIONAL_IMPACT_FAIRNESS: "5. Distributional Impact & Fairness",
+    GOVERNANCE_INTEGRITY_INSTITUTIONAL_RISK: "6. Governance Integrity & Institutional Risk",
+    UNINTENDED_CONSEQUENCES_SYSTEMIC_RISK: "7. Unintended Consequences & Systemic Risk"
+  };
+
+  mobilePillarLabels: Record<string, string> = {
+    PROBLEM_CLARITY_CAUSAL_VALIDITY: "1. Precision",
+    EVIDENCE_BASE_EMPIRICAL_SUPPORT: "2. Evidence",
+    IMPLEMENTATION_FEASIBILITY: "3. Feasibility",
+    ECONOMIC_EFFICIENCY_FISCAL_SUSTAINABILITY: "4. Budget",
+    DISTRIBUTIONAL_IMPACT_FAIRNESS: "5. Fairness",
+    GOVERNANCE_INTEGRITY_INSTITUTIONAL_RISK: "6. Governance",
+    UNINTENDED_CONSEQUENCES_SYSTEMIC_RISK: "7. Risk"
+  };
+
+  structuralExplainFormatted?: {
+    key: StructuralAnalysis;
+    label: string;
+    paragraphs: SafeHtml[];
+  }[];
 
   ent = inject(EntitlementService);
   analytics = inject(AnalyticsService);
@@ -115,7 +152,7 @@ export class BillComponent implements OnInit, OnDestroy {
       this.isSmallScreen = window.innerWidth < 600;
 
     this.sub = this.ent.status$.subscribe(s => {
-      this.isSubscribed = s.isSubscribed && s.isAuthenticated;
+      // this.isSubscribed = s.isSubscribed && s.isAuthenticated;
       this.recalcOverlay();
      });
 
@@ -142,6 +179,30 @@ export class BillComponent implements OnInit, OnDestroy {
       this.buildBarChartData();
       this.formattedExpertReport = this.getFormattedParagraphs(this.bill!.interpretation.longExplain);
       this.formattedLaymansReport = this.getFormattedParagraphs(this.bill!.interpretation.laymansReport);
+
+      const explainMap = this.bill!.interpretation.structuralAnalysisExplain;
+      if (explainMap) {
+        // const useMobileLabels =
+        //   isPlatformBrowser(this._platformId) && window.innerWidth < 600;
+        const useMobileLabels = true;
+
+        this.structuralExplainFormatted = STRUCTURAL_ANALYSIS_KEYS
+          // keep only keys that actually exist in the map (optional but nice)
+          .filter(key => !!explainMap[key])
+          .map(key => {
+            const value = explainMap[key];
+
+            return {
+              key,
+              label: useMobileLabels
+                ? this.mobilePillarLabels[key] ?? key
+                : this.fullPillarLabels[key] ?? key,
+              paragraphs: this.getFormattedParagraphs(
+                value.replaceAll('<PASS/FAIL:>', '')
+              )
+            };
+          });
+      }
     });
   }
 

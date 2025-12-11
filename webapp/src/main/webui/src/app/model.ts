@@ -25,6 +25,8 @@ export interface Bill {
 
 export interface BillInterpretation {
   issueStats: IssueStats;
+  structuralAnalysisPassFail: StructuralAnalysisPassFail;
+  structuralAnalysisExplain: StructuralAnalysisExplain;
   quality?: number;
   id: string;
   genBillTitle: string;
@@ -149,6 +151,39 @@ export interface LegislatorInterpretation {
 export interface IssueStats {
     stats: any;
 }
+
+// Necessary to preserve loop ordering
+export const STRUCTURAL_ANALYSIS_KEYS: Array<keyof StructuralAnalysisExplain> = [
+  "PROBLEM_CLARITY_CAUSAL_VALIDITY",
+  "EVIDENCE_BASE_EMPIRICAL_SUPPORT",
+  "IMPLEMENTATION_FEASIBILITY",
+  "ECONOMIC_EFFICIENCY_FISCAL_SUSTAINABILITY",
+  "DISTRIBUTIONAL_IMPACT_FAIRNESS",
+  "GOVERNANCE_INTEGRITY_INSTITUTIONAL_RISK",
+  "UNINTENDED_CONSEQUENCES_SYSTEMIC_RISK"
+];
+
+export interface StructuralAnalysisPassFail {
+  PROBLEM_CLARITY_CAUSAL_VALIDITY: boolean;
+  EVIDENCE_BASE_EMPIRICAL_SUPPORT: boolean;
+  IMPLEMENTATION_FEASIBILITY: boolean;
+  ECONOMIC_EFFICIENCY_FISCAL_SUSTAINABILITY: boolean;
+  DISTRIBUTIONAL_IMPACT_FAIRNESS: boolean;
+  GOVERNANCE_INTEGRITY_INSTITUTIONAL_RISK: boolean;
+  UNINTENDED_CONSEQUENCES_SYSTEMIC_RISK: boolean;
+}
+
+export interface StructuralAnalysisExplain {
+  PROBLEM_CLARITY_CAUSAL_VALIDITY: string;
+  EVIDENCE_BASE_EMPIRICAL_SUPPORT: string;
+  IMPLEMENTATION_FEASIBILITY: string;
+  ECONOMIC_EFFICIENCY_FISCAL_SUSTAINABILITY: string;
+  DISTRIBUTIONAL_IMPACT_FAIRNESS: string;
+  GOVERNANCE_INTEGRITY_INSTITUTIONAL_RISK: string;
+  UNINTENDED_CONSEQUENCES_SYSTEMIC_RISK: string;
+}
+
+export type StructuralAnalysis = keyof StructuralAnalysisPassFail;
 
 export type PageIndex = "ObjectsByLocation" | "ObjectsByDate" | "ObjectsByRating" | "ObjectsByRatingAbs" | "TrackedIssue" | "ObjectsByImpact" | "ObjectsByImpactAbs" | "ObjectsByIssueImpact" | "ObjectsByIssueRating" | "ObjectsByHot";
 

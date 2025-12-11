@@ -1,11 +1,12 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, Inject, PLATFORM_ID, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, Inject, PLATFORM_ID, ViewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { ConfigService } from '../config.service';
 import { Meta, Title } from '@angular/platform-browser';
 import { RouterModule } from '@angular/router';
 import { TrackClickDirective } from '../track-click.directive';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-promo',
@@ -15,17 +16,37 @@ import { TrackClickDirective } from '../track-click.directive';
   styleUrl: './promo.component.scss'
 })
 export class PromoComponent {
+  private readonly PROMPT_SOURCE_URL =
+    'https://raw.githubusercontent.com/PoliScore-us/poliscore/refs/heads/main/databuilder/src/main/java/us/poliscore/service/BillInterpretationService.java';
+
+  billPrompt: string | null = null;
+  promptLoading = false;
+  promptError: string | null = null;
+
   public isPreload = true;
+
+  public isSmallScreen = false;
   
     public donateBarHidden = true;
 
     public assetPrefix = "";
   
-    constructor(public config: ConfigService, public dialog: MatDialog, private meta: Meta, private titleService: Title, @Inject(PLATFORM_ID) private platformId: Object) {
+    constructor(private http: HttpClient, @Inject(PLATFORM_ID) private _platformId: Object, public config: ConfigService, public dialog: MatDialog, private meta: Meta, private titleService: Title, @Inject(PLATFORM_ID) private platformId: Object) {
       this.assetPrefix = config.getAssetRoutingPrefix();
+    }
+
+    @HostListener('window:resize', ['$event'])
+    onResize() {
+      // Check screen width on resize
+      this.isSmallScreen = window.innerWidth < 400;
     }
   
     ngOnInit(): void {
+      this.loadBillPrompt();
+
+      if (isPlatformBrowser(this._platformId))
+        this.isSmallScreen = window.innerWidth < 400;
+
       this.updateMetaTags();
       setTimeout(() => {
         this.isPreload = false;
@@ -90,6 +111,82 @@ export class PromoComponent {
       this.meta.updateTag({ name: 'twitter:title', content: pageTitle });
       this.meta.updateTag({ name: 'twitter:description', content: pageDescription });
       this.meta.updateTag({ name: 'twitter:image', content: imageUrl });
+    }
+
+    private loadBillPrompt(): void {
+      this.promptLoading = true;
+      this.promptError = null;
+
+      this.http.get(this.PROMPT_SOURCE_URL, { responseType: 'text' }).subscribe({
+        next: (source: string) => {
+          try {
+            this.billPrompt = this.extractStatsPromptTemplate(source);
+            if (!this.billPrompt) {
+              this.promptError = 'Could not find statsPromptTemplate in source file.';
+            }
+          } catch (e) {
+            console.error('Error parsing prompt source', e);
+            this.promptError = 'Error parsing bill prompt from source file.';
+          } finally {
+            this.promptLoading = false;
+          }
+        },
+        error: (err) => {
+          console.error('Error fetching bill prompt source', err);
+          this.promptError = 'Failed to fetch bill prompt from GitHub.';
+          this.promptLoading = false;
+        },
+      });
+    }
+
+    /**
+     * Extracts the contents of:
+     *
+     * public static final String statsPromptTemplate = """
+     *   ...
+     * """;
+     */
+    private extractStatsPromptTemplate(source: string): string | null {
+      const regex =
+        /public\s+static\s+final\s+String\s+statsPromptTemplate\s*=\s*"""([\s\S]*?)""";/m;
+
+      const match = source.match(regex);
+      if (!match || match.length < 2) {
+        return null;
+      }
+
+      let prompt = match[1];
+
+      // Strip a leading newline if present
+      prompt = prompt.replace(/^\r?\n/, '');
+
+      // Optionally dedent (remove common leading indentation)
+      const lines = prompt.split(/\r?\n/);
+      const nonEmpty = lines.filter((l) => l.trim().length > 0);
+      const indentLengths = nonEmpty.map((l) => l.match(/^(\s*)/)?.[1].length ?? 0);
+      const minIndent = indentLengths.length ? Math.min(...indentLengths) : 0;
+
+      if (minIndent > 0) {
+        prompt = lines
+          .map((l) => (l.length >= minIndent ? l.slice(minIndent) : l))
+          .join('\n');
+      }
+
+      return prompt;
+    }
+
+    async copyBillPrompt(): Promise<void> {
+      if (!this.billPrompt) {
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(this.billPrompt);
+        alert('Bill analysis prompt copied to clipboard.');
+      } catch (err) {
+        console.error('Failed to copy bill prompt', err);
+        alert('Sorry, something went wrong copying the prompt.');
+      }
     }
   }
   
