@@ -27,8 +27,8 @@ import us.poliscore.model.Persistable;
 import us.poliscore.model.SessionPersistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.AIInterpretationMetadataConverter;
-import us.poliscore.model.dynamodb.StructuralAnalysisPassFailAttributeConverter;
 import us.poliscore.model.dynamodb.StructuralAnalysisExplainAttributeConverter;
+import us.poliscore.model.dynamodb.StructuralAnalysisPassFailAttributeConverter;
 import us.poliscore.model.press.PressInterpretation;
 
 @Data
@@ -101,7 +101,8 @@ public class BillInterpretation extends SessionPersistable
 	
 	protected LocalDate lastPressQuery = LocalDate.EPOCH;
 	
-	@NonNull
+	@NonNull 
+	@Getter(onMethod = @__({ @DynamoDbIgnore})) // Some bils (such as OBBB) are too large to fit in DDB in one record with all the slices too 
 	protected List<BillInterpretation> sliceInterpretations = new ArrayList<BillInterpretation>();
 	
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(AIInterpretationMetadataConverter.class)}))

@@ -249,14 +249,15 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			bi.setId(BillInterpretation.generateId(billId, bi.getOrigin(), sliceIndex));
 		}
 		
-		var interpText = resp.getResponse().getBody().getChoices().get(0).getMessage().getContent();
+		var msg = resp.getResponse().getBody().getChoices().get(0).getMessage();
+		var interpText = msg.getContent();
 		
 		if (interpText.contains("NO_INTERPRETATION")) {
 			Log.info("Bill interpretation " + bi.getId() + " <" + bi.getOrigin().getUrl() + "> was determined by AI as " + interpText);
 			return;
 		}
 		
-		new BillInterpretationParser(bill, bi, s3).parse(interpText);
+		new BillInterpretationParser(bill, bi, s3).parse(interpText, null);
 		
 		if (!bi.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety)) {
 			if (sliceIndex != null) {throw new RuntimeException("Did not find OverallBenefitToSociety stat on interpretation");  }

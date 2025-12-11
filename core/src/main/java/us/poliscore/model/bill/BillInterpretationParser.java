@@ -69,11 +69,10 @@ public class BillInterpretationParser {
 		this.s3 = s3;
 	}
 
-	public void parse(String text) {
+	public void parse(String text, String reasoning) {
 		interp.setRating(0);
 		interp.setSearchReferences("");
 		interp.setStructuralAnalysisRaw("");
-		interp.setReasoning("");
 		interp.setShortExplain("");
 		interp.setLongExplain("");
 		interp.setAuthor("");
@@ -81,6 +80,11 @@ public class BillInterpretationParser {
 		interp.setIssueStats(new IssueStats());
 		interp.setConfidence(-1);
 		interp.setLaymansReport("");
+		
+		if (StringUtils.isNotEmpty(reasoning))
+			interp.setReasoning(reasoning);
+		else
+			interp.setReasoning("");
 
 		try (final Scanner scanner = new Scanner(text)) {
 			while (scanner.hasNextLine()) {
@@ -461,7 +465,7 @@ public class BillInterpretationParser {
 				return new StructuralAnalysisParsed(Collections.emptyMap(), Collections.emptyMap());
 			}
 
-			String text = structuralAnalysisText.replace("\r\n", "\n").replaceAll("<PASS/FAIL:>", "").replaceAll("<PASS/FAIL>", "").replaceAll("<PASS>", "").replaceAll("<FAIL>", "");
+			String text = structuralAnalysisText.replace("\r\n", "\n");
 			Map<StructuralAnalysis, Boolean> results = new HashMap<>();
 			Map<StructuralAnalysis, String> analyses = new HashMap<>();
 
@@ -544,7 +548,7 @@ public class BillInterpretationParser {
 			}
 
 			// Strip all <PASS> / <FAIL> tokens from the analysis text
-			String cleaned = PASS_FAIL_PATTERN.matcher(body).replaceAll("").trim();
+			String cleaned = PASS_FAIL_PATTERN.matcher(body).replaceAll("").replaceAll("<PASS/FAIL:>", "").replaceAll("<PASS/FAIL>", "").replaceAll("<PASS>", "").replaceAll("<FAIL>", "").trim();
 
 			return new StructuralAnalysisEntry(last, cleaned);
 		}

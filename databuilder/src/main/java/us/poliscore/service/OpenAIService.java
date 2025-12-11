@@ -22,6 +22,7 @@ import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.errors.InternalServerException;
 import com.openai.errors.OpenAIInvalidDataException;
 import com.openai.models.Reasoning;
+import com.openai.models.Reasoning.GenerateSummary;
 import com.openai.models.batches.Batch;
 import com.openai.models.batches.Batch.Status;
 import com.openai.models.batches.BatchCreateParams;
@@ -140,7 +141,7 @@ public class OpenAIService {
 			paramBuilder.temperature(0.0d); // We don't want randomness. Give us predictability and accuracy
 		
 		if (_model.getReasoningEffort() != null)
-			paramBuilder.reasoning(Reasoning.builder().effort(_model.getReasoningEffort()).build());
+			paramBuilder.reasoning(Reasoning.builder().effort(_model.getReasoningEffort()).build()); // TODO : In theory you're supposed to be able to get reasoning if you add ".summary(Reasoning.Summary.CONCISE)" (and your organization is verified), but I haven't been able to get it to work. The remote just doesn't include the reasoning in the response.
 			
 		val params = paramBuilder.build();
 		

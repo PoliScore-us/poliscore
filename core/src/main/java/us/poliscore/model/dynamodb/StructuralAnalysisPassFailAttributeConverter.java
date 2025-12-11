@@ -37,7 +37,8 @@ public class StructuralAnalysisPassFailAttributeConverter implements AttributeCo
         return input.m().entrySet().stream()
                 .collect(Collectors.toMap(
                         e -> getEnumClassKeyByString(e.getKey()),
-                        e -> e.getValue().bool()
+                        e -> e.getValue().bool(),
+                        (a, b) -> a
                 ));
     }
 
@@ -45,7 +46,7 @@ public class StructuralAnalysisPassFailAttributeConverter implements AttributeCo
         try {
             return StructuralAnalysis.valueOf(key);
         } catch (IllegalArgumentException ex) {
-            return StructuralAnalysis.DISTRIBUTIONAL_IMPACT_FAIRNESS;
+            return StructuralAnalysis.FAIRNESS;
         }
     }
 

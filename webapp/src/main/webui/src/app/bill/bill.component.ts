@@ -72,24 +72,14 @@ export class BillComponent implements OnInit, OnDestroy {
   'Taken together, they form a comprehensive rubric for judging whether a policy is likely to maximize ' +
   'societal benefit while minimizing harm, inefficiency, and unintended consequences.';
 
-  fullPillarLabels: Record<string, string> = {
-    PROBLEM_CLARITY_CAUSAL_VALIDITY: "1. Problem Clarity & Causal Validity",
-    EVIDENCE_BASE_EMPIRICAL_SUPPORT: "2. Evidence Base & Empirical Support",
-    IMPLEMENTATION_FEASIBILITY: "3. Implementation Feasibility",
-    ECONOMIC_EFFICIENCY_FISCAL_SUSTAINABILITY: "4. Economic Efficiency & Fiscal Sustainability",
-    DISTRIBUTIONAL_IMPACT_FAIRNESS: "5. Distributional Impact & Fairness",
-    GOVERNANCE_INTEGRITY_INSTITUTIONAL_RISK: "6. Governance Integrity & Institutional Risk",
-    UNINTENDED_CONSEQUENCES_SYSTEMIC_RISK: "7. Unintended Consequences & Systemic Risk"
-  };
-
-  mobilePillarLabels: Record<string, string> = {
-    PROBLEM_CLARITY_CAUSAL_VALIDITY: "1. Precision",
-    EVIDENCE_BASE_EMPIRICAL_SUPPORT: "2. Evidence",
-    IMPLEMENTATION_FEASIBILITY: "3. Feasibility",
-    ECONOMIC_EFFICIENCY_FISCAL_SUSTAINABILITY: "4. Budget",
-    DISTRIBUTIONAL_IMPACT_FAIRNESS: "5. Fairness",
-    GOVERNANCE_INTEGRITY_INSTITUTIONAL_RISK: "6. Governance",
-    UNINTENDED_CONSEQUENCES_SYSTEMIC_RISK: "7. Risk"
+  pillarLabels: Record<string, string> = {
+    PRECISION: "1. Precision",
+    EVIDENCE: "2. Evidence",
+    FEASIBILITY: "3. Feasibility",
+    BUDGET: "4. Budget",
+    FAIRNESS: "5. Fairness",
+    GOVERNANCE: "6. Governance",
+    RISK: "7. Risk"
   };
 
   structuralExplainFormatted?: {
@@ -182,10 +172,6 @@ export class BillComponent implements OnInit, OnDestroy {
 
       const explainMap = this.bill!.interpretation.structuralAnalysisExplain;
       if (explainMap) {
-        // const useMobileLabels =
-        //   isPlatformBrowser(this._platformId) && window.innerWidth < 600;
-        const useMobileLabels = true;
-
         this.structuralExplainFormatted = STRUCTURAL_ANALYSIS_KEYS
           // keep only keys that actually exist in the map (optional but nice)
           .filter(key => !!explainMap[key])
@@ -194,9 +180,7 @@ export class BillComponent implements OnInit, OnDestroy {
 
             return {
               key,
-              label: useMobileLabels
-                ? this.mobilePillarLabels[key] ?? key
-                : this.fullPillarLabels[key] ?? key,
+              label: this.pillarLabels[key] ?? key,
               paragraphs: this.getFormattedParagraphs(
                 value.replaceAll('<PASS/FAIL:>', '')
               )

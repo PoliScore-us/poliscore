@@ -9,6 +9,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum OpenAIModel {
 
+	GPT52("gpt-5.2", 400_000, 128_000, false, true, ReasoningEffort.LOW, new RateLimit(40_000_000, 15_000)),
     GPT51("gpt-5.1", 400_000, 128_000, false, true, ReasoningEffort.LOW, new RateLimit(40_000_000, 15_000)),
     GPT5("gpt-5", 400_000, 128_000, false, true, ReasoningEffort.LOW, new RateLimit(40_000_000, 15_000)),
     GPT41("gpt-4.1", 950_000, 32_768, true, true, null, new RateLimit(30_000_000, 10_000)),
@@ -17,7 +18,7 @@ public enum OpenAIModel {
     O3("o3", 190_000, 95_000, false, true, ReasoningEffort.LOW, new RateLimit(30_000_000, 10_000)),
     O3_DEEP_RESEARCH("o3-deep-research", 190_000, 95_000, false, true, null, new RateLimit(30_000_000, 10_000));
 	
-	public static final OpenAIModel DEFAULT_MODEL = GPT51;
+	public static final OpenAIModel DEFAULT_MODEL = GPT52;
 
     // ---- Fields ----
     private final String id;
@@ -29,7 +30,7 @@ public enum OpenAIModel {
     private final RateLimit rateLimit;
 
     public int getContextWindowStringLength() {
-        return contextWindowTokens * 4;
+        return contextWindowTokens * 2; // TODO : Technically this should work at *4 ? But in practice I'm not seeing it work until we get to *2.
     }
     
     @Override

@@ -75,7 +75,6 @@
                         </div>
 
                         <div class="chart-container">
-                            <h2 *ngIf="bill?.interpretation?.structuralAnalysisPassFail && bill?.interpretation?.structuralAnalysisExplain" style="padding-left:30px;">Impact Stats</h2>
                             <canvas id="barChart"></canvas>
                         </div>
 
@@ -90,82 +89,7 @@
                         </div>
                         -->
 
-                        <!-- STRUCTURAL ANALYSIS SECTION -->
-                        <div
-                            class="bill-section structural-analysis-section"
-                            *ngIf="bill?.interpretation?.structuralAnalysisPassFail && bill?.interpretation?.structuralAnalysisExplain"
-                        >
-                            <h2>Structural Analysis</h2>
-
-                            <mat-accordion class="structural-analysis-accordion">
-                                <mat-expansion-panel
-                                    *ngFor="let entry of structuralExplainFormatted"
-                                    class="structural-analysis-panel"
-                                >
-                                    <mat-expansion-panel-header>
-                                        <mat-panel-title>
-                                            <span class="pillar-title" [class.smallScreen]="isSmallScreen">
-                                            {{ isSmallScreen
-                                                ? mobilePillarLabels[entry.key]
-                                                : fullPillarLabels[entry.key]
-                                            }}
-                                            </span>
-                                        </mat-panel-title>
-
-                                        <mat-panel-description>
-                                            <span
-                                                class="pillar-status"
-                                                [ngClass]="{
-                                                    'pillar-pass': bill!.interpretation!.structuralAnalysisPassFail[entry.key],
-                                                    'pillar-fail': !bill!.interpretation!.structuralAnalysisPassFail[entry.key]
-                                                }"
-                                            >
-                                                {{ bill!.interpretation!.structuralAnalysisPassFail[entry.key] ? 'Pass' : 'Fail' }}
-                                            </span>
-                                        </mat-panel-description>
-                                    </mat-expansion-panel-header>
-
-                                    <!-- Pillar definition from whitepaper -->
-                                    <p class="pillar-definition" [ngSwitch]="entry.key">
-                                        <span *ngSwitchCase="'PROBLEM_CLARITY_CAUSAL_VALIDITY'">
-                                            Does the policy accurately diagnose the underlying issue and target the relevant causal mechanisms?
-                                        </span>
-                                        <span *ngSwitchCase="'EVIDENCE_BASE_EMPIRICAL_SUPPORT'">
-                                            Is the proposed intervention supported by empirical research, historical precedent, or meaningful comparative data?
-                                        </span>
-                                        <span *ngSwitchCase="'IMPLEMENTATION_FEASIBILITY'">
-                                            Can existing institutions realistically execute the policy given resource, logistical, administrative, and temporal constraints?
-                                        </span>
-                                        <span *ngSwitchCase="'ECONOMIC_EFFICIENCY_FISCAL_SUSTAINABILITY'">
-                                            Does the policy use resources responsibly, minimize waste, and avoid unsustainable long-term obligations?
-                                        </span>
-                                        <span *ngSwitchCase="'DISTRIBUTIONAL_IMPACT_FAIRNESS'">
-                                            How are benefits and burdens distributed across populations, and does the policy unjustifiably disadvantage certain groups?
-                                        </span>
-                                        <span *ngSwitchCase="'GOVERNANCE_INTEGRITY_INSTITUTIONAL_RISK'">
-                                            Does the policy maintain transparency, accountability, and resilience while minimizing opportunities for corruption or abuse?
-                                        </span>
-                                        <span *ngSwitchCase="'UNINTENDED_CONSEQUENCES_SYSTEMIC_RISK'">
-                                            Does the policy introduce fragility, perverse incentives, or cascading failures that undermine the intended outcomes?
-                                        </span>
-                                        <span *ngSwitchDefault>
-                                            This pillar evaluates a key dimension of policy quality.
-                                        </span>
-                                    </p>
-
-                                    <div class="pillar-explanation">
-                                        <p
-                                        *ngFor="let para of entry.paragraphs"
-                                        [innerHTML]="para"
-                                        ></p>
-                                    </div>
-                                </mat-expansion-panel>
-                            </mat-accordion>
-                        </div>
-                        <!-- END STRUCTURAL ANALYSIS SECTION -->
-
                         <div class="bill-section">
-                            <h2 *ngIf="bill?.interpretation?.structuralAnalysisPassFail && bill?.interpretation?.structuralAnalysisExplain">Report</h2>
 
                             @if (formattedLaymansReport && formattedExpertReport) {
                                 <!-- Tabs -->
@@ -210,7 +134,91 @@
                                 [small]="'AI Reasoning'"
                                 [large]="'Confidence: ' + bill.interpretation.confidence + '%\nRating: ' + bill.interpretation.rating + '\n\n' + bill.interpretation.reasoning"
                             ></disclaimer>
+
+                            <disclaimer
+                                *ngIf="isSubscribed && !(bill.interpretation.reasoning && bill.interpretation.reasoning.length > 0) && bill.interpretation.confidence && bill.interpretation.rating"
+                                [small]="'AI Reasoning'"
+                                [large]="'Confidence: ' + bill.interpretation.confidence + '%\nRating: ' + bill.interpretation.rating + '\n\nInternal reasoning coming soon...'"
+                            ></disclaimer>
                         </div>
+                    </mat-card-content>
+                </mat-card>
+
+                <mat-card
+                    class="tran-div "
+                    *ngIf="bill?.interpretation?.structuralAnalysisPassFail && bill?.interpretation?.structuralAnalysisExplain"
+                >
+                    <mat-card-content>
+                            <!-- STRUCTURAL ANALYSIS SECTION -->
+                        <div
+                            class="structural-analysis-section"
+                        >
+                            <h2>Structural Analysis</h2>
+
+                            <mat-accordion class="structural-analysis-accordion">
+                                <mat-expansion-panel
+                                    *ngFor="let entry of structuralExplainFormatted"
+                                    class="structural-analysis-panel"
+                                >
+                                    <mat-expansion-panel-header>
+                                        <mat-panel-title>
+                                            <span class="pillar-title" [class.smallScreen]="isSmallScreen">
+                                            {{ pillarLabels[entry.key]
+                                            }}
+                                            </span>
+                                        </mat-panel-title>
+
+                                        <mat-panel-description>
+                                            <span
+                                                class="pillar-status"
+                                                [ngClass]="{
+                                                    'pillar-pass': bill!.interpretation!.structuralAnalysisPassFail[entry.key],
+                                                    'pillar-fail': !bill!.interpretation!.structuralAnalysisPassFail[entry.key]
+                                                }"
+                                            >
+                                                {{ bill!.interpretation!.structuralAnalysisPassFail[entry.key] ? 'Pass' : 'Fail' }}
+                                            </span>
+                                        </mat-panel-description>
+                                    </mat-expansion-panel-header>
+
+                                    <!-- Pillar definition from whitepaper -->
+                                    <p class="pillar-definition" [ngSwitch]="entry.key">
+                                        <span *ngSwitchCase="'PRECISION'">
+                                            Does the policy accurately diagnose the underlying issue and target the relevant causal mechanisms?
+                                        </span>
+                                        <span *ngSwitchCase="'EVIDENCE'">
+                                            Is the proposed intervention supported by empirical research, historical precedent, or meaningful comparative data?
+                                        </span>
+                                        <span *ngSwitchCase="'FEASIBILITY'">
+                                            Can existing institutions realistically execute the policy given resource, logistical, administrative, and temporal constraints?
+                                        </span>
+                                        <span *ngSwitchCase="'BUDGET'">
+                                            Does the policy use resources responsibly, minimize waste, and avoid unsustainable long-term obligations?
+                                        </span>
+                                        <span *ngSwitchCase="'FAIRNESS'">
+                                            How are benefits and burdens distributed across populations, and does the policy unjustifiably disadvantage certain groups?
+                                        </span>
+                                        <span *ngSwitchCase="'GOVERNANCE'">
+                                            Does the policy maintain transparency, accountability, and resilience while minimizing opportunities for corruption or abuse?
+                                        </span>
+                                        <span *ngSwitchCase="'RISK'">
+                                            Does the policy introduce fragility, perverse incentives, or cascading failures that undermine the intended outcomes?
+                                        </span>
+                                        <span *ngSwitchDefault>
+                                            This pillar evaluates a key dimension of policy quality.
+                                        </span>
+                                    </p>
+
+                                    <div class="pillar-explanation">
+                                        <p
+                                        *ngFor="let para of entry.paragraphs"
+                                        [innerHTML]="para"
+                                        ></p>
+                                    </div>
+                                </mat-expansion-panel>
+                            </mat-accordion>
+                        </div>
+                        <!-- END STRUCTURAL ANALYSIS SECTION -->
                     </mat-card-content>
                 </mat-card>
 

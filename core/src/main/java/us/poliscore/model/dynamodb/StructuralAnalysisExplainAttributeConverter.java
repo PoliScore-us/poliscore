@@ -44,7 +44,8 @@ public class StructuralAnalysisExplainAttributeConverter implements AttributeCon
                         e -> {
                             AttributeValue av = e.getValue();
                             return av.s() == null ? "" : av.s();
-                        }
+                        },
+                        (a, b) -> a
                 ));
     }
 
@@ -53,7 +54,7 @@ public class StructuralAnalysisExplainAttributeConverter implements AttributeCon
             return StructuralAnalysis.valueOf(key);
         } catch (IllegalArgumentException ex) {
             // Fallback if something weird is in the DB
-            return StructuralAnalysis.DISTRIBUTIONAL_IMPACT_FAIRNESS;
+            return StructuralAnalysis.FAIRNESS;
         }
     }
 

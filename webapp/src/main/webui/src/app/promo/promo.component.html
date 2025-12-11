@@ -273,37 +273,74 @@
             example sometimes a bill can be a response to sub-optimal choices made elsewhere.
             <br/><br/>
 
+            Bill Title:<br/>
+            Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make
+            up a very concise title for the bill based on its content. If the bill has a title, but it is confusing, vague, too long, or would
+            otherwise be poorly understood by the general public, please make up a very concise title for the bill based on its content.
+            <br/><br/>
+
             Structural Analysis:<br/>
             Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response,
             thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by
             your analysis. Conclude each pillar analysis by writing either "&lt;PASS&gt;", or "&lt;FAIL&gt;", denoting that the bill has either passed or
             failed that pillar of the structural analysis.
             <br/><br/>
-            1. Problem Clarity &amp; Causal Validity:<br/>
+            1. Precision:<br/>
             Does the policy accurately diagnose the underlying issue and target the relevant causal mechanisms? &lt;PASS / FAIL&gt;
             <br/><br/>
-            2. Evidence Base &amp; Empirical Support:<br/>
+            2. Evidence:<br/>
             Is the proposed intervention supported by empirical research, historical precedent, or meaningful comparative data?
             &lt;PASS / FAIL&gt;
             <br/><br/>
-            3. Implementation Feasibility:<br/>
+            3. Feasibility:<br/>
             Can existing institutions realistically execute the policy given resource, logistical, administrative, and temporal constraints?
             &lt;PASS / FAIL&gt;
             <br/><br/>
-            4. Economic Efficiency &amp; Fiscal Sustainability:<br/>
+            4. Affordability:<br/>
             Does the policy use resources responsibly, minimize waste, and avoid unsustainable long-term obligations? &lt;PASS / FAIL&gt;
             <br/><br/>
-            5. Distributional Impact &amp; Fairness:<br/>
+            5. Fairness:<br/>
             How are benefits and burdens distributed across populations, and does the policy unjustifiably disadvantage certain groups?
             &lt;PASS / FAIL&gt;
             <br/><br/>
-            6. Governance Integrity &amp; Institutional Risk:<br/>
+            6. Governance:<br/>
             Does the policy maintain transparency, accountability, and resilience while minimizing opportunities for corruption or abuse?
             &lt;PASS / FAIL&gt;
             <br/><br/>
-            7. Unintended Consequences &amp; Systemic Risk:<br/>
+            7. Risk:<br/>
             Does the policy introduce fragility, perverse incentives, or cascading failures that undermine the intended outcomes?
             &lt;PASS / FAIL&gt;
+            <br/><br/>
+
+            Long Report:<br/>
+            Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will
+            explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by
+            giving your opinion on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to
+            explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and
+            identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of
+            the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include
+            the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where
+            relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are
+            referenced, which are not common knowledge, please define them. Do not include any formatting text such as stars or dashes
+            (excluding links). Do not include non-human readable text such as XML ids.Where appropriate, please cite references from your search inside the report. References can be cited using markdown link syntax: [explanation text here](http://example.com)
+            <br/><br/>
+
+            Casual Report:<br/>
+            Your audience is the general public, written at the high-school education level. Your primary goal here is to take the insights
+            from the long report and make them available for your average person. Begin by explaining the high level goals of the bill and a
+            high level summary of how it attempts to achieve those goals. Then, explain all the essential logic required to understand your
+            predicted impact to society, including any research, expert opinions, societal wisdom and/or any competing concerns which may
+            exist. Conclude with your findings on the impact the bill will have on society. Should be between one and three paragraphs long,
+            depending on the complexity of the bill and the topics it covers (controversial topics require more evidence to support your
+            conclusions). Do not use ancronyms, such as GPO, CBO, etc. If you must use them, they must be defined. You may link to sources
+            using markdown link syntax, where relevant. Do not include any formatting text such as stars or dashes (excluding links). Do not
+            include non-human readable text such as XML ids.Where appropriate, please cite references from your search inside the report. References can be cited using markdown link syntax: [explanation text here](http://example.com)
+            <br/><br/>
+
+            Short Report:<br/>
+            Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report
+            which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not
+            include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
             <br/><br/>
 
             Impact:<br/>
@@ -341,43 +378,6 @@
             voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be
             of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act
             (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
-            <br/><br/>
-
-            Bill Title:<br/>
-            Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make
-            up a very concise title for the bill based on its content. If the bill has a title, but it is confusing, vague, too long, or would
-            otherwise be poorly understood by the general public, please make up a very concise title for the bill based on its content.
-            <br/><br/>
-
-            Short Report:<br/>
-            Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report
-            which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not
-            include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
-            <br/><br/>
-
-            Long Report:<br/>
-            Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will
-            explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by
-            giving your opinion on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to
-            explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and
-            identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of
-            the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include
-            the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where
-            relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are
-            referenced, which are not common knowledge, please define them. Do not include any formatting text such as stars or dashes
-            (excluding links). Do not include non-human readable text such as XML ids.Where appropriate, please cite references from your search inside the report. References can be cited using markdown link syntax: [explanation text here](http://example.com)
-            <br/><br/>
-
-            Casual Report:<br/>
-            Your audience is the general public, written at the high-school education level. Your primary goal here is to take the insights
-            from the long report and make them available for your average person. Begin by explaining the high level goals of the bill and a
-            high level summary of how it attempts to achieve those goals. Then, explain all the essential logic required to understand your
-            predicted impact to society, including any research, expert opinions, societal wisdom and/or any competing concerns which may
-            exist. Conclude with your findings on the impact the bill will have on society. Should be between one and three paragraphs long,
-            depending on the complexity of the bill and the topics it covers (controversial topics require more evidence to support your
-            conclusions). Do not use ancronyms, such as GPO, CBO, etc. If you must use them, they must be defined. You may link to sources
-            using markdown link syntax, where relevant. Do not include any formatting text such as stars or dashes (excluding links). Do not
-            include non-human readable text such as XML ids.Where appropriate, please cite references from your search inside the report. References can be cited using markdown link syntax: [explanation text here](http://example.com)
             <br/><br/>
 
             Confidence:<br/>

@@ -37,31 +37,42 @@ public class BillInterpretationService {
 			
 			{searchModelInstructions1}
 
+			Bill Title:
+			Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very concise title for the bill based on its content. If the bill has a title, but it is confusing, vague, too long, or would otherwise be poorly understood by the general public, please make up a very concise title for the bill based on its content.
+
 			Structural Analysis:
 			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
 			
-			1. Problem Clarity & Causal Validity:
+			1. Precision:
 			Does the policy accurately diagnose the underlying issue and target the relevant causal mech-
 			anisms? <PASS / FAIL>
-			2. Evidence Base & Empirical Support:
+			2. Evidence:
 			Is the proposed intervention supported by empirical research, historical precedent, or mean-
 			ingful comparative data? <PASS / FAIL>
-			3. Implementation Feasibility: <PASS / FAIL>
+			3. Feasibility:
 			Can existing institutions realistically execute the policy given resource, logistical, adminis-
-			trative, and temporal constraints?
-			4. Economic Efficiency & Fiscal Sustainability:
+			trative, and temporal constraints? <PASS / FAIL>
+			4. Budget:
 			Does the policy use resources responsibly, minimize waste, and avoid unsustainable long-
 			term obligations? <PASS / FAIL>
-			12
-			5. Distributional Impact & Fairness:
+			5. Fairness:
 			How are benefits and burdens distributed across populations, and does the policy unjustifi-
 			ably disadvantage certain groups? <PASS / FAIL>
-			6. Governance Integrity & Institutional Risk:
+			6. Governance:
 			Does the policy maintain transparency, accountability, and resilience while minimizing op-
 			portunities for corruption or abuse? <PASS / FAIL>
-			7. Unintended Consequences & Systemic Risk:
+			7. Risk:
 			Does the policy introduce fragility, perverse incentives, or cascading failures that undermine
 			the intended outcomes? <PASS / FAIL>
+			
+			Long Report:
+			Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving your opinion on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are referenced, which are not common knowledge, please define them.  Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
+
+			Casual Report:
+			Your audience is the general public, written at the high-school education level. Your primary goal here is to take the insights from the long report and make them available for your average person. Begin by explaining the high level goals of the bill and a high level summary of how it attempts to achieve those goals. Then, explain all the essential logic required to understand your predicted impact to society, including any research, expert opinions, societal wisdom and/or any competing concerns which may exist. Conclude with your findings on the impact the bill will have on society. Should be between one and three paragraphs long, depending on the complexity of the bill and the topics it covers (controversial topics require more evidence to support your conclusions). Do not use ancronyms, such as GPO, CBO, etc. If you must use them, they must be defined. You may link to sources using markdown link syntax, where relevant. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
+
+			Short Report:
+			Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
 
 			Impact:
 			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. If the bill got a FAIL on any of the pillars of the structural analysis, the bill must be given a negative "Overall Impact to Society" score in this section. There is an important distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that it will have none. Use N/A if the goals of the bill do not align at all with the policy area. Respond with only the integer and an optional sign, no commentary or units.
@@ -70,18 +81,6 @@ public class BillInterpretationService {
 			
 			Rating:
 			Write a single integer, from -100 to 100, which represents how strongly you think the legislation should be passed, with -100 being it definitely should NOT be passed and 100 being it definitely SHOULD be passed. This rating should directly translate to a grade for the bill, as per the following grading rubric (where r is the rating): A: r >= 60, B: 60 < r >= 40, C: 40 < r >= 20, D: 20 < r >= 0, F: r < 0. If the impact to society is negative, then so too should the rating score - naturally you wouldn't recommend voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
-			
-			Bill Title:
-			Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very concise title for the bill based on its content. If the bill has a title, but it is confusing, vague, too long, or would otherwise be poorly understood by the general public, please make up a very concise title for the bill based on its content.
-			
-			Short Report:
-			Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
-			
-			Long Report:
-			Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving your opinion on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are referenced, which are not common knowledge, please define them.  Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
-			
-			Casual Report:
-			Your audience is the general public, written at the high-school education level. Your primary goal here is to take the insights from the long report and make them available for your average person. Begin by explaining the high level goals of the bill and a high level summary of how it attempts to achieve those goals. Then, explain all the essential logic required to understand your predicted impact to society, including any research, expert opinions, societal wisdom and/or any competing concerns which may exist. Conclude with your findings on the impact the bill will have on society. Should be between one and three paragraphs long, depending on the complexity of the bill and the topics it covers (controversial topics require more evidence to support your conclusions). Do not use ancronyms, such as GPO, CBO, etc. If you must use them, they must be defined. You may link to sources using markdown link syntax, where relevant. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
 
 			Confidence:
 			A self-rated integer from 0 to 100 measuring how confident you are that your analysis was valid and interpreted correctly.
@@ -95,28 +94,30 @@ public class BillInterpretationService {
 			Structural Analysis:
 			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
 			
-			1. Problem Clarity & Causal Validity:
+			1. Precision:
 			Does the policy accurately diagnose the underlying issue and target the relevant causal mech-
 			anisms? <PASS / FAIL>
-			2. Evidence Base & Empirical Support:
+			2. Evidence:
 			Is the proposed intervention supported by empirical research, historical precedent, or mean-
 			ingful comparative data? <PASS / FAIL>
-			3. Implementation Feasibility: <PASS / FAIL>
+			3. Feasibility:
 			Can existing institutions realistically execute the policy given resource, logistical, adminis-
-			trative, and temporal constraints?
-			4. Economic Efficiency & Fiscal Sustainability:
+			trative, and temporal constraints? <PASS / FAIL>
+			4. Budget:
 			Does the policy use resources responsibly, minimize waste, and avoid unsustainable long-
 			term obligations? <PASS / FAIL>
-			12
-			5. Distributional Impact & Fairness:
+			5. Fairness:
 			How are benefits and burdens distributed across populations, and does the policy unjustifi-
 			ably disadvantage certain groups? <PASS / FAIL>
-			6. Governance Integrity & Institutional Risk:
+			6. Governance:
 			Does the policy maintain transparency, accountability, and resilience while minimizing op-
 			portunities for corruption or abuse? <PASS / FAIL>
-			7. Unintended Consequences & Systemic Risk:
+			7. Risk:
 			Does the policy introduce fragility, perverse incentives, or cascading failures that undermine
 			the intended outcomes? <PASS / FAIL>
+			
+			Long Report:
+			Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving your opinion on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are referenced, which are not common knowledge, please define them.  Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
 			
 			Impact:
 			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. If the bill got a FAIL on any of the pillars of the structural analysis, the bill must be given a negative "Overall Impact to Society" score in this section. There is an important distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that it will have none. Use N/A if the goals of the bill do not align at all with the policy area. Respond with only the integer and an optional sign, no commentary or units.
@@ -126,9 +127,6 @@ public class BillInterpretationService {
 			Rating:
 			Write a single integer, from -100 to 100, which represents how strongly you think the legislation should be passed, with -100 being it definitely should NOT be passed and 100 being it definitely SHOULD be passed. This rating should directly translate to a grade for the bill, as per the following grading rubric (where r is the rating): A: r >= 60, B: 60 < r >= 40, C: 40 < r >= 20, D: 20 < r >= 0, F: r < 0. If the impact to society is negative, then so too should the rating score - naturally you wouldn't recommend voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
 			
-			Long Report:
-			Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving your opinion on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are referenced, which are not common knowledge, please define them.  Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
-			
 			{searchReferences}
 			""";
 	
@@ -137,46 +135,45 @@ public class BillInterpretationService {
 			
 			{searchModelInstructions1}
 			
-			Structural Analysis:
-			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
-			
-			1. Problem Clarity & Causal Validity:
-			Does the policy accurately diagnose the underlying issue and target the relevant causal mech-
-			anisms? <PASS / FAIL>
-			2. Evidence Base & Empirical Support:
-			Is the proposed intervention supported by empirical research, historical precedent, or mean-
-			ingful comparative data? <PASS / FAIL>
-			3. Implementation Feasibility: <PASS / FAIL>
-			Can existing institutions realistically execute the policy given resource, logistical, adminis-
-			trative, and temporal constraints?
-			4. Economic Efficiency & Fiscal Sustainability:
-			Does the policy use resources responsibly, minimize waste, and avoid unsustainable long-
-			term obligations? <PASS / FAIL>
-			12
-			5. Distributional Impact & Fairness:
-			How are benefits and burdens distributed across populations, and does the policy unjustifi-
-			ably disadvantage certain groups? <PASS / FAIL>
-			6. Governance Integrity & Institutional Risk:
-			Does the policy maintain transparency, accountability, and resilience while minimizing op-
-			portunities for corruption or abuse? <PASS / FAIL>
-			7. Unintended Consequences & Systemic Risk:
-			Does the policy introduce fragility, perverse incentives, or cascading failures that undermine
-			the intended outcomes? <PASS / FAIL>
-			
-			Rating:
-			Write a single integer, from -100 to 100, which represents how strongly you think the legislation should be passed, with -100 being it definitely should NOT be passed and 100 being it definitely SHOULD be passed. This rating should directly translate to a grade for the bill, as per the following grading rubric (where r is the rating): A: r >= 60, B: 60 < r >= 40, C: 40 < r >= 20, D: 20 < r >= 0, F: r < 0. If the impact to society is negative, then so too should the rating score - naturally you wouldn't recommend voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
-			
 			Bill Title:
 			Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very short title for the bill based on its content.
 			
-			Short Report:
-			Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
+			Structural Analysis:
+			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
+			
+			1. Precision:
+			Does the policy accurately diagnose the underlying issue and target the relevant causal mech-
+			anisms? <PASS / FAIL>
+			2. Evidence:
+			Is the proposed intervention supported by empirical research, historical precedent, or mean-
+			ingful comparative data? <PASS / FAIL>
+			3. Feasibility:
+			Can existing institutions realistically execute the policy given resource, logistical, adminis-
+			trative, and temporal constraints? <PASS / FAIL>
+			4. Budget:
+			Does the policy use resources responsibly, minimize waste, and avoid unsustainable long-
+			term obligations? <PASS / FAIL>
+			5. Fairness:
+			How are benefits and burdens distributed across populations, and does the policy unjustifi-
+			ably disadvantage certain groups? <PASS / FAIL>
+			6. Governance:
+			Does the policy maintain transparency, accountability, and resilience while minimizing op-
+			portunities for corruption or abuse? <PASS / FAIL>
+			7. Risk:
+			Does the policy introduce fragility, perverse incentives, or cascading failures that undermine
+			the intended outcomes? <PASS / FAIL>
 			
 			Long Report:
 			Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving your opinion on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are referenced, which are not common knowledge, please define them.  Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
 			
 			Casual Report:
 			Your audience is the general public, written at the high-school education level. Your primary goal here is to take the insights from the long report and make them available for your average person. Begin by explaining the high level goals of the bill and a high level summary of how it attempts to achieve those goals. Then, explain all the essential logic required to understand your predicted impact to society, including any research, expert opinions, societal wisdom and/or any competing concerns which may exist. Conclude with your findings on the impact the bill will have on society. Should be between one and three paragraphs long, depending on the complexity of the bill and the topics it covers (controversial topics require more evidence to support your conclusions). Do not use ancronyms, such as GPO, CBO, etc. If you must use them, they must be defined. You may link to sources using markdown link syntax, where relevant. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
+			
+			Short Report:
+			Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
+			
+			Rating:
+			Write a single integer, from -100 to 100, which represents how strongly you think the legislation should be passed, with -100 being it definitely should NOT be passed and 100 being it definitely SHOULD be passed. This rating should directly translate to a grade for the bill, as per the following grading rubric (where r is the rating): A: r >= 60, B: 60 < r >= 40, C: 40 < r >= 20, D: 20 < r >= 0, F: r < 0. If the impact to society is negative, then so too should the rating score - naturally you wouldn't recommend voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
 			
 			Confidence:
 			A self-rated integer from 0 to 100 measuring how confident you are that your analysis was valid and interpreted correctly.
