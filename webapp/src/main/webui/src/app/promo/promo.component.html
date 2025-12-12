@@ -72,18 +72,33 @@
           </h3>
 
           <p>
-            AI's strengths are aggregation, summaries, and translation. This makes it a natural fit for politics — a world where seeing the truth through all the noise gets harder everyday. Most people don't want to read through dense legal text — they just want to know what the legislation is actually going to do, and if its going to hurt to help them. PoliScore helps you to see through the noise, and it turns dense legal text into an easy to understand impact report, made for the general public.
+            In politics, every interpretation is assumed to be partisan. Left, right, donor-funded,
+            activist-backed — everyone is “selling” an interpretation, and trust is in short supply.
           </p>
 
           <p>
-            For journalists, PoliScore provides a <em>citable, traceable source</em> for AI generated outputs.
-            Every analysis is timestamped, tied to a specific model version, and stored so it can be reproduced or audited.
-            That means you can reference AI-assisted insights in your reporting with confidence: transparent,
-            verifiable, and grounded in a workflow you can hold accountable.
+            <strong>PoliScore is different, because we’re asking you to trust an open-source,
+            non-partisan evaluation process.</strong>
+            Bias, where it exists, is introduced by the AI interpretation model — and that model
+            can be swapped out or audited.
           </p>
 
           <p>
-            PoliScore is an independent, open-source project. The goal is simple: make it easier for the people already trying to make the world better to see through the noise and focus on whats actually happening in our government.
+            PoliScore is designed to apply
+            <strong>uniform evaluation criteria</strong>,
+            and to be <strong>transparent, reproducible, and auditable</strong>. Analyses are timestamped,
+            tied to specific model versions, and stored so they can be inspected, compared, or challenged over time.
+          </p>
+
+          <p>
+            For journalists, PoliScore provides <strong>citable, traceable AI-assisted analysis</strong>.
+            For citizens, it offers clarity without jargon. For researchers and watchdogs,
+            it enables large-scale accountability.
+          </p>
+
+          <p>
+            PoliScore is independent and open-source at its core. The goal is simple:
+            <strong>make it easier to see what’s actually happening in government — and harder to hide behind complexity.</strong>
           </p>
         </div>
       </section>
@@ -128,23 +143,79 @@
         <div class="content">
           <h3 class="content-header"><a [routerLink]="'/about'" fragment="ai-voting">How is "Good Policy" Decided?</a></h3>
 
-          <p>We pick the smartest AI we can find to follow our non-partisan prompts which instruct it to read the full bill text, do some independent research, and then formulate an opinion on it's impact to society, justifying it with concrete evidence. We pull expert opinions from scientific studies, stakeholder opinions from official press releases and existing budgetary analyses from the non-partisan Congressional Budget Office (CBO). Every grade is transparently posted on our website, and you can easily sort legislator bill interactions by grade to determine exactly why a legislator receieved the grade they did.</p>
+          <p>
+            At the core of PoliScore is a structured rubric — the
+            <strong>Seven Pillars of Bill Analysis</strong> — designed to assess
+            whether a piece of legislation is well-constructed, evidence-based,
+            feasible, fiscally responsible, fair, well-governed, and resilient to
+            unintended consequences.
+          </p>
 
-          <p>How exactly does AI decide between two competing narratives? To find an answer to this question we must dig into the interworkings of how AI decides what response to generate from a given prompt.</p>
+          <p>
+            These pillars are philosophically and academically grounded and
+            written explicitly for evaluation of legislative text.
+          </p>
 
-                        <ol>
-                            <li>AI's responses are weighted towards those most frequently found in its training data. Since the training data includes a massive wealth of books, wikipedia, and our online comments and opinions, this suddenly becomes a very interesting exercise. What's the most commonly found opinion with regards to climate change? Or abortion?</li>
-                            <li>AI's responses are also weighted towards those which most closely match the relevant context for the prompt. This is important, because if the training data was found in a jokes book, it might not be relevant for analyzing bills in a non-partisan manner. Because our context is one requiring authoritative responses, it ends up weighing the output towards authoritative contexts.</li>
-            <li>There is one final 'X' factor at play. In answering our prompts, AI must generate a singular, cohesive response which accounts for all of the criteria specified in our prompt and as fetched from it's internet queries — and our prompts are as tough as they are open source. This process results in an emergent "artificial intelligence" property which shines in the grading process.</li>
-                        </ol>
+          <ol>
+            <li>
+              <strong>Precision</strong> — Is the problem clearly defined, and does the
+              bill propose a coherent, causal solution?
+            </li>
+            <li>
+              <strong>Evidence</strong> — Is the policy grounded in empirical research,
+              precedent, or established best practices?
+            </li>
+            <li>
+              <strong>Feasibility</strong> — Can real institutions plausibly implement
+              this policy with available resources and capacity?
+            </li>
+            <li>
+              <strong>Budget</strong> — Are costs, incentives, and long-term fiscal
+              impacts responsibly handled?
+            </li>
+            <li>
+              <strong>Fairness</strong> — How are benefits and burdens distributed
+              across groups, regions, and stakeholders?
+            </li>
+            <li>
+              <strong>Governance</strong> — Does the policy strengthen accountability,
+              transparency, and institutional integrity?
+            </li>
+            <li>
+              <strong>Risk</strong> — What unintended consequences or systemic failures
+              might this policy introduce?
+            </li>
+          </ol>
 
-                        <p>So, in summary what we've done here, is we've taken the vast majority of written text, weighted it by frequency and context, performed comprehensive research, and then used it to craft a cohesive, consistent narrative about the bill's predicted impact to society. Those bill grades are then aggregated and used to assign grades for legislators. Sound like an intelligent approach to politics?</p>
+          <p>
+            When analyzing a bill, the AI evaluator reads the full legislative text, applies each
+            pillar in sequence, and performs constrained research where necessary — including
+            reviewing scientific literature, official stakeholder statements, and
+            non-partisan budgetary analyses such as those from the Congressional Budget
+            Office. The analysis is concluded with a PASS or FAIL. If a bill fails a pillar analysis, the bill receives
+            an F grade.
+          </p>
 
-          <!--
-          <p>If we as a society can’t agree on what good policy looks like, then what happens when AI delivers an opinion and half the population disagrees? Do we need a “republican grading system” and a “democrat grading system” so that we can all “live into our values”?</p>
+          <p>
+            The result is not a single opaque judgment, but a structured assessment:
+            pillar-by-pillar reasoning, sector-specific impact estimates, and an
+            overall “Impact to Society” score — all accompanied by written
+            justifications that can be inspected, compared, or challenged.
+          </p>
 
-          <p>This project is ultimately structured under the premise that people would rather live in a society that works for everyone rather than "win" an argument, consequences to society be damned. For this to happen, we at some point have to stop fighting and come to a consensus on these tough issues.</p>
-          -->
+          <p>
+            Bill scores are then aggregated across a legislator’s sponsorships,
+            co-sponsorships, and votes to estimate their
+            <em>Intended Societal Impact</em> — the kind of society their legislative
+            record points toward if enacted.
+          </p>
+
+          <p>
+            In short: PoliScore replaces ideological shortcuts with a consistent,
+            transparent evaluation process. The framework is open-source, the criteria
+            are explicit, and the methodology is designed to make political outcomes
+            easier to reason about — not harder.
+          </p>
         </div>
       </section>
 
