@@ -164,6 +164,8 @@ public class DatabaseBuilder implements QuarkusApplication
 			    || !Objects.equals(dbill.getShortName(), b.getShortName())
 			    || !Objects.equals(dbill.getHot(), b.getHot())
 			    || !Objects.equals(dbill.getStorageBucket(), b.getStorageBucket())
+			    || ( dbill.getInterpretation().getStructuralAnalysisExplain() == null && interp.get().getStructuralAnalysisExplain() != null )
+			    || (dbill.getInterpretation().getStructuralAnalysisExplain() != null && interp.get().getStructuralAnalysisExplain() != null && !Objects.equals(dbill.getInterpretation().getStructuralAnalysisExplain().size(), interp.get().getStructuralAnalysisExplain().size()))
 			    || !Objects.equals(ObjectUtils.firstNonNull(interp.get().getLastUpdate(), interp.get().getLastPressQuery()), ObjectUtils.firstNonNull(dbill.getInterpretation().getLastUpdate(), dbill.getInterpretation().getLastPressQuery()))
 			    ) {
 			    

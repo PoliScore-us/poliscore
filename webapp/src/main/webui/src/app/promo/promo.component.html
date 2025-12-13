@@ -72,33 +72,49 @@
           </h3>
 
           <p>
-            In politics, every interpretation is assumed to be partisan. Left, right, donor-funded,
-            activist-backed — everyone is “selling” an interpretation, and trust is in short supply.
+            Modern society relies on rigorous evaluation in almost every complex domain. Engineering, medicine, finance, and science all use formal processes to assess quality, risk, and downstream impact.
           </p>
 
           <p>
-            <strong>PoliScore is different, because we’re asking you to trust an open-source,
-            non-partisan evaluation process.</strong>
-            Bias, where it exists, is introduced by the AI interpretation model — and that model
-            can be swapped out or audited.
+            Public policy, despite affecting millions of lives, is often analyzed in fragmented, inaccessible, or narrowly scoped ways. Debate is driven by incentives, messaging, and incomplete readings rather than by systematic analysis of outcomes and tradeoffs.
           </p>
 
           <p>
-            PoliScore is designed to apply
-            <strong>uniform evaluation criteria</strong>,
-            and to be <strong>transparent, reproducible, and auditable</strong>. Analyses are timestamped,
-            tied to specific model versions, and stored so they can be inspected, compared, or challenged over time.
+            PoliScore was created to bring structured policy analysis to the general public. It evaluates the full text of legislation using explicit, repeatable criteria, and makes the resulting analysis open to inspection.
           </p>
 
           <p>
-            For journalists, PoliScore provides <strong>citable, traceable AI-assisted analysis</strong>.
-            For citizens, it offers clarity without jargon. For researchers and watchdogs,
-            it enables large-scale accountability.
+            Rather than asking readers to trust a brand or an authority, PoliScore asks them to examine a process. That process is built from three transparent components:
+          </p>
+
+          <ul>
+            <li>
+              The publicly documented
+              <a href="https://raw.githubusercontent.com/poliscore-us/poliscore/main/doc/whitepaper.pdf" target="_blank" rel="noopener noreferrer">methodology</a>,
+              <a href="https://github.com/poliscore-us/poliscore" target="_blank" rel="noopener noreferrer">software</a>,
+              and
+              <a href="https://poliscore.us/#bill-prompt" target="_blank" rel="noopener noreferrer">analysis prompt</a>
+            </li>
+            <li>
+              The AI model used to analyze legislation, along with its documented capabilities and limitations
+              (<a href="https://github.com/PoliScore-us/PoliBench" target="_blank" rel="noopener noreferrer">PoliBench</a>)
+            </li>
+            <li>
+              The reference materials cited within each analysis
+            </li>
+          </ul>
+
+          <p>
+            The process itself, the published results, and the underlying AI models are transparent and independently auditable. Models can be swapped, analyses can be re-run, and conclusions can be compared or challenged over time using the same inputs.
+          </p>
+
+          <p>
+            For journalists, PoliScore provides <strong>citable and traceable AI-assisted analysis</strong>. For the public, it offers clarity without jargon. For researchers and watchdog organizations, it enables large-scale, systematic accountability.
           </p>
 
           <p>
             PoliScore is independent and open-source at its core. The goal is simple:
-            <strong>make it easier to see what’s actually happening in government — and harder to hide behind complexity.</strong>
+            <strong>make it easier to see what is actually happening in government, and harder to hide behind complexity.</strong>
           </p>
         </div>
       </section>
@@ -291,15 +307,15 @@
         </div>
       </section>
 
-      <section class="spotlight" id="bill-scoring">
+      <section class="spotlight" id="bill-prompt">
         <div class="image">
-          <a [routerLink]="'/about'" fragment="bill-scoring">
+          <a [routerLink]="'/about'" fragment="bill-prompt">
             <img [src]="assetPrefix + 'images/bill-scoring-details.png'" alt="Political dashboard" />
           </a>
         </div>
         <div class="content">
           <h3 class="content-header">
-            <a [routerLink]="'/about'" fragment="bill-scoring">Specifics on Bill Scoring</a>
+            <a [routerLink]="'/about'" fragment="bill-prompt">Specifics on Bill Scoring</a>
           </h3>
 
           <p>

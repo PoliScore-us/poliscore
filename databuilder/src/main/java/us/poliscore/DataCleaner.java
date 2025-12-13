@@ -3,6 +3,7 @@ package us.poliscore;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.Set;
@@ -20,6 +21,7 @@ import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
+import us.poliscore.model.bill.BillInterpretationParser.StructuralAnalysisParser;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorInterpretation;
 import us.poliscore.model.press.PressInterpretation;
@@ -54,10 +56,36 @@ public class DataCleaner implements QuarkusApplication {
 		val dataset = data.importDataset(LegislativeNamespace.US_CONGRESS, 2026);
 //		val dataset = data.importDataset(LegislativeNamespace.US_COLORADO, 2025);
 		
-		validateLegislatorInterps(dataset);
+//		validateLegislatorInterps(dataset);
 		
+		reparseStructuralAnalysisInterps(dataset);
+        
 		System.out.println("Program complete.");
+	}
+	
+	public void reparseStructuralAnalysisInterps(PoliscoreDatasetIF dataset) {
 		
+		int count = 0;
+		for (Bill b : dataset.query(Bill.class)) {
+			var dbill = ddb.get(b.getId(), Bill.class).orElse(null);
+			
+			val interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class);
+			if (interp.isEmpty() || dbill == null || dbill.getInterpretation() == null) continue;
+			
+			if (StringUtils.isNotBlank(dbill.getInterpretation().getStructuralAnalysisRaw()) && (dbill.getInterpretation().getStructuralAnalysisExplain() == null || dbill.getInterpretation().getStructuralAnalysisExplain().isEmpty())) {
+				StructuralAnalysisParser.StructuralAnalysisParsed saParsed = StructuralAnalysisParser.parse(interp.get().getStructuralAnalysisRaw());
+				interp.get().setStructuralAnalysisPassFail(saParsed.getResults());
+		        interp.get().setStructuralAnalysisExplain(saParsed.getAnalyses());
+		        
+//		        s3.put(interp.get());
+		        
+		        billService.ddbPersist(dbill, interp.get());
+		        
+		        count++;
+			}
+		}
+		
+		System.out.println("Updated " + count + " bills.");
 	}
 	
 	public void printLegislatorsBills(Legislator leg, PoliscoreDataset dataset) {
@@ -203,3 +231,4 @@ public class DataCleaner implements QuarkusApplication {
 		Quarkus.asyncExit(0);
 	}
 }
+

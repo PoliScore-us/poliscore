@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.regex.Matcher;
@@ -411,147 +413,204 @@ public class BillInterpretationParser {
 		return false;
 	}
 
-	/**
-	 * Parses the "Structural Analysis" free-form section into: -
-	 * Map<StructuralAnalysis, Boolean> (PASS = true, FAIL = false) -
-	 * Map<StructuralAnalysis, String> (analysis text with PASS/FAIL stripped)
-	 *
-	 * Expected format (per prompt):
-	 *
-	 * 1. Problem Clarity & Causal Validity: ...analysis... <PASS> or <FAIL>
-	 *
-	 * 2. Evidence Base & Empirical Support: ...analysis... <PASS> or <FAIL>
-	 *
-	 * ... etc up through pillar 7.
-	 */
 	public static class StructuralAnalysisParser {
 
-		// Matches the numbered pillar headers like:
-		// "1. Problem Clarity & Causal Validity:"
-		// "2. Evidence Base & Empirical Support"
-		private static final Pattern PILLAR_HEADER_PATTERN = Pattern.compile("(?m)^\\s*([1-7])\\.\\s*([^\\n]*)");
+	    // Find start-of-line positions (multiline)
+	    private static final Pattern LINE_START_PATTERN = Pattern.compile("(?m)^.*$");
 
-		// Matches <PASS> or <FAIL> anywhere in the pillar body
-		private static final Pattern PASS_FAIL_PATTERN = Pattern.compile("(?i)<\\s*(PASS|FAIL)\\s*>");
+	    // Optional leading number: "1." or "1)" or "1 " (or nothing)
+	    private static final Pattern OPTIONAL_NUMBER_PREFIX =
+	            Pattern.compile("^\\s*(?:([1-7])\\s*(?:[\\.)]|\\s))?\\s*");
 
-		private StructuralAnalysisParser() {
-			// utility
-		}
+	    // Optional delimiter after display name: ":" or ";" (or nothing)
+	    // IMPORTANT: if present, it is NOT part of analysis.
+	    private static final Pattern OPTIONAL_NAME_DELIMITER =
+	            Pattern.compile("^\\s*[:;]\\s*");
 
-		public static class StructuralAnalysisParsed {
-			private final Map<StructuralAnalysis, Boolean> results;
-			private final Map<StructuralAnalysis, String> analyses;
+	    // Matches <PASS> or <FAIL> anywhere in the pillar body
+	    private static final Pattern PASS_FAIL_PATTERN = Pattern.compile("(?i)<\\s*(PASS|FAIL)\\s*>");
 
-			public StructuralAnalysisParsed(Map<StructuralAnalysis, Boolean> results,
-					Map<StructuralAnalysis, String> analyses) {
-				this.results = results;
-				this.analyses = analyses;
-			}
+	    // Strips ANSI color codes like \u001B[39m
+	    private static final Pattern ANSI_PATTERN = Pattern.compile("\\u001B\\[[;\\d]*m");
 
-			public Map<StructuralAnalysis, Boolean> getResults() {
-				return results;
-			}
+	    private StructuralAnalysisParser() {}
 
-			public Map<StructuralAnalysis, String> getAnalyses() {
-				return analyses;
-			}
-		}
+	    public static class StructuralAnalysisParsed {
+	        private final Map<StructuralAnalysis, Boolean> results;
+	        private final Map<StructuralAnalysis, String> analyses;
 
-		/**
-		 * Parse the full structural analysis text (all 7 pillars) into a pair of maps.
-		 */
-		public static StructuralAnalysisParsed parse(String structuralAnalysisText) {
-			if (StringUtils.isBlank(structuralAnalysisText)) {
-				return new StructuralAnalysisParsed(Collections.emptyMap(), Collections.emptyMap());
-			}
+	        public StructuralAnalysisParsed(Map<StructuralAnalysis, Boolean> results,
+	                                       Map<StructuralAnalysis, String> analyses) {
+	            this.results = results;
+	            this.analyses = analyses;
+	        }
 
-			String text = structuralAnalysisText.replace("\r\n", "\n");
-			Map<StructuralAnalysis, Boolean> results = new HashMap<>();
-			Map<StructuralAnalysis, String> analyses = new HashMap<>();
+	        public Map<StructuralAnalysis, Boolean> getResults() { return results; }
+	        public Map<StructuralAnalysis, String> getAnalyses() { return analyses; }
+	    }
 
-			Matcher matcher = PILLAR_HEADER_PATTERN.matcher(text);
+	    public static StructuralAnalysisParsed parse(String structuralAnalysisText) {
+	        if (StringUtils.isBlank(structuralAnalysisText)) {
+	            return new StructuralAnalysisParsed(Collections.emptyMap(), Collections.emptyMap());
+	        }
 
-			StructuralAnalysis currentPillar = null;
-			int currentBodyStart = -1;
+	        String text = structuralAnalysisText.replace("\r\n", "\n");
+	        text = ANSI_PATTERN.matcher(text).replaceAll("");
 
-			while (matcher.find()) {
-				// Close off previous pillar
-				if (currentPillar != null && currentBodyStart >= 0) {
-					String body = text.substring(currentBodyStart, matcher.start()).trim();
-					StructuralAnalysisEntry entry = parseBody(body);
-					if (entry.passFail != null) {
-						results.put(currentPillar, entry.passFail);
-					}
-					if (StringUtils.isNotBlank(entry.cleanedAnalysis)) {
-						analyses.put(currentPillar, entry.cleanedAnalysis);
-					}
-				}
+	        Map<StructuralAnalysis, Boolean> results = new HashMap<>();
+	        Map<StructuralAnalysis, String> analyses = new HashMap<>();
 
-				int number = Integer.parseInt(matcher.group(1));
-				try {
-					currentPillar = StructuralAnalysis.fromNumber(number);
-				} catch (IllegalArgumentException e) {
-					LoggerFactory.getLogger(BillInterpretationParser.class)
-							.warn("Unknown structural analysis pillar number: {}", number, e);
-					currentPillar = null;
-				}
-				currentBodyStart = matcher.end();
-			}
+	        // Find all pillar header occurrences as (pillar, startIndex, bodyStartIndex)
+	        List<HeaderHit> hits = findHeaderHits(text);
 
-			// Handle trailing pillar body (after last header)
-			if (currentPillar != null && currentBodyStart >= 0 && currentBodyStart < text.length()) {
-				String body = text.substring(currentBodyStart).trim();
-				StructuralAnalysisEntry entry = parseBody(body);
-				if (entry.passFail != null) {
-					results.put(currentPillar, entry.passFail);
-				}
-				if (StringUtils.isNotBlank(entry.cleanedAnalysis)) {
-					analyses.put(currentPillar, entry.cleanedAnalysis);
-				}
-			}
+	        // No headers found -> nothing to parse (or you could treat whole thing as one blob)
+	        if (hits.isEmpty()) {
+	        	throw new RuntimeException("No hits in input text: " + structuralAnalysisText);
+	        }
 
-			return new StructuralAnalysisParsed(results, analyses);
-		}
+	        for (int i = 0; i < hits.size(); i++) {
+	            HeaderHit hit = hits.get(i);
+	            int bodyStart = hit.bodyStart;
+	            int bodyEnd = (i + 1 < hits.size()) ? hits.get(i + 1).headerStart : text.length();
 
-		/**
-		 * Holds both the boolean result and cleaned text for a single pillar.
-		 */
-		private static class StructuralAnalysisEntry {
-			final Boolean passFail;
-			final String cleanedAnalysis;
+	            if (bodyStart < 0 || bodyStart > bodyEnd || bodyStart > text.length()) continue;
 
-			StructuralAnalysisEntry(Boolean passFail, String cleanedAnalysis) {
-				this.passFail = passFail;
-				this.cleanedAnalysis = cleanedAnalysis;
-			}
-		}
+	            String body = text.substring(bodyStart, bodyEnd).trim();
+	            StructuralAnalysisEntry entry = parseBody(body);
 
-		/**
-		 * Extracts the last-occurring <PASS> or <FAIL> from a pillar's body and returns
-		 * that boolean plus the analysis text with all PASS/FAIL tags removed.
-		 */
-		private static StructuralAnalysisEntry parseBody(String body) {
-			if (StringUtils.isBlank(body)) {
-				return new StructuralAnalysisEntry(null, null);
-			}
+	            if (entry.passFail != null) results.put(hit.pillar, entry.passFail);
+	            if (StringUtils.isNotBlank(entry.cleanedAnalysis)) analyses.put(hit.pillar, entry.cleanedAnalysis);
+	        }
+	        
+	        if (results.size() != StructuralAnalysis.values().length || analyses.size() != StructuralAnalysis.values().length)
+	        	throw new RuntimeException("Unable to match all expected structural analysis pillars in input text: " + structuralAnalysisText);
 
-			Matcher m = PASS_FAIL_PATTERN.matcher(body);
-			Boolean last = null;
+	        return new StructuralAnalysisParsed(results, analyses);
+	    }
 
-			while (m.find()) {
-				String token = m.group(1).toUpperCase();
-				if ("PASS".equals(token)) {
-					last = Boolean.TRUE;
-				} else if ("FAIL".equals(token)) {
-					last = Boolean.FALSE;
-				}
-			}
+	    private static class HeaderHit {
+	        final StructuralAnalysis pillar;
+	        final int headerStart; // start index of the full header line
+	        final int bodyStart;   // index where analysis begins
 
-			// Strip all <PASS> / <FAIL> tokens from the analysis text
-			String cleaned = PASS_FAIL_PATTERN.matcher(body).replaceAll("").replaceAll("<PASS/FAIL:>", "").replaceAll("<PASS/FAIL>", "").replaceAll("<PASS>", "").replaceAll("<FAIL>", "").trim();
+	        HeaderHit(StructuralAnalysis pillar, int headerStart, int bodyStart) {
+	            this.pillar = pillar;
+	            this.headerStart = headerStart;
+	            this.bodyStart = bodyStart;
+	        }
+	    }
 
-			return new StructuralAnalysisEntry(last, cleaned);
-		}
+	    /**
+	     * Extremely flexible header detection:
+	     * - optional "1." / "1)" / "1 " prefix
+	     * - then displayName at the start (case-insensitive)
+	     * - then optional ":" or ";" (not part of analysis)
+	     * - analysis may begin immediately after displayName (with or without delimiter)
+	     */
+	    private static List<HeaderHit> findHeaderHits(String text) {
+	        List<HeaderHit> hits = new ArrayList<>();
+
+	        Matcher lineMatcher = LINE_START_PATTERN.matcher(text);
+	        while (lineMatcher.find()) {
+	            String line = lineMatcher.group();
+	            int lineStartIdx = lineMatcher.start();
+
+	            // Strip ANSI again defensively per-line (in case of weird control chars)
+	            String cleanLine = ANSI_PATTERN.matcher(line).replaceAll("");
+
+	            // Remove optional numeric prefix
+	            Matcher prefix = OPTIONAL_NUMBER_PREFIX.matcher(cleanLine);
+	            if (!prefix.find()) continue;
+
+	            String afterPrefix = cleanLine.substring(prefix.end());
+
+	            // Find which pillar display name matches at start (case-insensitive)
+	            StructuralAnalysis matched = null;
+	            int nameLen = -1;
+
+	            for (StructuralAnalysis sa : StructuralAnalysis.values()) {
+	                String dn = sa.getDisplayName();
+	                if (afterPrefix.length() >= dn.length()
+	                        && afterPrefix.regionMatches(true, 0, dn, 0, dn.length())) {
+	                    matched = sa;
+	                    nameLen = dn.length();
+	                    break;
+	                }
+	            }
+
+	            if (matched == null) continue;
+
+	            // Compute where analysis begins (in original text index space)
+	            // bodyStart = lineStart + (prefix consumed) + (displayName consumed) + (optional delimiter)
+	            int bodyStartInLine = prefix.end() + nameLen;
+	            String afterName = cleanLine.substring(Math.min(bodyStartInLine, cleanLine.length()));
+
+	            // Strip optional ":" or ";" after the display name
+	            Matcher delim = OPTIONAL_NAME_DELIMITER.matcher(afterName);
+	            if (delim.find()) {
+	                bodyStartInLine += delim.end();
+	            }
+
+	            // Translate bodyStartInLine (in cleaned line) back to original text index:
+	            // Since we didn't change line length except possibly ANSI stripping, safest is:
+	            // use the original *line* substring positions by operating on original line too.
+	            //
+	            // Practical approach: recompute bodyStart based on original line using same logic but without ANSI present:
+	            String originalLine = line;
+	            String originalNoAnsi = ANSI_PATTERN.matcher(originalLine).replaceAll("");
+
+	            // If stripping ANSI changed length, align by using no-ansi version to compute offset
+	            // and then apply offset to (lineStartIdx + offsetInNoAnsi) by searching that substring in original.
+	            // For simplicity: assume ANSI codes are removed; so use lineStartIdx + bodyStartInLine
+	            // This is correct for typical "\u001B[...m" prefixes which appear before text.
+	            int bodyStartGlobal = lineStartIdx + bodyStartInLine;
+
+	            // Guard
+	            if (bodyStartGlobal < lineStartIdx) bodyStartGlobal = lineStartIdx;
+	            if (bodyStartGlobal > text.length()) bodyStartGlobal = text.length();
+
+	            hits.add(new HeaderHit(matched, lineStartIdx, bodyStartGlobal));
+	        }
+
+	        // If the same pillar appears multiple times, keep the first occurrence and drop the rest
+	        // (or change this behavior if you want "last wins")
+	        LinkedHashMap<StructuralAnalysis, HeaderHit> dedup = new LinkedHashMap<>();
+	        for (HeaderHit h : hits) dedup.putIfAbsent(h.pillar, h);
+
+	        // Return in the order encountered in text
+	        return new ArrayList<>(dedup.values());
+	    }
+
+	    private static class StructuralAnalysisEntry {
+	        final Boolean passFail;
+	        final String cleanedAnalysis;
+
+	        StructuralAnalysisEntry(Boolean passFail, String cleanedAnalysis) {
+	            this.passFail = passFail;
+	            this.cleanedAnalysis = cleanedAnalysis;
+	        }
+	    }
+
+	    private static StructuralAnalysisEntry parseBody(String body) {
+	        if (StringUtils.isBlank(body)) {
+	            return new StructuralAnalysisEntry(null, null);
+	        }
+
+	        Matcher m = PASS_FAIL_PATTERN.matcher(body);
+	        Boolean last = null;
+	        while (m.find()) {
+	            String token = m.group(1).toUpperCase(Locale.ROOT);
+	            last = "PASS".equals(token) ? Boolean.TRUE : Boolean.FALSE;
+	        }
+
+	        // Remove PASS/FAIL tags + your occasional variants
+	        String cleaned = PASS_FAIL_PATTERN.matcher(body).replaceAll("");
+	        cleaned = cleaned.replace("<PASS/FAIL:>", "")
+	                         .replace("<PASS/FAIL>", "")
+	                         .trim();
+
+	        return new StructuralAnalysisEntry(last, cleaned);
+	    }
 	}
 
 }
