@@ -20,5 +20,5 @@ export const sharedAppConfig: ApplicationConfig = {
 };
 
 export const backendUrl: string = environment.apiUrl;
-export const year: number = 2025;
-export const namespace: string = "us/co";
+export const year: number = 2026;
+export const namespace: string = "us/congress";

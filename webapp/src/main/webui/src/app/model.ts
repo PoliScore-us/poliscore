@@ -27,6 +27,7 @@ export interface BillInterpretation {
   issueStats: IssueStats;
   structuralAnalysisPassFail: StructuralAnalysisPassFail;
   structuralAnalysisExplain: StructuralAnalysisExplain;
+  impactAnalysis: string;
   quality?: number;
   id: string;
   genBillTitle: string;

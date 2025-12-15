@@ -49,7 +49,7 @@ public class BillInterpretationParser {
 
 	public static enum State {
 		REASONING("(?i)Reasoning Steps:"), STRUCTURAL("(?i)Structural Analysis:"),
-		SEARCH_REFERENCES("(?i)Search References:"), IMPACT("(?i)Impact:"), RATING("(?i)Rating:"),
+		SEARCH_REFERENCES("(?i)Search References:"), IMPACT_ANALYSIS("(?i)Impact Analysis:"), IMPACT("(?i)Impact:"), RATING("(?i)Rating:"),
 		AUTHOR("(?i)Author:"), TITLE("(?i)Title:", "(?i)Bill Title:"), RIDERS("(?i)Riders:"),
 		SHORT_REPORT("(?i)Short Report:"), LONG_REPORT("(?i)Long Report:"), LAYMANS_REPORT("(?i)Casual Report:"),
 		CONFIDENCE("(?i)Confidence:");
@@ -75,6 +75,7 @@ public class BillInterpretationParser {
 		interp.setRating(0);
 		interp.setSearchReferences("");
 		interp.setStructuralAnalysisRaw("");
+		interp.setImpactAnalysis("");
 		interp.setShortExplain("");
 		interp.setLongExplain("");
 		interp.setAuthor("");
@@ -178,6 +179,8 @@ public class BillInterpretationParser {
 			processSearchReferences(line);
 		} else if (State.LAYMANS_REPORT.equals(state)) {
 			processLaymansReport(line);
+		} else if (State.IMPACT_ANALYSIS.equals(state)) {
+			processImpactAnalysis(line);
 		}
 	}
 
@@ -211,6 +214,11 @@ public class BillInterpretationParser {
 //		if (stats.explanation.matches("(?i)^" + summaryHeaderRegex + ".*$")) {
 //			stats.explanation = stats.explanation.replaceFirst("(?i)" + summaryHeaderRegex, "");
 //		}
+	}
+	
+	private void processImpactAnalysis(String line) {
+		String newline = StringUtils.isBlank(interp.getImpactAnalysis()) ? "" : "\n";
+		interp.setImpactAnalysis(interp.getImpactAnalysis() + newline + line);
 	}
 
 	private void processReasoning(String line) {

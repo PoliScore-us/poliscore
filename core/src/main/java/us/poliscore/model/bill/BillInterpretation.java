@@ -74,8 +74,12 @@ public class BillInterpretation extends SessionPersistable
 	
 	protected Integer confidence;
 	
+	protected String impactAnalysis;
+	
 	protected String reasoning;
 	
+	@JsonIgnore
+	@Getter(onMethod_ = {@DynamoDbIgnore})
 	protected String structuralAnalysisRaw;
 	
 	protected String searchReferences;

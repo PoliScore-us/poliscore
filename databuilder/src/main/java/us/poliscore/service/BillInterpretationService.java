@@ -58,6 +58,73 @@ public class BillInterpretationService {
 			7. Risk:
 			Does the policy introduce fragility, perverse incentives, or cascading failures that undermine the intended outcomes?
 			
+			Impact Analysis:
+			Based on all previous bill analysis, you will now perform an impact analysis. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the step number, name and a colon, exactly as written here, followed by your analysis. Do not attempt to quantify impact in this section (that will happen in a later section).
+			
+			1. Baseline:
+			Provide 1–3 sentences which defines the baseline for which this bill impact is operating upon. Impact to society must be calculated relative to this baseline. End this section with one of the following machine-readble identifiers
+			- CURRENT_LAW (name the law)
+			- LIKELY_TRAJECTORY (absent new legislation)
+			- NO_ACTION
+			- OTHER (specify)
+			
+			2. Affected Parties:
+			Provide 1-3 sentences describing exactly who the affected party(s) will be and how you determined it. End this section with one of the following machine-readble identifiers
+			- VERY_NARROW (<0.1% of population)
+			- NARROW (0.1%–1%)
+			- MODERATE (1%–10%)
+			- BROAD (10%–50%)
+			- NEAR_UNIVERSAL (>50%)
+			
+			3. Directionality:
+			Select one.
+			- NET_BENEFICIAL
+			- NET_HARMFUL
+			- MIXED
+			- UNCLEAR
+			
+			4. Effect Magnitude (per affected person):
+			Provide 1-3 sentences describing the magnitude per affected person, and how you determined it. End this section with one of the following machine-readble identifiers
+			- NEGLIGIBLE
+			- MINOR
+			- MODERATE
+			- SIGNIFICANT
+			- SEVERE
+			
+			5. Temporal Horizon:
+			Provide 1-3 sentences describing the impact timeline and how you determined it. End this section with one of the following machine-readble identifiers
+			- IMMEDIATE (0–5 years)
+			- MEDIUM_TERM (5–20 years)
+			- LONG_TERM (20+ years)
+			
+			6. Risk Structure:
+			Provide 1-3 sentences describing the risk structure and how you determined it. End this section with one of the following machine-readble identifiers
+			- LINEAR_EFFECTS
+			- THRESHOLD_DEPENDENT
+			- TAIL_RISK
+			- SYSTEMIC_RISK
+			- IRREVERSIBLE_HARM
+			- REVERSIBLE_EFFECTS
+			
+			7. Reversibility:
+			Provide 1-3 sentences describing the reversibility and how you determined it. End this section with one of the following machine-readble identifiers
+			- EASILY_REVERSIBLE
+			- DIFFICULT_TO_REVERSE
+			- LARGELY_IRREVERSIBLE
+			
+			8. Summary:
+			Provide a concise paragraph explaining:
+			- the primary causal pathways
+			- how impacts differ from the stated baseline
+			- key assumptions
+			- major uncertainties
+			- any known thresholds, tipping points, or cumulative risks
+			
+			Impact:
+			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. Scores near ±10 indicate marginal or localized effects; ±30 indicate meaningful policy impact; ±60 indicate major national consequences; ±90 indicate rare, transformative effects. Use the full scale sparingly and proportionally. There is an important distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that it will have none. Use N/A if the goals of the bill do not align at all with the policy area. Respond with only the integer and an optional sign, no commentary or units.
+			
+			{issuesList}
+			
 			Long Report:
 			Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving an analysis on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are referenced, which are not common knowledge, please define them.  Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
 
@@ -66,11 +133,6 @@ public class BillInterpretationService {
 
 			Short Report:
 			Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
-
-			Impact:
-			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. There is an important distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that it will have none. Use N/A if the goals of the bill do not align at all with the policy area. Respond with only the integer and an optional sign, no commentary or units.
-			
-			{issuesList}
 			
 			Rating:
 			Write a single integer, from -100 to 100, which represents how strongly you think the legislation should be passed, with -100 being it definitely should NOT be passed and 100 being it definitely SHOULD be passed. This rating should directly translate to a grade for the bill, as per the following grading rubric (where r is the rating): A: r >= 60, B: 60 > r >= 40, C: 40 > r >= 20, D: 20 > r >= 0, F: r < 0. If the impact to society is negative, then so too should the rating score - naturally you wouldn't recommend voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
@@ -88,34 +150,89 @@ public class BillInterpretationService {
 			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
 			
 			1. Precision:
-			Does the policy accurately diagnose the underlying issue and target the relevant causal mech-
-			anisms? <PASS / FAIL>
+			Does the policy accurately diagnose the underlying issue and target the relevant causal mechanisms?
 			2. Evidence:
-			Is the proposed intervention supported by empirical research, historical precedent, or mean-
-			ingful comparative data? <PASS / FAIL>
+			Is the proposed intervention supported by empirical research, historical precedent, or meaningful comparative data?
 			3. Feasibility:
-			Can existing institutions realistically execute the policy given resource, logistical, adminis-
-			trative, and temporal constraints? <PASS / FAIL>
+			Can existing institutions realistically execute the policy given resource, logistical, administrative, and temporal constraints?
 			4. Budget:
-			Does the policy use resources responsibly, minimize waste, and avoid unsustainable long-
-			term obligations? <PASS / FAIL>
+			Does the policy use resources responsibly, minimize waste, and avoid unsustainable long-term obligations?
 			5. Fairness:
-			How are benefits and burdens distributed across populations, and does the policy unjustifi-
-			ably disadvantage certain groups? <PASS / FAIL>
+			How are benefits and burdens distributed across populations, and does the policy unjustifiably disadvantage certain groups?
 			6. Governance:
-			Does the policy maintain transparency, accountability, and resilience while minimizing op-
-			portunities for corruption or abuse? <PASS / FAIL>
+			Does the policy maintain transparency, accountability, and resilience while minimizing opportunities for corruption or abuse?
 			7. Risk:
-			Does the policy introduce fragility, perverse incentives, or cascading failures that undermine
-			the intended outcomes? <PASS / FAIL>
+			Does the policy introduce fragility, perverse incentives, or cascading failures that undermine the intended outcomes?
+			
+			Impact Analysis:
+			Based on all previous bill analysis, you will now perform an impact analysis. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the step number, name and a colon, exactly as written here, followed by your analysis. Do not attempt to quantify impact in this section (that will happen in a later section).
+			
+			1. Baseline:
+			Provide 1–3 sentences which defines the baseline for which this bill impact is operating upon. Impact to society must be calculated relative to this baseline. End this section with one of the following machine-readble identifiers
+			- CURRENT_LAW (name the law)
+			- LIKELY_TRAJECTORY (absent new legislation)
+			- NO_ACTION
+			- OTHER (specify)
+			
+			2. Affected Parties:
+			Provide 1-3 sentences describing exactly who the affected party(s) will be and how you determined it. End this section with one of the following machine-readble identifiers
+			- VERY_NARROW (<0.1% of population)
+			- NARROW (0.1%–1%)
+			- MODERATE (1%–10%)
+			- BROAD (10%–50%)
+			- NEAR_UNIVERSAL (>50%)
+			
+			3. Directionality:
+			Select one.
+			- NET_BENEFICIAL
+			- NET_HARMFUL
+			- MIXED
+			- UNCLEAR
+			
+			4. Effect Magnitude (per affected person):
+			Provide 1-3 sentences describing the magnitude per affected person, and how you determined it. End this section with one of the following machine-readble identifiers
+			- NEGLIGIBLE
+			- MINOR
+			- MODERATE
+			- SIGNIFICANT
+			- SEVERE
+			
+			5. Temporal Horizon:
+			Provide 1-3 sentences describing the impact timeline and how you determined it. End this section with one of the following machine-readble identifiers
+			- IMMEDIATE (0–5 years)
+			- MEDIUM_TERM (5–20 years)
+			- LONG_TERM (20+ years)
+			
+			6. Risk Structure:
+			Provide 1-3 sentences describing the risk structure and how you determined it. End this section with one of the following machine-readble identifiers
+			- LINEAR_EFFECTS
+			- THRESHOLD_DEPENDENT
+			- TAIL_RISK
+			- SYSTEMIC_RISK
+			- IRREVERSIBLE_HARM
+			- REVERSIBLE_EFFECTS
+			
+			7. Reversibility:
+			Provide 1-3 sentences describing the reversibility and how you determined it. End this section with one of the following machine-readble identifiers
+			- EASILY_REVERSIBLE
+			- DIFFICULT_TO_REVERSE
+			- LARGELY_IRREVERSIBLE
+			
+			8. Summary:
+			Provide a concise paragraph explaining:
+			- the primary causal pathways
+			- how impacts differ from the stated baseline
+			- key assumptions
+			- major uncertainties
+			- any known thresholds, tipping points, or cumulative risks
+			
+			Impact:
+			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. Scores near ±10 indicate marginal or localized effects; ±30 indicate meaningful policy impact; ±60 indicate major national consequences; ±90 indicate rare, transformative effects. Use the full scale sparingly and proportionally. There is an important distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that it will have none. Use N/A if the goals of the bill do not align at all with the policy area. Respond with only the integer and an optional sign, no commentary or units.
+			
+			{issuesList}
 			
 			Long Report:
 			Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving an analysis on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are referenced, which are not common knowledge, please define them.  Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
-			
-			Impact:
-			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. There is an important distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that it will have none. Use N/A if the goals of the bill do not align at all with the policy area. Respond with only the integer and an optional sign, no commentary or units.
-			
-			{issuesList}
 			
 			Rating:
 			Write a single integer, from -100 to 100, which represents how strongly you think the legislation should be passed, with -100 being it definitely should NOT be passed and 100 being it definitely SHOULD be passed. This rating should directly translate to a grade for the bill, as per the following grading rubric (where r is the rating): A: r >= 60, B: 60 > r >= 40, C: 40 > r >= 20, D: 20 > r >= 0, F: r < 0. If the impact to society is negative, then so too should the rating score - naturally you wouldn't recommend voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
@@ -177,7 +294,7 @@ public class BillInterpretationService {
 	
 	public static final String SEARCH_MODEL_INSTRUCTIONS1 = """
 Supplemental Web Search:
-This is your first section, and your goal is to query the web and gather additional supplemental information, which may or may not exist. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the step number, name and a colon, exactly as written here, followed by your search results. If you do not have access to the web, output 'Unable to access the web' and end this section; NEVER make up fake sources.
+This is your first section, and your goal is to query the web and gather additional supplemental information, which may or may not exist. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the step number, name and a colon, exactly as written here, followed by your search results. If you do not have access to the web, output 'Unable to access the web' and end this section; NEVER make up fake sources. Information for each of these sections may or may not exist; if it cannot be found, it must not be treated as evidence for or against the bill.
 
 1. Advocate / Sponsor Reasoning:
 Gather any information which may have been published on the web from the bill's sponsor or likely advocates. We're looking here for rationale which might explain their goals and reasoning process.

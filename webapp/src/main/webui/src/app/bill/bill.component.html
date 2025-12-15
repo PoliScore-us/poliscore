@@ -130,15 +130,9 @@
                             ></disclaimer>
                             
                             <disclaimer
-                                *ngIf="isSubscribed && bill.interpretation.reasoning && bill.interpretation.reasoning.length > 0"
+                                *ngIf="isSubscribed && bill.interpretation.confidence && bill.interpretation.rating"
                                 [small]="'AI Reasoning'"
-                                [large]="'Confidence: ' + bill.interpretation.confidence + '%\nRating: ' + bill.interpretation.rating + '\n\n' + bill.interpretation.reasoning"
-                            ></disclaimer>
-
-                            <disclaimer
-                                *ngIf="isSubscribed && !(bill.interpretation.reasoning && bill.interpretation.reasoning.length > 0) && bill.interpretation.confidence && bill.interpretation.rating"
-                                [small]="'AI Reasoning'"
-                                [large]="'Confidence: ' + bill.interpretation.confidence + '%\nRating: ' + bill.interpretation.rating + '\n\nInternal reasoning coming soon...'"
+                                [large]="'Confidence: ' + bill.interpretation.confidence + '%\nRating: ' + bill.interpretation.rating + '\n\n' + getReasoning()"
                             ></disclaimer>
                         </div>
                     </mat-card-content>

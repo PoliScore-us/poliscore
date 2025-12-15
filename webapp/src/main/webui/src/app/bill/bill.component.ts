@@ -214,6 +214,15 @@ export class BillComponent implements OnInit, OnDestroy {
     }
   }
 
+  getReasoning() {
+    const reasoning = this.bill?.interpretation?.reasoning;
+    const impact = this.bill?.interpretation?.impactAnalysis;
+
+    return reasoning?.trim()
+      || impact?.trim()
+      || "Internal reasoning coming soon...";
+  }
+
   officialUrlForBill(): string | undefined {
     if (this.bill == null) return;
     if (this.bill.officialUrl != null && this.bill.officialUrl.length > 0) return this.bill.officialUrl;
