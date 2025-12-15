@@ -49,7 +49,7 @@ public class BillInterpretationParser {
 
 	public static enum State {
 		REASONING("(?i)Reasoning Steps:"), STRUCTURAL("(?i)Structural Analysis:"),
-		SEARCH_REFERENCES("(?i)Search References:"), IMPACT_ANALYSIS("(?i)Impact Analysis:"), IMPACT("(?i)Impact:"), RATING("(?i)Rating:"),
+		SEARCH_REFERENCES("(?i)Search References:"), IMPACT_ANALYSIS("(?i)Impact Analysis:"), IMPACT("(?i)Impact Stats:"), RATING("(?i)Rating:"),
 		AUTHOR("(?i)Author:"), TITLE("(?i)Title:", "(?i)Bill Title:"), RIDERS("(?i)Riders:"),
 		SHORT_REPORT("(?i)Short Report:"), LONG_REPORT("(?i)Long Report:"), LAYMANS_REPORT("(?i)Casual Report:"),
 		CONFIDENCE("(?i)Confidence:");

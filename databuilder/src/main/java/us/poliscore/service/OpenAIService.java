@@ -271,7 +271,10 @@ public class OpenAIService {
 
 			List<String> lines = FileUtils.readLines(jsonlFile, "UTF-8");
 			
-			File outputFile = new File(jsonlFile.getParentFile(), jsonlFile.getName() + ".out.jsonl");
+			var buildTemp = new File(System.getProperty("user.home") + "/appdata/poliscore/build");
+			buildTemp.mkdirs();
+			
+			File outputFile = new File(buildTemp, jsonlFile.getName() + ".out.jsonl");
 			responseFiles.add(outputFile);
 			Log.info("Writing responses to file: " + outputFile.getAbsolutePath());
 

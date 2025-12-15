@@ -120,10 +120,16 @@ public class BillInterpretationService {
 			- major uncertainties
 			- any known thresholds, tipping points, or cumulative risks
 			
-			Impact:
+			Confidence:
+			A self-rated integer from 0 to 100 measuring how confident you are that your analysis was valid and interpreted correctly.
+			
+			Impact Stats:
 			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. Scores near ±10 indicate marginal or localized effects; ±30 indicate meaningful policy impact; ±60 indicate major national consequences; ±90 indicate rare, transformative effects. Use the full scale sparingly and proportionally. There is an important distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that it will have none. Use N/A if the goals of the bill do not align at all with the policy area. Respond with only the integer and an optional sign, no commentary or units.
 			
 			{issuesList}
+			
+			Rating:
+			Write a single integer, from -100 to 100, which represents how strongly you think the legislation should be passed, with -100 being it definitely should NOT be passed and 100 being it definitely SHOULD be passed. This rating should directly translate to a grade for the bill, as per the following grading rubric (where r is the rating): A: r >= 60, B: 60 > r >= 40, C: 40 > r >= 20, D: 20 > r >= 0, F: r < 0. If the impact to society is negative, then so too should the rating score - naturally you wouldn't recommend voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
 			
 			Long Report:
 			Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving an analysis on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are referenced, which are not common knowledge, please define them.  Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
@@ -133,12 +139,6 @@ public class BillInterpretationService {
 
 			Short Report:
 			Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
-			
-			Rating:
-			Write a single integer, from -100 to 100, which represents how strongly you think the legislation should be passed, with -100 being it definitely should NOT be passed and 100 being it definitely SHOULD be passed. This rating should directly translate to a grade for the bill, as per the following grading rubric (where r is the rating): A: r >= 60, B: 60 > r >= 40, C: 40 > r >= 20, D: 20 > r >= 0, F: r < 0. If the impact to society is negative, then so too should the rating score - naturally you wouldn't recommend voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
-
-			Confidence:
-			A self-rated integer from 0 to 100 measuring how confident you are that your analysis was valid and interpreted correctly.
 			
 			{searchReferences}
 			""";
@@ -226,16 +226,16 @@ public class BillInterpretationService {
 			- major uncertainties
 			- any known thresholds, tipping points, or cumulative risks
 			
-			Impact:
+			Impact Stats:
 			Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0 (neutral) to +100 (very helpful) or N/A if it is not relevant. Scores near ±10 indicate marginal or localized effects; ±30 indicate meaningful policy impact; ±60 indicate major national consequences; ±90 indicate rare, transformative effects. Use the full scale sparingly and proportionally. There is an important distinction between 0 and N/A. Use 0 if the goal of the bill was to provide impact in the policy area - but you are predicting that it will have none. Use N/A if the goals of the bill do not align at all with the policy area. Respond with only the integer and an optional sign, no commentary or units.
 			
 			{issuesList}
 			
-			Long Report:
-			Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving an analysis on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are referenced, which are not common knowledge, please define them.  Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
-			
 			Rating:
 			Write a single integer, from -100 to 100, which represents how strongly you think the legislation should be passed, with -100 being it definitely should NOT be passed and 100 being it definitely SHOULD be passed. This rating should directly translate to a grade for the bill, as per the following grading rubric (where r is the rating): A: r >= 60, B: 60 > r >= 40, C: 40 > r >= 20, D: 20 > r >= 0, F: r < 0. If the impact to society is negative, then so too should the rating score - naturally you wouldn't recommend voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
+			
+			Long Report:
+			Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving an analysis on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are referenced, which are not common knowledge, please define them.  Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
 			
 			{searchReferences}
 			""";
@@ -266,6 +266,12 @@ public class BillInterpretationService {
 			7. Risk:
 			Does the policy introduce fragility, perverse incentives, or cascading failures that undermine the intended outcomes?
 			
+			Confidence:
+			A self-rated integer from 0 to 100 measuring how confident you are that your analysis was valid and interpreted correctly.
+			
+			Rating:
+			Write a single integer, from -100 to 100, which represents how strongly you think the legislation should be passed, with -100 being it definitely should NOT be passed and 100 being it definitely SHOULD be passed. This rating should directly translate to a grade for the bill, as per the following grading rubric (where r is the rating): A: r >= 60, B: 60 > r >= 40, C: 40 > r >= 20, D: 20 > r >= 0, F: r < 0. If the impact to society is negative, then so too should the rating score - naturally you wouldn't recommend voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
+			
 			Long Report:
 			Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will explain the high level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving an analysis on the impact the bill will have on society, if enacted. After your high-level summary, you will then go on to explain, in depth, how you came to these conclusions. You may conclude by identifying winners and losers of the bill, and identifying industry stakeholders, if relevant. Should be between three and seven paragraphs long, depending on the complexity of the bill and the topics it covers. If the bill touches on controversial topics such as trans issues or guns rights, please include the advocating logic by proponents and also the advocating logic of the opposition, otherwise do not include this logic. Where relevant, cite scientific studies or the opinions of authoritative knowledge sources to provide more context. If acronyms are referenced, which are not common knowledge, please define them.  Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
 			
@@ -274,12 +280,6 @@ public class BillInterpretationService {
 			
 			Short Report:
 			Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
-			
-			Rating:
-			Write a single integer, from -100 to 100, which represents how strongly you think the legislation should be passed, with -100 being it definitely should NOT be passed and 100 being it definitely SHOULD be passed. This rating should directly translate to a grade for the bill, as per the following grading rubric (where r is the rating): A: r >= 60, B: 60 > r >= 40, C: 40 > r >= 20, D: 20 > r >= 0, F: r < 0. If the impact to society is negative, then so too should the rating score - naturally you wouldn't recommend voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
-			
-			Confidence:
-			A self-rated integer from 0 to 100 measuring how confident you are that your analysis was valid and interpreted correctly.
 			
 			{searchReferences}
 			""";

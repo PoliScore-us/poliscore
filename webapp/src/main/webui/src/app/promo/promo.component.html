@@ -487,7 +487,11 @@
             - any known thresholds, tipping points, or cumulative risks
             <br/><br/>
 
-            Impact:<br/>
+            Confidence:<br/>
+            A self-rated integer from 0 to 100 measuring how confident you are that your analysis was valid and interpreted correctly.
+            <br/><br/>
+
+            Impact Stats:<br/>
             Score the following bill on the estimated impact to the United States upon the following criteria, rated from -100 (very harmful) to 0
             (neutral) to +100 (very helpful) or N/A if it is not relevant. Scores near ±10 indicate marginal or localized effects; ±30 indicate
             meaningful policy impact; ±60 indicate major national consequences; ±90 indicate rare, transformative effects. Use the full scale sparingly
@@ -515,6 +519,10 @@
             Overall Benefit to Society: &lt;score or N/A&gt;
             <br/><br/>
 
+            Rating:<br/>
+            Write a single integer, from -100 to 100, which represents how strongly you think the legislation should be passed, with -100 being it definitely should NOT be passed and 100 being it definitely SHOULD be passed. This rating should directly translate to a grade for the bill, as per the following grading rubric (where r is the rating): A: r >= 60, B: 60 > r >= 40, C: 40 > r >= 20, D: 20 > r >= 0, F: r < 0. If the impact to society is negative, then so too should the rating score - naturally you wouldn't recommend voting for a bill which is bad for society. This rating metric is however separate from the impact scores, in that a bill might be of high rating but it might have a low impact. A common example might be a congressional gold medal award given for a heroic act (high rating), but the overall impact to society is small. Respond with only the integer, no commentary or units.
+            <br/><br/>
+
             Long Report:<br/>
             Your audience is political enthusiasts and/or professionals, written at a college education level. Your first paragraph will explain the high
             level goals of the bill, give a high level summary of how it attempts to achieve those goals, and then conclude by giving an analysis on the
@@ -538,6 +546,11 @@
             use them, they must be defined. You may link to sources using markdown link syntax, where relevant. Do not include any formatting text such
             as stars or dashes (excluding links). Do not include non-human readable text such as XML ids. Where appropriate, please cite references from
             your search inside the report. References can be cited using markdown link syntax: [explanation text here](http://example.com)
+            <br/><br/>
+
+            Short Report:<br/>
+            Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
+            <br/><br/>
           </div>
         </div>
       </section>
