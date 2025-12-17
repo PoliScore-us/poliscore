@@ -41,7 +41,7 @@ public class BillInterpretationService {
 			Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very concise title for the bill based on its content. If the bill has a title, but it is confusing, vague, too long, or would otherwise be poorly understood by the general public, please make up a very concise title for the bill based on its content.
 
 			Structural Analysis:
-			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
+			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either exactly "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
 			
 			1. Precision:
 			Does the policy accurately diagnose the underlying issue and target the relevant causal mechanisms?
@@ -147,7 +147,7 @@ public class BillInterpretationService {
 			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Impact:') in your response. Do not include the section instructions in your response. Do not ever use 'I' language (as in, I reached this conclusion because...).
 
 			Structural Analysis:
-			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
+			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either exactly "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
 			
 			1. Precision:
 			Does the policy accurately diagnose the underlying issue and target the relevant causal mechanisms?
@@ -249,7 +249,7 @@ public class BillInterpretationService {
 			Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very short title for the bill based on its content.
 			
 			Structural Analysis:
-			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
+			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either exactly "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
 			
 			1. Precision:
 			Does the policy accurately diagnose the underlying issue and target the relevant causal mechanisms?

@@ -152,18 +152,6 @@ public class DataCleaner implements QuarkusApplication {
 //		}
 //	}
 	
-	public void wipeAllPressInterps(Bill b)
-	{
-		var pressInterps = billService.getPressInterps(b.getId(), false);
-		
-		for (val interp : pressInterps)
-		{
-			s3.delete(interp.getId(), PressInterpretation.class);
-		}
-		
-		Log.info("Deleted " + pressInterps.size() + " existing interpretations");
-	}
-	
 	public void validateLegislatorInterps(PoliscoreDatasetIF dataset) {
 		Log.info("validating legislator interpretations.");
 		

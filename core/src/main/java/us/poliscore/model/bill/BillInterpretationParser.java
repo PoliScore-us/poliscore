@@ -105,17 +105,9 @@ public class BillInterpretationParser {
 		validateIssueStats(interp.getIssueStats());
 
 		// Parse structural analysis into clean outputs
-		try {
-            if (StringUtils.isNotBlank(interp.getStructuralAnalysisRaw())) {
-                StructuralAnalysisParser.StructuralAnalysisParsed saParsed =
-                        StructuralAnalysisParser.parse(interp.getStructuralAnalysisRaw());
-
-                interp.setStructuralAnalysisPassFail(saParsed.getResults());
-                interp.setStructuralAnalysisExplain(saParsed.getAnalyses());
-            }
-        } catch (Throwable t) {
-            logger.error("Error parsing structural analysis results for bill [" + this.interp.billId + "]", t);
-        }
+        StructuralAnalysisParser.StructuralAnalysisParsed saParsed = StructuralAnalysisParser.parse(interp.getStructuralAnalysisRaw());
+        interp.setStructuralAnalysisPassFail(saParsed.getResults());
+        interp.setStructuralAnalysisExplain(saParsed.getAnalyses());
 	}
 
 	private String standardizeFormatting(String line) {

@@ -257,6 +257,9 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			return;
 		}
 		
+		if (DatabaseBuilder.FORCE_WEB_SEARCH)
+			billService.wipeAllPressInterps(bill);
+		
 		new BillInterpretationParser(bill, bi, s3).parse(interpText, null);
 		
 		if (!bi.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety)) {

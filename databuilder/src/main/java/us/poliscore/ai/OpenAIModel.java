@@ -18,7 +18,7 @@ public enum OpenAIModel {
     O3("o3", 190_000, 95_000, false, true, ReasoningEffort.LOW, new RateLimit(30_000_000, 10_000)),
     O3_DEEP_RESEARCH("o3-deep-research", 190_000, 95_000, false, true, null, new RateLimit(30_000_000, 10_000));
 	
-	public static final OpenAIModel DEFAULT_MODEL = GPT52;
+	public static final OpenAIModel DEFAULT_MODEL = GPT51;
 
     // ---- Fields ----
     private final String id;

@@ -333,7 +333,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 			
 			if (!quotaLimitHit && totalQueries < MAX_QUERIES) {
 				if (FORCE_REINTERPRET)
-					deleteExisting(b);
+					billService.wipeAllPressInterps(b);
 				
 				try {
 					processBill(b);
@@ -357,19 +357,6 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		
 		if (remainingBillsCount > 0)
 			Log.info(remainingBillsCount + " bills remaining to process in dataset " + dataset.getDescription());
-	}
-	
-	public void deleteExisting(Bill b)
-	{
-		var pressInterps = billService.getPressInterps(b.getId(), false);
-		
-		for (val interp : pressInterps)
-		{
-//			if (interp.getId().contains("reddit"))
-				s3.delete(interp.getId(), PressInterpretation.class);
-		}
-		
-		Log.info("Deleted " + pressInterps.size() + " existing interpretations");
 	}
 	
 	

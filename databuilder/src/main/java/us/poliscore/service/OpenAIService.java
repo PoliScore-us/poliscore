@@ -122,7 +122,10 @@ public class OpenAIService {
 		int estimatedTokens = userMsg.length() / 4; // Roughly 4 chars per token
 		waitForRateLimit(model, estimatedTokens);
 		
-		OpenAIClient client = OpenAIOkHttpClient.builder().apiKey(secret.getOpenAISecret()).build();
+		OpenAIClient client = OpenAIOkHttpClient.builder()
+				.apiKey(secret.getOpenAISecret())
+				.timeout(Duration.ofMinutes(30)) // You want this with flex. Not with others
+				.build();
 		
 		OpenAIModel _model = ObjectUtils.defaultIfNull(model, OpenAIModel.DEFAULT_MODEL);
 		
@@ -136,6 +139,8 @@ public class OpenAIService {
 			paramBuilder.tools(List.of(
 			        Tool.ofWebSearch(WebSearchTool.builder().type(Type.WEB_SEARCH_PREVIEW).build())
 			        ));
+		
+		paramBuilder.serviceTier(ResponseCreateParams.ServiceTier.FLEX);
 		
 		if (_model.isSupportsTemperature())
 			paramBuilder.temperature(0.0d); // We don't want randomness. Give us predictability and accuracy

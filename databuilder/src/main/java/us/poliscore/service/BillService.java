@@ -98,6 +98,18 @@ public class BillService {
 		
 		return s3PressInterps;
 	}
+	
+	public void wipeAllPressInterps(Bill b)
+	{
+		var pressInterps = getPressInterps(b.getId(), false);
+		
+		for (val interp : pressInterps)
+		{
+			s3.delete(interp.getId(), PressInterpretation.class);
+		}
+		
+		Log.info("Deleted " + pressInterps.size() + " existing interpretations for bill " + b.getId());
+	}
     
     protected String generateBillName(String url)
     {

@@ -8756,6 +8756,7 @@ https://poliscore.us/2026/bill/hr/5257
 https://poliscore.us/2026/bill/hr/5258
 https://poliscore.us/2026/bill/hr/5250
 https://poliscore.us/2026/bill/hr/5248
+https://poliscore.us/2026/bill/hr/5249
 https://poliscore.us/2026/bill/hjres/119
 https://poliscore.us/2026/bill/s/2762
 https://poliscore.us/2026/bill/s/2761
@@ -10061,6 +10062,7 @@ https://poliscore.us/2026/bill/hr/6105
 https://poliscore.us/2026/bill/hr/6104
 https://poliscore.us/2026/bill/s/3209
 https://poliscore.us/2026/bill/s/3208
+https://poliscore.us/2026/bill/s/3210
 https://poliscore.us/2026/bill/sjres/96
 https://poliscore.us/2026/bill/hr/6121
 https://poliscore.us/2026/bill/hr/6123
@@ -10131,6 +10133,7 @@ https://poliscore.us/2026/bill/hr/6208
 https://poliscore.us/2026/bill/hr/6207
 https://poliscore.us/2026/bill/hr/6209
 https://poliscore.us/2026/bill/hr/6220
+https://poliscore.us/2026/bill/hr/6221
 https://poliscore.us/2026/bill/hr/6224
 https://poliscore.us/2026/bill/hr/6223
 https://poliscore.us/2026/bill/hr/6226
@@ -10198,7 +10201,9 @@ https://poliscore.us/2026/bill/hr/6250
 https://poliscore.us/2026/bill/hr/6249
 https://poliscore.us/2026/bill/hr/6266
 https://poliscore.us/2026/bill/hr/6265
+https://poliscore.us/2026/bill/hr/6267
 https://poliscore.us/2026/bill/hr/6260
+https://poliscore.us/2026/bill/hr/6275
 https://poliscore.us/2026/bill/hr/6279
 https://poliscore.us/2026/bill/hr/6273
 https://poliscore.us/2026/bill/hr/6284
@@ -10211,6 +10216,7 @@ https://poliscore.us/2026/bill/hr/6290
 https://poliscore.us/2026/bill/hr/6293
 https://poliscore.us/2026/bill/hr/6292
 https://poliscore.us/2026/bill/hr/6300
+https://poliscore.us/2026/bill/hr/6303
 https://poliscore.us/2026/bill/hr/6310
 https://poliscore.us/2026/bill/hr/6312
 https://poliscore.us/2026/bill/hr/6311
@@ -10225,7 +10231,10 @@ https://poliscore.us/2026/bill/hr/6315
 https://poliscore.us/2026/bill/hr/6317
 https://poliscore.us/2026/bill/hr/6321
 https://poliscore.us/2026/bill/hr/6320
+https://poliscore.us/2026/bill/hr/6323
+https://poliscore.us/2026/bill/hr/6322
 https://poliscore.us/2026/bill/hr/6325
+https://poliscore.us/2026/bill/hr/6324
 https://poliscore.us/2026/bill/hr/6318
 https://poliscore.us/2026/bill/hr/6319
 https://poliscore.us/2026/bill/hr/6327
@@ -10233,6 +10242,7 @@ https://poliscore.us/2026/bill/hr/6326
 https://poliscore.us/2026/bill/hr/6328
 https://poliscore.us/2026/bill/hr/6330
 https://poliscore.us/2026/bill/hr/6332
+https://poliscore.us/2026/bill/hr/6331
 https://poliscore.us/2026/bill/hr/6334
 https://poliscore.us/2026/bill/hr/6333
 https://poliscore.us/2026/bill/hr/6336
@@ -10245,10 +10255,14 @@ https://poliscore.us/2026/bill/hr/6342
 https://poliscore.us/2026/bill/hr/6345
 https://poliscore.us/2026/bill/hr/6346
 https://poliscore.us/2026/bill/hr/6338
+https://poliscore.us/2026/bill/hr/6339
 https://poliscore.us/2026/bill/s/3293
 https://poliscore.us/2026/bill/s/3290
+https://poliscore.us/2026/bill/hr/6352
 https://poliscore.us/2026/bill/hr/6351
+https://poliscore.us/2026/bill/hr/6353
 https://poliscore.us/2026/bill/hr/6356
+https://poliscore.us/2026/bill/hr/6355
 https://poliscore.us/2026/bill/hr/6349
 https://poliscore.us/2026/bill/hr/6366
 https://poliscore.us/2026/bill/hr/6361
@@ -10266,11 +10280,16 @@ https://poliscore.us/2026/bill/hr/6398
 https://poliscore.us/2026/bill/hr/6390
 https://poliscore.us/2026/bill/hr/6392
 https://poliscore.us/2026/bill/sjres/98
+https://poliscore.us/2026/bill/hr/6422
 https://poliscore.us/2026/bill/hr/6472
 https://poliscore.us/2026/bill/hr/6478
+https://poliscore.us/2026/bill/hr/6480
+https://poliscore.us/2026/bill/hr/6481
+https://poliscore.us/2026/bill/hr/6427
 https://poliscore.us/2026/bill/hr/6429
 https://poliscore.us/2026/bill/hr/6437
 https://poliscore.us/2026/bill/hr/6436
+https://poliscore.us/2026/bill/hr/6460
 https://poliscore.us/2026/bill/s/3380
 https://poliscore.us/2026/bill/hr/6484
 https://poliscore.us/2026/bill/hr/6488
@@ -10325,7 +10344,10 @@ https://poliscore.us/2026/bill/hr/6663
 https://poliscore.us/2026/bill/hr/6611
 https://poliscore.us/2026/bill/hr/6612
 https://poliscore.us/2026/bill/hr/6672
+https://poliscore.us/2026/bill/s/3436
 https://poliscore.us/2026/bill/hjres/134
+https://poliscore.us/2026/bill/hr/6703
+https://poliscore.us/2026/bill/hr/6722
 https://poliscore.us/legislators
 https://poliscore.us/legislator/F000062
 https://poliscore.us/legislator/G000386
