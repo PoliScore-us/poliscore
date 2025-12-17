@@ -63,11 +63,10 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 @QuarkusMain(name="BatchOpenAIResponseImporter")
 public class BatchOpenAIResponseImporter implements QuarkusApplication
 {
-//	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/unprocessed.jsonl";
+	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/unprocessed.jsonl").getAbsolutePath();
 	
 //	Canceled half-way through a batch (bills)
-	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/openapi-bills-bulk-1.jsonl.out.jsonl").getAbsolutePath();
-//	public static final String INPUT = "/Users/rrowlands/dev/projects/pissedoffcitizen/poliscore/databuilder/target/oxpenapi-legislators-bulk-1.jsonl.out.jsonl";
+//	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/openapi-bills-bulk-1.jsonl.out.jsonl").getAbsolutePath();
 	
 	@Inject
 	private CachedDynamoDbService ddb;
@@ -144,7 +143,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		}
 		
 		if (erroredLines.size() > 0) {
-			File f = new File(Environment.getDeployedPath(), "unprocessed.jsonl");
+			File f = new File(System.getProperty("user.home"), "/appdata/poliscore/build/unprocessed.jsonl");
 			FileUtils.write(f, String.join("\n", erroredLines), "UTF-8");
 			throw new RuntimeException("Encountered errors on " + erroredLines.size() + " lines. Printed them to " + f.getAbsolutePath());
 		}

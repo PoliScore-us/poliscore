@@ -7,7 +7,9 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -28,7 +30,6 @@ import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
 import us.poliscore.dataset.PoliscoreDatasetIF;
-import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillSlice;
@@ -45,7 +46,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 {
 	public static final List<String> specificFetch = null;
 //	public static final List<String> specificFetch = Arrays.asList(
-//			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 1)
+//			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 6590)
 //			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 4)
 //			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 3380),
 //			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 844)	
@@ -59,7 +60,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 //		    "BIL/us/co/2173/sb/11","BIL/us/co/2173/sb/77","BIL/us/co/2173/sb/160"
 //		);
 	
-	public static final int MAX_BILL_PROCESS = 300; // Denotes the max bills to process in a given session. -1 for infinite
+	public static final int MAX_BILL_PROCESS = 600; // Denotes the max bills to process in a given session. -1 for infinite
 	
 	
 	
@@ -139,27 +140,24 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		
 		boolean includePressDirtyBills = !isSecondFetch;
 		
-		var requestBills = dataset.query(Bill.class).stream()
-				.filter(b -> specificFetch == null || specificFetch.contains(b.getId()))
-				.filter(b -> (!CHECK_S3_EXISTS || !billInterpreter.isInterpreted(b.getId()) || (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))))
-//				.filter(b -> 
-//				!billInterpreter.isInterpreted(b.getId()) || (b.getSessionCode().equals("2173") &&
-//				billInterpreter.isInterpreted(b.getId())
-////						&& s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getRating() < 0
-//						 && !s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getMetadata().getModel().toLowerCase().equals("gpt-5")
-////								&& b.getStatus().getProgress() == 1.0f
-//								))
-				.filter(b -> s3.exists(BillText.generateId(b.getId()), BillText.class))
-				.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed());
+		var stream = dataset.query(Bill.class).stream().filter(b -> specificFetch == null || specificFetch.contains(b.getId())).filter(b -> s3.exists(BillText.generateId(b.getId()), BillText.class));
 		
-		if (MAX_BILL_PROCESS != -1)
-			requestBills = requestBills.limit(MAX_BILL_PROCESS);
+//		stream = andNotAlreadyInterpreted(stream, includePressDirtyBills);
+		stream = ifInterpretedThenInSession(stream, "119");
+		stream = ifInterpretedThenByModel(stream, "gpt-4o");
+				
+		var requestBills = stream.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed()).toList();
 		
-		val requestBillsList = requestBills.toList();
+		long total = requestBills.size();
 		
-		Log.info("Processing " + requestBillsList.size() + " bills for request generation on dataset " + dataset.getDescription());
+		if (MAX_BILL_PROCESS != -1) {
+			requestBills = requestBills.stream().limit(MAX_BILL_PROCESS).toList();
+		}
 		
-		for (Bill b : requestBillsList) {
+		String outOf = (MAX_BILL_PROCESS != -1 && total > MAX_BILL_PROCESS) ? " out of " + total : "";
+		Log.info("Processing " + requestBills.size() + " bills" + outOf + " for request generation on dataset " + dataset.getDescription());
+		
+		for (Bill b : requestBills) {
 			
 			// The press interpreter may have said this bill was dirty, but after the press interps came back, they came back as NO_INTERP. At this point, it's not actually dirty and doesn't need to be interpreted.
 			if (CHECK_S3_EXISTS && billInterpreter.isInterpreted(b.getId()) && includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b)) {
@@ -248,18 +246,21 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 				writeBlock(block++);
 			}
 		};
-		
-//		if (totalRequests == 0) {
-//			val mostRecent = data.getDataset().query(Bill.class).stream()
-//					.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed())
-//					.limit(100)
-//					.filter(b -> (!CHECK_S3_EXISTS || !billInterpreter.isInterpreted(b.getId())))
-//					.limit(10)
-//					.map(b -> Arrays.asList(b.getId(), s3.exists(BillText.generateId(b.getId()), BillText.class)))
-//					.toList();
-//			
-//			Log.info(mostRecent);
-//		}
+	}
+	
+	private Stream<Bill> andNotAlreadyInterpreted(Stream<Bill> stream, boolean includePressDirtyBills) {
+		return stream.filter(b -> (!CHECK_S3_EXISTS || !billInterpreter.isInterpreted(b.getId()) || (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))));
+	}
+	
+	private Stream<Bill> ifInterpretedThenByModel(Stream<Bill> stream, String model) {
+		return stream.filter(b -> 
+			!billInterpreter.isInterpreted(b.getId()) ||
+				(s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getMetadata().getModel().toLowerCase().equals("gpt-4o"))
+		);
+	}
+	
+	private Stream<Bill> ifInterpretedThenInSession(Stream<Bill> stream, String sessionCode) {
+		return stream.filter(b -> !billInterpreter.isInterpreted(b.getId()) || (b.getSessionCode().equals(sessionCode)));
 	}
 	
 	private void createRequest(String oid, String sysMsg, String userMsg) {

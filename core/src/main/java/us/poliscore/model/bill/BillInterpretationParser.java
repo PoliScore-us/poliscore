@@ -177,19 +177,19 @@ public class BillInterpretationParser {
 	}
 
 	private void validateIssueStats(IssueStats stats) {
-		int zeroCount = 0;
-		int totalSet = 0;
-		for (TrackedIssue issue : TrackedIssue.values()) {
-			if (issue != TrackedIssue.OverallBenefitToSociety && stats.hasStat(issue)) {
-				totalSet++;
-				if (stats.getStat(issue) == 0)
-					zeroCount++;
-			}
-		}
+//		int zeroCount = 0;
+//		int totalSet = 0;
+//		for (TrackedIssue issue : TrackedIssue.values()) {
+//			if (issue != TrackedIssue.OverallBenefitToSociety && stats.hasStat(issue)) {
+//				totalSet++;
+//				if (stats.getStat(issue) == 0)
+//					zeroCount++;
+//			}
+//		}
 
-		if (Math.abs(totalSet - TrackedIssue.values().length) <= 2 && zeroCount > 1) {
-			logger.error("Malformed AI response for bill [" + this.interp.billId
-					+ "]: too many tracked issues were assigned a value of 0. Only include an issue if it is truly relevant. Zeros will be removed from issue stats.");
+//		if (Math.abs(totalSet - TrackedIssue.values().length) <= 2 && zeroCount > 1) {
+//			logger.error("Malformed AI response for bill [" + this.interp.billId
+//					+ "]: too many tracked issues were assigned a value of 0. Only include an issue if it is truly relevant. Zeros will be removed from issue stats.");
 
 			for (TrackedIssue issue : TrackedIssue.values()) {
 				if (stats.hasStat(issue) && stats.getStat(issue) == 0
@@ -197,7 +197,7 @@ public class BillInterpretationParser {
 					stats.removeStat(issue);
 				}
 			}
-		}
+//		}
 	}
 
 	private void clean(String dirty) {
@@ -415,23 +415,13 @@ public class BillInterpretationParser {
 
 	public static class StructuralAnalysisParser {
 
-	    // Find start-of-line positions (multiline)
-	    private static final Pattern LINE_START_PATTERN = Pattern.compile("(?m)^.*$");
-
-	    // Optional leading number: "1." or "1)" or "1 " (or nothing)
-	    private static final Pattern OPTIONAL_NUMBER_PREFIX =
-	            Pattern.compile("^\\s*(?:([1-7])\\s*(?:[\\.)]|\\s))?\\s*");
-
-	    // Optional delimiter after display name: ":" or ";" (or nothing)
-	    // IMPORTANT: if present, it is NOT part of analysis.
-	    private static final Pattern OPTIONAL_NAME_DELIMITER =
-	            Pattern.compile("^\\s*[:;]\\s*");
-
-	    // Matches <PASS> or <FAIL> anywhere in the pillar body
-	    private static final Pattern PASS_FAIL_PATTERN = Pattern.compile("(?i)<\\s*(PASS|FAIL)\\s*>");
+	    // <PASS> / <FAIL> anywhere (case-insensitive, whitespace-tolerant)
+	    private static final Pattern PASS_FAIL_PATTERN =
+	            Pattern.compile("(?i)<\\s*(PASS|FAIL)\\s*>");
 
 	    // Strips ANSI color codes like \u001B[39m
-	    private static final Pattern ANSI_PATTERN = Pattern.compile("\\u001B\\[[;\\d]*m");
+	    private static final Pattern ANSI_PATTERN =
+	            Pattern.compile("\\u001B\\[[;\\d]*m");
 
 	    private StructuralAnalysisParser() {}
 
@@ -440,7 +430,7 @@ public class BillInterpretationParser {
 	        private final Map<StructuralAnalysis, String> analyses;
 
 	        public StructuralAnalysisParsed(Map<StructuralAnalysis, Boolean> results,
-	                                       Map<StructuralAnalysis, String> analyses) {
+	                                        Map<StructuralAnalysis, String> analyses) {
 	            this.results = results;
 	            this.analyses = analyses;
 	        }
@@ -451,165 +441,184 @@ public class BillInterpretationParser {
 
 	    public static StructuralAnalysisParsed parse(String structuralAnalysisText) {
 	        if (StringUtils.isBlank(structuralAnalysisText)) {
-	            return new StructuralAnalysisParsed(Collections.emptyMap(), Collections.emptyMap());
+	            throw new RuntimeException("Structural analysis text was blank");
 	        }
 
 	        String text = structuralAnalysisText.replace("\r\n", "\n");
 	        text = ANSI_PATTERN.matcher(text).replaceAll("");
 
+	        // Accumulate raw bodies per pillar in encounter order
+	        Map<StructuralAnalysis, StringBuilder> bodies = new LinkedHashMap<>();
+
+	        StructuralAnalysis current = null;
+
+	        try (Scanner scanner = new Scanner(text)) {
+	            while (scanner.hasNextLine()) {
+	                String rawLine = scanner.nextLine();
+	                String line = rawLine.trim();
+
+	                if (StringUtils.isBlank(line)) {
+	                    // preserve blank lines inside bodies (optional); easiest: ignore them
+	                    // If you want them, append "\n" when current != null.
+	                    continue;
+	                }
+
+	                // If this line starts a new pillar header, switch state
+	                HeaderMatch hm = matchHeader(line);
+	                if (hm != null) {
+	                    current = hm.pillar;
+	                    bodies.computeIfAbsent(current, k -> new StringBuilder());
+
+	                    // Inline analysis (same line after header) should be captured too
+	                    if (StringUtils.isNotBlank(hm.inlineBody)) {
+	                        appendLine(bodies.get(current), hm.inlineBody);
+	                    }
+
+	                    continue;
+	                }
+
+	                // Otherwise it's body content for the current pillar (if any)
+	                if (current != null) {
+	                    appendLine(bodies.get(current), line);
+	                }
+	            }
+	        }
+
+	        // Now produce outputs
 	        Map<StructuralAnalysis, Boolean> results = new HashMap<>();
 	        Map<StructuralAnalysis, String> analyses = new HashMap<>();
 
-	        // Find all pillar header occurrences as (pillar, startIndex, bodyStartIndex)
-	        List<HeaderHit> hits = findHeaderHits(text);
+	        // Must see every enum at least once
+	        for (StructuralAnalysis sa : StructuralAnalysis.values()) {
+	            StringBuilder sb = bodies.get(sa);
+	            if (sb == null) {
+	                throw new RuntimeException("Missing structural analysis pillar: " + sa);
+	            }
 
-	        // No headers found -> nothing to parse (or you could treat whole thing as one blob)
-	        if (hits.isEmpty()) {
-	        	throw new RuntimeException("No hits in input text: " + structuralAnalysisText);
+	            String body = sb.toString().trim();
+	            if (StringUtils.isBlank(body)) {
+	                throw new RuntimeException("Empty analysis body for pillar: " + sa);
+	            }
+
+	            Boolean passFail = findLastPassFail(body);
+	            if (passFail == null) {
+	                throw new RuntimeException("Missing <PASS> or <FAIL> tag for pillar: " + sa);
+	            }
+
+	            String cleaned = cleanBody(body);
+	            if (StringUtils.isBlank(cleaned)) {
+	                // if you want to allow “tag only” pillars, remove this check
+	                throw new RuntimeException("Analysis text was empty after cleaning for pillar: " + sa);
+	            }
+
+	            results.put(sa, passFail);
+	            analyses.put(sa, cleaned);
 	        }
 
-	        for (int i = 0; i < hits.size(); i++) {
-	            HeaderHit hit = hits.get(i);
-	            int bodyStart = hit.bodyStart;
-	            int bodyEnd = (i + 1 < hits.size()) ? hits.get(i + 1).headerStart : text.length();
-
-	            if (bodyStart < 0 || bodyStart > bodyEnd || bodyStart > text.length()) continue;
-
-	            String body = text.substring(bodyStart, bodyEnd).trim();
-	            StructuralAnalysisEntry entry = parseBody(body);
-
-	            if (entry.passFail != null) results.put(hit.pillar, entry.passFail);
-	            if (StringUtils.isNotBlank(entry.cleanedAnalysis)) analyses.put(hit.pillar, entry.cleanedAnalysis);
+	        // Defensive: ensure we populated all
+	        if (results.size() != StructuralAnalysis.values().length ||
+	            analyses.size() != StructuralAnalysis.values().length) {
+	            throw new RuntimeException("Unable to parse all structural analysis pillars from input text: " + structuralAnalysisText);
 	        }
-	        
-	        if (results.size() != StructuralAnalysis.values().length || analyses.size() != StructuralAnalysis.values().length)
-	        	throw new RuntimeException("Unable to match all expected structural analysis pillars in input text: " + structuralAnalysisText);
 
 	        return new StructuralAnalysisParsed(results, analyses);
 	    }
 
-	    private static class HeaderHit {
-	        final StructuralAnalysis pillar;
-	        final int headerStart; // start index of the full header line
-	        final int bodyStart;   // index where analysis begins
-
-	        HeaderHit(StructuralAnalysis pillar, int headerStart, int bodyStart) {
-	            this.pillar = pillar;
-	            this.headerStart = headerStart;
-	            this.bodyStart = bodyStart;
-	        }
+	    private static void appendLine(StringBuilder sb, String line) {
+	        if (sb.length() > 0) sb.append("\n");
+	        sb.append(line);
 	    }
 
-	    /**
-	     * Extremely flexible header detection:
-	     * - optional "1." / "1)" / "1 " prefix
-	     * - then displayName at the start (case-insensitive)
-	     * - then optional ":" or ";" (not part of analysis)
-	     * - analysis may begin immediately after displayName (with or without delimiter)
-	     */
-	    private static List<HeaderHit> findHeaderHits(String text) {
-	        List<HeaderHit> hits = new ArrayList<>();
-
-	        Matcher lineMatcher = LINE_START_PATTERN.matcher(text);
-	        while (lineMatcher.find()) {
-	            String line = lineMatcher.group();
-	            int lineStartIdx = lineMatcher.start();
-
-	            // Strip ANSI again defensively per-line (in case of weird control chars)
-	            String cleanLine = ANSI_PATTERN.matcher(line).replaceAll("");
-
-	            // Remove optional numeric prefix
-	            Matcher prefix = OPTIONAL_NUMBER_PREFIX.matcher(cleanLine);
-	            if (!prefix.find()) continue;
-
-	            String afterPrefix = cleanLine.substring(prefix.end());
-
-	            // Find which pillar display name matches at start (case-insensitive)
-	            StructuralAnalysis matched = null;
-	            int nameLen = -1;
-
-	            for (StructuralAnalysis sa : StructuralAnalysis.values()) {
-	                String dn = sa.getDisplayName();
-	                if (afterPrefix.length() >= dn.length()
-	                        && afterPrefix.regionMatches(true, 0, dn, 0, dn.length())) {
-	                    matched = sa;
-	                    nameLen = dn.length();
-	                    break;
-	                }
-	            }
-
-	            if (matched == null) continue;
-
-	            // Compute where analysis begins (in original text index space)
-	            // bodyStart = lineStart + (prefix consumed) + (displayName consumed) + (optional delimiter)
-	            int bodyStartInLine = prefix.end() + nameLen;
-	            String afterName = cleanLine.substring(Math.min(bodyStartInLine, cleanLine.length()));
-
-	            // Strip optional ":" or ";" after the display name
-	            Matcher delim = OPTIONAL_NAME_DELIMITER.matcher(afterName);
-	            if (delim.find()) {
-	                bodyStartInLine += delim.end();
-	            }
-
-	            // Translate bodyStartInLine (in cleaned line) back to original text index:
-	            // Since we didn't change line length except possibly ANSI stripping, safest is:
-	            // use the original *line* substring positions by operating on original line too.
-	            //
-	            // Practical approach: recompute bodyStart based on original line using same logic but without ANSI present:
-	            String originalLine = line;
-	            String originalNoAnsi = ANSI_PATTERN.matcher(originalLine).replaceAll("");
-
-	            // If stripping ANSI changed length, align by using no-ansi version to compute offset
-	            // and then apply offset to (lineStartIdx + offsetInNoAnsi) by searching that substring in original.
-	            // For simplicity: assume ANSI codes are removed; so use lineStartIdx + bodyStartInLine
-	            // This is correct for typical "\u001B[...m" prefixes which appear before text.
-	            int bodyStartGlobal = lineStartIdx + bodyStartInLine;
-
-	            // Guard
-	            if (bodyStartGlobal < lineStartIdx) bodyStartGlobal = lineStartIdx;
-	            if (bodyStartGlobal > text.length()) bodyStartGlobal = text.length();
-
-	            hits.add(new HeaderHit(matched, lineStartIdx, bodyStartGlobal));
-	        }
-
-	        // If the same pillar appears multiple times, keep the first occurrence and drop the rest
-	        // (or change this behavior if you want "last wins")
-	        LinkedHashMap<StructuralAnalysis, HeaderHit> dedup = new LinkedHashMap<>();
-	        for (HeaderHit h : hits) dedup.putIfAbsent(h.pillar, h);
-
-	        // Return in the order encountered in text
-	        return new ArrayList<>(dedup.values());
-	    }
-
-	    private static class StructuralAnalysisEntry {
-	        final Boolean passFail;
-	        final String cleanedAnalysis;
-
-	        StructuralAnalysisEntry(Boolean passFail, String cleanedAnalysis) {
-	            this.passFail = passFail;
-	            this.cleanedAnalysis = cleanedAnalysis;
-	        }
-	    }
-
-	    private static StructuralAnalysisEntry parseBody(String body) {
-	        if (StringUtils.isBlank(body)) {
-	            return new StructuralAnalysisEntry(null, null);
-	        }
-
+	    private static Boolean findLastPassFail(String body) {
 	        Matcher m = PASS_FAIL_PATTERN.matcher(body);
 	        Boolean last = null;
 	        while (m.find()) {
 	            String token = m.group(1).toUpperCase(Locale.ROOT);
 	            last = "PASS".equals(token) ? Boolean.TRUE : Boolean.FALSE;
 	        }
+	        return last;
+	    }
 
-	        // Remove PASS/FAIL tags + your occasional variants
+	    private static String cleanBody(String body) {
+	        // Remove all PASS/FAIL tags
 	        String cleaned = PASS_FAIL_PATTERN.matcher(body).replaceAll("");
-	        cleaned = cleaned.replace("<PASS/FAIL:>", "")
-	                         .replace("<PASS/FAIL>", "")
-	                         .trim();
 
-	        return new StructuralAnalysisEntry(last, cleaned);
+	        // Remove your occasional variants
+	        cleaned = cleaned
+	                .replace("<PASS/FAIL:>", "")
+	                .replace("<PASS/FAIL>", "");
+
+	        return cleaned.trim();
+	    }
+
+	    private static class HeaderMatch {
+	        final StructuralAnalysis pillar;
+	        final String inlineBody;
+
+	        HeaderMatch(StructuralAnalysis pillar, String inlineBody) {
+	            this.pillar = pillar;
+	            this.inlineBody = inlineBody;
+	        }
+	    }
+
+	    /**
+	     * Enum-driven structural analysis header matcher.
+	     *
+	     * A header is recognized ONLY if it begins with the enum’s numeric order
+	     * followed by an optional "." or ")" delimiter, optional whitespace, the
+	     * enum display name, and a required ":" delimiter.
+	     *
+	     * Accepted examples:
+	     *  - "1. Precision:"
+	     *  - "1 Precision:"
+	     *  - "1)Precision:"
+	     *  - "1)   **Precision**: inline analysis text"
+	     *
+	     * Rejected examples:
+	     *  - "Precision:"              (missing numeric prefix)
+	     *  - "**Precision**:"          (missing numeric prefix)
+	     *  - "1 - Precision:"          (unsupported delimiter)
+	     *
+	     * Notes:
+	     *  - Matching is case-insensitive.
+	     *  - Simple markdown emphasis around the display name is tolerated.
+	     *  - Any text following the ":" is captured as inline body content.
+	     */
+	    private static HeaderMatch matchHeader(String line) {
+	        String working = ANSI_PATTERN.matcher(line).replaceAll("").trim();
+
+	        for (StructuralAnalysis sa : StructuralAnalysis.values()) {
+	            int n = sa.getNumber();
+	            String dn = sa.getDisplayName();
+
+	            /*
+	             * Accepts:
+	             *  "1. Precision:"
+	             *  "1 Precision:"
+	             *  "1)Precision:"
+	             *  "1)   **Precision**: blah"
+	             * Rejects:
+	             *  "Precision:" (no number)
+	             */
+	            String regex =
+	                    "^\\s*"
+	                  + n
+	                  + "(?:[\\.)])?"     // optional "." or ")"
+	                  + "\\s*"            // optional whitespace (incl none)
+	                  + "(?:\\*\\*|__|\\*|_)?\\s*"
+	                  + Pattern.quote(dn)
+	                  + "\\s*(?:\\*\\*|__|\\*|_)?"
+	                  + "\\s*:\\s*(.*)$";
+
+	            Matcher m = Pattern.compile(regex, Pattern.CASE_INSENSITIVE).matcher(working);
+	            if (m.matches()) {
+	                String inline = m.group(1);
+	                inline = (inline == null) ? null : inline.trim();
+	                return new HeaderMatch(sa, StringUtils.isBlank(inline) ? null : inline);
+	            }
+	        }
+
+	        return null;
 	    }
 	}
 
