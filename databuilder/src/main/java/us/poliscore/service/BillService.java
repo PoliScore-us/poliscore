@@ -94,7 +94,9 @@ public class BillService {
 		String sessionKey = billId.substring(StringUtils.ordinalIndexOf(billId, "/", 1)+1, StringUtils.ordinalIndexOf(billId, "/", 4));
 		String objectKey = billId.substring(StringUtils.ordinalIndexOf(billId, "/", 4)+1);
 		
-		var s3PressInterps = s3.query(PressInterpretation.class, sessionKey, objectKey).stream().filter(i -> !InterpretationOrigin.POLISCORE.equals(i.getOrigin()) && (!excludeNoInterps || !i.isNoInterp())).collect(Collectors.toList());
+		var s3PressInterps = s3.query(PressInterpretation.class, sessionKey, objectKey).stream()
+				.filter(i -> i.getBillId().equals(billId) && !InterpretationOrigin.POLISCORE.equals(i.getOrigin()) && (!excludeNoInterps || !i.isNoInterp()))
+				.collect(Collectors.toList());
 		
 		return s3PressInterps;
 	}

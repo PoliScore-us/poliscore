@@ -159,8 +159,9 @@ public class OpenAIService {
 			        String msg = failure.getMessage();
 			        return msg != null && msg.toLowerCase().contains("rate limit");
 			    })
-			    .withBackoff(1, 8, ChronoUnit.SECONDS)
-			    .withMaxRetries(3)
+			    .withBackoff(5, 640, ChronoUnit.SECONDS)
+			    .withJitter(0.25)
+			    .withMaxRetries(8)
 			    .onRetry(e -> Log.warn("Retrying due to timeout or retryable server exception [" + e.getLastException().getMessage() + "]"))
 			    .onFailure(e -> Log.error("Retries exhausted", e.getException()))
 			    .build();
