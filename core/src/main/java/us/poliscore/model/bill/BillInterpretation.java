@@ -132,6 +132,8 @@ public class BillInterpretation extends SessionPersistable
 		billId = bill.getId();
 	}
 	
+	@JsonIgnore
+	@DynamoDbIgnore
 	public Integer getSliceIndex() {
 		if (!(metadata instanceof AISliceInterpretationMetadata)) return null;
 		
