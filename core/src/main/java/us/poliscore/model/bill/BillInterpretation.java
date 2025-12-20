@@ -151,6 +151,8 @@ public class BillInterpretation extends SessionPersistable
 		}
 	}
 	
+	@JsonIgnore
+	@DynamoDbIgnore
 	public boolean isValid() {
 		return pressInterps != null && pressInterps.size() > 0 &&
 				issueStats != null && issueStats.isValid() &&

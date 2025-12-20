@@ -142,6 +142,8 @@ public class IssueStats {
 		return stats.getOrDefault(issue, defaultValue);
 	}
 	
+	@JsonIgnore
+	@DynamoDbIgnore
 	public boolean isValid() {
 		for (TrackedIssue issue : TrackedIssue.values()) {
 			if (hasStat(issue) && getStat(issue) == 0 && issue != TrackedIssue.OverallBenefitToSociety) {
