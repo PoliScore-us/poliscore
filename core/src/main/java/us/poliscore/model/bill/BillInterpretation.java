@@ -156,10 +156,10 @@ public class BillInterpretation extends SessionPersistable
 	@JsonIgnore
 	@DynamoDbIgnore
 	public boolean isValid() {
-		return pressInterps != null && pressInterps.size() > 0 &&
-				issueStats != null && issueStats.isValid() &&
-				StringUtils.isNotBlank(getLongExplain()) &&
-				getSliceIndex() != null || (StringUtils.isNotBlank(getLaymansReport()) && StringUtils.isNotBlank(getShortExplain()));
+		return pressInterps != null && pressInterps.size() > 0
+				&& issueStats != null && issueStats.isValid()
+				&& StringUtils.isNotBlank(getLongExplain())
+				&& (getSliceIndex() != null || (StringUtils.isNotBlank(getLaymansReport()) && StringUtils.isNotBlank(getShortExplain())));
 	}
 	
 	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX }) public String getStorageBucket() { return super.getStorageBucket(); }
