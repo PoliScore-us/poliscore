@@ -208,8 +208,7 @@
             pillar in sequence, and performs constrained research where necessary — including
             reviewing scientific literature, official stakeholder statements, and
             non-partisan budgetary analyses such as those from the Congressional Budget
-            Office. The analysis is concluded with a PASS or FAIL. If a bill fails a pillar analysis, the bill receives
-            an F grade.
+            Office. The analysis is concluded with a PASS or FAIL.
           </p>
 
           <p>
@@ -550,6 +549,11 @@
 
             Short Report:<br/>
             Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
+            <br/><br/>
+
+            Search References:<br/>
+            A single line JSON array payload which contains machine readable data about all the references used in your analysis. Each reference shall be represented by a JSON array with the following string fields: ["https://example.org/full/url/here", "author or Unknown", "title", "sentiment as an integer from -100 to 100", "sentiment text: a textual representation of the sentiment. Could be N/A, Mixed, Neutral, Positive, Negative, etc.", "summary", "long summary",  "reference type, one of : STAKEHOLDER | BUDGETARY | NEWS | ACADEMIC | LEGAL | GOVERNMENT | OTHER"]"<br/>
+			      The long summary field must contain all critical information from the article which you used in your analysis. Here is an example of a single cited reference (you may have more than one): [["https://pmc.ncbi.nlm.nih.gov/articles/PMC9677302/", "Sajjad et al., Canadian Journal of Kidney Health and Disease, 2022", "Motivators and Barriers to Living Donor Kidney Transplant as Perceived by Past and Potential Donors", "0", "N/A", "Peer-reviewed study citing lack of job security as a significant barrier to living donation.", "A large proportion of women and men reported that guaranteed job security (47% women and 38% of men), paid time off (51% of women and 42% of men), reimbursement of lost wages (49% of women and 38% of men), and protections to guarantee no impact on future insurability (62% of women and 52% of men) were significant motivators to donate.", "ACADEMIC"]]
             <br/><br/>
           </div>
         </div>

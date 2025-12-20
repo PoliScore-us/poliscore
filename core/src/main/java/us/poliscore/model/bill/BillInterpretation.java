@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
@@ -130,6 +132,12 @@ public class BillInterpretation extends SessionPersistable
 		billId = bill.getId();
 	}
 	
+	public Integer getSliceIndex() {
+		if (!(metadata instanceof AISliceInterpretationMetadata)) return null;
+		
+		return ((AISliceInterpretationMetadata)metadata).getSliceIndex();
+	}
+	
 	@JsonIgnore
 	public String getName()
 	{
@@ -141,6 +149,13 @@ public class BillInterpretation extends SessionPersistable
 		{
 			return bill.getName();
 		}
+	}
+	
+	public boolean isValid() {
+		return pressInterps != null && pressInterps.size() > 0 &&
+				issueStats != null && issueStats.isValid() &&
+				StringUtils.isNotBlank(getLongExplain()) &&
+				getSliceIndex() != null || (StringUtils.isNotBlank(getLaymansReport()) && StringUtils.isNotBlank(getShortExplain()));
 	}
 	
 	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX }) public String getStorageBucket() { return super.getStorageBucket(); }

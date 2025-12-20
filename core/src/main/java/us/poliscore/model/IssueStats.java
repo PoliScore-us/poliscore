@@ -142,6 +142,16 @@ public class IssueStats {
 		return stats.getOrDefault(issue, defaultValue);
 	}
 	
+	public boolean isValid() {
+		for (TrackedIssue issue : TrackedIssue.values()) {
+			if (hasStat(issue) && getStat(issue) == 0 && issue != TrackedIssue.OverallBenefitToSociety) {
+				return false;
+			}
+		}
+		
+		return hasStat(TrackedIssue.OverallBenefitToSociety);
+	}
+	
 	public void removeStat(TrackedIssue issue)
 	{
 		stats.remove(issue);

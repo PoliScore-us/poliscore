@@ -46,6 +46,8 @@ public class BillInterpretationParser {
 	private BillInterpretation interp;
 
 	private S3PersistenceService s3;
+	
+	private int searchReferenceCount = 0;
 
 	public static enum State {
 		REASONING("(?i)Reasoning Steps:"), STRUCTURAL("(?i)Structural Analysis:"),
@@ -100,14 +102,14 @@ public class BillInterpretationParser {
 			}
 		}
 
-		// TODO : Clean?
-
-		validateIssueStats(interp.getIssueStats());
+		cleanIssueStats(interp.getIssueStats());
 
 		// Parse structural analysis into clean outputs
         StructuralAnalysisParser.StructuralAnalysisParsed saParsed = StructuralAnalysisParser.parse(interp.getStructuralAnalysisRaw());
         interp.setStructuralAnalysisPassFail(saParsed.getResults());
         interp.setStructuralAnalysisExplain(saParsed.getAnalyses());
+        
+        validate();
 	}
 
 	private String standardizeFormatting(String line) {
@@ -175,8 +177,14 @@ public class BillInterpretationParser {
 			processImpactAnalysis(line);
 		}
 	}
+	
+	protected void validate() {
+		if (!interp.isValid()) {
+			throw new RuntimeException("Interpretation did not pass vaidation.");
+		}
+	}
 
-	private void validateIssueStats(IssueStats stats) {
+	private void cleanIssueStats(IssueStats stats) {
 //		int zeroCount = 0;
 //		int totalSet = 0;
 //		for (TrackedIssue issue : TrackedIssue.values()) {
@@ -290,6 +298,7 @@ public class BillInterpretationParser {
 		s3.put(pi);
 
 		interp.getPressInterps().add(pi);
+		searchReferenceCount++;
 	}
 
 	private int parseSentiment(String sentimentStr) {

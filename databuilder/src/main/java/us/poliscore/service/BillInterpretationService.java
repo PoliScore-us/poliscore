@@ -147,7 +147,7 @@ public class BillInterpretationService {
 			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Impact:') in your response. Do not include the section instructions in your response. Do not ever use 'I' language (as in, I reached this conclusion because...).
 
 			Structural Analysis:
-			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either exactly "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
+			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing EXACTLY one of "<PASS>", or "<FAIL>" (not mixed), denoting that the bill has either passed or failed that pillar of the structural analysis.
 			
 			1. Precision:
 			Does the policy accurately diagnose the underlying issue and target the relevant causal mechanisms?
@@ -308,8 +308,46 @@ Search for existing analysis which may have been published by a news organizatio
 Attempt to identify the broader context in which this bill exists, and any larger strategy or context it may be a part of. For example sometimes a bill can be a response to sub-optimal choices made elsewhere.
 			""";
 	public static final String SEARCH_MODEL_INSTRUCTIONS2 = " Where appropriate, please cite references from your search inside the report. References can be cited using markdown link syntax: [explanation text here](http://example.com)";
-	public static final String SEARCH_REFERENCES = "Search References:\nA single line JSON array payload which contains machine readable data about all the references used in your analysis. Each reference shall be represented by a JSON array with the following string fields: [\"https://example.org/full/url/here\", \"author or unknown\", \"title\", \"sentiment as an integer from -100 to 100\", \"sentiment text: a textual representation of the sentiment. Could be N/A, Mixed, Neutral, Positive, Negative, etc.\", \"summary\", \"long summary\",  \"reference type, one of : STAKEHOLDER | BUDGETARY | NEWS | ACADEMIC | LEGAL | GOVERNMENT | OTHER\"]\n"
-			+ "The long summary field must contain all critical information from the article which you used in your analysis. Here is an example of a single cited reference (you may have more than one): [[\"https://pmc.ncbi.nlm.nih.gov/articles/PMC9677302/\", \"Sajjad et al., Canadian Journal of Kidney Health and Disease, 2022\", \"Motivators and Barriers to Living Donor Kidney Transplant as Perceived by Past and Potential Donors\", \"0\", \"N/A\", \"Peer-reviewed study citing lack of job security as a significant barrier to living donation.\", \"A large proportion of women and men reported that guaranteed job security (47% women and 38% of men), paid time off (51% of women and 42% of men), reimbursement of lost wages (49% of women and 38% of men), and protections to guarantee no impact on future insurability (62% of women and 52% of men) were significant motivators to donate.\", \"ACADEMIC\"]]";
+	public static final String SEARCH_REFERENCES = """
+Search References:
+Output exactly one line that is valid JSON and nothing else.
+
+Required JSON shape - The output must be a JSON array. Each element must be a JSON array of exactly 8 strings, in this exact order:
+[url, author, title, authors_opinion_int_string, authors_opinion_text, summary, long_summary, reference_type]
+
+1. url: full URL string
+2. author: author name or "Unknown"
+3. title: article/page title
+4. authors_opinion_int_string: a string integer from "-100" to "100" representing the author's opinion on the bill, either positive (in favor) or negative (against).
+5. authors_opinion_text: one of: "N/A" | "Mixed" | "Neutral" | "Positive" | "Negative". Again, represents the author's opinion, either for or against, the bill itself.
+6. summary: 1–2 sentence concise summary of why this reference mattered
+7. long_summary: must contain all critical information from the article that was actually used in the analysis (include key findings, numbers, constraints, definitions, conclusions, and any caveats that materially affected reasoning). It should be detailed enough that a reader can understand exactly what evidence was used without opening the link.
+8. reference_type: one of: "STAKEHOLDER" | "BUDGETARY" | "NEWS" | "ACADEMIC" | "LEGAL" | "GOVERNMENT" | "OTHER"
+
+Hard rules (to ensure machine readability)
+1. Output must be valid JSON per JSON.parse(...).
+2. Output must be a JSON array, not an object.
+3. Do not wrap the JSON in quotes. Never output “stringified JSON.”
+  Bad: "[["https://..."]]"
+  Bad: ["[\"https://...\"]"]
+  Good: [[ "https://...", ... ]]
+4. Do not include markdown, code fences, labels, commentary, or extra whitespace lines.
+5. Use only standard JSON double quotes " (no smart quotes).
+6. No trailing commas.
+7. Do not include newline characters outside JSON string escaping. (If newlines are needed inside long_summary, encode them as \n.)
+8. If no references were used, output exactly: []
+9. Each top-level element must be a JSON array, not a string
+
+Content rule (important)
+Only include references that were actually used as evidence in the analysis (not links that were merely found but not used). If an item is mentioned in the analysis, it must appear here; if it is not used, it must not appear here.
+
+Example (format reference only)
+[["https://pmc.ncbi.nlm.nih.gov/articles/PMC9677302/","Sajjad et al., Canadian Journal of Kidney Health and Disease, 2022","Motivators and Barriers to Living Donor Kidney Transplant as Perceived by Past and Potential Donors","0","N/A","Peer-reviewed study citing lack of job security as a significant barrier to living donation.","A large proportion of women and men reported that guaranteed job security (47% women and 38% of men), paid time off (51% of women and 42% of men), reimbursement of lost wages (49% of women and 38% of men), and protections to guarantee no impact on future insurability (62% of women and 52% of men) were significant motivators to donate.","ACADEMIC"]]
+ 
+ Before printing the final line, internally verify the output is a JSON array of arrays, each inner array has length 8, and every element is a string; if not, correct it until it passes.
+			""";
+//	public static final String SEARCH_REFERENCES = "Search References:\nA single line JSON array payload which contains machine readable data about all the references used in your analysis. Each reference shall be represented by a JSON array with the following string fields: [\"https://example.org/full/url/here\", \"author or Unknown\", \"title\", \"sentiment as an integer from -100 to 100\", \"sentiment text: a textual representation of the sentiment. Could be N/A, Mixed, Neutral, Positive, Negative, etc.\", \"summary\", \"long summary\",  \"reference type, one of : STAKEHOLDER | BUDGETARY | NEWS | ACADEMIC | LEGAL | GOVERNMENT | OTHER\"]\n"
+//			+ "The long summary field must contain all critical information from the article which you used in your analysis. Here is an example of a single cited reference (you may have more than one): [[\"https://pmc.ncbi.nlm.nih.gov/articles/PMC9677302/\", \"Sajjad et al., Canadian Journal of Kidney Health and Disease, 2022\", \"Motivators and Barriers to Living Donor Kidney Transplant as Perceived by Past and Potential Donors\", \"0\", \"N/A\", \"Peer-reviewed study citing lack of job security as a significant barrier to living donation.\", \"A large proportion of women and men reported that guaranteed job security (47% women and 38% of men), paid time off (51% of women and 42% of men), reimbursement of lost wages (49% of women and 38% of men), and protections to guarantee no impact on future insurability (62% of women and 52% of men) were significant motivators to donate.\", \"ACADEMIC\"]]";
 	
 	@Inject
 	protected OpenAIService ai;

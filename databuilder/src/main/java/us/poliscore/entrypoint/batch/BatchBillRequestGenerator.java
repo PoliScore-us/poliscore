@@ -2,12 +2,12 @@ package us.poliscore.entrypoint.batch;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -30,6 +30,7 @@ import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
 import us.poliscore.dataset.PoliscoreDatasetIF;
+import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillSlice;
@@ -46,10 +47,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 {
 	public static final List<String> specificFetch = null;
 //	public static final List<String> specificFetch = Arrays.asList(
-//			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 6590)
-//			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 4)
-//			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 3380),
-//			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 844)	
+//			Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 146),
 //		);
 //	public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_COLORADO, "2173", "sb", 317));
 	
@@ -60,7 +58,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 //		    "BIL/us/co/2173/sb/11","BIL/us/co/2173/sb/77","BIL/us/co/2173/sb/160"
 //		);
 	
-	public static final int MAX_BILL_PROCESS = 600; // Denotes the max bills to process in a given session. -1 for infinite
+	public static final int MAX_BILL_PROCESS = -1; // Denotes the max bills to process in a given session. -1 for infinite
 	
 	
 	
@@ -142,9 +140,16 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		
 		var stream = dataset.query(Bill.class).stream().filter(b -> specificFetch == null || specificFetch.contains(b.getId())).filter(b -> s3.exists(BillText.generateId(b.getId()), BillText.class));
 		
-//		stream = andNotAlreadyInterpreted(stream, includePressDirtyBills);
-		stream = ifInterpretedThenInSession(stream, "119");
-		stream = ifInterpretedThenByModel(stream, "gpt-4o");
+		if (specificFetch == null) {
+			stream = andNotAlreadyInterpretedOrInvalid(stream, includePressDirtyBills);
+			
+//			stream = ifInterpretedThenInSession(stream, "119");
+			
+//			stream = ifInterpretedThenByModel(stream, "gpt-4.1");
+			
+//			stream = ifInterpretedThenAboveStatusProgress(stream, 0.1f);
+//			stream = ifInterpretedThenBeforeDate(stream, LocalDate.of(2025, 12, 11));
+		}
 				
 		var requestBills = stream.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed()).toList();
 		
@@ -248,14 +253,43 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 		};
 	}
 	
-	private Stream<Bill> andNotAlreadyInterpreted(Stream<Bill> stream, boolean includePressDirtyBills) {
-		return stream.filter(b -> (!CHECK_S3_EXISTS || !billInterpreter.isInterpreted(b.getId()) || (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))));
+	private Stream<Bill> andNotAlreadyInterpretedOrInvalid(Stream<Bill> stream, boolean includePressDirtyBills) {
+		return stream.filter(b -> (!CHECK_S3_EXISTS
+				|| !interpretedAndValid(b)
+				|| (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))
+			));
+	}
+	
+	private boolean interpretedAndValid(Bill b) {
+		var interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).orElse(null);
+		
+		if (interp == null) return false;
+		
+		return interp.isValid();
 	}
 	
 	private Stream<Bill> ifInterpretedThenByModel(Stream<Bill> stream, String model) {
 		return stream.filter(b -> 
 			!billInterpreter.isInterpreted(b.getId()) ||
-				(s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getMetadata().getModel().toLowerCase().equals("gpt-4o"))
+				(s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getMetadata().getModel().toLowerCase().equals(model))
+		);
+	}
+	
+	private Stream<Bill> ifInterpretedThenAboveStatusProgress(Stream<Bill> stream, float progress) {
+		return stream.filter(b -> 
+			!billInterpreter.isInterpreted(b.getId()) || b.getStatus().getProgress() > progress
+		);
+	}
+	
+	private Stream<Bill> ifInterpretedThenBeforeDate(Stream<Bill> stream, LocalDate beforeDate) {
+		return stream.filter(b -> 
+			beforeDate.isAfter(s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getDate())
+		);
+	}
+	
+	private Stream<Bill> ifInterpretedThenHasZeroSearchReferences(Stream<Bill> stream) {
+		return stream.filter(b -> 
+			s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getPressInterps().size() == 0
 		);
 	}
 	
