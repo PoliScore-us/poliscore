@@ -145,11 +145,12 @@ public class IssueStats {
 	@JsonIgnore
 	@DynamoDbIgnore
 	public boolean isValid() {
-		for (TrackedIssue issue : TrackedIssue.values()) {
-			if (hasStat(issue) && getStat(issue) == 0 && issue != TrackedIssue.OverallBenefitToSociety) {
-				return false;
-			}
-		}
+		// TODO : Clean up existing data
+//		for (TrackedIssue issue : TrackedIssue.values()) {
+//			if (hasStat(issue) && getStat(issue) == 0 && issue != TrackedIssue.OverallBenefitToSociety) {
+//				return false;
+//			}
+//		}
 		
 		return hasStat(TrackedIssue.OverallBenefitToSociety);
 	}
