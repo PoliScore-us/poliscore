@@ -45,7 +45,7 @@ type Feature = {
 })
 export class SignupComponent implements OnInit {
   @Input() headline = 'Become A Founding Member';
-  @Input() headlineDescriptor = 'Join a growing community of policy professionals using AI to strengthen democratic accountability. Founding Members unlock premium tools for analyzing bills, understanding real-world impact, tracking legislative changes, and surfacing high-quality sources—all designed to empower advocacy groups, researchers, and legislative staff. Enroll now to be grandfathered into a $5/month plan for life as we continue expanding advanced policy-analysis features.';
+  @Input() headlineDescriptor = "PoliScore is an early-stage, experimental project focused on AI-assisted legislative analysis. Founding Memberships currently serve as a way to support ongoing research and development rather than to access guaranteed features. Future tools or early-access functionality may evolve over time but is not guaranteed.";
 
   @Input() signupRouterLink: string | any[] = '/signup';
   @Input() loginRouterLink: string | any[] = '/login';

@@ -20,6 +20,8 @@ export class DisclaimerComponent {
 
   @Input() public metadata!: InterpretationMetadata;
 
+  @Input() public isBill = true;
+
   public tooltipVisible = true;
 
   constructor(public dialog: MatDialog) {}
