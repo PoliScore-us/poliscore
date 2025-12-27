@@ -1,23 +1,48 @@
 <div class="disclaimer-container">
-    <p (click)="openDialog()">{{small}}</p>
-    <div *ngIf="tooltipVisible" class="disclaimer-popup" [ngClass]="{'below': positionBelow}">
-         <!-- {{ large }} -->
+  <p (click)="openDialog()">{{ small }}</p>
 
-        <span *ngIf="large == ''">
-            <p>
-                The data on this page was generated using OpenAI's {{metadata.model.replace("gpt","GPT")}} on {{metadata.date}} using 
-                <a *ngIf="isBill" href="/about#bill-prompt">a non-partisan bill-analysis prompt</a>
-                <a *ngIf="!isBill" href="/about#legislator-prompt">a parameterized prompt</a>,
-                which applies the same evaluation criteria to all subjects without reference to political parties or ideology.
-                While large language models can exhibit systematic biases, this methodology is designed to constrain those effects through standardized prompts, scoring rules, and source-based evaluation.
-                
-                Please consider this information as part of an experimental AI analysis rather than definitive or authoritative guidance.
-            <br/><br/>
-                For verification, you can cross-reference details with the official website by clicking on the bill title. You can also explore aggregated data by clicking on the bill sponsor or <a href="/">viewing all legislators</a>. For more information about our methods, including the prompts used and the goals of this project, <a href="/about">visit the About page.</a>
-            </p>
-        </span>
-        <span style="white-space: pre-line">
-            <p [innerHtml]="getLargeForTooltip()"></p>
-        </span>
-    </div>
+  <div *ngIf="tooltipVisible" class="disclaimer-popup" [ngClass]="{ below: positionBelow }">
+    <ng-container
+      [ngTemplateOutlet]="disclaimerBodyTpl"
+      [ngTemplateOutletContext]="{
+        large: getLargeForTooltip(),
+        metadata: metadata,
+        isBill: isBill,
+        mode: 'tooltip'
+      }"
+    ></ng-container>
+  </div>
 </div>
+
+<!-- Single source of truth for the disclaimer body -->
+<ng-template
+  #disclaimerBodyTpl
+  let-large="large"
+  let-metadata="metadata"
+  let-isBill="isBill"
+  let-mode="mode"
+>
+  <!-- Default disclaimer -->
+  <ng-container *ngIf="!large; else customDisclaimer">
+    <p>
+      The data on this page was generated using OpenAI's {{ metadata.model.replace("gpt", "GPT") }} on {{ metadata.date }} using
+      <a *ngIf="isBill" href="/about#bill-prompt">a non-partisan bill-analysis prompt</a>
+      <a *ngIf="!isBill" href="/about#legislator-prompt">a parameterized prompt</a>,
+      which applies the same evaluation criteria to all subjects without reference to political parties or ideology.
+      While large language models can exhibit systematic biases, this methodology is designed to constrain those effects
+      through standardized prompts, scoring rules, and source-based evaluation.
+
+      Please consider this information as part of an experimental AI analysis rather than definitive or authoritative guidance.
+      <br/><br/>
+      For verification, you can cross-reference details with the official website by clicking on the bill title. You can also explore aggregated data by clicking on the bill sponsor or <a href="/">viewing all legislators</a>. For more information about our methods, including the prompts used and the goals of this project, <a href="/about">visit the About page.</a>
+    </p>
+  </ng-container>
+
+  <!-- Custom "large" disclaimer -->
+  <ng-template #customDisclaimer>
+    <!-- You can keep pre-line for tooltip and/or dialog -->
+    <div [style.white-space]="mode === 'tooltip' ? 'pre-line' : 'normal'">
+      <p [innerHTML]="large"></p>
+    </div>
+  </ng-template>
+</ng-template>
