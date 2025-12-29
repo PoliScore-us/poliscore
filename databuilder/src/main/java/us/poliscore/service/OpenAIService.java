@@ -73,12 +73,12 @@ public class OpenAIService {
 	
 	public static AIInterpretationMetadata metadata()
 	{
-		return AIInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.FORCE_WEB_SEARCH);
+		return AIInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.AGENTIC_WEB_SEARCH);
 	}
 	
 	public static AIInterpretationMetadata metadata(BillSlice slice)
 	{
-		return AISliceInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.FORCE_WEB_SEARCH, slice);
+		return AISliceInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.AGENTIC_WEB_SEARCH, slice);
 	}
 	
 	private void resetRateLimitsIfNecessary() {

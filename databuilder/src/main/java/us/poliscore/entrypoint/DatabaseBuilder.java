@@ -2,15 +2,12 @@ package us.poliscore.entrypoint;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import io.quarkus.logging.Log;
@@ -20,15 +17,12 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
-import us.poliscore.PoliscoreDataset;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.entrypoint.batch.BatchBillRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchLegislatorRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchOpenAIResponseImporter;
 import us.poliscore.entrypoint.batch.PressBillInterpretationRequestGenerator;
 import us.poliscore.model.DoubleIssueStats;
-import us.poliscore.model.LegislativeNamespace;
-import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
@@ -60,7 +54,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	public static boolean REINTERPRET_PARTIES = false;
 	
 	// Enables the agent to use web searches, but disables batch processing (which doesn't currently support web searches)
-	public static boolean FORCE_WEB_SEARCH = true;
+	public static boolean AGENTIC_WEB_SEARCH = true;
 	
 	@Inject
 	private BatchBillRequestGenerator billRequestGenerator;
@@ -70,9 +64,6 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	@Inject
 	private PartyInterpretationService partyInterpreter;
-	
-	@Inject
-	private WebappDataGenerator webappDataGenerator;
 	
 	@Inject
 	private BatchOpenAIResponseImporter responseImporter;
@@ -112,17 +103,9 @@ public class DatabaseBuilder implements QuarkusApplication
 		
 		val buildDatasets = data.getBuildDatasets();
 		
-		for (val dataset : buildDatasets) {
-			data.syncS3LegislatorImages(dataset);
-			data.syncS3BillText(dataset);
-			
-			dataset.optimizeExists(s3, BillInterpretation.class);
-			dataset.optimizeExists(s3, LegislatorInterpretation.class);
-			
-			syncDdbWithS3(dataset);
-		}
+		initialDataSetup(buildDatasets);
 		
-		if (!FORCE_WEB_SEARCH)
+		if (!AGENTIC_WEB_SEARCH)
 			interpretBillPressArticles(buildDatasets);
 		
 		interpretBills(buildDatasets);
@@ -130,86 +113,16 @@ public class DatabaseBuilder implements QuarkusApplication
 		
 		interpretLegislators(buildDatasets);
 		interpretPartyStats(buildDatasets);
-		
-		webappDataGenerator.process();
-		
-		Log.info("Poliscore database build complete.");
 	}
 	
-	@SneakyThrows
-	private void syncDdbWithS3(PoliscoreDatasetIF dataset)
-	{
-		Log.info("Making sure that our ddb database is up-to-date with what exists on s3.");
-		
-		long amount = 0;
-		
-		// This could be optimized by building an "index" for each ddb database
-		for (Bill b : dataset.query(Bill.class)) {
-			var dbill = ddb.get(b.getId(), Bill.class).orElse(null);
+	protected void initialDataSetup(List<PoliscoreDatasetIF> buildDatasets) {
+		for (val dataset : buildDatasets) {
+			data.syncS3LegislatorImages(dataset);
+			data.syncS3BillText(dataset);
 			
-			val interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class);
-			if (interp.isEmpty()) continue;
-			
-			if (interp.get().getLastUpdate() == null && interp.get().getLastPressQuery() == null) {
-				interp.get().setLastUpdate(LocalDateTime.now());
-				s3.put(interp.get());
-			}
-			
-			b.setInterpretation(interp.get());
-			
-			if (dbill == null || dbill.getInterpretation() == null
-			    || !Objects.equals(dbill.getStatus(), b.getStatus()) 
-			    || !Objects.equals(dbill.getLastActionDate(), b.getLastActionDate())
-			    || !Objects.equals(dbill.getName(), b.getName())
-			    || !Objects.equals(dbill.getShortName(), b.getShortName())
-			    || !Objects.equals(dbill.getHot(), b.getHot())
-			    || !Objects.equals(dbill.getStorageBucket(), b.getStorageBucket())
-			    || ( dbill.getInterpretation().getStructuralAnalysisExplain() == null && interp.get().getStructuralAnalysisExplain() != null )
-			    || (dbill.getInterpretation().getStructuralAnalysisExplain() != null && interp.get().getStructuralAnalysisExplain() != null && !Objects.equals(dbill.getInterpretation().getStructuralAnalysisExplain().size(), interp.get().getStructuralAnalysisExplain().size()))
-			    || !Objects.equals(ObjectUtils.firstNonNull(interp.get().getLastUpdate(), interp.get().getLastPressQuery()), ObjectUtils.firstNonNull(dbill.getInterpretation().getLastUpdate(), dbill.getInterpretation().getLastPressQuery()))
-			    ) {
-			    
-			    billService.ddbPersist(b, interp.get());
-			    amount++;
-			}
-
+			dataset.optimizeExists(s3, BillInterpretation.class);
+			dataset.optimizeExists(s3, LegislatorInterpretation.class);
 		}
-		
-		Log.info("Updated " + amount + " out of sync bills in ddb from s3");
-		Log.info("Decaying hot values");
-		
-		// Decay first x hot values //
-//		for (Bill b : ddb.query(Bill.class, dataset.getSession().getKey(), 1000, Persistable.OBJECT_BY_HOT_INDEX, false, null, null))
-//		{
-//			ddb.put(b);
-//		}
-		
-		// Update bills whose press interpretations are out of date //
-//		Log.info("Syncing press interpretations");
-//		Set<Bill> updated = new HashSet<Bill>();
-//		for (val pi : s3.query(PressInterpretation.class, dataset.getSession().getKey(), new QueryCriteria().setLastModifiedAfter(Instant.now().minus(15, ChronoUnit.DAYS)))) {
-//			if (pi.isNoInterp()) continue;
-//			
-//			if (pi.getId().contains("null") || pi.getBillId().contains("null")) {
-//				s3.delete(pi.getId(), PressInterpretation.class);
-//				continue;
-//			}
-//			
-//			var bill = ddb.get(pi.getBillId(), Bill.class).orElse(null);
-//			
-//			if (bill != null && bill.getInterpretation() != null && !updated.contains(bill)) {
-//				var interp = bill.getInterpretation();
-//				
-//				if (interp.getPressInterps() == null) interp.setPressInterps(new ArrayList<PressInterpretation>());
-//				
-//				if (!interp.getPressInterps().stream().filter(ddbpi -> !ddbpi.isNoInterp()).anyMatch(ddbpi -> ddbpi.getId().equals(pi.getId()))) {
-//					interp = s3.get(BillInterpretation.generateId(pi.getBillId(), null), BillInterpretation.class).get();
-//					billService.ddbPersist(bill, interp);
-//					updated.add(bill);
-//				}
-//			}
-//		}
-//		Log.info("Updated " + updated.size() + " bills whose press interpretations were out of date.");
 	}
 	
 	@SneakyThrows
@@ -230,12 +143,12 @@ public class DatabaseBuilder implements QuarkusApplication
 	private void interpretBills(List<PoliscoreDatasetIF> buildDatasets) { interpretBills(buildDatasets, false); }
 	@SneakyThrows private void interpretBills(List<PoliscoreDatasetIF> buildDatasets, boolean isRecursive) {
 		if (INTERPRET_NEW_BILLS) {
-			List<File> requests = billRequestGenerator.process(buildDatasets, FORCE_WEB_SEARCH, isRecursive);
+			List<File> requests = billRequestGenerator.process(buildDatasets, AGENTIC_WEB_SEARCH, isRecursive);
 			
 			if (requests.size() > 0) {
 				List<File> responses;
 				
-				if (FORCE_WEB_SEARCH)
+				if (AGENTIC_WEB_SEARCH)
 					responses = openAi.processBatchImmediately(requests);
 				else
 					responses = openAi.processBatch(requests);
@@ -258,7 +171,7 @@ public class DatabaseBuilder implements QuarkusApplication
 			if (requests.size() > 0) {
 				List<File> responses;
 				
-				if (FORCE_WEB_SEARCH)
+				if (AGENTIC_WEB_SEARCH)
 					responses = openAi.processBatchImmediately(requests);
 				else
 					responses = openAi.processBatch(requests);

@@ -275,7 +275,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	
 	public static AIInterpretationMetadata metadata()
 	{
-		return AIInterpretationMetadata.construct(OpenAIService.PROVIDER, interpModel.getId(), 0, DatabaseBuilder.FORCE_WEB_SEARCH);
+		return AIInterpretationMetadata.construct(OpenAIService.PROVIDER, interpModel.getId(), 0, DatabaseBuilder.AGENTIC_WEB_SEARCH);
 	}
 	
 	@SneakyThrows

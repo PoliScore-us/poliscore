@@ -256,7 +256,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			return;
 		}
 		
-		if (DatabaseBuilder.FORCE_WEB_SEARCH)
+		if (DatabaseBuilder.AGENTIC_WEB_SEARCH)
 			billService.wipeAllPressInterps(bill);
 		
 		new BillInterpretationParser(bill, bi, s3).parse(interpText, null);
@@ -288,7 +288,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			throw new RuntimeException("Interpretation missing proper stats or explain." + billId);
 		}
 		
-		if (DatabaseBuilder.FORCE_WEB_SEARCH || pressBillInterpGenerator.getQueriedBills().contains(bill)) {
+		if (DatabaseBuilder.AGENTIC_WEB_SEARCH || pressBillInterpGenerator.getQueriedBills().contains(bill)) {
 			bi.setLastPressQuery(LocalDate.now());
 		}
 		
