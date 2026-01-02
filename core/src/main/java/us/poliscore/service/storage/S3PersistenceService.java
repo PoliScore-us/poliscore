@@ -48,6 +48,11 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 		return id + ".json";
 	}
 	
+	protected String getObjectIdFromKey(String key)
+	{
+		return key.substring(0, key.length()-5);
+	}
+	
 	protected String getSessionKey(String id)
 	{
 		return id.split("/")[1] + "/" + id.split("/")[2] + "/" + id.split("/")[3];
@@ -205,16 +210,11 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 
 	    for (int i = 0; i < limit; i++) {
 	        val s3Key = keys.get(i);
-
-	        val getObjectRequest = GetObjectRequest.builder()
-	                .bucket(BUCKET_NAME)
-	                .key(s3Key)
-	                .build();
-
-	        @Cleanup val s3ObjectStream = getClient().getObject(getObjectRequest);
-
-	        val obj = PoliscoreUtil.getObjectMapper().readValue(s3ObjectStream, clazz);
-	        results.add(obj);
+	        
+	        val op = get(getObjectIdFromKey(s3Key), clazz);
+	        
+	        if (op.isPresent())
+	        	results.add(op.get());
 	    }
 
 	    return results;

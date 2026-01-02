@@ -30,7 +30,7 @@ import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislativeTerm;
 import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.OpenAIService;
-import us.poliscore.service.storage.S3PersistenceService;
+import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
  * Fetches additional data for state-level legislators which is not served by legiscan but we want for our app. The data is archived on S3 and fetched during database build.
@@ -49,7 +49,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	protected GovernmentDataService data;
 	
 	@Inject
-	protected S3PersistenceService s3;
+	protected LocalCachedS3Service s3;
 	
 	@Inject
 	protected CachedLegiscanService legiscan;

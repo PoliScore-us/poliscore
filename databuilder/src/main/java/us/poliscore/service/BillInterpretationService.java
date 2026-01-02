@@ -8,6 +8,7 @@ import jakarta.inject.Inject;
 import lombok.NonNull;
 import lombok.val;
 import us.poliscore.ai.OpenAIModel;
+import us.poliscore.entrypoint.DatabaseBuilder;
 import us.poliscore.model.InterpretationOrigin;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
@@ -407,29 +408,31 @@ Example (format reference only)
 		String userMsg = "";
 		final String billTextMsg = "Official Bill Text:\n" + billText;
 		
-		var pressInterps = billService.getPressInterps(bill.getId());
-		
-		if (pressInterps.size() > 0) {
-			String header = "References:\n" + "The following articles were pulled from a web search for this bill and were included to provide additional context for the interpretation. Their inclusion does not represent an endorsement of the opinions expressed from the source. Often a web search for a bill will reveal key legislative stakeholders, so view these articles with a skeptical eye. We want to prioritize what's best for all of America, not necessarily a few key stakeholders. Feel free to cite these sources using markdown link syntax in your long report if appropriate and relevant.\n\n";
+		if (!DatabaseBuilder.AGENTIC_WEB_SEARCH) {
+			var pressInterps = billService.getPressInterps(bill.getId());
 			
-			int context = billTextMsg.length() + header.length();
-			
-			for (int i = 0; i < pressInterps.size(); ++i)
-			{
-				var interp = pressInterps.get(i);
+			if (pressInterps.size() > 0) {
+				String header = "References:\n" + "The following articles were pulled from a web search for this bill and were included to provide additional context for the interpretation. Their inclusion does not represent an endorsement of the opinions expressed from the source. Often a web search for a bill will reveal key legislative stakeholders, so view these articles with a skeptical eye. We want to prioritize what's best for all of America, not necessarily a few key stakeholders. Feel free to cite these sources using markdown link syntax in your long report if appropriate and relevant.\n\n";
 				
-				String pressText = interp.getAuthor() + "(" + interp.getOrigin().getUrl() + ") - " + interp.getOrigin().getTitle() + ":\n" + interp.getLongExplain() + "\n\n";
+				int context = billTextMsg.length() + header.length();
 				
-				context += pressText.length();
-				
-				if (context < model.getContextWindowStringLength()) {
-					if (i == 0) {
-						userMsg = header;
-					}
+				for (int i = 0; i < pressInterps.size(); ++i)
+				{
+					var interp = pressInterps.get(i);
 					
-					userMsg += pressText;
-				} else {
-					break;
+					String pressText = interp.getAuthor() + "(" + interp.getOrigin().getUrl() + ") - " + interp.getOrigin().getTitle() + ":\n" + interp.getLongExplain() + "\n\n";
+					
+					context += pressText.length();
+					
+					if (context < model.getContextWindowStringLength()) {
+						if (i == 0) {
+							userMsg = header;
+						}
+						
+						userMsg += pressText;
+					} else {
+						break;
+					}
 				}
 			}
 		}
