@@ -59,7 +59,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 //		    "BIL/us/co/2173/sb/11","BIL/us/co/2173/sb/77","BIL/us/co/2173/sb/160"
 //		);
 	
-	public static final int MAX_BILL_PROCESS = 50; // Denotes the max bills to process in a given session. -1 for infinite
+	public static final int MAX_BILL_PROCESS = 300; // Denotes the max bills to process in a given session. -1 for infinite
 	
 	public static final boolean REPROCESS_INVALID_BILLS = false;
 	

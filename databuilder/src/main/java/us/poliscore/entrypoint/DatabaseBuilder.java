@@ -36,7 +36,7 @@ import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
-import us.poliscore.service.storage.DynamoDbPersistenceService;
+import us.poliscore.service.storage.DiskCachingDdbService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
@@ -49,6 +49,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	public static boolean INTERPRET_NEW_BILLS = true;
 	
+	// TODO : Before updating legislators, that workflow needs to be rethought, because the ddb sync now happens at the end, instead of the beginning
 	public static boolean REINTERPRET_LEGISLATORS = false;
 	
 	public static boolean REINTERPRET_PARTIES = false;
@@ -69,7 +70,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	private BatchOpenAIResponseImporter responseImporter;
 	
 	@Inject
-	private DynamoDbPersistenceService ddb;
+	private DiskCachingDdbService diskCachedDdb;
 	
 	@Inject
 	private LocalCachedS3Service s3;
@@ -228,7 +229,7 @@ public class DatabaseBuilder implements QuarkusApplication
 						
 						String prevLegId = Legislator.generateId(previousSession.getNamespace(), previousSession.getCode(), leg.getCode());
 						
-						val prevLeg = ddb.get(prevLegId, Legislator.class).orElseThrow();
+						val prevLeg = diskCachedDdb.get(prevLegId, Legislator.class).orElseThrow();
 						
 						val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
 						while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {

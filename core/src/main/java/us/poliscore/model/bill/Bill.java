@@ -133,7 +133,8 @@ public class Bill extends SessionPersistable {
 		return session.getCode().equals(getSessionCode()) && this.getNamespace().equals(session.getNamespace());
 	}
 	
-	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX, Persistable.OBJECT_BY_RATING_ABS_INDEX, Persistable.OBJECT_BY_IMPACT_INDEX, OBJECT_BY_IMPACT_ABS_INDEX, OBJECT_BY_HOT_INDEX }) public String getStorageBucket() {
+	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX, Persistable.OBJECT_BY_RATING_ABS_INDEX, Persistable.OBJECT_BY_IMPACT_INDEX, OBJECT_BY_IMPACT_ABS_INDEX, OBJECT_BY_HOT_INDEX })
+	public String getStorageBucket() {
 		if (getNamespace().equals(LegislativeNamespace.US_CONGRESS))
 			return this.getId().substring(0, StringUtils.ordinalIndexOf(getId(), "/", 4));
 		else {
