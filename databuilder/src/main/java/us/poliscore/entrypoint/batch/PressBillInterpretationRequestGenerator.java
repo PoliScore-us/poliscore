@@ -350,7 +350,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 				writeBlock(block++);
 			}
 		}
-//		processOrigin(b, new InterpretationOrigin("url", "title"), Jsoup.parse(new File("/Users/rrowlands/dev/projects/poliscore/databuilder/src/main/resources/ace-ccr.html")));
+//		processOrigin(b, new InterpretationOrigin("url", "title"), Jsoup.parse(new File("/Users/test/dev/projects/poliscore/databuilder/src/main/resources/ace-ccr.html")));
 //		processOrigin(b, new InterpretationOrigin("https://www.reddit.com/r/NeutralPolitics/comments/1jawsml/what_are_the_pros_and_cons_of_voting_for_hr1968", "What are the PROS and CONS of voting for H.R.1968 - Full-Year Continuing Appropriations and Extensions Act, 2025?"));
 //		processOrigin(b, new InterpretationOrigin("https://www.asha.org/news/2025/congress-extends-medicare-telehealth-authority-through-september/", "Congress Extends Medicare Telehealth Authority Through September"));
 //		processOrigin(b, new InterpretationOrigin("https://www.aamc.org/news/press-releases/aamc-statement-passage-full-year-continuing-resolution", "Medicare Telehealth Flexibilities Extended, but Without Promise of Permanent Solution"));

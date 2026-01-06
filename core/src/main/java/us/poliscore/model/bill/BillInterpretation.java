@@ -60,6 +60,9 @@ public class BillInterpretation extends SessionPersistable
 			id += "-" + sliceIndex;
 		}
 		
+		if (billId.contains("us/congress/118"))
+			id = id.replace("-polisc", "");
+		
 		return id;
 	}
 	

@@ -5,7 +5,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -14,6 +13,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -60,6 +60,9 @@ public class USCDatasetProvider implements DatasetProvider {
 	public static boolean memorizedRollCall = false;
 	
 	public static boolean updatedLegislatorFiles = false;
+	
+	@ConfigProperty(name = "poliscore.usc.data")
+    File uscDataDir;
 	
 	@Inject
 	private CongressionalLegislatorImageFetcher congressionalImageFetcher;
@@ -155,7 +158,7 @@ public class USCDatasetProvider implements DatasetProvider {
 		long totalVotes = 0;
 		long skipped = 0;
 		
-		for (File fCongress : Arrays.asList(PoliscoreUtil.USC_DATA.listFiles()).stream()
+		for (File fCongress : Arrays.asList(uscDataDir.listFiles()).stream()
 				.filter(f -> f.getName().matches("\\d+") && f.isDirectory())
 				.sorted((a,b) -> a.getName().compareTo(b.getName()))
 				.collect(Collectors.toList()))
@@ -255,7 +258,7 @@ public class USCDatasetProvider implements DatasetProvider {
 		
 		long totalBills = 0;
 		
-		for (File fCongress : Arrays.asList(PoliscoreUtil.USC_DATA.listFiles()).stream()
+		for (File fCongress : Arrays.asList(uscDataDir.listFiles()).stream()
 				.filter(f -> f.getName().matches("\\d+") && f.isDirectory())
 				.sorted((a,b) -> a.getName().compareTo(b.getName()))
 				.collect(Collectors.toList()))

@@ -74,6 +74,9 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	{
 		Persistable.validate(obj);
 		
+		String sessionKey = getSessionKey(obj.getId());
+		val idClassPrefix = Persistable.getClassStorageBucket(obj.getClass(), sessionKey);
+		
 		val key = getObjectKey(obj.getId());
 		
 		if (key.contains("null")) {
@@ -87,13 +90,22 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 
         getClient().putObject(putOb, RequestBody.fromString(PoliscoreUtil.getObjectMapper().writeValueAsString(obj)));
         
+        if (objectsInBucket.containsKey(idClassPrefix) && !objectsInBucket.get(idClassPrefix).contains(obj.getId()))
+        	objectsInBucket.get(idClassPrefix).add(obj.getId());
+        
         Log.info("Uploaded to S3 " + key);
 	}
 	
 	@SneakyThrows
 	public <T extends Persistable> Optional<T> get(String id, Class<T> clazz)
 	{
+		String sessionKey = getSessionKey(id);
+		val idClassPrefix = Persistable.getClassStorageBucket(clazz, sessionKey);
+		
 		val key = getObjectKey(id);
+		
+		// If optimize exists was called, and we know the object doesn't exist, it's actually faster to just return null then it is to go all the way to s3
+		if (objectsInBucket.containsKey(idClassPrefix) && !objectsInBucket.get(idClassPrefix).contains(id)) return Optional.empty();
 		
         GetObjectRequest req = GetObjectRequest.builder()
                 .bucket(BUCKET_NAME)

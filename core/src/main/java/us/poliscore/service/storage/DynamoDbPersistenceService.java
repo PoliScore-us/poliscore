@@ -135,7 +135,7 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 	                        @SuppressWarnings("unchecked")
 	                        AttributeConverter<Object> converter =
 	                                (AttributeConverter<Object>) new DefaultAttributeConverterProvider()
-	                                        .converterFor(EnhancedType.of(rawValue.getClass()));
+	                                        .converterFor(EnhancedType.of(getter.getGenericReturnType()));
 	                        val = converter.transformFrom(rawValue);
 	                    }
 

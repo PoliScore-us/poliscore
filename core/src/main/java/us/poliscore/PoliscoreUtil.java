@@ -15,8 +15,6 @@ import us.poliscore.service.SessionInfoService;
 
 public class PoliscoreUtil {
 	
-	public static File USC_DATA = new File("/Users/rrowlands/dev/projects/congress/data");
-	
 	public static File APP_DATA = new File(System.getProperty("user.home") + "/appdata/poliscore");
 	{
 		APP_DATA.mkdirs();

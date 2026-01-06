@@ -89,13 +89,17 @@ public class GovernmentDataService {
 		throw new NoSuchElementException();
 	}
 	
-	public PoliscoreDatasetIF getDataset(LegislativeNamespace namespace, String sessionCode) {
+	public PoliscoreDatasetIF getDataset(LegislativeNamespace namespace, String sessionKey) {
 		for (val dataset : importedDatasets) {
-			if (dataset.getNamespace().equals(namespace) && dataset.containsSession(sessionCode))
+			if (dataset.getNamespace().equals(namespace) && dataset.containsSession(sessionKey))
 				return dataset;
 		}
 		
 		throw new NoSuchElementException();
+	}
+	
+	public PoliscoreDatasetIF getDataset(LegislativeSession session) {
+		return getDataset(session.getNamespace(), session.getKey());
 	}
 	
 	public void syncS3LegislatorImages(PoliscoreDatasetIF dataset) {

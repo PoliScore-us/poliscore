@@ -54,7 +54,7 @@ public class PressInterpModelComparator implements QuarkusApplication {
 //    
 //    // If specified, we won't generate and send a new request to AI, we will simply reprocess an existing file.
 ////    private static final String REPROCESS_RESPONSE = null;
-//    private static final String REPROCESS_RESPONSE = "/Users/rrowlands/dev/projects/poliscore/databuilder/target/file-WSQi6X89qWPpudadPJnera.jsonl";
+//    private static final String REPROCESS_RESPONSE = "/Users/test/dev/projects/poliscore/databuilder/target/file-WSQi6X89qWPpudadPJnera.jsonl";
 //
 //    @Inject LocalCachedS3Service s3;
 //    @Inject BillService billService;

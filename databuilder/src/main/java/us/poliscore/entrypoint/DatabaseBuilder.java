@@ -37,6 +37,7 @@ import us.poliscore.service.LegislatorService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
 import us.poliscore.service.storage.DiskCachingDdbService;
+import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
@@ -70,16 +71,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	private BatchOpenAIResponseImporter responseImporter;
 	
 	@Inject
-	private DiskCachingDdbService diskCachedDdb;
-	
-	@Inject
 	private LocalCachedS3Service s3;
-	
-	@Inject
-	private BillService billService;
-	
-	@Inject
-	private BillInterpretationService billInterpreter;
 	
 	@Inject
 	private LegislatorService legService;
@@ -218,7 +210,8 @@ public class DatabaseBuilder implements QuarkusApplication
 				// If an interpretation from this session doesn't exist, grab one from the previous session.
 				var previousSession = data.getPreviousRegularSession(dataset.getRegularSession());
 				
-				if (previousSession != null){ // && !previousSession.getCode().equals("118")
+				if (previousSession != null && data.getDataset(previousSession) != null) {
+					var previousDataset = data.getDataset(previousSession);
 					val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousSession.getNamespace(), previousSession.getCode(), leg.getCode()), LegislatorInterpretation.class);
 					
 					if (prevInterpOp.isPresent()) {
@@ -229,14 +222,17 @@ public class DatabaseBuilder implements QuarkusApplication
 						
 						String prevLegId = Legislator.generateId(previousSession.getNamespace(), previousSession.getCode(), leg.getCode());
 						
-						val prevLeg = diskCachedDdb.get(prevLegId, Legislator.class).orElseThrow();
+						val prevLeg = previousDataset.get(prevLegId, Legislator.class).orElseThrow();
 						
-						val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
+						val prevInteracts = legInterp.getInteractionsForInterpretation(prevLeg).iterator();
 						while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
-							val n = prevInteracts.next();
-							if (n.getIssueStats() != null) {
-								n.setRating(Math.round(n.getIssueStats().getRating() * n.getJudgementWeight() * 0.9f));
-								leg.getInteractionsPrivate1().add(n);
+							val interact = prevInteracts.next();
+							val interactInterpOp = s3.get(BillInterpretation.generateId(interact.getBillId(), null), BillInterpretation.class);
+							
+							if (interactInterpOp.isPresent() && interactInterpOp.get().getIssueStats() != null) {
+								var issueStats = interactInterpOp.get().getIssueStats();
+								interact.setRating(Math.round(issueStats.getRating() * interact.getJudgementWeight() * 0.9f));
+								leg.getInteractionsPrivate1().add(interact);
 							}
 						}
 					}

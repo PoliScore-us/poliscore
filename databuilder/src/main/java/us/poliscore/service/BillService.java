@@ -74,7 +74,7 @@ public class BillService {
 
 	public void ddbPersist(Bill b, BillInterpretation interp)
 	{
-		b.setLastUpdate(LocalDateTime.now());
+		b.setLastUpdate(interp.getLastUpdate());
 		
 		populatePressInterps(interp);
 		b.setInterpretation(interp);

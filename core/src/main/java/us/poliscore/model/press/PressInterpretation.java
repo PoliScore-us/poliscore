@@ -69,6 +69,9 @@ public class PressInterpretation extends SessionPersistable {
 	
 	protected String sentimentText;
 	
+	// TODO
+//	protected String sourceHtml;
+	
 	protected boolean noInterp = true;
 	
 	@NonNull

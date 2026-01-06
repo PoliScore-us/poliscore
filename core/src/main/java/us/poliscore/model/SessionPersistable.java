@@ -46,7 +46,11 @@ abstract public class SessionPersistable implements Persistable {
 	@JsonIgnore
 	@DynamoDbIgnore
 	public String getCode() {
-		return this.id.substring(StringUtils.ordinalIndexOf(this.id, "/", 4) + 1);
+		int sessionSlash = StringUtils.ordinalIndexOf(this.id, "/", 4);
+		
+		if (sessionSlash == -1) return null;
+		
+		return this.id.substring(sessionSlash + 1);
 	}
 	
 	@JsonIgnore
@@ -63,7 +67,11 @@ abstract public class SessionPersistable implements Persistable {
 	
 	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX, Persistable.OBJECT_BY_RATING_ABS_INDEX, Persistable.OBJECT_BY_LOCATION_INDEX, Persistable.OBJECT_BY_IMPACT_INDEX, Persistable.OBJECT_BY_IMPACT_ABS_INDEX})
 	public String getStorageBucket() {
-		return this.getId().substring(0, StringUtils.ordinalIndexOf(getId(), "/", 4));
+		int sessionSlash = StringUtils.ordinalIndexOf(getId(), "/", 4);
+		
+		if (sessionSlash == -1) return id;
+		
+		return this.getId().substring(0, sessionSlash);
 	}
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 	
