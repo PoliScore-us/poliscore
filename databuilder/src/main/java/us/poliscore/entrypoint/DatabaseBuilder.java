@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,6 +16,7 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
+import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.entrypoint.batch.BatchBillRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchLegislatorRequestGenerator;
@@ -27,17 +27,12 @@ import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
-import us.poliscore.model.legislator.LegislatorBillInteraction;
 import us.poliscore.model.legislator.LegislatorInterpretation;
-import us.poliscore.service.BillInterpretationService;
-import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
-import us.poliscore.service.storage.DiskCachingDdbService;
-import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
@@ -121,7 +116,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	@SneakyThrows
 	private void interpretBillPressArticles(List<PoliscoreDatasetIF> buildDatasets) {
 		if (INTERPRET_PRESS_BILLS) {
-			List<File> requests = pressBillInterpGenerator.process(buildDatasets);
+			List<InterpretationRequest> requests = pressBillInterpGenerator.process(buildDatasets);
 			
 			if (requests.size() > 0) {
 				List<File> responses = openAi.processBatch(requests);
@@ -136,7 +131,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	private void interpretBills(List<PoliscoreDatasetIF> buildDatasets) { interpretBills(buildDatasets, false); }
 	@SneakyThrows private void interpretBills(List<PoliscoreDatasetIF> buildDatasets, boolean isRecursive) {
 		if (INTERPRET_NEW_BILLS) {
-			List<File> requests = billRequestGenerator.process(buildDatasets, AGENTIC_WEB_SEARCH, isRecursive);
+			List<InterpretationRequest> requests = billRequestGenerator.process(buildDatasets, AGENTIC_WEB_SEARCH, isRecursive);
 			
 			if (requests.size() > 0) {
 				List<File> responses;
@@ -159,7 +154,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	@SneakyThrows
 	private void interpretLegislators(List<PoliscoreDatasetIF> buildDatasets) {
 		if (REINTERPRET_LEGISLATORS) {
-			List<File> requests = legislatorRequestGenerator.process(buildDatasets);
+			List<InterpretationRequest> requests = legislatorRequestGenerator.process(buildDatasets);
 		
 			if (requests.size() > 0) {
 				List<File> responses;
@@ -206,7 +201,8 @@ public class DatabaseBuilder implements QuarkusApplication
 			if (interpOp.isPresent()) { interp = interpOp.get(); }
 			
 			// If there exists an interp from a previous session, backfill the interactions until we get to 1000
-			if (legInterp.getInteractionsForInterpretation(leg).size() < 1000) {
+			// We're skipping data from the 118th congress because the data in the 118th congress used a very primitive prompt
+			if (!dataset.getCode().equals("119") && legInterp.getInteractionsForInterpretation(leg).size() < 1000) {
 				// If an interpretation from this session doesn't exist, grab one from the previous session.
 				var previousSession = data.getPreviousRegularSession(dataset.getRegularSession());
 				
@@ -274,7 +270,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	@SneakyThrows
 	private void interpretPartyStats(List<PoliscoreDatasetIF> buildDatasets) {
 		if (REINTERPRET_PARTIES) {
-			List<File> requests = partyInterpreter.process(buildDatasets);
+			List<InterpretationRequest> requests = partyInterpreter.process(buildDatasets);
 			
 			if (requests.size() > 0) {
 				List<File> responses = openAi.processBatch(requests);

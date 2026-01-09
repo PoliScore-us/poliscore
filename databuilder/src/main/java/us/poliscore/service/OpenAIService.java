@@ -12,8 +12,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -45,7 +45,10 @@ import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.Environment;
+import us.poliscore.ai.BatchOpenAIRequest;
 import us.poliscore.ai.OpenAIModel;
+import us.poliscore.bill.InterpretationRequest;
+import us.poliscore.bill.OpenAIBatchJsonlSerializer;
 import us.poliscore.entrypoint.DatabaseBuilder;
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.AISliceInterpretationMetadata;
@@ -151,7 +154,7 @@ public class OpenAIService {
 		val params = paramBuilder.build();
 		
 		Log.info("Sending request to open ai with message size " + userMsg.length());
-		RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
+		RetryPolicy<Response> retryPolicy = RetryPolicy.<Response>builder()
 			    .handle(SocketTimeoutException.class, InternalServerException.class,
 			    		OpenAIInvalidDataException.class, // Even though this runs counter to their documentation, this exception is actually thrown wrapping a "SocketException: connection reset", so we definitely want to retry it.
 			    		BadRequestException.class // OpenAI threw this once saying our prompt was invalid. Seems to be something they do non-deterministically on rare occasion. Try again.
@@ -160,10 +163,11 @@ public class OpenAIService {
 			        String msg = failure.getMessage();
 			        return msg != null && msg.toLowerCase().contains("rate limit");
 			    })
+//			    .handleResultIf(r -> r == null || !r.status().isPresent() || r.status().get() != ResponseStatus.COMPLETED)
 			    .withBackoff(5, 640, ChronoUnit.SECONDS)
 			    .withJitter(0.25)
 			    .withMaxRetries(8)
-			    .onRetry(e -> Log.warn("Retrying due to timeout or retryable server exception [" + e.getLastException().getMessage() + "]"))
+			    .onRetry(e -> Log.warn("Retrying due to " + (e.getLastException() == null ? "invalid response" : "retryable exception [" + e.getLastException().getMessage() + "]")))
 			    .onFailure(e -> Log.error("Retries exhausted", e.getException()))
 			    .build();
 		
@@ -191,181 +195,165 @@ public class OpenAIService {
 	 * Submits a batch of files, awaits their processing, and then downloads the results.
 	 */
 	@SneakyThrows
-	public List<File> processBatch(List<File> files) {
-		if (files.size() == 1 && Files.lines(files.get(0).toPath()).count() <= IMMEDIATE_PROCESS_THRESHOLD) return processBatchImmediately(files);
-		
-		OpenAIClient client = OpenAIOkHttpClient.builder().apiKey(secret.getOpenAISecret()).build();
-		
-		final List<Batch> batches = new ArrayList<Batch>();
-		final List<File> responseFiles = new ArrayList<File>();
-		
-		for (File f : files) {
-			Log.info("Sending request batch file to OpenAI [" + f.getAbsolutePath() + "]");
-			
-			String fileId = client.files().create(
-				    FileCreateParams.builder()
-				      .file(f.toPath())
-				      .purpose(FilePurpose.BATCH)
-				      .build()
-				).id();
-			
-			Batch batch = client.batches().create(BatchCreateParams.builder()
-				    .inputFileId(fileId)
-				    .endpoint(Endpoint.V1_CHAT_COMPLETIONS)
-				    .completionWindow(CompletionWindow._24H)
-				    .build());
-			
-			batches.add(batch);
-		}
-		
-		Log.info("Awaiting OpenAI to process our batch files (this will take a while)...");
-		
-		while (batches.size() > 0) {
-			Thread.sleep(Duration.ofMinutes(1));
-			
-			Iterator<Batch> it = batches.iterator();
-			
-			while (it.hasNext()) {
-				val b = it.next();
-				
-				RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
-				    .handle(SocketTimeoutException.class, InternalServerException.class)
-				    .withBackoff(1, 8, ChronoUnit.SECONDS)
-				    .withMaxRetries(3)
-				    .onRetry(e -> Log.warn("Retrying due to timeout or retryable server exception..."))
-				    .onFailure(e -> Log.error("Retries exhausted", e.getException()))
-				    .build();
-				
-				Batch b2 = Failsafe.with(retryPolicy).get(() -> client.batches().retrieve(b.id()));
-				
-				if (b2.status().equals(Status.COMPLETED) && b2.outputFileId().isPresent()) {
-					val body = client.files().content(b2.outputFileId().get());
-					
-					val f = new File(Environment.getDeployedPath(), b2.outputFileId() + ".jsonl");
-					Files.copy(body.body(), f.toPath(), StandardCopyOption.REPLACE_EXISTING);
-					responseFiles.add(f);
-					
-					it.remove();
-					
-					Log.info("Batch file successfully processed by OpenAI [" + f.getAbsolutePath() + "].");
-				}
-			}
-		}
-		
-		return responseFiles;
+	public List<File> processBatch(List<InterpretationRequest> requests) {
+
+	    if (requests == null || requests.isEmpty()) {
+	        return List.of();
+	    }
+
+	    // If small enough, don't use Batch API (too slow / flaky for tiny jobs)
+	    if (requests.size() <= IMMEDIATE_PROCESS_THRESHOLD) {
+	        return processBatchImmediately(requests);
+	    }
+
+	    OpenAIClient client = OpenAIOkHttpClient.builder()
+	            .apiKey(secret.getOpenAISecret())
+	            .build();
+
+	    // 1) Serializer writes chunked batch input files (handles OpenAI file size limit)
+	    var buildTemp = new File(System.getProperty("user.home") + "/appdata/poliscore/build");
+	    buildTemp.mkdirs();
+
+	    OpenAIBatchJsonlSerializer serializer = new OpenAIBatchJsonlSerializer();
+
+	    List<File> inputFiles = serializer.writeChunkedJsonlFiles(requests, buildTemp, "openai-bills.in");
+
+	    Log.info("Prepared " + inputFiles.size() + " OpenAI batch input file(s).");
+
+	    // 2) Submit each file as a batch
+	    final List<Batch> batches = new ArrayList<>();
+	    final List<File> responseFiles = new ArrayList<>();
+
+	    for (File f : inputFiles) {
+	        Log.info("Sending request batch file to OpenAI [" + f.getAbsolutePath() + "]");
+
+	        String fileId = client.files().create(
+	                FileCreateParams.builder()
+	                        .file(f.toPath())
+	                        .purpose(FilePurpose.BATCH)
+	                        .build()
+	        ).id();
+
+	        Batch batch = client.batches().create(
+	                BatchCreateParams.builder()
+	                        .inputFileId(fileId)
+	                        .endpoint(Endpoint.V1_CHAT_COMPLETIONS)
+	                        .completionWindow(CompletionWindow._24H)
+	                        .build()
+	        );
+
+	        batches.add(batch);
+	    }
+
+	    // 3) Poll until all completed, download output files
+	    Log.info("Awaiting OpenAI to process our batch files (polling every 60s)...");
+
+	    while (!batches.isEmpty()) {
+	        Thread.sleep(Duration.ofMinutes(1));
+
+	        Iterator<Batch> it = batches.iterator();
+
+	        while (it.hasNext()) {
+	            val b = it.next();
+
+	            RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
+	                    .handle(SocketTimeoutException.class, InternalServerException.class)
+	                    .withBackoff(1, 8, ChronoUnit.SECONDS)
+	                    .withMaxRetries(3)
+	                    .onRetry(e -> Log.warn("Retrying due to timeout or retryable server exception..."))
+	                    .onFailure(e -> Log.error("Retries exhausted", e.getException()))
+	                    .build();
+
+	            Batch latest = Failsafe.with(retryPolicy).get(() -> client.batches().retrieve(b.id()));
+
+	            if (latest.status().equals(Status.COMPLETED) && latest.outputFileId().isPresent()) {
+	                val outputId = latest.outputFileId().get();
+	                val body = client.files().content(outputId);
+
+	                val outFile = new File(Environment.getDeployedPath(), outputId + ".jsonl");
+	                Files.copy(body.body(), outFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+	                responseFiles.add(outFile);
+
+	                it.remove();
+	                Log.info("Batch file successfully processed by OpenAI [" + outFile.getAbsolutePath() + "].");
+	            } else if (latest.status().equals(Status.FAILED)
+	                    || latest.status().equals(Status.CANCELLED)
+	                    || latest.status().equals(Status.EXPIRED)) {
+
+	                String msg = "OpenAI batch ended in terminal status: " + latest.status() + " (batchId=" + latest.id() + ")";
+	                Log.error(msg);
+	                throw new RuntimeException(msg);
+	            }
+	        }
+	    }
+
+	    return responseFiles;
 	}
+
 	
 	/**
-	 * Processes a batch of jsonl files immediately without submitting to OpenAI's batch API.
-	 * 
-	 * For each file:
-	 * - Reads each JSONL line containing a chat completion request format.
-	 * - Extracts the system and user messages, as well as the target model (if specified).
-	 * - Invokes the OpenAI chat completion API for each line individually.
-	 * - Saves all responses to a corresponding output file in OpenAI batch response format.
-	 * 
-	 * Returns a list of the output files containing the responses.
-	 *
-	 * @param files list of jsonl files containing batch chat completion requests
-	 * @return list of output files containing responses for each input file
+	 * Processes a list of interpretation requests using OpenAI's service.
 	 */
 	@SneakyThrows
-	public List<File> processBatchImmediately(List<File> files) {
+	public List<File> processBatchImmediately(List<InterpretationRequest> requests) {
 		List<File> responseFiles = new ArrayList<>();
+		
+		Log.info("Performing " + requests.size() + " requests to OpenAI.");
 
-		for (File jsonlFile : files) {
-			Log.info("Processing immediate batch for file: " + jsonlFile.getAbsolutePath());
-
-			List<String> lines = FileUtils.readLines(jsonlFile, "UTF-8");
-			
+		for (InterpretationRequest request : requests) {
 			var buildTemp = new File(System.getProperty("user.home") + "/appdata/poliscore/build");
 			buildTemp.mkdirs();
 			
-			File outputFile = new File(buildTemp, jsonlFile.getName() + ".out.jsonl");
+			File outputFile = new File(buildTemp, "openapi-bills.out.jsonl");
 			responseFiles.add(outputFile);
 			Log.info("Writing responses to file: " + outputFile.getAbsolutePath());
 
 			try (BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-				for (String line : lines) {
-					if (StringUtils.isBlank(line)) {
-						continue;
-					}
-	
-					val objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-					val node = objectMapper.readTree(line);
-					val body = node.get("body");
-	
-					if (body == null || !body.has("messages")) {
-						throw new IllegalArgumentException("Missing 'body' or 'messages' in line: " + line);
-					}
-	
-					String model = body.has("model") ? body.get("model").asText() : null;
-					String systemMsg = null;
-					String userMsg = null;
-	
-					for (val msgNode : body.get("messages")) {
-						String role = msgNode.get("role").asText();
-						String content = msgNode.get("content").asText();
-	
-						if ("system".equals(role)) {
-							systemMsg = content;
-						} else if ("user".equals(role)) {
-							userMsg = content;
-						}
-	
-						if (systemMsg != null && userMsg != null) {
-							break;
-						}
-					}
-	
-					if (systemMsg == null || userMsg == null) {
-						throw new IllegalArgumentException("Expected at least one system and one user message in: " + line);
-					}
-	
-					val customId = node.path("custom_id").asText(null);
-	
-					String assistantResponse = chat(systemMsg, userMsg, OpenAIModel.fromString(model));
-	
-					// Build the "body" part (chat completion result)
-					val responseNode = objectMapper.createObjectNode();
-					responseNode.put("id", "chatcmpl-" + java.util.UUID.randomUUID());
-					responseNode.put("object", "chat.completion");
-					responseNode.put("created", System.currentTimeMillis() / 1000);
-					responseNode.put("model", StringUtils.defaultIfEmpty(model, OpenAIModel.DEFAULT_MODEL.getId()));
-	
-					val choicesArray = objectMapper.createArrayNode();
-					val choice = objectMapper.createObjectNode();
-					choice.put("index", 0);
-	
-					val message = objectMapper.createObjectNode();
-					message.put("role", "assistant");
-					message.put("content", assistantResponse);
-					choice.set("message", message);
-					choice.put("finish_reason", "stop");
-					choicesArray.add(choice);
-					responseNode.set("choices", choicesArray);
-	
-					val usageNode = objectMapper.createObjectNode();
-					usageNode.put("prompt_tokens", 0);
-					usageNode.put("completion_tokens", 0);
-					usageNode.put("total_tokens", 0);
-					responseNode.set("usage", usageNode);
-	
-					// Wrap response inside OpenAI batch envelope format
-					val responseEnvelope = objectMapper.createObjectNode();
-					responseEnvelope.put("status_code", 200);
-					responseEnvelope.set("body", responseNode);
-	
-					val out = objectMapper.createObjectNode();
-					if (customId != null) {
-						out.put("custom_id", customId);
-					}
-					out.set("response", responseEnvelope);
-	
-					writer.write(out.toString());
-                    writer.newLine();
-                    writer.flush();
-				}
+				val objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+				val model = Objects.requireNonNullElse(request.getRequestedModel(), OpenAIModel.DEFAULT_MODEL);
+				String systemMsg = request.getSystemMsg();
+				String userMsg = request.getUserMsg();
+
+				String assistantResponse = chat(systemMsg, userMsg, model);
+
+				// Build the "body" part (chat completion result)
+				val responseNode = objectMapper.createObjectNode();
+				responseNode.put("id", "chatcmpl-" + java.util.UUID.randomUUID());
+				responseNode.put("object", "chat.completion");
+				responseNode.put("created", System.currentTimeMillis() / 1000);
+				responseNode.put("model", model.getId());
+
+				val choicesArray = objectMapper.createArrayNode();
+				val choice = objectMapper.createObjectNode();
+				choice.put("index", 0);
+
+				val message = objectMapper.createObjectNode();
+				message.put("role", "assistant");
+				message.put("content", assistantResponse);
+				choice.set("message", message);
+				choice.put("finish_reason", "stop");
+				choicesArray.add(choice);
+				responseNode.set("choices", choicesArray);
+
+				val usageNode = objectMapper.createObjectNode();
+				usageNode.put("prompt_tokens", 0);
+				usageNode.put("completion_tokens", 0);
+				usageNode.put("total_tokens", 0);
+				responseNode.set("usage", usageNode);
+
+				// Wrap response inside OpenAI batch envelope format
+				val responseEnvelope = objectMapper.createObjectNode();
+				responseEnvelope.put("status_code", 200);
+				responseEnvelope.set("body", responseNode);
+
+				val out = objectMapper.createObjectNode();
+				out.put("custom_id", BatchOpenAIRequest.customDataToCustomId(request.getData()) );
+				out.set("response", responseEnvelope);
+
+				writer.write(out.toString());
+                writer.newLine();
+                writer.flush();
 			}
 		}
 

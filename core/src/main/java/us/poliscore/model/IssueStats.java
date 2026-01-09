@@ -106,14 +106,16 @@ public class IssueStats {
 	}
 	
 	@JsonIgnore
-	public String getLetterGrade() {
-		int credit = this.getRating();
+	public String getLetterGrade(float datasetMultiplier) {
+		double credit = this.getRating();
+		
+		credit = credit * datasetMultiplier;
 		
 		if (credit >= 40) return "A";
 		else if (credit >= 30 && credit < 40) return "B";
 		else if (credit >= 15 && credit < 30) return "C";
-		else if (credit >= 0 && credit < 15) return "D";
-		else if (credit < 0) return "F";
+		else if (credit > 0 && credit < 15) return "D";
+		else if (credit <= 0) return "F";
 		else throw new UnsupportedOperationException("Programming error. Can't handle " + credit);
 	}
 	
@@ -144,7 +146,7 @@ public class IssueStats {
 	
 	@JsonIgnore
 	@DynamoDbIgnore
-	public boolean isValid() {
+	public void validate() {
 		// TODO : Clean up existing data
 //		for (TrackedIssue issue : TrackedIssue.values()) {
 //			if (hasStat(issue) && getStat(issue) == 0 && issue != TrackedIssue.OverallBenefitToSociety) {
@@ -152,7 +154,19 @@ public class IssueStats {
 //			}
 //		}
 		
-		return hasStat(TrackedIssue.OverallBenefitToSociety);
+		if (!hasStat(TrackedIssue.OverallBenefitToSociety))
+			throw new RuntimeException("Expected an 'OverallBenefitToSociety' stat.");
+	}
+	
+	@JsonIgnore
+	@DynamoDbIgnore
+	public boolean isValid() {
+		try {
+			validate();
+			return true;
+		} catch(Throwable t) {
+			return false;
+		}
 	}
 	
 	public void removeStat(TrackedIssue issue)

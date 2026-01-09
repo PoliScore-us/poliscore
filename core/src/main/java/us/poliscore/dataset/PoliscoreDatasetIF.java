@@ -37,6 +37,8 @@ public interface PoliscoreDatasetIF extends ObjectStorageServiceIF {
 	
 	public boolean isCurrent();
 	
+	public boolean isBuild();
+	
 	public <T extends Persistable> void optimizeExists(S3PersistenceService s3, Class<T> clazz);
 
 	public <T extends Persistable> void clearExistsOptimize(S3PersistenceService s3, Class<T> class1);

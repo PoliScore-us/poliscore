@@ -13,6 +13,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.val;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.IssueStats;
 import us.poliscore.model.LegislativeChamber;
@@ -30,7 +31,6 @@ import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVot
 import us.poliscore.model.legislator.LegislatorInterpretation;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
-import us.poliscore.service.storage.ObjectStorageServiceIF;
 
 /**
  * TODO :
@@ -225,7 +225,6 @@ Your written response for this research section should consist of only a compact
 	}
 	
 	public DoubleIssueStats calculateAgregateInteractionStats(Legislator leg) {
-		val dataset = data.getDataset(leg.getId());
 		DoubleIssueStats stats = new DoubleIssueStats();
 		
 		for (val interact : getInteractionsForInterpretation(leg))
@@ -238,7 +237,6 @@ Your written response for this research section should consist of only a compact
 		}
 		
 		stats = stats.divideByTotalSummed();
-		stats = stats.multiply(dataset.getConfig().getMultiplier());
 		return stats;
 	}
 	
@@ -312,8 +310,8 @@ Your written response for this research section should consist of only a compact
 //		return interp;
 //	}
 	
-	public static String getAiPrompt(Legislator leg, IssueStats stats) {
-		val grade = stats.getLetterGrade();
+	public static String getAiPrompt(PoliscoreDatasetIF dataset, Legislator leg, IssueStats stats) {
+		val grade = stats.getLetterGrade(dataset.getConfig().getMultiplier());
 		
 		String ns = "";
 		if (leg.getNamespace().equals(LegislativeNamespace.US_CONGRESS))

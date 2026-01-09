@@ -109,7 +109,7 @@ public class BillInterpretationParser {
         interp.setStructuralAnalysisPassFail(saParsed.getResults());
         interp.setStructuralAnalysisExplain(saParsed.getAnalyses());
         
-        validate();
+        interp.validate();
 	}
 
 	private String standardizeFormatting(String line) {
@@ -175,12 +175,6 @@ public class BillInterpretationParser {
 			processLaymansReport(line);
 		} else if (State.IMPACT_ANALYSIS.equals(state)) {
 			processImpactAnalysis(line);
-		}
-	}
-	
-	protected void validate() {
-		if (!interp.isValid()) {
-			throw new RuntimeException("Interpretation did not pass vaidation.");
 		}
 	}
 

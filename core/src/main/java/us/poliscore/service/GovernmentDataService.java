@@ -115,11 +115,7 @@ public class GovernmentDataService {
 	}
 	
 	public List<PoliscoreDatasetIF> getBuildDatasets() {
-		val currentYear = LocalDate.now().getYear();
-		
-		return importedDatasets.stream()
-				.filter(ds -> ds.isYearWithin(currentYear))
-				.toList();
+		return importedDatasets.stream().filter(d -> d.getConfig().getBuild()).toList();
 	}
 	
 	public LegislativeSession getPreviousRegularSession(LegislativeSession current) {

@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.openai.models.ReasoningEffort;
 
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
@@ -28,6 +29,7 @@ import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
+import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.LegislativeNamespace;
@@ -65,8 +67,6 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	
 	public static final OpenAIModel interpModel = OpenAIModel.DEFAULT_MODEL;
 	
-	public static final long TOKEN_BLOCK_SIZE = 30000000;
-	
 	@Inject
 	private S3PersistenceService s3;
 	
@@ -76,19 +76,15 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	@Inject
 	private LegislatorInterpretationService legInterp;
 	
-	private long tokenLen = 0;
-	
-	private long totalRequests = 0;
-	
 	private long skipped = 0;
 	
-	private List<BatchOpenAIRequest> requests = new ArrayList<BatchOpenAIRequest>();
+	private List<InterpretationRequest> requests = new ArrayList<InterpretationRequest>();
 	
 	private List<File> writtenFiles = new ArrayList<File>();
 	
 	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
-	public List<File> process(List<PoliscoreDatasetIF> buildDatasets) throws IOException
+	public List<InterpretationRequest> process(List<PoliscoreDatasetIF> buildDatasets) throws IOException
 	{
 		Log.info("Generating batch request to interpret legislators");
 		
@@ -103,11 +99,9 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 			processDataset(dataset, true, block);
 		}
 		
-		writeBlock(block++);
+		Log.info("Batch legislator request generator complete. Generated " + requests.size() + " requests. Skipped " + skipped + " legislators.");
 		
-		Log.info("Batch legislator request generator complete. Generated " + totalRequests + " requests. Skipped " + skipped + " legislators.");
-		
-		return writtenFiles;
+		return requests;
 	}
 	
 	private void processDataset(PoliscoreDatasetIF dataset, boolean enableWebSearch, int block) throws IOException {
@@ -137,10 +131,6 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		
 		for (Legislator l : list) {
 			interpret(dataset, l);
-			
-			if (tokenLen >= TOKEN_BLOCK_SIZE) {
-				writeBlock(block++);
-			}
 		}
 	}
 	
@@ -149,7 +139,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		if (interpOp.isEmpty()) return true;
 		if (interpOp.get().getIssueStats() == null) return true;
 		
-		return interpOp.get().getIssueStats().getLetterGrade().trim().equalsIgnoreCase(grade.trim());
+		return interpOp.get().getIssueStats().getLetterGrade(dataset.getConfig().getMultiplier()).trim().equalsIgnoreCase(grade.trim());
 	}
 	
 	private boolean interpIsOlderThan(Legislator leg, PoliscoreDatasetIF dataset) {
@@ -223,7 +213,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		if (includedBills.size() == 0)
 			return;
 		
-		createRequest(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretationService.getAiPrompt(leg, stats.toIssueStats()), String.join("\n", billMsgs));
+		createRequest(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretationService.getAiPrompt(dataset, leg, stats.toIssueStats()), String.join("\n", billMsgs));
 	}
 
 	private void includeBillsByTopIssues(Legislator leg, DoubleIssueStats stats, List<String> billMsgs, Set<String> includedBills, int amount, boolean ascending) {
@@ -277,6 +267,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	}
 	
 	private void includeBillsByGrade(Legislator leg, List<String> billMsgs, Set<String> includedBills, int amount, boolean ascending) {
+		val dataset = data.getDataset(leg.getId());
 		billMsgs.add("Legislator's " + (ascending ? "Worst" : "Best") + " Bills:");
 		
 		var billsByGrade = legInterp.getInteractionsForInterpretation(leg).stream().filter(i -> i.getIssueStats() != null);
@@ -289,7 +280,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		for (val interact : billsByGrade.limit(amount).collect(Collectors.toList()))
 		{
 			val bill = data.get(interact.getBillId(), Bill.class).orElseThrow();
-			val billMsg = "- " + interact.describe() + " \"" + interact.getBillName() + "\" (Grade: " + interact.getIssueStats().getLetterGrade() + ") (" + bill.getStatus().getDescription() + ") (" + bill.getId() + "): " + interact.getShortExplain();
+			val billMsg = "- " + interact.describe() + " \"" + interact.getBillName() + "\" (Grade: " + interact.getIssueStats().getLetterGrade(dataset.getConfig().getMultiplier()) + ") (" + bill.getStatus().getDescription() + ") (" + bill.getId() + "): " + interact.getShortExplain();
 			if ( (String.join("\n", billMsgs) + "\n" + billMsg).length() < interpModel.getContextWindowStringLength() ) {
 				billMsgs.add(billMsg);
 				includedBills.add(interact.getBillId());
@@ -300,6 +291,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	}
 
 	private void includeBillsByImpact(Legislator leg, List<String> billMsgs, Set<String> includedBills, int amount, boolean ascending) {
+		val dataset = data.getDataset(leg.getId());
 		var billsByImpact = legInterp.getInteractionsForInterpretation(leg).stream().filter(i -> i.getIssueStats() != null);
 		
 		if (ascending)
@@ -310,7 +302,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		for (val interact : billsByImpact.limit(amount).collect(Collectors.toList()))
 		{
 			val bill = data.get(interact.getBillId(), Bill.class).orElseThrow();
-			val billMsg = "- " + interact.describe() + " \"" + interact.getBillName() + "\" (Grade: " + interact.getIssueStats().getLetterGrade() + ") (" + bill.getStatus().getDescription() + "): " + interact.getShortExplain();
+			val billMsg = "- " + interact.describe() + " \"" + interact.getBillName() + "\" (Grade: " + interact.getIssueStats().getLetterGrade(dataset.getConfig().getMultiplier()) + ") (" + bill.getStatus().getDescription() + "): " + interact.getShortExplain();
 			if ( (String.join("\n", billMsgs) + "\n" + billMsg).length() < interpModel.getContextWindowStringLength() ) {
 				billMsgs.add(billMsg);
 				includedBills.add(interact.getBillId());
@@ -321,42 +313,18 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	}
 
 	private void createRequest(String oid, String sysMsg, String userMsg) {
-		List<BatchBillMessage> messages = new ArrayList<BatchBillMessage>();
-		messages.add(new BatchBillMessage("system", sysMsg));
-		messages.add(new BatchBillMessage("user", userMsg));
+		if (userMsg.length() >= interpModel.getContextWindowStringLength()) {
+	      throw new RuntimeException("Max user message length exceeded on " + oid + " (" + userMsg.length()
+	          + " > " + interpModel.getContextWindowStringLength());
+	    }
 		
-		requests.add(new BatchOpenAIRequest(
-				new CustomData(oid),
-				new BatchOpenAIBody(messages)
-		));
-		
-		tokenLen += (userMsg.length() / 4);
-	}
-
-	private void writeBlock(int block) throws IOException {
-		if (requests.size() == 0) return;
-		
-		File f = requestFile(block);
-		
-		val mapper = PoliscoreUtil.getObjectMapper();
-		val s = requests.stream().map(r -> {
-			try {
-				return mapper.writeValueAsString(r);
-			} catch (JsonProcessingException e) {
-				throw new RuntimeException(e);
-			}
-		}).toList();
-		
-		FileUtils.write(f, String.join("\n", s), "UTF-8");
-		
-		totalRequests += requests.size();
-		
-		Log.info("Successfully wrote " + requests.size() + " requests to " + f.getAbsolutePath());
-		
-		writtenFiles.add(f);
-		
-		requests = new ArrayList<BatchOpenAIRequest>();
-		tokenLen = 0;
+		requests.add(InterpretationRequest.builder()
+		        .data(new CustomData(oid))
+		        .systemMsg(sysMsg)
+		        .userMsg(userMsg)
+		        .requestedModel(interpModel)
+		        .reasoningEffort(ReasoningEffort.MEDIUM)
+		        .build());
 	}
 	
 	public static File requestFile(int blockNum) {

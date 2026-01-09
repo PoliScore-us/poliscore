@@ -1,6 +1,5 @@
 package us.poliscore.entrypoint.batch;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -19,11 +18,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openai.models.ReasoningEffort;
 
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
@@ -32,14 +30,10 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
-import us.poliscore.Environment;
-import us.poliscore.PoliscoreDataset;
-import us.poliscore.PoliscoreUtil;
-import us.poliscore.ai.BatchOpenAIRequest;
-import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
-import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
+import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
 import us.poliscore.ai.OpenAIModel;
+import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.entrypoint.DatabaseBuilder;
 import us.poliscore.model.AIInterpretationMetadata;
@@ -249,17 +243,11 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	
 	@Inject PressInterpService pressService;
 	
-	private int block;
-	
-	private long tokenLen = 0;
-	
 	private long totalRequests = 0;
 	
 	private int totalQueries = 0;
 	
-	private List<BatchOpenAIRequest> requests = new ArrayList<BatchOpenAIRequest>();
-	
-	private List<File> writtenFiles = new ArrayList<File>();
+	private List<InterpretationRequest> requests = new ArrayList<InterpretationRequest>();
 	
 	private Set<Bill> dirtyBills = new HashSet<Bill>();
 	
@@ -279,7 +267,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	}
 	
 	@SneakyThrows
-	public List<File> process(List<PoliscoreDatasetIF> buildDatasets)
+	public List<InterpretationRequest> process(List<PoliscoreDatasetIF> buildDatasets)
 	{
 		Log.info("Scraping press articles");
 		
@@ -289,24 +277,19 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 			dataset.optimizeExists(s3, BillInterpretation.class);
 		}
 		
-		block = 1;
-		tokenLen = 0;
 		totalRequests = 0;
-		requests = new ArrayList<BatchOpenAIRequest>();
-		writtenFiles = new ArrayList<File>();
+		requests = new ArrayList<InterpretationRequest>();
 		
 		for (val dataset : buildDatasets) {
-			processDataset(dataset, block);
+			processDataset(dataset);
 		}
-		
-		writeBlock(block++);
 		
 		Log.info("Press scraper complete. Executed " + totalQueries + " Google search queries and generated " + totalRequests + " AI requests.");
 		
-		return writtenFiles;
+		return requests;
 	}
 
-	private void processDataset(PoliscoreDatasetIF dataset, int block) throws IOException {
+	private void processDataset(PoliscoreDatasetIF dataset) throws IOException {
 		// Determine what bills to process //
 		Stream<Bill> bills;
 		if (specificFetch.length > 0) {
@@ -344,10 +327,6 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 				}
 			} else {
 				remainingBillsCount++;
-			}
-			
-			if (tokenLen >= TOKEN_BLOCK_SIZE) {
-				writeBlock(block++);
 			}
 		}
 //		processOrigin(b, new InterpretationOrigin("url", "title"), Jsoup.parse(new File("/Users/test/dev/projects/poliscore/databuilder/src/main/resources/ace-ccr.html")));
@@ -537,51 +516,18 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
                 "\nIntroduced in " + bill.getIntroducedDate();
     }
 	
-	private void createRequest(CustomOriginData data, String sysMsg, String userMsg) {
-		if ((userMsg.length() + sysMsg.length()) > interpModel.getContextWindowStringLength()) {
+	private void createRequest(CustomData data, String systemMsg, String userMsg) {
+		if ((userMsg.length() + systemMsg.length()) > interpModel.getContextWindowStringLength()) {
 			throw new RuntimeException("Max user message length exceeded on " + data.getOid() + " (" + userMsg.length() + " > " + interpModel.getContextWindowStringLength());
 		}
 		
-		List<BatchBillMessage> messages = new ArrayList<BatchBillMessage>();
-		messages.add(new BatchBillMessage("system", sysMsg));
-		messages.add(new BatchBillMessage("user", userMsg));
-		
-		requests.add(new BatchOpenAIRequest(
-				data,
-				new BatchOpenAIBody(messages, interpModel)
-		));
-		
-		tokenLen += (userMsg.length() / 4);
-	}
-	
-	private void writeBlock(int block) throws IOException {
-		if (requests.size() == 0) return;
-		
-		File f = requestFile(block);
-		
-		val mapper = PoliscoreUtil.getObjectMapper();
-		val s = requests.stream().map(r -> {
-			try {
-				return mapper.writeValueAsString(r);
-			} catch (JsonProcessingException e) {
-				throw new RuntimeException(e);
-			}
-		}).toList();
-		
-		FileUtils.write(f, String.join("\n", s), "UTF-8");
-		
-		totalRequests += requests.size();
-		
-		Log.info("Successfully wrote " + requests.size() + " requests to " + f.getAbsolutePath());
-		
-		writtenFiles.add(f);
-		
-		requests = new ArrayList<BatchOpenAIRequest>();
-		tokenLen = 0;
-	}
-	
-	public static File requestFile(int blockNum) {
-		return new File(Environment.getDeployedPath(), "openapi-press-bulk-" + blockNum + ".jsonl");
+		requests.add(InterpretationRequest.builder()
+		        .data(data)
+		        .systemMsg(systemMsg)
+		        .userMsg(userMsg)
+		        .requestedModel(interpModel)
+		        .reasoningEffort(ReasoningEffort.LOW)
+		        .build());
 	}
 	
 	@SneakyThrows

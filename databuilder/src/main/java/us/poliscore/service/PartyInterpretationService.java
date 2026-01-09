@@ -15,19 +15,20 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.openai.models.ReasoningEffort;
 
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.val;
 import us.poliscore.Environment;
-import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.ai.BatchOpenAIRequest;
 import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
 import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
+import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.IssueStats;
@@ -62,15 +63,13 @@ public class PartyInterpretationService {
 	@Inject
 	private GovernmentDataService data;
 	
-	private List<BatchOpenAIRequest> requests = new ArrayList<BatchOpenAIRequest>();
-	
-	private List<File> writtenFiles = new ArrayList<File>();
+	private List<InterpretationRequest> requests = new ArrayList<InterpretationRequest>();
 	
 	private HashMap<Party, Map<TrackedIssue, PriorityQueue<PartyBillInteraction>>> bestBillsByIssue;
 	
 	private HashMap<Party, Map<TrackedIssue, PriorityQueue<PartyBillInteraction>>> worstBillsByIssue;
 	
-	public List<File> process(List<PoliscoreDatasetIF> buildDatasets) throws IOException
+	public List<InterpretationRequest> process(List<PoliscoreDatasetIF> buildDatasets) throws IOException
 	{
 		for (val dataset : buildDatasets) {
 			val hasIndependent = dataset.hasIndependentPartyMembers();
@@ -85,9 +84,7 @@ public class PartyInterpretationService {
 				createRequest(dataset, partyStats.getIndependent());
 		}
 		
-		writeRequests(requests);
-		
-		return writtenFiles;
+		return requests;
 	}
 	
 	public SessionInterpretation recalculateStats(PoliscoreDatasetIF dataset) {
@@ -235,7 +232,7 @@ public class PartyInterpretationService {
 		
 		msg.add("\n");
 		
-		val grade = interp.getStats().getLetterGrade();
+		val grade = interp.getStats().getLetterGrade(1.0f);
 		if (grade.equals("A") || grade.equals("B")) {
 			msg.add("Highest \"Overall Benefit to Society\" (Rating) Bills:");
 			msg.add(StringUtils.join(interp.getBestBills().stream().limit(5).map(i -> i.getShortExplainForInterp()).toArray(), "\n"));
@@ -279,38 +276,18 @@ public class PartyInterpretationService {
 			throw new RuntimeException("Max user message length exceeded on " + party.getName() + " (" + userMsg.length() + " > " + partyInterpModel.getContextWindowStringLength());
 		}
 		
-		List<BatchBillMessage> messages = new ArrayList<BatchBillMessage>();
-		messages.add(new BatchBillMessage("system", sysMsg));
-		messages.add(new BatchBillMessage("user", userMsg));
-		
-		requests.add(new BatchOpenAIRequest(
-				new CustomData(SessionInterpretation.ID_CLASS_PREFIX + "/" + sessionKey + "/" + party.name()),
-				new BatchOpenAIBody(messages)
-		));
-	}
-	
-	private void writeRequests(List<BatchOpenAIRequest> requests) throws IOException {
-		File f = new File(Environment.getDeployedPath(), "openai-party-requests.jsonl");
-		
-		val mapper = PoliscoreUtil.getObjectMapper();
-		val s = requests.stream().map(r -> {
-			try {
-				return mapper.writeValueAsString(r);
-			} catch (JsonProcessingException e) {
-				throw new RuntimeException(e);
-			}
-		}).toList();
-		
-		FileUtils.write(f, String.join("\n", s), "UTF-8");
-		
-		writtenFiles.add(f);
-		
-		Log.info("Successfully wrote " + requests.size() + " requests to " + f.getAbsolutePath());
+		requests.add(InterpretationRequest.builder()
+		        .data(new CustomData(SessionInterpretation.ID_CLASS_PREFIX + "/" + sessionKey + "/" + party.name()))
+		        .systemMsg(sysMsg)
+		        .userMsg(userMsg)
+		        .requestedModel(partyInterpModel)
+		        .reasoningEffort(ReasoningEffort.MEDIUM)
+		        .build());
 	}
 	
 	public static List<TrackedIssue> getHighlightPolicyAreas(IssueStats stats)
 	{
-		val grade = stats.getLetterGrade();
+		val grade = stats.getLetterGrade(1.0f);
 		List<TrackedIssue> highlightPolicyAreas;
 		
 		if (grade.equals("A") || grade.equals("B")) {
@@ -342,7 +319,7 @@ public class PartyInterpretationService {
 	}
 	
 	public static String getAiPrompt(LegislativeSession session, Party party, IssueStats stats) {
-		val grade = stats.getLetterGrade();
+		val grade = stats.getLetterGrade(1.0f);
 		
 		String sessionName;
 		if (session.getNamespace().equals(LegislativeNamespace.US_CONGRESS))

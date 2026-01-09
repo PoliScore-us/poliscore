@@ -21,6 +21,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConve
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
+import us.poliscore.interpretation.InterpretationMissingReferencesException;
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.AISliceInterpretationMetadata;
 import us.poliscore.model.InterpretationOrigin;
@@ -158,11 +159,41 @@ public class BillInterpretation extends SessionPersistable
 	
 	@JsonIgnore
 	@DynamoDbIgnore
+	public void validate() {
+		if (pressInterps == null || pressInterps.size() == 0) {
+			System.out.println("!!!!Interpretation had no references!!!!");
+			System.out.println("!!!!Interpretation had no references!!!!");
+			System.out.println("!!!!Interpretation had no references!!!!");
+//			throw new InterpretationMissingReferencesException("The interpretation had no references.");
+		}
+		
+		issueStats.validate();
+		
+		if (StringUtils.isBlank(getLongExplain()))
+			throw new RuntimeException("Long explain was blank");
+		
+		if (getSliceIndex() == null && StringUtils.isBlank(getLaymansReport()))
+			throw new RuntimeException("Non-slice interps require laymans report");
+		
+		if (getSliceIndex() == null && StringUtils.isBlank(getShortExplain()))
+			throw new RuntimeException("Non-slice interps require short explain");
+		
+		if (structuralAnalysisExplain.size() != StructuralAnalysis.values().length)
+			throw new RuntimeException("Structural analysis explain missing");
+		
+		if (structuralAnalysisPassFail.size() != StructuralAnalysis.values().length)
+			throw new RuntimeException("Structural analysis pass fail missing");
+	}
+	
+	@JsonIgnore
+	@DynamoDbIgnore
 	public boolean isValid() {
-		return pressInterps != null && pressInterps.size() > 0
-				&& issueStats != null && issueStats.isValid()
-				&& StringUtils.isNotBlank(getLongExplain())
-				&& (getSliceIndex() != null || (StringUtils.isNotBlank(getLaymansReport()) && StringUtils.isNotBlank(getShortExplain())));
+		try {
+			validate();
+			return true;
+		} catch(Throwable t) {
+			return false;
+		}
 	}
 	
 	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX }) public String getStorageBucket() { return super.getStorageBucket(); }

@@ -34,6 +34,8 @@ public class PoliscoreDataset extends MemoryObjectStore implements PoliscoreData
 		protected Integer year;
 		
 		protected float multiplier = 1.0f;
+		
+		protected Boolean build;
 	}
 	
 	@NonNull
@@ -99,6 +101,11 @@ public class PoliscoreDataset extends MemoryObjectStore implements PoliscoreData
 	@Override
 	public boolean isCurrent() {
 		return isYearWithin(Year.now().getValue());
+	}
+	
+	@Override
+	public boolean isBuild() {
+		return this.config.getBuild();
 	}
 
 	@Override

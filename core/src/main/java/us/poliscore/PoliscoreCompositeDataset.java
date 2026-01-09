@@ -149,6 +149,11 @@ public class PoliscoreCompositeDataset implements ObjectStorageServiceIF, Polisc
 	public boolean isCurrent() {
 		return isYearWithin(Year.now().getValue());
 	}
+	
+	@Override
+	public boolean isBuild() {
+		return this.config.getBuild();
+	}
 
 	@Override
 	public String getCode() {
