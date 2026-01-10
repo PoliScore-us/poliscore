@@ -66,7 +66,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/unprocessed.jsonl").getAbsolutePath();
 	
 //	Canceled half-way through a batch (bills)
-//	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/openapi-bills-bulk-1.jsonl.out.jsonl").getAbsolutePath();
+//	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/openapi-bills.out.jsonl").getAbsolutePath();
 	
 	@Inject
 	private CachedDynamoDbService ddb;

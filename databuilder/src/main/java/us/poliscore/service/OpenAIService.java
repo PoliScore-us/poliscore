@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -296,19 +297,16 @@ public class OpenAIService {
 	 */
 	@SneakyThrows
 	public List<File> processBatchImmediately(List<InterpretationRequest> requests) {
-		List<File> responseFiles = new ArrayList<>();
-		
 		Log.info("Performing " + requests.size() + " requests to OpenAI.");
 
-		for (InterpretationRequest request : requests) {
-			var buildTemp = new File(System.getProperty("user.home") + "/appdata/poliscore/build");
-			buildTemp.mkdirs();
-			
-			File outputFile = new File(buildTemp, "openapi-bills.out.jsonl");
-			responseFiles.add(outputFile);
-			Log.info("Writing responses to file: " + outputFile.getAbsolutePath());
-
-			try (BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+		var buildTemp = new File(System.getProperty("user.home") + "/appdata/poliscore/build");
+		buildTemp.mkdirs();
+		
+		File outputFile = new File(buildTemp, "openapi-bills.out.jsonl");
+		Log.info("Writing responses to file: " + outputFile.getAbsolutePath());
+		
+		try (BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+			for (InterpretationRequest request : requests) {
 				val objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
 				val model = Objects.requireNonNullElse(request.getRequestedModel(), OpenAIModel.DEFAULT_MODEL);
@@ -347,16 +345,16 @@ public class OpenAIService {
 				responseEnvelope.put("status_code", 200);
 				responseEnvelope.set("body", responseNode);
 
-				val out = objectMapper.createObjectNode();
-				out.put("custom_id", BatchOpenAIRequest.customDataToCustomId(request.getData()) );
-				out.set("response", responseEnvelope);
+				val line = objectMapper.createObjectNode();
+				line.put("custom_id", BatchOpenAIRequest.customDataToCustomId(request.getData()) );
+				line.set("response", responseEnvelope);
 
-				writer.write(out.toString());
+				writer.write(line.toString());
                 writer.newLine();
                 writer.flush();
 			}
 		}
 
-		return responseFiles;
+		return Arrays.asList(new File[] { outputFile });
 	}
 }
