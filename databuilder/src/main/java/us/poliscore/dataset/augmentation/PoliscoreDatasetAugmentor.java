@@ -12,6 +12,8 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContexts;
 
+import com.openai.models.ReasoningEffort;
+
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
@@ -238,7 +240,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	    }
 
 	    String userPrompt = sb.toString();
-	    String response = openai.chat(BIRTHDAY_LOOKUP_SYSTEM_PROMPT, userPrompt, OpenAIModel.O3_DEEP_RESEARCH);
+	    String response = openai.chat(BIRTHDAY_LOOKUP_SYSTEM_PROMPT, userPrompt, OpenAIModel.O3_DEEP_RESEARCH, ReasoningEffort.MEDIUM);
 
 	    Log.info("OpenAI response:\n" + response);
 

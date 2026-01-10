@@ -12,6 +12,8 @@ import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.openai.models.ReasoningEffort;
+
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
@@ -58,6 +60,8 @@ public class BatchBillRequestGenerator implements QuarkusApplication
 
   /** Default requested model for these interpretation requests. */
   public static final OpenAIModel billProcessModel = OpenAIModel.DEFAULT_MODEL;
+  
+  public static final ReasoningEffort minEffort = ReasoningEffort.LOW;
 
   @Inject
   private LocalCachedS3Service s3;
@@ -187,7 +191,8 @@ public class BatchBillRequestGenerator implements QuarkusApplication
               b.getId(),
               null,
               billInterpreter.getPromptForBill(b, false, enableWebSearch),
-              billInterpreter.getUserMsgForBill(b, b.getText().getDocument(), billProcessModel)
+              billInterpreter.getUserMsgForBill(b, b.getText().getDocument(), billProcessModel),
+              effortForBill(b, b.getText().getXml())
           );
         } else {
           val sliceInterps = new ArrayList<BillInterpretation>();
@@ -208,7 +213,8 @@ public class BatchBillRequestGenerator implements QuarkusApplication
                   b.getId(),
                   slice.getSliceIndex(),
                   BillInterpretationService.slicePrompt,
-                  slice.getText()
+                  slice.getText(),
+                  minEffort
               );
             } else {
               sliceInterps.add(sliceInterp.get());
@@ -241,7 +247,8 @@ public class BatchBillRequestGenerator implements QuarkusApplication
                 b.getId(),
                 null,
                 billInterpreter.getPromptForBill(b, true, enableWebSearch),
-                billInterpreter.getUserMsgForBill(b, String.join("\n", summaries), billProcessModel)
+                billInterpreter.getUserMsgForBill(b, String.join("\n", summaries), billProcessModel),
+                minEffort == ReasoningEffort.LOW ? ReasoningEffort.MEDIUM : minEffort
             );
           }
         }
@@ -251,10 +258,20 @@ public class BatchBillRequestGenerator implements QuarkusApplication
             b.getId(),
             null,
             billInterpreter.getPromptForBill(b, false, enableWebSearch),
-            userMsg
+            userMsg,
+            effortForBill(b, userMsg)
         );
       }
     }
+  }
+  
+  private ReasoningEffort effortForBill(Bill b, String billText) {
+	  if (minEffort != ReasoningEffort.LOW) return minEffort;
+	  
+	  if (b.getStatus().getProgress() > 0.0f || billText.length() > 10000)
+		  return ReasoningEffort.MEDIUM;
+	  else
+		  return minEffort;
   }
 
   private Stream<Bill> andNotAlreadyInterpretedOrInvalid(Stream<Bill> stream, boolean includePressDirtyBills) {
@@ -299,7 +316,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
     return stream.filter(b -> !billInterpreter.isInterpreted(b.getId()) || (b.getSessionCode().equals(sessionCode)));
   }
 
-  private void createRequest(String oid, String billId, Integer sliceIndex, String systemMsg, String userMsg) {
+  private void createRequest(String oid, String billId, Integer sliceIndex, String systemMsg, String userMsg, ReasoningEffort effort) {
     if (userMsg.length() >= billProcessModel.getContextWindowStringLength()) {
       throw new RuntimeException("Max user message length exceeded on " + oid + " (" + userMsg.length()
           + " > " + billProcessModel.getContextWindowStringLength());
@@ -310,7 +327,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication
         .systemMsg(systemMsg)
         .userMsg(userMsg)
         .requestedModel(billProcessModel)
-        .reasoningEffort(null) // TODO : Set
+        .reasoningEffort(effort)
         .build();
 
     requests.add(req);

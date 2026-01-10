@@ -24,6 +24,7 @@ import com.openai.errors.BadRequestException;
 import com.openai.errors.InternalServerException;
 import com.openai.errors.OpenAIInvalidDataException;
 import com.openai.models.Reasoning;
+import com.openai.models.ReasoningEffort;
 import com.openai.models.batches.Batch;
 import com.openai.models.batches.Batch.Status;
 import com.openai.models.batches.BatchCreateParams;
@@ -111,10 +112,10 @@ public class OpenAIService {
 	    tokensUsedThisMinute += tokensToBeUsed;
 	}
 	
-	public String chat(String systemMsg, String userMsg) { return this.chat(systemMsg, userMsg, null); }
+	public String chat(String systemMsg, String userMsg) { return this.chat(systemMsg, userMsg, null, null); }
 	
 	@SneakyThrows
-	public String chat(String systemMsg, String userMsg, OpenAIModel model)
+	public String chat(String systemMsg, String userMsg, OpenAIModel model, ReasoningEffort effort)
     {
 		if (userMsg.length() > model.getContextWindowStringLength()) {
 			throw new IndexOutOfBoundsException();
@@ -122,6 +123,8 @@ public class OpenAIService {
 		if (StringUtils.isEmpty(systemMsg) || StringUtils.isEmpty(userMsg)) {
 			throw new IllegalArgumentException();
 		}
+		
+		effort = Objects.requireNonNullElse(effort, ReasoningEffort.LOW);
 		
 		int estimatedTokens = userMsg.length() / 4; // Roughly 4 chars per token
 		waitForRateLimit(model, estimatedTokens);
@@ -149,8 +152,8 @@ public class OpenAIService {
 		if (_model.isSupportsTemperature())
 			paramBuilder.temperature(0.0d); // We don't want randomness. Give us predictability and accuracy
 		
-		if (_model.getReasoningEffort() != null)
-			paramBuilder.reasoning(Reasoning.builder().effort(_model.getReasoningEffort()).build()); // TODO : In theory you're supposed to be able to get reasoning if you add ".summary(Reasoning.Summary.CONCISE)" (and your organization is verified), but I haven't been able to get it to work. The remote just doesn't include the reasoning in the response.
+		if (_model.isSupportsReasoning())
+			paramBuilder.reasoning(Reasoning.builder().effort(effort).build()); // TODO : In theory you're supposed to be able to get reasoning if you add ".summary(Reasoning.Summary.CONCISE)" (and your organization is verified), but I haven't been able to get it to work. The remote just doesn't include the reasoning in the response.
 			
 		val params = paramBuilder.build();
 		
@@ -180,7 +183,10 @@ public class OpenAIService {
     	}
     	
     	if (!response.status().get().equals(ResponseStatus.COMPLETED)) {
-    		throw new RuntimeException("OpenAI's response status was not equal to completed. " + response.status().get());
+    		if (response.status().get().equals(ResponseStatus.INCOMPLETE) && model.isSupportsReasoning() && ReasoningEffort.LOW.equals(effort))
+    			return chat(systemMsg, userMsg, model, ReasoningEffort.MEDIUM); // Retry the request with higher reasoning
+    		else
+    			throw new RuntimeException("OpenAI's response status was not equal to completed. " + response.status().get());
     	}
     	
     	return response.output().stream()
@@ -313,7 +319,7 @@ public class OpenAIService {
 				String systemMsg = request.getSystemMsg();
 				String userMsg = request.getUserMsg();
 
-				String assistantResponse = chat(systemMsg, userMsg, model);
+				String assistantResponse = chat(systemMsg, userMsg, model, request.getReasoningEffort());
 
 				// Build the "body" part (chat completion result)
 				val responseNode = objectMapper.createObjectNode();
