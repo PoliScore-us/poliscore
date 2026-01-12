@@ -2,6 +2,7 @@ package us.poliscore.dataset.augmentation;
 
 import java.io.InputStream;
 import java.security.KeyStore;
+import java.util.UUID;
 
 import javax.net.ssl.SSLContext;
 
@@ -22,7 +23,9 @@ import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.PoliscoreDataset;
+import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
+import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.images.StateLegislatorImageFetcher;
 import us.poliscore.legiscan.service.CachedLegiscanService;
@@ -240,7 +243,8 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	    }
 
 	    String userPrompt = sb.toString();
-	    String response = openai.chat(BIRTHDAY_LOOKUP_SYSTEM_PROMPT, userPrompt, OpenAIModel.O3_DEEP_RESEARCH, ReasoningEffort.MEDIUM);
+	    val request = new InterpretationRequest(new CustomData(UUID.randomUUID().toString()), BIRTHDAY_LOOKUP_SYSTEM_PROMPT, userPrompt, OpenAIModel.O3_DEEP_RESEARCH, ReasoningEffort.MEDIUM);
+	    String response = openai.chat(request);
 
 	    Log.info("OpenAI response:\n" + response);
 
