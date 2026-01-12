@@ -112,19 +112,20 @@ public class OpenAIService {
 	    tokensUsedThisMinute += tokensToBeUsed;
 	}
 	
-	public String chat(String systemMsg, String userMsg) { return this.chat(systemMsg, userMsg, null, null); }
-	
 	@SneakyThrows
-	public String chat(String systemMsg, String userMsg, OpenAIModel model, ReasoningEffort effort)
+	public String chat(InterpretationRequest request)
     {
+		val model = Objects.requireNonNullElse(request.getRequestedModel(), OpenAIModel.DEFAULT_MODEL);
+		String systemMsg = request.getSystemMsg();
+		String userMsg = request.getUserMsg();
+		val effort = Objects.requireNonNullElse(request.getReasoningEffort(), ReasoningEffort.LOW);
+		
 		if (userMsg.length() > model.getContextWindowStringLength()) {
 			throw new IndexOutOfBoundsException();
 		}
 		if (StringUtils.isEmpty(systemMsg) || StringUtils.isEmpty(userMsg)) {
 			throw new IllegalArgumentException();
 		}
-		
-		effort = Objects.requireNonNullElse(effort, ReasoningEffort.LOW);
 		
 		int estimatedTokens = userMsg.length() / 4; // Roughly 4 chars per token
 		waitForRateLimit(model, estimatedTokens);
@@ -157,7 +158,7 @@ public class OpenAIService {
 			
 		val params = paramBuilder.build();
 		
-		Log.info("Sending request to open ai with message size " + userMsg.length());
+		Log.info("Intepreting " + request.getData().getOid() + " using model " + model.getId() + " with reasoning effort " + effort.asString() + " and message size " + userMsg.length());
 		RetryPolicy<Response> retryPolicy = RetryPolicy.<Response>builder()
 			    .handle(SocketTimeoutException.class, InternalServerException.class,
 			    		OpenAIInvalidDataException.class, // Even though this runs counter to their documentation, this exception is actually thrown wrapping a "SocketException: connection reset", so we definitely want to retry it.
@@ -183,9 +184,10 @@ public class OpenAIService {
     	}
     	
     	if (!response.status().get().equals(ResponseStatus.COMPLETED)) {
-    		if (response.status().get().equals(ResponseStatus.INCOMPLETE) && model.isSupportsReasoning() && ReasoningEffort.LOW.equals(effort))
-    			return chat(systemMsg, userMsg, model, ReasoningEffort.MEDIUM); // Retry the request with higher reasoning
-    		else
+    		if (response.status().get().equals(ResponseStatus.INCOMPLETE) && model.isSupportsReasoning() && ReasoningEffort.LOW.equals(effort)) {
+    			request.setReasoningEffort(ReasoningEffort.MEDIUM);
+    			return chat(request); // Retry the request with higher reasoning
+    		} else
     			throw new RuntimeException("OpenAI's response status was not equal to completed. " + response.status().get());
     	}
     	
@@ -316,10 +318,7 @@ public class OpenAIService {
 				val objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
 				val model = Objects.requireNonNullElse(request.getRequestedModel(), OpenAIModel.DEFAULT_MODEL);
-				String systemMsg = request.getSystemMsg();
-				String userMsg = request.getUserMsg();
-
-				String assistantResponse = chat(systemMsg, userMsg, model, request.getReasoningEffort());
+				String assistantResponse = chat(request);
 
 				// Build the "body" part (chat completion result)
 				val responseNode = objectMapper.createObjectNode();

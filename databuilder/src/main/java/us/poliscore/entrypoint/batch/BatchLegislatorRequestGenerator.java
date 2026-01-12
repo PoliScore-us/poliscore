@@ -11,9 +11,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.io.FileUtils;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.openai.models.ReasoningEffort;
 
 import io.quarkus.logging.Log;
@@ -23,14 +20,11 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.val;
 import us.poliscore.Environment;
-import us.poliscore.PoliscoreUtil;
-import us.poliscore.ai.BatchOpenAIRequest;
-import us.poliscore.ai.BatchOpenAIRequest.BatchBillMessage;
-import us.poliscore.ai.BatchOpenAIRequest.BatchOpenAIBody;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
+import us.poliscore.model.BuildReport;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.TrackedIssue;
@@ -80,13 +74,17 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	
 	private List<InterpretationRequest> requests = new ArrayList<InterpretationRequest>();
 	
+	protected BuildReport report;
+	
 	private List<File> writtenFiles = new ArrayList<File>();
 	
 	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
-	public List<InterpretationRequest> process(List<PoliscoreDatasetIF> buildDatasets) throws IOException
+	public List<InterpretationRequest> process(List<PoliscoreDatasetIF> buildDatasets, BuildReport report) throws IOException
 	{
 		Log.info("Generating batch request to interpret legislators");
+		
+		this.report = report;
 		
 		data.importAllDatasets();
 		
@@ -213,7 +211,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		if (includedBills.size() == 0)
 			return;
 		
-		createRequest(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretationService.getAiPrompt(dataset, leg, stats.toIssueStats()), String.join("\n", billMsgs));
+		createRequest(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), leg, LegislatorInterpretationService.getAiPrompt(dataset, leg, stats.toIssueStats()), String.join("\n", billMsgs));
 	}
 
 	private void includeBillsByTopIssues(Legislator leg, DoubleIssueStats stats, List<String> billMsgs, Set<String> includedBills, int amount, boolean ascending) {
@@ -312,7 +310,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		}
 	}
 
-	private void createRequest(String oid, String sysMsg, String userMsg) {
+	private void createRequest(String oid, Legislator leg, String sysMsg, String userMsg) {
 		if (userMsg.length() >= interpModel.getContextWindowStringLength()) {
 	      throw new RuntimeException("Max user message length exceeded on " + oid + " (" + userMsg.length()
 	          + " > " + interpModel.getContextWindowStringLength());
@@ -325,6 +323,8 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		        .requestedModel(interpModel)
 		        .reasoningEffort(ReasoningEffort.MEDIUM)
 		        .build());
+		
+		report.interpretedLegislators.add(leg);
 	}
 	
 	public static File requestFile(int blockNum) {
@@ -333,7 +333,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	
 	@Override
     public int run(String... args) throws Exception {
-        process(data.getBuildDatasets());
+        process(data.getBuildDatasets(), new BuildReport());
         
         Quarkus.waitForExit();
         return 0;

@@ -451,23 +451,34 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 			// TODO : This won't allow for text updates or amendments
 			if (s3.exists(BillText.generateId(bill.getId()), BillText.class)) continue;
 			
-			val metadata = legiBill.getTexts().stream().max(Comparator.comparing(LegiscanTextMetadataView::getDate)).get();
+			var metadata = legiBill.getTexts().stream()
+				    .max(Comparator.comparing(
+				        LegiscanTextMetadataView::getDate,
+				        Comparator.nullsFirst(Comparator.naturalOrder())
+				    )).get();
 			
 			val doc = legiscan.getBillText(metadata.getDocId());
 			
-			if (!doc.getMime().equals(LegiscanMimeType.PDF)) throw new UnsupportedOperationException("Unsupported bill text MIME type [" + doc.getMime().name() + "]");
-			
-			byte[] pdfBytes = Base64.getDecoder().decode(doc.getDoc());
-			
-			try (PDDocument document = Loader.loadPDF(pdfBytes)) {
-	            PDFTextStripper stripper = new PDFTextStripper();
-	            String text = stripper.getText(document);
-
-	            BillText bt = BillText.factoryFromText(bill.getId(), text, doc.getDate());
-				s3.put(bt);
+			String text;
+			if (doc.getMime().equals(LegiscanMimeType.PDF)) {
+				byte[] pdfBytes = Base64.getDecoder().decode(doc.getDoc());
 				
-				count++;
-	        }
+				try (PDDocument document = Loader.loadPDF(pdfBytes)) {
+		            PDFTextStripper stripper = new PDFTextStripper();
+		            text = stripper.getText(document);
+		        }
+			} else if (doc.getMime().equals(LegiscanMimeType.RICH_TEXT_FORMAT) || doc.getMime().equals(LegiscanMimeType.HTML)) {
+				byte[] pdfBytes = Base64.getDecoder().decode(doc.getDoc());
+
+				text = new String(pdfBytes);
+			} else {
+				throw new UnsupportedOperationException("Unsupported bill text MIME type [" + doc.getMime().name() + "]");
+			}
+			
+			BillText bt = BillText.factoryFromText(bill.getId(), text, doc.getDate());
+			s3.put(bt);
+			
+			count++;
 		}
 		
 		dataset.clearExistsOptimize(s3, BillText.class);

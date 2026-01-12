@@ -22,6 +22,7 @@ import us.poliscore.entrypoint.batch.BatchBillRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchLegislatorRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchOpenAIResponseImporter;
 import us.poliscore.entrypoint.batch.PressBillInterpretationRequestGenerator;
+import us.poliscore.model.BuildReport;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.CongressionalBillType;
@@ -83,9 +84,11 @@ public class DatabaseBuilder implements QuarkusApplication
 	@Inject
 	private LegislatorInterpretationService legInterp;
 	
+	protected BuildReport report = new BuildReport();
+	
 	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
-	protected void process() throws IOException
+	public BuildReport process() throws IOException
 	{
 		data.importAllDatasets();
 		
@@ -101,6 +104,10 @@ public class DatabaseBuilder implements QuarkusApplication
 		
 		interpretLegislators(buildDatasets);
 		interpretPartyStats(buildDatasets);
+		
+		System.out.println(report.toString());
+		
+		return report;
 	}
 	
 	protected void initialDataSetup(List<PoliscoreDatasetIF> buildDatasets) {
@@ -131,7 +138,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	private void interpretBills(List<PoliscoreDatasetIF> buildDatasets) { interpretBills(buildDatasets, false); }
 	@SneakyThrows private void interpretBills(List<PoliscoreDatasetIF> buildDatasets, boolean isRecursive) {
 		if (INTERPRET_NEW_BILLS) {
-			List<InterpretationRequest> requests = billRequestGenerator.process(buildDatasets, AGENTIC_WEB_SEARCH, isRecursive);
+			List<InterpretationRequest> requests = billRequestGenerator.process(buildDatasets, report, AGENTIC_WEB_SEARCH, isRecursive);
 			
 			if (requests.size() > 0) {
 				List<File> responses;
@@ -154,7 +161,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	@SneakyThrows
 	private void interpretLegislators(List<PoliscoreDatasetIF> buildDatasets) {
 		if (REINTERPRET_LEGISLATORS) {
-			List<InterpretationRequest> requests = legislatorRequestGenerator.process(buildDatasets);
+			List<InterpretationRequest> requests = legislatorRequestGenerator.process(buildDatasets, report);
 		
 			if (requests.size() > 0) {
 				List<File> responses;
