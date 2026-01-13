@@ -1,14 +1,16 @@
 package us.poliscore.service;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -18,6 +20,10 @@ import io.quarkus.arc.Arc;
 import io.quarkus.arc.InstanceHandle;
 import lombok.SneakyThrows;
 import lombok.val;
+import us.poliscore.PoliscoreCompositeDataset;
+import us.poliscore.PoliscoreDataset;
+import us.poliscore.PoliscoreUtil;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 
@@ -53,6 +59,33 @@ public class SessionInfoService {
             return mapper;
         }
     }
+    
+    @SneakyThrows
+	public static void writeSessions(List<PoliscoreDatasetIF> datasets, File path) {
+		val result = buildSessions(datasets);
+		
+		System.out.println("Writing sessions to " + path.getAbsolutePath());
+		FileUtils.write(path, PoliscoreUtil.getObjectMapper().writeValueAsString(result), "UTF-8");
+	}
+    
+    @SneakyThrows
+	public static List<LegislativeSession> buildSessions(List<PoliscoreDatasetIF> datasets) {
+		val result = new ArrayList<LegislativeSession>();
+		
+		for (var dataset : datasets) {
+			if (dataset instanceof PoliscoreCompositeDataset) {
+				for (var dataset2 : ((PoliscoreCompositeDataset)dataset).getDatasets()) {
+					result.add(((PoliscoreDataset)dataset2).getSession());
+				}
+			} else {
+				result.add(((PoliscoreDataset)dataset).getSession());
+			}
+		}
+		
+		cachedSessions = result;
+		
+		return result;
+	}
 
     @SneakyThrows
     public static List<LegislativeSession> getSessions() {

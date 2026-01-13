@@ -12,6 +12,7 @@ public enum OpenAIModel {
 	GPT52("gpt-5.2", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000)),
     GPT51("gpt-5.1", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000)),
     GPT5("gpt-5", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000)),
+    GPT5mini("gpt-5-mini", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000)),
     GPT41("gpt-4.1", 950_000, 32_768, true, true, false, new RateLimit(30_000_000, 10_000)),
     GPT41mini("gpt-4.1-mini", GPT41.contextWindowTokens, GPT41.maxOutputTokens, true, false, false, new RateLimit(150_000_000, 30_000)),
     GPT4o("gpt-4o", 122_500, 14_000, true, true, false, new RateLimit(30_000_000, 10_000)),
@@ -19,6 +20,8 @@ public enum OpenAIModel {
     O3_DEEP_RESEARCH("o3-deep-research", 190_000, 95_000, false, true, true, new RateLimit(30_000_000, 10_000));
 	
 	public static final OpenAIModel DEFAULT_MODEL = GPT51;
+	
+	public static final OpenAIModel DEFAULT_MODEL_MINI = GPT5mini;
 
     // ---- Fields ----
     private final String id;

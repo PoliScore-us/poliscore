@@ -22,9 +22,11 @@ import jakarta.inject.Inject;
 import lombok.val;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
+import us.poliscore.bill.BillInterpretationRouter;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.BuildReport;
+import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillSlice;
@@ -44,7 +46,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 	public static final List<String> specificFetch = null;
 //	public static final List<String> specificFetch = Arrays.asList(
-//	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 21),
+//	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 282)
 //	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 6)
 //);
 //public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_COLORADO, "2173", "sb", 317));
@@ -172,8 +174,11 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 			val billText = billService.getBillText(b).orElse(null);
 			b.setText(billText);
+			
+			String sBillText = b.getText().getDocument();
+			if (StringUtils.isBlank(sBillText)) throw new UnsupportedOperationException("Bill text is empty for " + b.getId());
 
-			val userMsg = billInterpreter.getUserMsgForBill(b, b.getText().getDocument(), billProcessModel);
+			val userMsg = billInterpreter.getUserMsgForBill(b, sBillText, billProcessModel);
 
 			if (userMsg.length() >= billProcessModel.getContextWindowStringLength()) {
 
@@ -185,13 +190,13 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 					throw new UnsupportedOperationException("Slicer returned zero slices?");
 
 				if (slices.size() == 1) {
-					if (!StringUtils.isBlank(b.getText().getXml()))
-						b.getText().setXml(slices.get(0).getText());
+					if (!StringUtils.isBlank(slices.get(0).getText()))
+						sBillText = slices.get(0).getText();
 
 					createRequest(BillInterpretation.generateId(b.getId(), null), b, null,
 							billInterpreter.getPromptForBill(b, false, enableWebSearch),
 							billInterpreter.getUserMsgForBill(b, b.getText().getDocument(), billProcessModel),
-							effortForBill(b, b.getText().getXml()));
+							sBillText);
 				} else {
 					val sliceInterps = new ArrayList<BillInterpretation>();
 
@@ -206,9 +211,9 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 							if (s3.exists(oid, BillInterpretation.class))
 								continue;
-
+							
 							createRequest(oid, b, slice.getSliceIndex(), BillInterpretationService.slicePrompt,
-									slice.getText(), minEffort);
+									slice.getText(), slice.getText());
 						} else {
 							sliceInterps.add(sliceInterp.get());
 						}
@@ -236,27 +241,17 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 							}
 						}
 
+						String sliceTexts = String.join("\n", summaries);
 						createRequest(oid, b, null, billInterpreter.getPromptForBill(b, true, enableWebSearch),
-								billInterpreter.getUserMsgForBill(b, String.join("\n", summaries), billProcessModel),
-								minEffort == ReasoningEffort.LOW ? ReasoningEffort.MEDIUM : minEffort);
+								billInterpreter.getUserMsgForBill(b, sliceTexts, billProcessModel),
+								sliceTexts);
 					}
 				}
 			} else {
 				createRequest(BillInterpretation.generateId(b.getId(), null), b, null,
-						billInterpreter.getPromptForBill(b, false, enableWebSearch), userMsg,
-						effortForBill(b, userMsg));
+						billInterpreter.getPromptForBill(b, false, enableWebSearch), userMsg, sBillText);
 			}
 		}
-	}
-
-	private ReasoningEffort effortForBill(Bill b, String billText) {
-		if (minEffort != ReasoningEffort.LOW)
-			return minEffort;
-
-		if (b.getStatus().getProgress() > 0.0f || billText.length() > 10000)
-			return ReasoningEffort.MEDIUM;
-		else
-			return minEffort;
 	}
 
 	private Stream<Bill> andNotAlreadyInterpretedOrInvalid(Stream<Bill> stream, boolean includePressDirtyBills) {
@@ -297,15 +292,18 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 				.filter(b -> !billInterpreter.isInterpreted(b.getId()) || (b.getSessionCode().equals(sessionCode)));
 	}
 
-	private void createRequest(String oid, Bill bill, Integer sliceIndex, String systemMsg, String userMsg,
-			ReasoningEffort effort) {
+	private void createRequest(String oid, Bill bill, Integer sliceIndex, String systemMsg, String userMsg, String billText) {
+		if (StringUtils.isBlank(billText)) throw new UnsupportedOperationException("Bill text is empty for " + bill.getId() + (sliceIndex != null ? " slice " + sliceIndex : ""));
+		
 		if (userMsg.length() >= billProcessModel.getContextWindowStringLength()) {
 			throw new RuntimeException("Max user message length exceeded on " + oid + " (" + userMsg.length() + " > "
 					+ billProcessModel.getContextWindowStringLength());
 		}
 
 		val req = InterpretationRequest.builder().data(new CustomData(oid)).systemMsg(systemMsg).userMsg(userMsg)
-				.requestedModel(billProcessModel).reasoningEffort(effort).build();
+				.requestedModel(billProcessModel).build();
+		
+		new BillInterpretationRouter().route(req, billProcessModel, OpenAIModel.DEFAULT_MODEL_MINI, bill, billText);
 
 		requests.add(req);
 		totalRequests++;
@@ -315,7 +313,11 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 	@Override
 	public int run(String... args) throws Exception {
 		List<InterpretationRequest> reqs = process();
-		Log.info("Generated " + reqs.size() + " BillInterpretationRequest objects.");
+		
+		long regCount = reqs.stream().filter(r -> !r.getRequestedModel().getId().toLowerCase().contains("mini")).count();
+		long miniCount = reqs.stream().filter(r -> r.getRequestedModel().getId().toLowerCase().contains("mini")).count();
+		Log.info("Generated " + reqs.size() + " BillInterpretationRequest objects. " + regCount + " are 'regular' models, " + miniCount + " are mini.");
+		
 		Quarkus.waitForExit();
 		return 0;
 	}

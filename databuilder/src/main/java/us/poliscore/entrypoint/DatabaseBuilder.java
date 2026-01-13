@@ -16,6 +16,7 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
+import us.poliscore.Environment;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.entrypoint.batch.BatchBillRequestGenerator;
@@ -34,6 +35,7 @@ import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
+import us.poliscore.service.SessionInfoService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
@@ -112,7 +114,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	protected void initialDataSetup(List<PoliscoreDatasetIF> buildDatasets) {
 		for (val dataset : buildDatasets) {
-			data.syncS3LegislatorImages(dataset);
+//			data.syncS3LegislatorImages(dataset);
 			data.syncS3BillText(dataset);
 			
 			dataset.optimizeExists(s3, BillInterpretation.class);

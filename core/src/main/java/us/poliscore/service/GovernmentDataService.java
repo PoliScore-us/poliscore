@@ -1,6 +1,5 @@
 package us.poliscore.service;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -9,8 +8,6 @@ import java.util.Optional;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.val;
-import us.poliscore.PoliscoreCompositeDataset;
-import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.dataset.DatasetProvider;
 import us.poliscore.dataset.PoliscoreDatasetIF;
@@ -38,6 +35,8 @@ public class GovernmentDataService {
 		}
 		
 		didImportDatasets = true;
+		
+		SessionInfoService.buildSessions(importedDatasets);
 		
 		return importedDatasets;
 	}
