@@ -3,9 +3,12 @@ package us.poliscore.entrypoint;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -18,6 +21,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.jsoup.Jsoup;
 
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
@@ -26,6 +31,7 @@ import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
 import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.exception.ZipException;
 import software.amazon.awssdk.utils.StringUtils;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.dataset.PoliscoreDatasetIF;
@@ -86,19 +92,33 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 					zip.delete();
 				} else if (zip.exists()) { continue; }
 				
-				try
-				{
-					Log.info("Downloading " + url + " to " + zip.getAbsolutePath());
-					IOUtils.copy(new URL(url).openStream(), new FileOutputStream(zip));
-					
-					Log.info("Extracting " + zip.getAbsolutePath() + " to " + typeStore.getAbsolutePath());
-					new ZipFile(zip).extractAll(typeStore.getAbsolutePath());
-				}
-				catch(FileNotFoundException ex)
-				{
-					if (session != 2) // Session 2 may not exist yet
-						throw ex;
-				}
+				RetryPolicy<Object> retryPolicy = RetryPolicy.<Object>builder()
+					    .handle(SocketTimeoutException.class, IOException.class,
+					    		ZipException.class // Congress occasionally gives us a bad zip. Just try it again.
+					    		)
+					    .withBackoff(5, 30, ChronoUnit.SECONDS)
+					    .withJitter(0.25)
+					    .withMaxRetries(5)
+					    .onRetry(e -> Log.warn("Retrying due to " + e.getLastException().getMessage()))
+					    .onFailure(e -> Log.error("Retries exhausted", e.getException()))
+					    .build();
+				
+				Failsafe.with(retryPolicy).get(() -> {
+					try
+					{
+						Log.info("Downloading " + url + " to " + zip.getAbsolutePath());
+						IOUtils.copy(new URL(url).openStream(), new FileOutputStream(zip));
+						
+						Log.info("Extracting " + zip.getAbsolutePath() + " to " + typeStore.getAbsolutePath());
+						new ZipFile(zip).extractAll(typeStore.getAbsolutePath());
+					}
+					catch(FileNotFoundException ex)
+					{
+						if (session != 2) // Session 2 may not exist yet
+							throw ex;
+					}
+					return new Object();
+				});
 			}
 			
 			// Upload to S3

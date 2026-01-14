@@ -51,6 +51,7 @@ public class BillInterpretationParser {
 
 	public static enum State {
 		REASONING("(?i)Reasoning Steps:"), STRUCTURAL("(?i)Structural Analysis:"),
+		NEUTRAL_SUMMARY("(?i)Neutral Summary:"),
 		SEARCH_REFERENCES("(?i)Search References:"), IMPACT_ANALYSIS("(?i)Impact Analysis:"), IMPACT("(?i)Impact Stats:"), RATING("(?i)Rating:"),
 		AUTHOR("(?i)Author:"), TITLE("(?i)Title:", "(?i)Bill Title:"), RIDERS("(?i)Riders:"),
 		SHORT_REPORT("(?i)Short Report:"), LONG_REPORT("(?i)Long Report:"), LAYMANS_REPORT("(?i)Casual Report:"),
@@ -80,6 +81,7 @@ public class BillInterpretationParser {
 		interp.setImpactAnalysis("");
 		interp.setShortExplain("");
 		interp.setLongExplain("");
+		interp.setNeutralSummary("");
 		interp.setAuthor("");
 		interp.setRiders(new ArrayList<String>());
 		interp.setIssueStats(new IssueStats());
@@ -161,6 +163,8 @@ public class BillInterpretationParser {
 			processRider(line);
 		} else if (State.SHORT_REPORT.equals(state)) {
 			processShortForm(line);
+		} else if (State.NEUTRAL_SUMMARY.equals(state)) {
+			processNeutralSummary(line);
 		} else if (State.LONG_REPORT.equals(state)) {
 			processLongForm(line);
 		} else if (State.CONFIDENCE.equals(state)) {
@@ -314,12 +318,12 @@ public class BillInterpretationParser {
 		if (normalized.contains("analytical"))
 			return 0;
 
-		if (normalized.contains("supportive") || normalized.contains("positive") || normalized.contains("endorse"))
+		if (normalized.contains("supportive") || normalized.contains("positive") || normalized.contains("endorse") || normalized.contains("for"))
 			return 75;
 		if (normalized.contains("strongly supportive") || normalized.contains("enthusiastic"))
 			return 100;
 
-		if (normalized.contains("critical") || normalized.contains("negative"))
+		if (normalized.contains("critical") || normalized.contains("negative") || normalized.contains("against"))
 			return -75;
 		if (normalized.contains("strongly critical") || normalized.contains("condemn"))
 			return -100;
@@ -394,6 +398,10 @@ public class BillInterpretationParser {
 
 	private void processShortForm(String line) {
 		interp.setShortExplain(interp.getShortExplain() + "\n" + line);
+	}
+	
+	private void processNeutralSummary(String line) {
+		interp.setNeutralSummary(interp.getNeutralSummary() + "\n" + line);
 	}
 
 	private boolean setState(String line) {

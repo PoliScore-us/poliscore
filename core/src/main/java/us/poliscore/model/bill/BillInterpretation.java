@@ -96,6 +96,8 @@ public class BillInterpretation extends SessionPersistable
 	
 	protected String author;
 	
+	protected String neutralSummary;
+	
 	protected String shortExplain;
 	
 	protected String longExplain;

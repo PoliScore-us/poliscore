@@ -37,6 +37,9 @@ public class BillInterpretationService {
 			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, performing an impact analysis which evaluates whether or not the following bill is predicted to produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Impact:') in your response. Do not include the section instructions in your response. Do not ever use 'I' language (as in, I reached this conclusion because...).
 			
 			{searchModelInstructions1}
+			
+			Neutral Summary:
+			Read the bill text in its entirety and write a strictly neutral, non-partisan summary. This section must contain only officially verifiable information drawn from the bill text itself or widely accepted, non-partisan reference sources. The summary should be between one and three paragraphs, depending on the complexity of the bill. Start by describing what the bill does and the mechanisms it uses to achieve its stated objectives, including relevant thresholds, authorities, timelines, or structural changes where necessary. Avoid evaluative or predictive language. If relevant, briefly describe the stated rationale of supporters and the stated concerns of opponents, presenting both perspectives factually and symmetrically, without implying which is stronger or more correct. Your tone must remain strictly neutral and descriptive. Do not take sides, imply outcomes, assess impacts, or suggest whether the policy is good or bad. This section should be analogous in style and purpose to Congress.gov’s “Official Summary” and should be suitable for citation by journalists as reference-grade material. You may include links to neutral, non-partisan sources (for example, Congress.gov or Wikipedia) using markdown link syntax where appropriate. Do not include formatting symbols such as stars or dashes (excluding links). Do not include non-human-readable text such as XML identifiers, internal IDs, or metadata.
 
 			Bill Title:
 			Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very concise title for the bill based on its content. If the bill has a title, but it is confusing, vague, too long, or would otherwise be poorly understood by the general public, please make up a very concise title for the bill based on its content.
@@ -137,7 +140,7 @@ public class BillInterpretationService {
 
 			Casual Report:
 			Your audience is the general public, written at the high-school education level. Your primary goal here is to take the insights from the long report and make them available for your average person. Begin by explaining the high level goals of the bill and a high level summary of how it attempts to achieve those goals. Then, explain all the essential logic required to understand your predicted impact to society, including any research, expert opinions, societal wisdom and/or any competing concerns which may exist. Conclude with your findings on the impact the bill will have on society. Should be between one and three paragraphs long, depending on the complexity of the bill and the topics it covers (controversial topics require more evidence to support your conclusions). Do not use acronyms, such as GPO, CBO, etc. If you must use them, they must be defined. You may link to sources using markdown link syntax, where relevant. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.{searchModelInstructions2}
-
+			
 			Short Report:
 			Your audience is the general public, written at the high-school education level. A single paragraph, at least four sentence report which gives a detailed, but not repetitive, summary of the bill, any high level goals, and its expected impact to society. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
 			
@@ -246,6 +249,9 @@ public class BillInterpretationService {
 			
 			{searchModelInstructions1}
 			
+			Neutral Summary:
+			Read the bill text in its entirety and write a strictly neutral, non-partisan summary. This section must contain only officially verifiable information drawn from the bill text itself or widely accepted, non-partisan reference sources. The summary should be between one and three paragraphs, depending on the complexity of the bill. Start by describing what the bill does and the mechanisms it uses to achieve its stated objectives, including relevant thresholds, authorities, timelines, or structural changes where necessary. Avoid evaluative or predictive language. If relevant, briefly describe the stated rationale of supporters and the stated concerns of opponents, presenting both perspectives factually and symmetrically, without implying which is stronger or more correct. Your tone must remain strictly neutral and descriptive. Do not take sides, imply outcomes, assess impacts, or suggest whether the policy is good or bad. This section should be analogous in style and purpose to Congress.gov’s “Official Summary” and should be suitable for citation by journalists as reference-grade material. You may include links to neutral, non-partisan sources (for example, Congress.gov or Wikipedia) using markdown link syntax where appropriate. Do not include formatting symbols such as stars or dashes (excluding links). Do not include non-human-readable text such as XML identifiers, internal IDs, or metadata.
+			
 			Bill Title:
 			Write the bill title. If the bill does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very short title for the bill based on its content.
 			
@@ -320,7 +326,7 @@ Required JSON shape - The output must be a JSON array. Each element must be a JS
 2. author: author name or "Unknown"
 3. title: article/page title
 4. authors_opinion_int_string: a string integer from "-100" to "100" representing the author's opinion on the bill, either positive (in favor) or negative (against).
-5. authors_opinion_text: one of: "N/A" | "Mixed" | "Neutral" | "Positive" | "Negative". Again, represents the author's opinion, either for or against, the bill itself.
+5. authors_opinion_text: one of: "N/A" | "Mixed" | "Neutral" | "For" | "Against". Again, represents the author's opinion, either for or against, the bill itself.
 6. summary: 1–2 sentence concise summary of why this reference mattered
 7. long_summary: must contain all critical information from the article that was actually used in the analysis (include key findings, numbers, constraints, definitions, conclusions, and any caveats that materially affected reasoning). It should be detailed enough that a reader can understand exactly what evidence was used without opening the link.
 8. reference_type: one of: "STAKEHOLDER" | "BUDGETARY" | "NEWS" | "ACADEMIC" | "LEGAL" | "GOVERNMENT" | "OTHER"
