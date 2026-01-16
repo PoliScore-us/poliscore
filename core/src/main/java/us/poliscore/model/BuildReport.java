@@ -12,6 +12,12 @@ public class BuildReport {
 	
 	public List<Legislator> interpretedLegislators = new ArrayList<Legislator>();
 	
+	public List<Throwable> fatalErrors = new ArrayList<Throwable>();
+	
+	public void fatal(Throwable t) { fatalErrors.add(t); }
+	
+	public boolean hasFatal() { return !fatalErrors.isEmpty(); }
+	
 	@Override
 	public String toString() {
 		String result = "interpreted " + interpretedBills.size() + " bills and " + interpretedLegislators.size() + " legislators.";
@@ -21,6 +27,10 @@ public class BuildReport {
 		
 		if (interpretedLegislators.size() > 0)
 			result += "\n\n" + String.join("\n", interpretedLegislators.stream().map(b -> b.getId()).toList());
+		
+		for (Throwable t : fatalErrors) {
+			t.printStackTrace();
+		}
 		
 		return result;
 	}

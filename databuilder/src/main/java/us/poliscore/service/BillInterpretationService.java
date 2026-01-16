@@ -307,8 +307,8 @@ This is your first section, and your goal is to query the web and gather additio
 Gather any information which may have been published on the web from the bill's sponsor or likely advocates. We're looking here for rationale which might explain their goals and reasoning process.
 2. Opposition Reasoning:
 Gather any information which may have been published on the web from the bill's opposition. We're looking here for rationale which might explain their goals and reasoning process.
-3. CBO Report:
-Search to see if a CBO report has been published on this bill. If one is found, write the findings here.
+3. Budget Report:
+Search to see if a budgetary analysis by a credible organization has been published for this bill. If this is a congressional bill, search for a CBO report. if it's a state legislature then find the equivalent organization (if one exists). If a credible budgetary analysis was found, write the findings here.
 4. Media Analysis:
 Search for existing analysis which may have been published by a news organization. Be careful to avoid introducing partisan bias into the analysis in this process.
 5. Identify Broader Context:

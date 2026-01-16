@@ -128,7 +128,7 @@ public class DatabaseBuilder implements QuarkusApplication
 			List<InterpretationRequest> requests = pressBillInterpGenerator.process(buildDatasets);
 			
 			if (requests.size() > 0) {
-				List<File> responses = openAi.processBatch(requests);
+				List<File> responses = openAi.processBatch(report, requests);
 				
 				for (File f : responses) {
 					responseImporter.process(f);
@@ -139,6 +139,8 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	private void interpretBills(List<PoliscoreDatasetIF> buildDatasets) { interpretBills(buildDatasets, false); }
 	@SneakyThrows private void interpretBills(List<PoliscoreDatasetIF> buildDatasets, boolean isRecursive) {
+		if (report.hasFatal()) return;
+		
 		if (INTERPRET_NEW_BILLS) {
 			List<InterpretationRequest> requests = billRequestGenerator.process(buildDatasets, report, AGENTIC_WEB_SEARCH, isRecursive);
 			
@@ -146,9 +148,11 @@ public class DatabaseBuilder implements QuarkusApplication
 				List<File> responses;
 				
 				if (AGENTIC_WEB_SEARCH)
-					responses = openAi.processBatchImmediately(requests);
+					responses = openAi.processBatchImmediately(report, requests);
 				else
-					responses = openAi.processBatch(requests);
+					responses = openAi.processBatch(report, requests);
+				
+				if (report.hasFatal()) return;
 				
 				for (File f : responses) {
 					responseImporter.process(f);
@@ -162,19 +166,21 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	@SneakyThrows
 	private void interpretLegislators(List<PoliscoreDatasetIF> buildDatasets) {
-		if (REINTERPRET_LEGISLATORS) {
+		if (!report.hasFatal() && REINTERPRET_LEGISLATORS) {
 			List<InterpretationRequest> requests = legislatorRequestGenerator.process(buildDatasets, report);
 		
 			if (requests.size() > 0) {
 				List<File> responses;
 				
 				if (AGENTIC_WEB_SEARCH)
-					responses = openAi.processBatchImmediately(requests);
+					responses = openAi.processBatchImmediately(report, requests);
 				else
-					responses = openAi.processBatch(requests);
+					responses = openAi.processBatch(report, requests);
 				
-				for (File f : responses) {
-					responseImporter.process(f);
+				if (!report.hasFatal()) {
+					for (File f : responses) {
+						responseImporter.process(f);
+					}
 				}
 			}
 		}
@@ -282,7 +288,7 @@ public class DatabaseBuilder implements QuarkusApplication
 			List<InterpretationRequest> requests = partyInterpreter.process(buildDatasets);
 			
 			if (requests.size() > 0) {
-				List<File> responses = openAi.processBatch(requests);
+				List<File> responses = openAi.processBatch(report, requests);
 				
 				for (File f : responses) {
 					responseImporter.process(f);

@@ -52,8 +52,10 @@ import us.poliscore.ai.OpenAIModel;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.bill.OpenAIBatchJsonlSerializer;
 import us.poliscore.entrypoint.DatabaseBuilder;
+import us.poliscore.entrypoint.batch.BatchOpenAIResponseImporter;
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.AISliceInterpretationMetadata;
+import us.poliscore.model.BuildReport;
 import us.poliscore.model.bill.BillSlice;
 
 @ApplicationScoped
@@ -73,6 +75,9 @@ public class OpenAIService {
 	
 	@Inject
     protected SecretService secret;
+	
+	@Inject
+	private BatchOpenAIResponseImporter responseImporter;
 	
 	protected LocalDateTime nextCallTime = null;
 	
@@ -169,9 +174,9 @@ public class OpenAIService {
 			        return msg != null && msg.toLowerCase().contains("rate limit");
 			    })
 //			    .handleResultIf(r -> r == null || !r.status().isPresent() || r.status().get() != ResponseStatus.COMPLETED)
-			    .withBackoff(5, 640, ChronoUnit.SECONDS)
+			    .withBackoff(5, 1800, ChronoUnit.SECONDS)
 			    .withJitter(0.25)
-			    .withMaxRetries(8)
+			    .withMaxRetries(12)
 			    .onRetry(e -> Log.warn("Retrying due to " + (e.getLastException() == null ? "invalid response" : "retryable exception [" + e.getLastException().getMessage() + "]")))
 			    .onFailure(e -> Log.error("Retries exhausted", e.getException()))
 			    .build();
@@ -204,7 +209,7 @@ public class OpenAIService {
 	 * Submits a batch of files, awaits their processing, and then downloads the results.
 	 */
 	@SneakyThrows
-	public List<File> processBatch(List<InterpretationRequest> requests) {
+	public List<File> processBatch(BuildReport report, List<InterpretationRequest> requests) {
 
 	    if (requests == null || requests.isEmpty()) {
 	        return List.of();
@@ -212,7 +217,7 @@ public class OpenAIService {
 
 	    // If small enough, don't use Batch API (too slow / flaky for tiny jobs)
 	    if (requests.size() <= IMMEDIATE_PROCESS_THRESHOLD) {
-	        return processBatchImmediately(requests);
+	        return processBatchImmediately(report, requests);
 	    }
 
 	    OpenAIClient client = OpenAIOkHttpClient.builder()
@@ -304,7 +309,7 @@ public class OpenAIService {
 	 * Processes a list of interpretation requests using OpenAI's service.
 	 */
 	@SneakyThrows
-	public List<File> processBatchImmediately(List<InterpretationRequest> requests) {
+	public List<File> processBatchImmediately(BuildReport report, List<InterpretationRequest> requests) {
 		Log.info("Performing " + requests.size() + " requests to OpenAI.");
 
 		var buildTemp = new File(System.getProperty("user.home") + "/appdata/poliscore/build");
@@ -312,6 +317,8 @@ public class OpenAIService {
 		
 		File outputFile = new File(buildTemp, "openapi-bills.out.jsonl");
 		Log.info("Writing responses to file: " + outputFile.getAbsolutePath());
+		
+		int writtenRequests = 0;
 		
 		try (BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
 			for (InterpretationRequest request : requests) {
@@ -357,7 +364,16 @@ public class OpenAIService {
 				writer.write(line.toString());
                 writer.newLine();
                 writer.flush();
+                
+                writtenRequests++;
 			}
+		} catch (Throwable t) {
+			Log.error("Fatal error encountered while processing immediate batch. We will hault bill processing, import what we have now, and continue.", t);
+			report.fatal(t);;
+			
+			// If we failed half-way through, and we've generated some requests, then we definitely want to import them
+			if (writtenRequests > 0)
+				responseImporter.process(outputFile);
 		}
 
 		return Arrays.asList(new File[] { outputFile });
