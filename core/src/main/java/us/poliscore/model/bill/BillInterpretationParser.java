@@ -2,7 +2,6 @@ package us.poliscore.model.bill;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,6 +21,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.model.InterpretationOrigin;
 import us.poliscore.model.InterpretationOrigin.InvalidOriginException;
@@ -229,6 +229,7 @@ public class BillInterpretationParser {
 		interp.setStructuralAnalysisRaw(interp.getStructuralAnalysisRaw() + newline + line);
 	}
 
+	@SneakyThrows
 	private void processSearchReferences(String line) {
 		// Even though we asked openai to not give us newlines, sometimes it does anyway
 		if (line.strip().equals("[") || line.strip().equals("]"))
@@ -237,33 +238,29 @@ public class BillInterpretationParser {
 		String newline = StringUtils.isBlank(interp.getReasoning()) ? "" : "\n";
 		interp.setSearchReferences(interp.getSearchReferences() + newline + line);
 
+		// Remove leading dash-like characters (hyphen, en dash, em dash, minus, etc.)
+		line = LEADING_DASHES.matcher(line).replaceFirst("");
+
+		// Also remove escaped quotes (from legacy issues?)
+		line = line.replace("\\\"", "");
+
 		try {
-			// Remove leading dash-like characters (hyphen, en dash, em dash, minus, etc.)
-			line = LEADING_DASHES.matcher(line).replaceFirst("");
+			String[][] references = new ObjectMapper().readValue(line, new TypeReference<String[][]>() {
+			});
 
-			// Also remove escaped quotes (from legacy issues?)
-			line = line.replace("\\\"", "");
-
-			try {
-				String[][] references = new ObjectMapper().readValue(line, new TypeReference<String[][]>() {
-				});
-
-				for (val values : references) {
-					try {
-						processSearchReference(values);
-					} catch (InvalidOriginException e) {
-						// Url validation failed
-					}
+			for (val values : references) {
+				try {
+					processSearchReference(values);
+				} catch (InvalidOriginException e) {
+					// Url validation failed
 				}
-			} catch (JsonProcessingException t) {
-				// Even though we asked openai to not give us newlines, sometimes it does anyway
-				String[] values = new ObjectMapper().readValue(line, new TypeReference<String[]>() {
-				});
-
-				processSearchReference(values);
 			}
-		} catch (Throwable t) {
-			logger.error("Error parsing search reference", t);
+		} catch (JsonProcessingException t) {
+			// Even though we asked openai to not give us newlines, sometimes it does anyway
+			String[] values = new ObjectMapper().readValue(line, new TypeReference<String[]>() {
+			});
+
+			processSearchReference(values);
 		}
 	}
 

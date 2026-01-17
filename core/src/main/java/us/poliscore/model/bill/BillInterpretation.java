@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -21,7 +23,6 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConve
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
-import us.poliscore.interpretation.InterpretationMissingReferencesException;
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.AISliceInterpretationMetadata;
 import us.poliscore.model.InterpretationOrigin;
@@ -42,6 +43,8 @@ import us.poliscore.model.press.PressInterpretation;
 @AllArgsConstructor
 public class BillInterpretation extends SessionPersistable
 {
+	public static Logger logger = LoggerFactory.getLogger(BillInterpretation.class);
+	
 	public static final String ID_CLASS_PREFIX = "BIT";
 	
 	public static String generateId(String billId, Integer sliceIndex)
@@ -163,9 +166,7 @@ public class BillInterpretation extends SessionPersistable
 	@DynamoDbIgnore
 	public void validate() {
 		if (pressInterps == null || pressInterps.size() == 0) {
-			System.out.println("!!!!Interpretation had no references!!!!");
-			System.out.println("!!!!Interpretation had no references!!!!");
-			System.out.println("!!!!Interpretation had no references!!!!");
+			logger.warn("Interpretation had no references! This might not be an error, but it's not ideal either.");
 //			throw new InterpretationMissingReferencesException("The interpretation had no references.");
 		}
 		

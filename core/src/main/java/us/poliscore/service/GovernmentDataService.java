@@ -120,4 +120,21 @@ public class GovernmentDataService {
 	public LegislativeSession getPreviousRegularSession(LegislativeSession current) {
 		return provider.getPreviousRegularSession(current);
 	}
+	
+	public PoliscoreDatasetIF getPreviousDataset(PoliscoreDatasetIF current) {
+		val previousSession = getPreviousRegularSession(current.getRegularSession());
+		
+		return getDataset(previousSession);
+	}
+
+	public PoliscoreDatasetIF getMostRecentDataset(LegislativeNamespace namespace) {
+		PoliscoreDatasetIF mostRecent = null;
+		
+		for (val dataset : importedDatasets) {
+			if (dataset.getNamespace().equals(namespace) && (mostRecent == null || dataset.getEndYear() > mostRecent.getEndYear()))
+				mostRecent = dataset;
+		}
+		
+		return mostRecent;
+	}
 }

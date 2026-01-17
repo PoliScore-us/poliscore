@@ -174,9 +174,9 @@ public class OpenAIService {
 			        return msg != null && msg.toLowerCase().contains("rate limit");
 			    })
 //			    .handleResultIf(r -> r == null || !r.status().isPresent() || r.status().get() != ResponseStatus.COMPLETED)
-			    .withBackoff(5, 1800, ChronoUnit.SECONDS)
+			    .withBackoff(2, 900, ChronoUnit.SECONDS)
 			    .withJitter(0.25)
-			    .withMaxRetries(12)
+			    .withMaxRetries(30)
 			    .onRetry(e -> Log.warn("Retrying due to " + (e.getLastException() == null ? "invalid response" : "retryable exception [" + e.getLastException().getMessage() + "]")))
 			    .onFailure(e -> Log.error("Retries exhausted", e.getException()))
 			    .build();
