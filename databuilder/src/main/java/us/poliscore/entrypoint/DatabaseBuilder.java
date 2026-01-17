@@ -131,7 +131,7 @@ public class DatabaseBuilder implements QuarkusApplication
 				List<File> responses = openAi.processBatch(report, requests);
 				
 				for (File f : responses) {
-					responseImporter.process(f);
+					responseImporter.process(report, f);
 				}
 			}
 		}
@@ -155,7 +155,7 @@ public class DatabaseBuilder implements QuarkusApplication
 				if (report.hasFatal()) return;
 				
 				for (File f : responses) {
-					responseImporter.process(f);
+					responseImporter.process(report, f);
 				}
 				
 				if (!isRecursive)
@@ -179,7 +179,7 @@ public class DatabaseBuilder implements QuarkusApplication
 				
 				if (!report.hasFatal()) {
 					for (File f : responses) {
-						responseImporter.process(f);
+						responseImporter.process(report, f);
 					}
 				}
 			}
@@ -291,7 +291,7 @@ public class DatabaseBuilder implements QuarkusApplication
 				List<File> responses = openAi.processBatch(report, requests);
 				
 				for (File f : responses) {
-					responseImporter.process(f);
+					responseImporter.process(report, f);
 				}
 			}
 		}

@@ -13,6 +13,8 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
@@ -22,12 +24,12 @@ import jakarta.inject.Inject;
 import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.val;
-import us.poliscore.Environment;
 import us.poliscore.PartyBillLinker;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
 import us.poliscore.ai.BatchOpenAIResponse;
 import us.poliscore.entrypoint.DatabaseBuilder;
+import us.poliscore.model.BuildReport;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.InterpretationOrigin;
 import us.poliscore.model.Party;
@@ -68,6 +70,8 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 //	Canceled half-way through a batch (bills)
 	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/openapi-bills.out.jsonl").getAbsolutePath();
 	
+	public Logger logger = LoggerFactory.getLogger(BatchOpenAIResponseImporter.class);
+	
 	@Inject
 	private CachedDynamoDbService ddb;
 	
@@ -94,10 +98,12 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	
 	private Set<String> importedBills = new HashSet<String>();
 	
+	private List<Bill> interpretedBillsWithErrors = new ArrayList<Bill>();
+	
 	private SessionInterpretation sessionInterp = null;
 	
 	@SneakyThrows
-	public void process(File input)
+	public void process(BuildReport report, File input)
 	{
 		data.importAllDatasets();
 		
@@ -145,7 +151,13 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		if (erroredLines.size() > 0) {
 			File f = new File(System.getProperty("user.home"), "/appdata/poliscore/build/unprocessed.jsonl");
 			FileUtils.write(f, String.join("\n", erroredLines), "UTF-8");
-			throw new RuntimeException("Encountered errors on " + erroredLines.size() + " lines. Printed them to " + f.getAbsolutePath());
+			
+			String msg = "Encountered errors on " + erroredLines.size() + " lines. Printed them to " + f.getAbsolutePath();
+			logger.warn(msg);
+			if (report == null)
+				throw new RuntimeException(msg);
+			else
+				report.interpretedBillsWithErrors = interpretedBillsWithErrors;
 		}
 		
 		Log.info("Successfully imported " + input.getAbsolutePath());
@@ -229,82 +241,86 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		val dataset = data.getDataset(billId);
 		val bill = dataset.get(billId, Bill.class).orElseThrow();
 		
-		BillInterpretation bi = new BillInterpretation();
-		bi.setBill(bill);
-		
-		if (sliceIndex == null)
-		{
-			bi.setMetadata(OpenAIService.metadata());
-			bi.setId(BillInterpretation.generateId(bill.getId(), bi.getOrigin(), null));
-		}
-		else
-		{
-			val billText = s3.get(BillText.generateId(bill.getId()), BillText.class).orElseThrow();
-			bill.setText(billText);
+		try {
+			BillInterpretation bi = new BillInterpretation();
+			bi.setBill(bill);
 			
-			List<BillSlice> slices = BillSlicer.factory(billText).slice(bill, billText, BatchBillRequestGenerator.billProcessModel.getContextWindowStringLength());
-			
-			bi.setMetadata(OpenAIService.metadata(slices.get(sliceIndex)));
-			bi.setId(BillInterpretation.generateId(billId, bi.getOrigin(), sliceIndex));
-		}
-		
-		var msg = resp.getResponse().getBody().getChoices().get(0).getMessage();
-		var interpText = msg.getContent();
-		
-		if (interpText.contains("NO_INTERPRETATION")) {
-			Log.info("Bill interpretation " + bi.getId() + " <" + bi.getOrigin().getUrl() + "> was determined by AI as " + interpText);
-			return;
-		}
-		
-		if (DatabaseBuilder.AGENTIC_WEB_SEARCH)
-			billService.wipeAllPressInterps(bill);
-		
-		new BillInterpretationParser(bill, bi, s3).parse(interpText, null);
-		
-		if (!bi.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety)) {
-			if (sliceIndex != null) {throw new RuntimeException("Did not find OverallBenefitToSociety stat on interpretation");  }
-			
-			val billText = s3.get(BillText.generateId(bill.getId()), BillText.class).orElseThrow();
-			
-			List<BillSlice> slices = new XMLBillSlicer().slice(bill, billText, BatchBillRequestGenerator.billProcessModel.getContextWindowStringLength());
-			
-			if (slices.size() <= 1) { throw new RuntimeException("Expected multiple slices on [" + billId + "] since OpenAI did not include benefit to society issue stat"); }
-			
-			DoubleIssueStats billStats = new DoubleIssueStats();
-			List<BillInterpretation> sliceInterps = new ArrayList<BillInterpretation>();
-			
-			for (int i = 0; i < slices.size(); ++i) {
-				val sliceInterp = s3.get(BillInterpretation.generateId(billId, bi.getOrigin(), sliceIndex), BillInterpretation.class).orElseThrow();
+			if (sliceIndex == null)
+			{
+				bi.setMetadata(OpenAIService.metadata());
+				bi.setId(BillInterpretation.generateId(bill.getId(), bi.getOrigin(), null));
+			}
+			else
+			{
+				val billText = s3.get(BillText.generateId(bill.getId()), BillText.class).orElseThrow();
+				bill.setText(billText);
 				
-				billStats = billStats.sum(sliceInterp.getIssueStats().toDoubleIssueStats());
-				sliceInterps.add(sliceInterp);
+				List<BillSlice> slices = BillSlicer.factory(billText).slice(bill, billText, BatchBillRequestGenerator.billProcessModel.getContextWindowStringLength());
+				
+				bi.setMetadata(OpenAIService.metadata(slices.get(sliceIndex)));
+				bi.setId(BillInterpretation.generateId(billId, bi.getOrigin(), sliceIndex));
 			}
 			
-			bi.setIssueStats(billStats.divideByTotalSummed().toIssueStats());
-			bi.setSliceInterpretations(sliceInterps);
-		}
-		
-		if (StringUtils.isBlank(bi.getLongExplain()) || (sliceIndex == null && (StringUtils.isBlank(bi.getShortExplain()) || bi.getIssueStats() == null || !bi.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety)))) {
-			throw new RuntimeException("Interpretation missing proper stats or explain." + billId);
-		}
-		
-		if (DatabaseBuilder.AGENTIC_WEB_SEARCH || pressBillInterpGenerator.getQueriedBills().contains(bill)) {
-			bi.setLastPressQuery(LocalDate.now());
-		}
-		
-		bi.setLastUpdate(LocalDateTime.now());
-		
-		if (bi.getOrigin().equals(InterpretationOrigin.POLISCORE) && sliceIndex == null) {
-			billService.ddbPersist(bill, bi);
+			var msg = resp.getResponse().getBody().getChoices().get(0).getMessage();
+			var interpText = msg.getContent();
 			
-			importedBills.add(billId);
-		} else {
-//			System.out.println(new ObjectMapper().writeValueAsString(bi));
-			ddb.put(bi);
+			if (interpText.contains("NO_INTERPRETATION")) {
+				Log.info("Bill interpretation " + bi.getId() + " <" + bi.getOrigin().getUrl() + "> was determined by AI as " + interpText);
+				return;
+			}
+			
+			if (DatabaseBuilder.AGENTIC_WEB_SEARCH)
+				billService.wipeAllPressInterps(bill);
+			
+			new BillInterpretationParser(bill, bi, s3).parse(interpText, null);
+			
+			if (!bi.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety)) {
+				if (sliceIndex != null) {throw new RuntimeException("Did not find OverallBenefitToSociety stat on interpretation");  }
+				
+				val billText = s3.get(BillText.generateId(bill.getId()), BillText.class).orElseThrow();
+				
+				List<BillSlice> slices = new XMLBillSlicer().slice(bill, billText, BatchBillRequestGenerator.billProcessModel.getContextWindowStringLength());
+				
+				if (slices.size() <= 1) { throw new RuntimeException("Expected multiple slices on [" + billId + "] since OpenAI did not include benefit to society issue stat"); }
+				
+				DoubleIssueStats billStats = new DoubleIssueStats();
+				List<BillInterpretation> sliceInterps = new ArrayList<BillInterpretation>();
+				
+				for (int i = 0; i < slices.size(); ++i) {
+					val sliceInterp = s3.get(BillInterpretation.generateId(billId, bi.getOrigin(), sliceIndex), BillInterpretation.class).orElseThrow();
+					
+					billStats = billStats.sum(sliceInterp.getIssueStats().toDoubleIssueStats());
+					sliceInterps.add(sliceInterp);
+				}
+				
+				bi.setIssueStats(billStats.divideByTotalSummed().toIssueStats());
+				bi.setSliceInterpretations(sliceInterps);
+			}
+			
+			if (StringUtils.isBlank(bi.getLongExplain()) || (sliceIndex == null && (StringUtils.isBlank(bi.getShortExplain()) || bi.getIssueStats() == null || !bi.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety)))) {
+				throw new RuntimeException("Interpretation missing proper stats or explain." + billId);
+			}
+			
+			if (DatabaseBuilder.AGENTIC_WEB_SEARCH || pressBillInterpGenerator.getQueriedBills().contains(bill)) {
+				bi.setLastPressQuery(LocalDate.now());
+			}
+			
+			bi.setLastUpdate(LocalDateTime.now());
+			
+			if (bi.getOrigin().equals(InterpretationOrigin.POLISCORE) && sliceIndex == null) {
+				billService.ddbPersist(bill, bi);
+				
+				importedBills.add(billId);
+			} else {
+				ddb.put(bi);
+			}
+			
+			// PopulatePressInterps must be called before we do this (which happens in billService.ddbPersist)
+			s3.put(bi);
+		} catch (Throwable t) {
+			interpretedBillsWithErrors.add(bill);
+			throw t;
 		}
-		
-		// PopulatePressInterps must be called before we do this (which happens in billService.ddbPersist)
-		s3.put(bi);
 	}
 	
 	@SneakyThrows
@@ -346,7 +362,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	
 	@Override
     public int run(String... args) throws Exception {
-        process(new File(INPUT));
+        process(null, new File(INPUT));
         
         Quarkus.waitForExit();
         return 0;

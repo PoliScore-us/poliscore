@@ -373,7 +373,7 @@ public class OpenAIService {
 			
 			// If we failed half-way through, and we've generated some requests, then we definitely want to import them
 			if (writtenRequests > 0)
-				responseImporter.process(outputFile);
+				responseImporter.process(report, outputFile);
 		}
 
 		return Arrays.asList(new File[] { outputFile });
