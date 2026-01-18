@@ -151,7 +151,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	}
 	
 	private boolean hasEnoughInteractions(Legislator leg, PoliscoreDatasetIF dataset) {
-		legInterp.backfillInteractionsFromPreviousSession(leg, data.getPreviousRegularSession(dataset.getRegularSession()));
+		legInterp.backfillInteractionsFromPreviousSession(leg, data.getPreviousDataset(dataset));
 		
 		if (!legInterp.meetsInterpretationPrereqs(leg))
 		{

@@ -219,11 +219,10 @@ public class DatabaseBuilder implements QuarkusApplication
 			// We're skipping data from the 118th congress because the data in the 118th congress used a very primitive prompt
 			if (!dataset.getCode().equals("119") && legInterp.getInteractionsForInterpretation(leg).size() < 1000) {
 				// If an interpretation from this session doesn't exist, grab one from the previous session.
-				var previousSession = data.getPreviousRegularSession(dataset.getRegularSession());
+				var previousDataset = data.getPreviousDataset(dataset);
 				
-				if (previousSession != null && data.getDataset(previousSession) != null) {
-					var previousDataset = data.getDataset(previousSession);
-					val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousSession.getNamespace(), previousSession.getCode(), leg.getCode()), LegislatorInterpretation.class);
+				if (previousDataset != null) {
+					val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousDataset.getNamespace(), previousDataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
 					
 					if (prevInterpOp.isPresent()) {
 						if (StringUtils.isBlank(interp.getShortExplain()))
@@ -231,7 +230,7 @@ public class DatabaseBuilder implements QuarkusApplication
 						if (StringUtils.isBlank(interp.getLongExplain()))
 							interp.setLongExplain(prevInterpOp.get().getLongExplain());
 						
-						String prevLegId = Legislator.generateId(previousSession.getNamespace(), previousSession.getCode(), leg.getCode());
+						String prevLegId = Legislator.generateId(previousDataset.getNamespace(), previousDataset.getCode(), leg.getCode());
 						
 						val prevLeg = previousDataset.get(prevLegId, Legislator.class).orElseThrow();
 						

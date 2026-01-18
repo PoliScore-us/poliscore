@@ -79,6 +79,16 @@ public class GovernmentDataService {
 		return this.getDataset(id).exists(id, clazz);
 	}
 	
+	public PoliscoreDatasetIF getPreviousDataset(PoliscoreDatasetIF dataset) {
+		for (val loopDs : importedDatasets) {
+			if (dataset.getNamespace().equals(loopDs.getNamespace()) && dataset.isYearWithin(loopDs.getStartYear()-1)) {
+				return loopDs;
+			}
+		}
+		
+		return null;
+	}
+	
 	public PoliscoreDatasetIF getDataset(LegislativeNamespace namespace, int year) {
 		for (val dataset : importedDatasets) {
 			if (dataset.getNamespace().equals(namespace) && dataset.isYearWithin(year))
@@ -117,15 +127,9 @@ public class GovernmentDataService {
 		return importedDatasets.stream().filter(d -> d.getConfig().getBuild()).toList();
 	}
 	
-	public LegislativeSession getPreviousRegularSession(LegislativeSession current) {
-		return provider.getPreviousRegularSession(current);
-	}
-	
-	public PoliscoreDatasetIF getPreviousDataset(PoliscoreDatasetIF current) {
-		val previousSession = getPreviousRegularSession(current.getRegularSession());
-		
-		return getDataset(previousSession);
-	}
+//	public LegislativeSession getPreviousRegularSession(LegislativeSession current) {
+//		return provider.getPreviousRegularSession(current);
+//	}
 
 	public PoliscoreDatasetIF getMostRecentDataset(LegislativeNamespace namespace) {
 		PoliscoreDatasetIF mostRecent = null;

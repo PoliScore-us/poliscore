@@ -7,7 +7,9 @@ public interface DatasetProvider {
 	
 	public PoliscoreDatasetIF importDataset(DeploymentConfig ref);
 	
-	public LegislativeSession getPreviousRegularSession(LegislativeSession current);
+//	public PoliscoreDatasetIF getPreviousDataset(PoliscoreDatasetIF dataset);
+	
+//	public LegislativeSession getPreviousRegularSession(LegislativeSession current);
 	
 	public void syncS3LegislatorImages(PoliscoreDatasetIF dataset);
 	

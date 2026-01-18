@@ -104,11 +104,11 @@ public class USCDatasetProvider implements DatasetProvider {
 		updatedLegislatorFiles = true;
 	}
 	
-	@Override
-	public LegislativeSession getPreviousRegularSession(LegislativeSession current) {
-		val cses = CongressionalSession.of(Integer.valueOf(current.getCode()) - 1);
-		return new LegislativeSession(true, cses.getStartDate(), cses.getEndDate(), String.valueOf(cses.getNumber()), LegislativeNamespace.US_CONGRESS);
-	}
+//	@Override
+//	public LegislativeSession getPreviousRegularSession(LegislativeSession current) {
+//		val cses = CongressionalSession.of(Integer.valueOf(current.getCode()) - 1);
+//		return new LegislativeSession(true, cses.getStartDate(), cses.getEndDate(), String.valueOf(cses.getNumber()), LegislativeNamespace.US_CONGRESS);
+//	}
 	
 	@SneakyThrows
 	public void importUSCLegislators(PoliscoreDatasetIF dataset)

@@ -148,20 +148,20 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		return new LegislativeSession(regular, start, end, key, namespace);
 	}
 	
-	@Override
-	public LegislativeSession getPreviousRegularSession(LegislativeSession current) {
-		LegiscanState state = LegiscanState.fromAbbreviation(current.getNamespace().toAbbreviation());
-		
-		LegiscanSessionView previous = null;
-		for (var view : legiscan.getSessionList(state)) {
-			if (view.getYearStart() == current.getStartDate().getYear() && view.getYearEnd() == current.getEndDate().getYear() && !view.isSpecial())
-				return previous == null ? null : buildSession(true, previous.getSessionId(), previous.getState(), previous.getYearStart(), previous.getYearEnd());
-			
-			previous = view;
-		}
-		
-		return null;
-	}
+//	@Override
+//	public LegislativeSession getPreviousRegularSession(LegislativeSession current) {
+//		LegiscanState state = LegiscanState.fromAbbreviation(current.getNamespace().toAbbreviation());
+//		
+//		LegiscanSessionView previous = null;
+//		for (var view : legiscan.getSessionList(state)) {
+//			if (view.getYearStart() == current.getStartDate().getYear() && view.getYearEnd() == current.getEndDate().getYear() && !view.isSpecial())
+//				return previous == null ? null : buildSession(true, previous.getSessionId(), previous.getState(), previous.getYearStart(), previous.getYearEnd());
+//			
+//			previous = view;
+//		}
+//		
+//		return null;
+//	}
 	
 	protected String getChamberCode(LegislativeChamber chamber) {
 		if (chamber.equals(LegislativeChamber.UPPER)) {

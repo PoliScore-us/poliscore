@@ -138,11 +138,11 @@ Your written response for this research section should consist of only a compact
 	}
 	
 	// Backfill the interactions until we get to 1000
-	public void backfillInteractionsFromPreviousSession(Legislator leg, LegislativeSession prevSession)
+	public void backfillInteractionsFromPreviousSession(Legislator leg, PoliscoreDatasetIF prevDataset)
 	{
-		if (prevSession == null) return;
+		if (prevDataset == null) return;
 		
-		val prevLeg = ddb.get(Legislator.generateId(prevSession.getNamespace(), prevSession.getCode(), leg.getCode()), Legislator.class).orElse(null);
+		val prevLeg = ddb.get(Legislator.generateId(prevDataset.getNamespace(), prevDataset.getCode(), leg.getCode()), Legislator.class).orElse(null);
 		if (prevLeg == null) return;
 		
 		val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
