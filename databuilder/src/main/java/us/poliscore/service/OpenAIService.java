@@ -1,19 +1,17 @@
 package us.poliscore.service;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.net.SocketTimeoutException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -47,7 +45,7 @@ import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.Environment;
-import us.poliscore.ai.BatchOpenAIRequest;
+import us.poliscore.ai.MinuteRateLimiter;
 import us.poliscore.ai.OpenAIModel;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.bill.OpenAIBatchJsonlSerializer;
@@ -57,6 +55,7 @@ import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.AISliceInterpretationMetadata;
 import us.poliscore.model.BuildReport;
 import us.poliscore.model.bill.BillSlice;
+import us.poliscore.service.openai.OpenAIFlexBatchProcessor;
 
 @ApplicationScoped
 public class OpenAIService {
@@ -69,17 +68,23 @@ public class OpenAIService {
 	// This is because the OpenAI Batch API has been known to take forever or even fail to process.
 	public static final int IMMEDIATE_PROCESS_THRESHOLD = 5;
 	
-	private int tokensUsedThisMinute = 0;
-	private int requestsMadeThisMinute = 0;
-	private LocalDateTime usageWindowStart = LocalDateTime.now();
-	
 	@Inject
     protected SecretService secret;
 	
 	@Inject
 	private BatchOpenAIResponseImporter responseImporter;
 	
+	@Inject OpenAIFlexBatchProcessor flexBatchProcessor;
+	
 	protected LocalDateTime nextCallTime = null;
+	
+	private final ConcurrentHashMap<String, MinuteRateLimiter> limiters = new ConcurrentHashMap<>();
+	
+	public record Usage(long promptTokens, long completionTokens) {
+	  public long totalTokens() { return promptTokens + completionTokens; }
+	}
+
+	public record ChatResult(String content, Usage usage, double costUsd) {}
 	
 	public static AIInterpretationMetadata metadata()
 	{
@@ -91,34 +96,18 @@ public class OpenAIService {
 		return AISliceInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.AGENTIC_WEB_SEARCH, slice);
 	}
 	
-	private void resetRateLimitsIfNecessary() {
-	    if (ChronoUnit.MINUTES.between(usageWindowStart, LocalDateTime.now()) >= 1) {
-	        tokensUsedThisMinute = 0;
-	        requestsMadeThisMinute = 0;
-	        usageWindowStart = LocalDateTime.now();
-	    }
+	private MinuteRateLimiter limiterFor(OpenAIModel model) {
+	  OpenAIModel.RateLimit rl = model.getRateLimit();
+	  return limiters.computeIfAbsent(model.getId(),
+	      id -> new MinuteRateLimiter(rl.getRpm(), rl.getTpm()));
 	}
 	
 	private void waitForRateLimit(OpenAIModel model, int tokensToBeUsed) throws InterruptedException {
-	    resetRateLimitsIfNecessary();
-
-	    OpenAIModel.RateLimit limit = model.getRateLimit();
-
-	    while (requestsMadeThisMinute >= limit.getRpm() ||
-	           tokensUsedThisMinute + tokensToBeUsed >= limit.getTpm()) {
-
-	        long millisToWait = 1000L; // wait 1s and check again
-	        Log.info("Rate limit hit. Waiting " + millisToWait + "ms...");
-	        Thread.sleep(millisToWait);
-	        resetRateLimitsIfNecessary();
-	    }
-
-	    requestsMadeThisMinute++;
-	    tokensUsedThisMinute += tokensToBeUsed;
+	  limiterFor(model).acquire(tokensToBeUsed);
 	}
 	
 	@SneakyThrows
-	public String chat(InterpretationRequest request)
+	public ChatResult chat(InterpretationRequest request)
     {
 		val model = Objects.requireNonNullElse(request.getRequestedModel(), OpenAIModel.DEFAULT_MODEL);
 		String systemMsg = request.getSystemMsg();
@@ -196,13 +185,21 @@ public class OpenAIService {
     			throw new RuntimeException("OpenAI's response status was not equal to completed. " + response.status().get());
     	}
     	
-    	return response.output().stream()
+    	String responseBody = response.output().stream()
     			.filter(r -> r.message().isPresent())
     			.map(r -> r.message().get().content().stream()
     					.filter(c -> c.outputText().isPresent())
     					.map(c -> c.outputText().get().text())
     					.reduce("",(a,b) -> a + b))
     			.reduce("", (a,b) -> a + b);
+    	
+    	Usage usage = response.usage()
+	      .map(u -> new Usage(u.inputTokens(), u.outputTokens())) // <-- rename to what your SDK exposes
+	      .orElse(new Usage(0, 0));
+
+    	double costUsd = _model.estimateCostUsd(usage);
+
+    	return new ChatResult(responseBody, usage, costUsd);
     }
 	
 	/**
@@ -303,79 +300,83 @@ public class OpenAIService {
 
 	    return responseFiles;
 	}
-
 	
-	/**
-	 * Processes a list of interpretation requests using OpenAI's service.
-	 */
 	@SneakyThrows
 	public List<File> processBatchImmediately(BuildReport report, List<InterpretationRequest> requests) {
-		Log.info("Performing " + requests.size() + " requests to OpenAI.");
-
-		var buildTemp = new File(System.getProperty("user.home") + "/appdata/poliscore/build");
-		buildTemp.mkdirs();
-		
-		File outputFile = new File(buildTemp, "openapi-bills.out.jsonl");
-		Log.info("Writing responses to file: " + outputFile.getAbsolutePath());
-		
-		int writtenRequests = 0;
-		
-		try (BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-			for (InterpretationRequest request : requests) {
-				val objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-
-				val model = Objects.requireNonNullElse(request.getRequestedModel(), OpenAIModel.DEFAULT_MODEL);
-				String assistantResponse = chat(request);
-
-				// Build the "body" part (chat completion result)
-				val responseNode = objectMapper.createObjectNode();
-				responseNode.put("id", "chatcmpl-" + java.util.UUID.randomUUID());
-				responseNode.put("object", "chat.completion");
-				responseNode.put("created", System.currentTimeMillis() / 1000);
-				responseNode.put("model", model.getId());
-
-				val choicesArray = objectMapper.createArrayNode();
-				val choice = objectMapper.createObjectNode();
-				choice.put("index", 0);
-
-				val message = objectMapper.createObjectNode();
-				message.put("role", "assistant");
-				message.put("content", assistantResponse);
-				choice.set("message", message);
-				choice.put("finish_reason", "stop");
-				choicesArray.add(choice);
-				responseNode.set("choices", choicesArray);
-
-				val usageNode = objectMapper.createObjectNode();
-				usageNode.put("prompt_tokens", 0);
-				usageNode.put("completion_tokens", 0);
-				usageNode.put("total_tokens", 0);
-				responseNode.set("usage", usageNode);
-
-				// Wrap response inside OpenAI batch envelope format
-				val responseEnvelope = objectMapper.createObjectNode();
-				responseEnvelope.put("status_code", 200);
-				responseEnvelope.set("body", responseNode);
-
-				val line = objectMapper.createObjectNode();
-				line.put("custom_id", BatchOpenAIRequest.customDataToCustomId(request.getData()) );
-				line.set("response", responseEnvelope);
-
-				writer.write(line.toString());
-                writer.newLine();
-                writer.flush();
-                
-                writtenRequests++;
-			}
-		} catch (Throwable t) {
-			Log.error("Fatal error encountered while processing immediate batch. We will hault bill processing, import what we have now, and continue.", t);
-			report.fatal(t);;
-			
-			// If we failed half-way through, and we've generated some requests, then we definitely want to import them
-			if (writtenRequests > 0)
-				responseImporter.process(report, outputFile);
-		}
-
-		return Arrays.asList(new File[] { outputFile });
+		return flexBatchProcessor.processBatchImmediately(report, requests);
 	}
+	
+//	/**
+//	 * Processes a list of interpretation requests using OpenAI's service.
+//	 */
+//	@SneakyThrows
+//	public List<File> processBatchImmediately(BuildReport report, List<InterpretationRequest> requests) {
+//		Log.info("Performing " + requests.size() + " requests to OpenAI.");
+//
+//		var buildTemp = new File(System.getProperty("user.home") + "/appdata/poliscore/build");
+//		buildTemp.mkdirs();
+//		
+//		File outputFile = new File(buildTemp, "openapi-bills.out.jsonl");
+//		Log.info("Writing responses to file: " + outputFile.getAbsolutePath());
+//		
+//		int writtenRequests = 0;
+//		
+//		try (BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+//			for (InterpretationRequest request : requests) {
+//				val objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+//
+//				val model = Objects.requireNonNullElse(request.getRequestedModel(), OpenAIModel.DEFAULT_MODEL);
+//				String assistantResponse = chat(request);
+//
+//				// Build the "body" part (chat completion result)
+//				val responseNode = objectMapper.createObjectNode();
+//				responseNode.put("id", "chatcmpl-" + java.util.UUID.randomUUID());
+//				responseNode.put("object", "chat.completion");
+//				responseNode.put("created", System.currentTimeMillis() / 1000);
+//				responseNode.put("model", model.getId());
+//
+//				val choicesArray = objectMapper.createArrayNode();
+//				val choice = objectMapper.createObjectNode();
+//				choice.put("index", 0);
+//
+//				val message = objectMapper.createObjectNode();
+//				message.put("role", "assistant");
+//				message.put("content", assistantResponse);
+//				choice.set("message", message);
+//				choice.put("finish_reason", "stop");
+//				choicesArray.add(choice);
+//				responseNode.set("choices", choicesArray);
+//
+//				val usageNode = objectMapper.createObjectNode();
+//				usageNode.put("prompt_tokens", 0);
+//				usageNode.put("completion_tokens", 0);
+//				usageNode.put("total_tokens", 0);
+//				responseNode.set("usage", usageNode);
+//
+//				// Wrap response inside OpenAI batch envelope format
+//				val responseEnvelope = objectMapper.createObjectNode();
+//				responseEnvelope.put("status_code", 200);
+//				responseEnvelope.set("body", responseNode);
+//
+//				val line = objectMapper.createObjectNode();
+//				line.put("custom_id", BatchOpenAIRequest.customDataToCustomId(request.getData()) );
+//				line.set("response", responseEnvelope);
+//
+//				writer.write(line.toString());
+//                writer.newLine();
+//                writer.flush();
+//                
+//                writtenRequests++;
+//			}
+//		} catch (Throwable t) {
+//			Log.error("Fatal error encountered while processing immediate batch. We will hault bill processing, import what we have now, and continue.", t);
+//			report.fatal(t);;
+//			
+//			// If we failed half-way through, and we've generated some requests, then we definitely want to import them
+//			if (writtenRequests > 0)
+//				responseImporter.process(report, outputFile);
+//		}
+//
+//		return Arrays.asList(new File[] { outputFile });
+//	}
 }

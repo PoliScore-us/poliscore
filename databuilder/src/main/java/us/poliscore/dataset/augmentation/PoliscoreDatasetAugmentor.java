@@ -35,6 +35,7 @@ import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislativeTerm;
 import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.OpenAIService;
+import us.poliscore.service.OpenAIService.ChatResult;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
@@ -244,12 +245,12 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 
 	    String userPrompt = sb.toString();
 	    val request = new InterpretationRequest(new CustomData(UUID.randomUUID().toString()), BIRTHDAY_LOOKUP_SYSTEM_PROMPT, userPrompt, OpenAIModel.O3_DEEP_RESEARCH, ReasoningEffort.MEDIUM);
-	    String response = openai.chat(request);
+	    ChatResult response = openai.chat(request);
 
-	    Log.info("OpenAI response:\n" + response);
+	    Log.info("OpenAI response:\n" + response.content());
 
 	    val mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-	    val array = mapper.readTree(response);
+	    val array = mapper.readTree(response.content());
 
 	    int updated = 0;
 	    int skipped = 0;

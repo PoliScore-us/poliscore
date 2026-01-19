@@ -317,7 +317,7 @@ Attempt to identify the broader context in which this bill exists, and any large
 	public static final String SEARCH_MODEL_INSTRUCTIONS2 = " Where appropriate, please cite references from your search inside the report. References can be cited using markdown link syntax: [explanation text here](http://example.com)";
 	public static final String SEARCH_REFERENCES = """
 Search References:
-Output exactly one line that is valid JSON and nothing else.
+Output the header (Search References:) and exactly one line that is valid JSON and nothing else.
 
 Required JSON shape - The output must be a JSON array. Each element must be a JSON array of exactly 8 strings, in this exact order:
 [url, author, title, authors_opinion_int_string, authors_opinion_text, summary, long_summary, reference_type]

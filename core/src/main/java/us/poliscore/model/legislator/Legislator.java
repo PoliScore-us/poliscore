@@ -54,6 +54,8 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	
 	public static final String ID_CLASS_PREFIX = "LEG";
 	
+	public static final int INTERACTIONS_PAGE_SIZE = 900;
+	
 	public static final LocalDate DEFAULT_BIRTHDAY = LocalDate.of(1970, 1, 1);
 	
 	public static String generateId(LegislativeNamespace ns, String sessionCode, String legislatorCode)
@@ -112,11 +114,11 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	public void setInteractions(LegislatorBillInteractionList list)
 	{
 		interactionsPrivate1 = new LegislatorBillInteractionList();
-		interactionsPrivate1.addAll(list.subList(0, Math.min(1000, list.size())));
+		interactionsPrivate1.addAll(list.subList(0, Math.min(INTERACTIONS_PAGE_SIZE, list.size())));
 		
 		interactionsPrivate2 = new LegislatorBillInteractionList();
-		if (list.size() > 1000)
-			interactionsPrivate2.addAll(list.subList(1000, list.size()));
+		if (list.size() > INTERACTIONS_PAGE_SIZE)
+			interactionsPrivate2.addAll(list.subList(INTERACTIONS_PAGE_SIZE, list.size()));
 	}
 	
 	public void clearInteractions() {
@@ -127,7 +129,7 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	public void addBillInteraction(LegislatorBillInteraction incoming)
 	{
 		var interactions = interactionsPrivate1;
-		if (interactions.size() >= 1000)
+		if (interactions.size() >= INTERACTIONS_PAGE_SIZE)
 		{
 			interactions = interactionsPrivate2;
 		}

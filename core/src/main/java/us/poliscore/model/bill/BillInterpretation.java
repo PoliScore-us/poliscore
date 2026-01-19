@@ -172,20 +172,36 @@ public class BillInterpretation extends SessionPersistable
 		
 		issueStats.validate();
 		
-		if (StringUtils.isBlank(getLongExplain()))
-			throw new RuntimeException("Long explain was blank");
+		strValidate(getLongExplain(), "long explain", 15_000);
 		
-		if (getSliceIndex() == null && StringUtils.isBlank(getLaymansReport()))
-			throw new RuntimeException("Non-slice interps require laymans report");
-		
-		if (getSliceIndex() == null && StringUtils.isBlank(getShortExplain()))
-			throw new RuntimeException("Non-slice interps require short explain");
+		if (getSliceIndex() == null) {
+			strValidate(getLaymansReport(), "casual report", 6000);
+			strValidate(getShortExplain(), "short explain", 3000);
+		}
 		
 		if (structuralAnalysisExplain.size() != StructuralAnalysis.values().length)
 			throw new RuntimeException("Structural analysis explain missing");
 		
 		if (structuralAnalysisPassFail.size() != StructuralAnalysis.values().length)
 			throw new RuntimeException("Structural analysis pass fail missing");
+		
+		for (var sa : StructuralAnalysis.values()) {
+			strValidate(structuralAnalysisExplain.get(sa), "structural analysis pillar [" + sa.name() + "]", 3000);
+			
+			if (structuralAnalysisPassFail.get(sa) == null)
+				throw new RuntimeException("Structural analysis pillar [" + sa.name() + "] pass/faill was null");
+		}
+	}
+	
+	private void strValidate(String str, String attrName, int maxLen) {
+		if (StringUtils.isBlank(str))
+			throw new RuntimeException(attrName + " was blank");
+		
+		if (str.length() > maxLen)
+			throw new RuntimeException(attrName + " exceeded max length [" + str.length() + "]");
+		
+		if (str.contains("[[\"") || str.contains("\"]]"))
+			throw new RuntimeException(attrName + " contained 'json-like' syntax.");
 	}
 	
 	@JsonIgnore

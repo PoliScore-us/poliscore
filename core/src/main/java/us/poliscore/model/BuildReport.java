@@ -22,6 +22,8 @@ public class BuildReport {
 	
 	public List<Throwable> fatalErrors = new ArrayList<Throwable>();
 	
+	double totalProcessingCost = 0;
+	
 	public void fatal(Throwable t) { fatalErrors.add(t); }
 	
 	public boolean hasFatal() { return !fatalErrors.isEmpty(); }
