@@ -7,7 +7,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
@@ -35,7 +38,6 @@ import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
-import us.poliscore.service.SessionInfoService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
@@ -46,7 +48,7 @@ public class DatabaseBuilder implements QuarkusApplication
 {
 	public static boolean INTERPRET_PRESS_BILLS = false;
 	
-	public static boolean INTERPRET_NEW_BILLS = true;
+	public static boolean INTERPRET_NEW_BILLS = false;
 	
 	// TODO : Before updating legislators, that workflow needs to be rethought, because the ddb sync now happens at the end, instead of the beginning
 	public static boolean REINTERPRET_LEGISLATORS = false;
@@ -108,13 +110,14 @@ public class DatabaseBuilder implements QuarkusApplication
 		interpretPartyStats(buildDatasets);
 		
 		System.out.println(report.toString());
+		FileUtils.write(new File(Environment.getDeployedPath(), "../buildreport.txt"), report.toString(), "UTF-8");
 		
 		return report;
 	}
 	
 	protected void initialDataSetup(List<PoliscoreDatasetIF> buildDatasets) {
 		for (val dataset : buildDatasets) {
-//			data.syncS3LegislatorImages(dataset);
+			data.syncS3LegislatorImages(dataset);
 			data.syncS3BillText(dataset);
 			
 			dataset.optimizeExists(s3, BillInterpretation.class);
@@ -222,18 +225,20 @@ public class DatabaseBuilder implements QuarkusApplication
 				var previousDataset = data.getPreviousDataset(dataset);
 				
 				if (previousDataset != null) {
-					val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousDataset.getNamespace(), previousDataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
+					// Pull textual interpretation from previous session if ours doesn't exist
+					if (StringUtils.isBlank(interp.getShortExplain()) || StringUtils.isBlank(interp.getLongExplain())) {
+						val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousDataset.getNamespace(), previousDataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
+						if (prevInterpOp.isPresent()) {
+							if (StringUtils.isBlank(interp.getShortExplain()))
+								interp.setShortExplain(prevInterpOp.get().getShortExplain());
+							if (StringUtils.isBlank(interp.getLongExplain()))
+								interp.setLongExplain(prevInterpOp.get().getLongExplain());
+						}
+					}
 					
-					if (prevInterpOp.isPresent()) {
-						if (StringUtils.isBlank(interp.getShortExplain()))
-							interp.setShortExplain(prevInterpOp.get().getShortExplain());
-						if (StringUtils.isBlank(interp.getLongExplain()))
-							interp.setLongExplain(prevInterpOp.get().getLongExplain());
-						
-						String prevLegId = Legislator.generateId(previousDataset.getNamespace(), previousDataset.getCode(), leg.getCode());
-						
-						val prevLeg = previousDataset.get(prevLegId, Legislator.class).orElseThrow();
-						
+					// Pull interactions from previous session if they've been interpreted
+					val prevLeg = previousDataset.get(Legislator.generateId(previousDataset.getNamespace(), previousDataset.getCode(), leg.getCode()), Legislator.class).orElse(null);
+					if (prevLeg != null) {
 						val prevInteracts = legInterp.getInteractionsForInterpretation(prevLeg).iterator();
 						while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
 							val interact = prevInteracts.next();
@@ -242,6 +247,7 @@ public class DatabaseBuilder implements QuarkusApplication
 							if (interactInterpOp.isPresent() && interactInterpOp.get().getIssueStats() != null) {
 								var issueStats = interactInterpOp.get().getIssueStats();
 								interact.setRating(Math.round(issueStats.getRating() * interact.getJudgementWeight() * 0.9f));
+								interact.setIssueStats(issueStats);
 								leg.getInteractionsPrivate1().add(interact);
 							}
 						}
@@ -249,17 +255,22 @@ public class DatabaseBuilder implements QuarkusApplication
 				}
 			}
 			
+			val interactions = legInterp.getInteractionsForInterpretation(leg);
+			
 			interp.setHash(legInterp.calculateInterpHashCode(leg));
 			
-			DoubleIssueStats stats = legInterp.calculateAgregateInteractionStats(leg);
-			interp.setIssueStats(stats.toIssueStats());
+			// We don't even calculate the stats unless there's at least 100. We have some integrity around here.
+			if (interactions.size() >= 100) {
+				DoubleIssueStats stats = legInterp.calculateAgregateInteractionStats(leg);
+				interp.setIssueStats(stats.toIssueStats());
+			}
 			
 //			if (interp.getIssueStats() == null || !interp.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety) || StringUtils.isBlank(interp.getLongExplain())) {
 //				legsWithoutInterp.add(leg.getBioguideId());
 //				continue;
 //			}
 			
-			leg.setInteractions(legInterp.getInteractionsForInterpretation(leg).stream()
+			leg.setInteractions(interactions.stream()
 					.filter(i -> i.getIssueStats() != null && i.getRating() != null)
 					.sorted((a,b) -> a.getDate().compareTo(b.getDate())).collect(Collectors.toCollection(LegislatorBillInteractionList::new)));
 			

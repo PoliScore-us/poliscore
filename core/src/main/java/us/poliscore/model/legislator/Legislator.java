@@ -2,12 +2,10 @@ package us.poliscore.model.legislator;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeSet;
-
-import org.apache.commons.lang3.StringUtils;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -24,7 +22,6 @@ import lombok.NonNull;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
 import us.poliscore.legiscan.view.LegiscanState;
@@ -37,7 +34,6 @@ import us.poliscore.model.Party;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.SessionPersistable;
 import us.poliscore.model.TrackedIssue;
-import us.poliscore.model.bill.Bill;
 import us.poliscore.model.dynamodb.DdbDataPage;
 import us.poliscore.model.dynamodb.IssueStatsMapLongAttributeConverter;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.CompressedLegislatorBillInteractionListConverter;
@@ -177,12 +173,12 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() { return birthday == null ? DEFAULT_BIRTHDAY : birthday; }
 	@JsonIgnore public void setDate(LocalDate date) { this.setBirthday(date); }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return interpretation == null ? -1 : interpretation.getRating(); }
-	@JsonIgnore public void setRating(int rating) { }
-	@JsonIgnore public int getRating(TrackedIssue issue) { return interpretation.getRating(issue); }
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public Integer getRating() { return interpretation == null ? null : interpretation.getRating(); }
+	@JsonIgnore public void setRating(Integer rating) { }
+	@JsonIgnore public Integer getRating(TrackedIssue issue) { return interpretation.getRating(issue); }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_ABS_INDEX }) public int getRatingAbs() { return interpretation == null ? -1 : Math.abs(interpretation.getRating()); }
-	@JsonIgnore public void setRatingAbs(int rating) { }
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_ABS_INDEX }) public Integer getRatingAbs() { return interpretation == null || interpretation.getRating() == null ? null : Math.abs(interpretation.getRating()); }
+	@JsonIgnore public void setRatingAbs(Integer rating) { }
 	
 	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_IMPACT_INDEX }) public Long getImpact() { return getImpact(TrackedIssue.OverallBenefitToSociety); }
 	public void setImpact(Long impact) { impactMap.put(TrackedIssue.OverallBenefitToSociety, impact); }
@@ -258,7 +254,7 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 
 	@Override
 	public int compareTo(Legislator o) {
-		return Integer.valueOf(this.getRating()).compareTo(o.getRating());
+		return Integer.valueOf(Objects.requireNonNullElse(this.getRating(),-1)).compareTo(Objects.requireNonNullElse(o.getRating(),-1));
 	}
 	
 }

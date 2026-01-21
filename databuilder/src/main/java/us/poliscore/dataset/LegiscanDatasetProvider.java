@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.quarkus.arc.DefaultBean;
 import io.quarkus.logging.Log;
@@ -32,7 +34,6 @@ import us.poliscore.legiscan.view.LegiscanDatasetView;
 import us.poliscore.legiscan.view.LegiscanMimeType;
 import us.poliscore.legiscan.view.LegiscanPeopleView;
 import us.poliscore.legiscan.view.LegiscanRollCallView;
-import us.poliscore.legiscan.view.LegiscanSessionView;
 import us.poliscore.legiscan.view.LegiscanSponsorView;
 import us.poliscore.legiscan.view.LegiscanState;
 import us.poliscore.legiscan.view.LegiscanStatus;
@@ -62,6 +63,8 @@ import us.poliscore.service.storage.S3PersistenceService;
 @Named("legiscan")
 @DefaultBean
 public class LegiscanDatasetProvider implements DatasetProvider {
+	
+	private static final Logger logger = LoggerFactory.getLogger(LegiscanDatasetProvider.class);
 	
 //	@Inject
 //	private SecretService secret;
@@ -180,6 +183,11 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		
 		bill.setNumber(Integer.parseInt(view.getBillNumber().replaceAll("[^\\d]", "")));
 		
+		if (view.getHistory().size() == 0) {
+			logger.warn("Legiscan bill " + view.getBillId() + " did not have any history and thus cannot be imported.");
+			return;
+		}
+			
 		bill.setOriginatingChamber(LegislativeChamber.fromLegiscanChamber(view.getHistory().get(0).getChamber()));
 		
 		if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
@@ -473,6 +481,11 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 				text = new String(pdfBytes);
 			} else {
 				throw new UnsupportedOperationException("Unsupported bill text MIME type [" + doc.getMime().name() + "]");
+			}
+			
+			if (StringUtils.isBlank(text)) {
+				logger.error("Bill text was blank for " + bill.getId() + ". Skipping s3 upload to allow further processing, but you might want to look into this when you get a chance.");
+				continue;
 			}
 			
 			BillText bt = BillText.factoryFromText(bill.getId(), text, doc.getDate());

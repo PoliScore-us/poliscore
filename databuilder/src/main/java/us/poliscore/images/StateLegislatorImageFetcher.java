@@ -85,8 +85,8 @@ public class StateLegislatorImageFetcher extends AbstractLegislatorImageFetcher 
 	        }
 
 	        byte[] image = IOUtils.toByteArray(is);
-	        if (!isJPEG(image)) {
-	            Log.warn("[" + leg.getCode() + "] Invalid image data. Waiting " + backoffMs + "ms...");
+	        if (!isValidImage(image)) {
+	            Log.warn("Error fetching url [" + url + "] for legislator [" + leg.getCode() + "]: invalid image data. Waiting " + backoffMs + "ms...");
 	            Thread.sleep(backoffMs);
 	            backoffMs = Math.min(backoffMs * 2, 60000);
 	            continue;

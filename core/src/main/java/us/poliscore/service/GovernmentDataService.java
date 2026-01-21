@@ -81,7 +81,7 @@ public class GovernmentDataService {
 	
 	public PoliscoreDatasetIF getPreviousDataset(PoliscoreDatasetIF dataset) {
 		for (val loopDs : importedDatasets) {
-			if (dataset.getNamespace().equals(loopDs.getNamespace()) && dataset.isYearWithin(loopDs.getStartYear()-1)) {
+			if (dataset.getNamespace().equals(loopDs.getNamespace()) && loopDs.isYearWithin(dataset.getStartYear()-1)) {
 				return loopDs;
 			}
 		}

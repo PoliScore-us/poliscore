@@ -1,5 +1,10 @@
 [
     { "namespace": "us/congress", "year": 2026, "multiplier": 1.7, "build": true },
     { "namespace": "us/congress", "year": 2024, "build": false },
-    { "namespace": "us/co",       "year": 2025, "multiplier": 2.0, "build": false }
+    
+    { "namespace": "us/co",       "year": 2026, "multiplier": 2.0, "build": true },
+    { "namespace": "us/co",       "year": 2025, "multiplier": 2.0, "build": true },
+    
+    { "namespace": "us/az",       "year": 2026, "multiplier": 2.0, "build": true },
+    { "namespace": "us/az",       "year": 2025, "multiplier": 2.0, "build": true }
 ]

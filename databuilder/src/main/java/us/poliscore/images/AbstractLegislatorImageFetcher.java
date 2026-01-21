@@ -171,11 +171,24 @@ private static final String BUCKET_NAME = "poliscore-prod-public";
 	    throw new UnsupportedOperationException("Unsupported image type. All images must be in webp format.");
 	}
 	
-	@SneakyThrows
-	protected static Boolean isJPEG(byte[] bytes) throws Exception {
-	    @Cleanup DataInputStream ins = new DataInputStream(new BufferedInputStream(new ByteArrayInputStream(bytes)));
-	    
-	    return ins.readInt() == 0xffd8ffe0;
+	protected boolean isValidImage(byte[] bytes) {
+	  if (bytes == null || bytes.length < 16) {
+	    return false;
+	  }
+
+	  try {
+	    BufferedImage img = ImageIO.read(new ByteArrayInputStream(bytes));
+	    if (img == null) {
+	      return false;
+	    }
+	    if (img.getWidth() <= 0 || img.getHeight() <= 0) {
+	      return false;
+	    }
+	  } catch (Exception e) {
+	    return false;
+	  }
+	  
+	  return true;
 	}
 	
 	protected boolean exists(Legislator leg)

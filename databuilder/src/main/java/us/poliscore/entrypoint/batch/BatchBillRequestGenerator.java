@@ -40,7 +40,7 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 
 @QuarkusMain(name = "BatchBillRequestGenerator")
 public class BatchBillRequestGenerator implements QuarkusApplication {
-	public static final boolean REPROCESS_INVALID_BILLS = true;
+	public static final boolean REPROCESS_INVALID_BILLS = false;
 
 	public static final int MAX_BILL_PROCESS = 3000; // -1 for infinite
 

@@ -3,7 +3,6 @@ package us.poliscore;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.Set;
@@ -22,6 +21,7 @@ import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillInterpretationParser.StructuralAnalysisParser;
+import us.poliscore.model.bill.BillText;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorInterpretation;
 import us.poliscore.model.press.PressInterpretation;
@@ -53,14 +53,33 @@ public class DataCleaner implements QuarkusApplication {
 	
 	protected void process() throws IOException
 	{
-		val dataset = data.importDataset(LegislativeNamespace.US_CONGRESS, 2026);
-//		val dataset = data.importDataset(LegislativeNamespace.US_COLORADO, 2025);
+//		val dataset = data.importDataset(LegislativeNamespace.US_CONGRESS, 2026);
+		val dataset = data.importDataset(LegislativeNamespace.US_COLORADO, 2026);
+		
+		deleteInvalidBillTexts(dataset);
 		
 //		validateLegislatorInterps(dataset);
 		
-		reparseStructuralAnalysisInterps(dataset);
+//		reparseStructuralAnalysisInterps(dataset);
         
 		System.out.println("Program complete.");
+	}
+	
+	public void deleteInvalidBillTexts(PoliscoreDatasetIF dataset) {
+		int count = 0;
+		
+		for (Bill b : dataset.query(Bill.class)) {
+			var dbill = ddb.get(b.getId(), Bill.class).orElse(null);
+			
+			val op = s3.get(BillText.generateId(b.getId()), BillText.class);
+			
+			if (op.isPresent() && StringUtils.isBlank(op.get().getDocument())) {
+				s3.delete(BillText.generateId(b.getId()), BillText.class);
+				count++;
+			}
+		}
+		
+		System.out.println("Deleted " + count + " corrupt bill texts");
 	}
 	
 	public void reparseStructuralAnalysisInterps(PoliscoreDatasetIF dataset) {

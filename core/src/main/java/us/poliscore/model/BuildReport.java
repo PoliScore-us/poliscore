@@ -51,6 +51,9 @@ public class BuildReport {
 		    result += sw.toString();
 		}
 		
+		if (totalProcessingCost > 0)
+			result += "\nTotal processing cost is $" + totalProcessingCost;
+		
 		return result;
 	}
 	

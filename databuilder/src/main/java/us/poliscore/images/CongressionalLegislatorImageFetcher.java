@@ -107,7 +107,7 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 	        }
 
 	        byte[] image = IOUtils.toByteArray(is);
-	        if (!isJPEG(image)) {
+	        if (!isValidImage(image)) {
 	            Log.warn("[" + leg.getCode() + "] Invalid image data. Waiting " + backoffMs + "ms...");
 	            Thread.sleep(backoffMs);
 	            backoffMs = Math.min(backoffMs * 2, 60000);

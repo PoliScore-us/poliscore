@@ -44,7 +44,7 @@ import us.poliscore.service.OpenAIService.ChatResult;
 public class OpenAIFlexBatchProcessor {
 
 	// Configurable thread count as a static final:
-	private static final int THREADS = Integer.getInteger("poliscore.openai.flex.threads", 2);
+	private static final int THREADS = Integer.getInteger("poliscore.openai.flex.threads", 8);
 
 	// Rate limiter here is a secondary "absolute max". Actual rate limiting is done in OpenAIService.waitForRateLimit
 	private static final int MAX_REQUESTS_PER_MINUTE = Integer.getInteger("poliscore.openai.flex.rpm", 100);

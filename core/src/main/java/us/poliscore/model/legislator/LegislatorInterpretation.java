@@ -96,13 +96,16 @@ public class LegislatorInterpretation extends SessionPersistable
 
 	@JsonIgnore public void setDate(LocalDate date) { }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return getRating(null); }
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public Integer getRating() { return getRating(null); }
 	public Integer getRating(TrackedIssue issue) {
 		if (rating != null)
 			return rating;
 		
-		return issueStats.getImpact(issue);
+		if (issueStats != null)
+			return issueStats.getImpact(issue);
+		
+		return null;
 	}
 
-	@JsonIgnore public void setRating(int rating) { }
+	@JsonIgnore public void setRating(Integer rating) { }
 }

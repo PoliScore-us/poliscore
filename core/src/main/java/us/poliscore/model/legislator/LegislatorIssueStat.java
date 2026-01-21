@@ -56,7 +56,7 @@ public class LegislatorIssueStat implements Persistable {
 	LegislatorInterpretation interpretation;
 	
 	@Getter(onMethod = @__({ @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_ISSUE_RATING_INDEX }) }))
-	protected int rating;
+	protected Integer rating;
 	
 	@NonNull
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(LegislatorLegislativeTermSortedSetConverter.class) }))

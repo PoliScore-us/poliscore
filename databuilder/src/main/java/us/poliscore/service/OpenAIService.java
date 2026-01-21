@@ -15,6 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
@@ -60,7 +62,11 @@ import us.poliscore.service.openai.OpenAIFlexBatchProcessor;
 @ApplicationScoped
 public class OpenAIService {
 	
+	public static final Logger logger = LoggerFactory.getLogger(OpenAIService.class);
+	
 	public static final String PROVIDER = "openai";
+	
+	private static final Duration REQUEST_TIMEOUT = Duration.ofMinutes(30); // single OpenAI request cap
 	
 	public static final int PROMPT_VERSION = 0;
 	
@@ -77,6 +83,8 @@ public class OpenAIService {
 	@Inject OpenAIFlexBatchProcessor flexBatchProcessor;
 	
 	protected LocalDateTime nextCallTime = null;
+	
+	volatile OpenAIClient openAiClient;
 	
 	private final ConcurrentHashMap<String, MinuteRateLimiter> limiters = new ConcurrentHashMap<>();
 	
@@ -106,6 +114,17 @@ public class OpenAIService {
 	  limiterFor(model).acquire(tokensToBeUsed);
 	}
 	
+	public synchronized OpenAIClient getClient() {
+	  if (openAiClient == null) {
+		  openAiClient = OpenAIOkHttpClient.builder()
+		      .apiKey(secret.getOpenAISecret())
+		      .timeout(REQUEST_TIMEOUT)
+		      .build();
+	  }
+	  return openAiClient;
+	}
+
+	
 	@SneakyThrows
 	public ChatResult chat(InterpretationRequest request)
     {
@@ -121,13 +140,8 @@ public class OpenAIService {
 			throw new IllegalArgumentException();
 		}
 		
-		int estimatedTokens = userMsg.length() / 4; // Roughly 4 chars per token
+		int estimatedTokens = userMsg.length() / 3; // tokens are about 4 per char... but we're being conservative here.
 		waitForRateLimit(model, estimatedTokens);
-		
-		OpenAIClient client = OpenAIOkHttpClient.builder()
-				.apiKey(secret.getOpenAISecret())
-				.timeout(Duration.ofMinutes(30)) // You want this with flex. Not with others
-				.build();
 		
 		OpenAIModel _model = ObjectUtils.defaultIfNull(model, OpenAIModel.DEFAULT_MODEL);
 		
@@ -170,7 +184,7 @@ public class OpenAIService {
 			    .onFailure(e -> Log.error("Retries exhausted", e.getException()))
 			    .build();
 		
-		Response response = Failsafe.with(retryPolicy).get(() -> client.responses().create(params));
+		Response response = Failsafe.with(retryPolicy).get(() -> getClient().responses().create(params));
     	
     	if (response.error().isPresent())
     	{
@@ -180,6 +194,7 @@ public class OpenAIService {
     	if (!response.status().get().equals(ResponseStatus.COMPLETED)) {
     		if (response.status().get().equals(ResponseStatus.INCOMPLETE) && model.isSupportsReasoning() && ReasoningEffort.LOW.equals(effort)) {
     			request.setReasoningEffort(ReasoningEffort.MEDIUM);
+    			logger.error("Low reasoning attempt caused a reponse status INCOMPLETE. Retrying request at MEDIUM reasoning level.");
     			return chat(request); // Retry the request with higher reasoning
     		} else
     			throw new RuntimeException("OpenAI's response status was not equal to completed. " + response.status().get());
