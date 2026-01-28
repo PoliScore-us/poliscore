@@ -2,7 +2,6 @@ package us.poliscore.model.legislator;
 
 import java.time.LocalDate;
 import java.util.Arrays;
-import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -11,25 +10,18 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.NonNull;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.IssueStats;
 import us.poliscore.model.LegislativeNamespace;
-import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.SessionPersistable;
+import us.poliscore.model.StructuralStats;
 import us.poliscore.model.TrackedIssue;
-import us.poliscore.model.bill.Bill;
-import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
-import us.poliscore.model.legislator.Legislator.LegislatorLegislativeTermSortedSet;
-import us.poliscore.model.legislator.Legislator.LegislatorName;
 import us.poliscore.util.ParsingUtil;
 
 @Data
@@ -47,6 +39,8 @@ public class LegislatorInterpretation extends SessionPersistable
 	}
 	
 	protected IssueStats issueStats;
+	
+	protected StructuralStats structuralStats;
 	
 	protected Integer rating;
 	

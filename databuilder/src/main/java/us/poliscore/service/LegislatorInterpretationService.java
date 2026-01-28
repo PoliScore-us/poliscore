@@ -18,7 +18,7 @@ import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.IssueStats;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
-import us.poliscore.model.LegislativeSession;
+import us.poliscore.model.StructuralStats;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.VoteStatus;
 import us.poliscore.model.bill.Bill;
@@ -359,11 +359,14 @@ Your written response for this research section should consist of only a compact
 
 	public void calculateImpactAndRating(Legislator leg, LegislatorInterpretation interp) {
 		Map<TrackedIssue, Long> impact = new HashMap<TrackedIssue, Long>();
+		StructuralStats structStats = new StructuralStats();
 		
 		Double rating = 0.0d;
 		double total = 0;
 		
 		for (LegislatorBillInteraction interact : leg.getInteractions()) {
+			val billInterp = s3.get(BillInterpretation.generateId(interact.getBillId(), null), BillInterpretation.class).orElse(null);
+			
 			if (interact.getIssueStats() != null) {
 				for (TrackedIssue issue : interact.getIssueStats().getStats().keySet()) {
 					val existing = impact.getOrDefault(issue, 0l);
@@ -375,9 +378,14 @@ Your written response for this research section should consist of only a compact
 					total++;
 				}
 			}
+			
+			if (billInterp != null && billInterp.getStructuralAnalysisPassFail() != null) {
+				structStats = structStats.addAll(billInterp.getStructuralAnalysisPassFail());
+			}
 		}
 		
 		leg.setImpactMap(impact);
 		interp.setRating(total == 0 ? 0 : (int)Math.round(rating / total));
+		interp.setStructuralStats(structStats.divideByTotalSummed());
 	}
 }

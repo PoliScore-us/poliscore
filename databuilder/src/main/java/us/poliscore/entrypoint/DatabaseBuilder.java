@@ -48,7 +48,7 @@ public class DatabaseBuilder implements QuarkusApplication
 {
 	public static boolean INTERPRET_PRESS_BILLS = false;
 	
-	public static boolean INTERPRET_NEW_BILLS = false;
+	public static boolean INTERPRET_NEW_BILLS = true;
 	
 	// TODO : Before updating legislators, that workflow needs to be rethought, because the ddb sync now happens at the end, instead of the beginning
 	public static boolean REINTERPRET_LEGISLATORS = false;
@@ -231,8 +231,10 @@ public class DatabaseBuilder implements QuarkusApplication
 						if (prevInterpOp.isPresent()) {
 							if (StringUtils.isBlank(interp.getShortExplain()))
 								interp.setShortExplain(prevInterpOp.get().getShortExplain());
-							if (StringUtils.isBlank(interp.getLongExplain()))
+							if (StringUtils.isBlank(interp.getLongExplain())) {
 								interp.setLongExplain(prevInterpOp.get().getLongExplain());
+								interp.setLastUpdate(prevInterpOp.get().getLastUpdate());
+							}
 						}
 					}
 					
