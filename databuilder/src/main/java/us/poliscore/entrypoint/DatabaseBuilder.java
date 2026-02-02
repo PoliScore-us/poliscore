@@ -50,7 +50,6 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	public static boolean INTERPRET_NEW_BILLS = true;
 	
-	// TODO : Before updating legislators, that workflow needs to be rethought, because the ddb sync now happens at the end, instead of the beginning
 	public static boolean REINTERPRET_LEGISLATORS = false;
 	
 	public static boolean REINTERPRET_PARTIES = false;
@@ -72,9 +71,6 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	@Inject
 	private LocalCachedS3Service s3;
-	
-	@Inject
-	private LegislatorService legService;
 	
 	@Inject
 	private GovernmentDataService data;
@@ -169,6 +165,10 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	@SneakyThrows
 	private void interpretLegislators(List<PoliscoreDatasetIF> buildDatasets) {
+		
+		// The interpreter will utilize data generated in this process (i.e. aggregate stats)
+		legInterp.recalculateAllLegislators();
+		
 		if (!report.hasFatal() && REINTERPRET_LEGISLATORS) {
 			List<InterpretationRequest> requests = legislatorRequestGenerator.process(buildDatasets, report);
 		
@@ -188,110 +188,6 @@ public class DatabaseBuilder implements QuarkusApplication
 			}
 		}
 		
-		for(val dataset : buildDatasets)
-			recalculateLegislators(dataset);
-	}
-	
-	/**
-	 * Recalculates all legislator stats and bill interactions without actually re-interpreting their activity. Saves on AI interpretation costs while
-	 * still allowing stats and interactions to remain up-to-date.
-	 */
-	private void recalculateLegislators(PoliscoreDatasetIF dataset) {
-		Log.info("Recalculating legislators for " + dataset.getDescription());
-		
-		List<String> legsWithoutInterp = new ArrayList<String>();
-		List<String> legsWithoutSufficientInteractions = new ArrayList<String>();
-		
-		for (var leg : dataset.query(Legislator.class).stream()
-//				.filter(l -> l.isMemberOfSession(data.getSession())) //  && s3.exists(LegislatorInterpretation.generateId(l.getId(), PoliscoreUtil.CURRENT_SESSION.getNumber()), LegislatorInterpretation.class)
-				.collect(Collectors.toList()))
-		{
-			legInterp.updateInteractionsInterp(leg);
-			
-//			if (leg.getInteractions().size() < 100) {
-//				legsWithoutSufficientInteractions.add(leg.getBioguideId());
-//				continue;
-//			}
-			
-			LegislatorInterpretation interp = new LegislatorInterpretation(dataset.getNamespace(), dataset.getCode(), leg.getCode(), OpenAIService.metadata(), null);
-			val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
-			
-			if (interpOp.isPresent()) { interp = interpOp.get(); }
-			
-			// If there exists an interp from a previous session, backfill the interactions until we get to 1000
-			// We're skipping data from the 118th congress because the data in the 118th congress used a very primitive prompt
-			if (!dataset.getCode().equals("119") && legInterp.getInteractionsForInterpretation(leg).size() < 1000) {
-				// If an interpretation from this session doesn't exist, grab one from the previous session.
-				var previousDataset = data.getPreviousDataset(dataset);
-				
-				if (previousDataset != null) {
-					// Pull textual interpretation from previous session if ours doesn't exist
-					if (StringUtils.isBlank(interp.getShortExplain()) || StringUtils.isBlank(interp.getLongExplain())) {
-						val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousDataset.getNamespace(), previousDataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
-						if (prevInterpOp.isPresent()) {
-							if (StringUtils.isBlank(interp.getShortExplain()))
-								interp.setShortExplain(prevInterpOp.get().getShortExplain());
-							if (StringUtils.isBlank(interp.getLongExplain())) {
-								interp.setLongExplain(prevInterpOp.get().getLongExplain());
-								interp.setLastUpdate(prevInterpOp.get().getLastUpdate());
-							}
-						}
-					}
-					
-					// Pull interactions from previous session if they've been interpreted
-					val prevLeg = previousDataset.get(Legislator.generateId(previousDataset.getNamespace(), previousDataset.getCode(), leg.getCode()), Legislator.class).orElse(null);
-					if (prevLeg != null) {
-						val prevInteracts = legInterp.getInteractionsForInterpretation(prevLeg).iterator();
-						while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
-							val interact = prevInteracts.next();
-							val interactInterpOp = s3.get(BillInterpretation.generateId(interact.getBillId(), null), BillInterpretation.class);
-							
-							if (interactInterpOp.isPresent() && interactInterpOp.get().getIssueStats() != null) {
-								var issueStats = interactInterpOp.get().getIssueStats();
-								interact.setRating(Math.round(issueStats.getRating() * interact.getJudgementWeight() * 0.9f));
-								interact.setIssueStats(issueStats);
-								leg.getInteractionsPrivate1().add(interact);
-							}
-						}
-					}
-				}
-			}
-			
-			val interactions = legInterp.getInteractionsForInterpretation(leg);
-			
-			interp.setHash(legInterp.calculateInterpHashCode(leg));
-			
-			// We don't even calculate the stats unless there's at least 100. We have some integrity around here.
-			if (interactions.size() >= 100) {
-				DoubleIssueStats stats = legInterp.calculateAgregateInteractionStats(leg);
-				interp.setIssueStats(stats.toIssueStats());
-			}
-			
-//			if (interp.getIssueStats() == null || !interp.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety) || StringUtils.isBlank(interp.getLongExplain())) {
-//				legsWithoutInterp.add(leg.getBioguideId());
-//				continue;
-//			}
-			
-			leg.setInteractions(interactions.stream()
-					.filter(i -> i.getIssueStats() != null && i.getRating() != null)
-					.sorted((a,b) -> a.getDate().compareTo(b.getDate())).collect(Collectors.toCollection(LegislatorBillInteractionList::new)));
-			
-			leg.setInterpretation(interp);
-			
-			legInterp.calculateImpactAndRating(leg, interp);
-			
-			legService.ddbPersist(leg, interp);
-		}
-		
-		if (legsWithoutInterp.size() > 0 || legsWithoutSufficientInteractions.size() > 0) {
-			System.out.println("Legislators without interpretations:");
-			System.out.println(String.join(", ", legsWithoutInterp));
-			System.out.println("Legislators without sufficient interactions:");
-			System.out.println(String.join(", ", legsWithoutSufficientInteractions));
-			
-			throw new RuntimeException(legsWithoutInterp.size() + " legislators without interpretations " +
-					legsWithoutSufficientInteractions.size() + " legislators without sufficient interactions");
-		}
 	}
 	
 	@SneakyThrows

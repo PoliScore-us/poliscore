@@ -58,6 +58,10 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 //  "BIL/us/co/2173/sb/11","BIL/us/co/2173/sb/77","BIL/us/co/2173/sb/160"
 //);
 
+	public static final List<String> billSkipList = Arrays.asList(
+		Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 7148)
+	);
+	
 	public static final boolean CHECK_S3_EXISTS = specificFetch == null;
 
 	/** Default requested model for these interpretation requests. */
@@ -135,6 +139,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 				.filter(b -> s3.exists(BillText.generateId(b.getId()), BillText.class));
 
 		if (specificFetch == null) {
+			stream = andNotInList(stream, billSkipList);
 			stream = andNotAlreadyInterpretedOrInvalid(stream, includePressDirtyBills);
 
 			// stream = ifInterpretedThenInSession(stream, "119");
@@ -254,6 +259,10 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 		}
 	}
 
+	private Stream<Bill> andNotInList(Stream<Bill> stream, List<String> billExcludeList) {
+		return stream.filter(b -> !billExcludeList.contains(b.getId()));
+	}
+	
 	private Stream<Bill> andNotAlreadyInterpretedOrInvalid(Stream<Bill> stream, boolean includePressDirtyBills) {
 		return stream.filter(b -> (!CHECK_S3_EXISTS || !interpretedAndValid(b)
 				|| (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))));

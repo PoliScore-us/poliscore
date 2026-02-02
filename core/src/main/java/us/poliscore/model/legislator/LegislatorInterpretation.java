@@ -50,6 +50,8 @@ public class LegislatorInterpretation extends SessionPersistable
 	
 	protected String shortExplain;
 	
+	protected String casualExplain;
+
 	protected String longExplain;
 	
 	protected String reasoning;

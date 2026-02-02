@@ -2,14 +2,17 @@ package us.poliscore.service;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.val;
@@ -23,12 +26,14 @@ import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.VoteStatus;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
+import us.poliscore.model.bill.StructuralAnalysis;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorBillInteraction;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCosponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
 import us.poliscore.model.legislator.LegislatorInterpretation;
+import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
 import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
@@ -47,7 +52,7 @@ public class LegislatorInterpretationService
 //	private static final String PROMPT_TEMPLATE = "The provided text is a summary of the last {{time_period}} of legislative history of United States Legislator {{full_name}}. Please generate a concise (single paragraph) critique of this history, evaluating the performance, highlighting any specific accomplishments or alarming behavior and pointing out major focuses and priorities of the legislator. In your critique, please attempt to reference concrete, notable and specific text of the summarized bills where possible.";
 	
 	private static final String PROMPT_TEMPLATE = """
-You are part of an independent U.S. legislative watchdog which has graded the recent performance of {{namespace}} {{politicianType}} {{fullName}}. You have opinions on policy and are not afraid to voice them or take sides. You do not engage in "both sides" analyses. This legislator has received the following policy area grades (scores range from -100 to 100):
+You are part of an independent U.S. legislative watchdog which has used AI with a non-paristan bill evaluation prompt to analyze every bill in the current legislative session. These bill analyses were aggregated up to the legislators and used to evaluate the recent performance of {{namespace}} {{politicianType}} {{fullName}}. You have opinions on policy and are not afraid to voice them or take sides. You do not engage in "both sides" analyses. This legislator has received the following policy area scores (scores range from -100 to 100):
 
 {{stats}}
 
@@ -67,11 +72,11 @@ Short Report:
 Generate a layman's, concise, single sentence describing the primary focuses of the representative, not more than 150 characters. Should start with "Focuses on". Should not include the name of the representative. Do not include any formatting text such as stars or dashes. 
 
 Long Report:
-Generate a {{analysisType}}. Your report will be 5 paragraphs, the content of which is as follows:
+Generate a {{analysisType}}. Your report shall be 5 paragraph long, the content of which is as follows:
 1. Your first paragraph will be a high level summary of the legislator’s recent work. This summary needs to condense all the research you’ve previously done into easy, digestable talking points, pointing out major focuses, priorities and values of the legislator and highlighting any {{behavior}}. Mention any higher level philosophies or groups that they may subscribe or belong to. Write your most noteworthy and interesting information here, we want to hook the reader early.
-2. Identify who typically funds their campaigns, mentioning a few big ones and highlighting overall trends. If you found any problematic or synergistic relationships with funders make sure to mention them. 
+2. Illuminate exactly why this legislator received the scores they did with a concrete policy analysis. Mention how the policy aligns with their stated campaign goals, and where that policy aligns (or doesn't) with the needs of their constituents. If prominent constituents or groups have commented publicly on their policy, mention that here. Refrain from listing more than ten bills here, we want overall trends and notable bills (not just a dump of bills), especially if they align with painting a larger picture or focus of the legislator’s work. 
 3. Document your findings from your news/web research, providing concrete links to articles where relevant.
-4. Tie it all together with a concrete policy analysis. Refrain from listing more than ten bills here, we want overall trends and notable bills (not just a dump of bills), especially if they align with painting a larger picture or focus of the legislator’s work.
+4. Identify who typically funds their campaigns, mentioning a few big ones and highlighting overall trends. If you found any problematic or synergistic relationships with funders make sure to mention them.
 5. Conclude by painting a picture of their impact to society, both unrealized (proposed but not law), and realized.
 When referring to the legislator, please use their name, rather than "the legislator". You may use markdown to format your text, linking to concrete sources where appropriate. Bills shall be referenced via a markdown link syntax, where the link URL is the PoliScore id [name of the bill](BIL/us/congress/119/hr/1). Do not ever use [link] as the description of your link. Your tone here should be professional yet approachable. We want these concepts to be easy to digest for your average person whilst also respecting the integrity of the analysis. Don't lead each paragraph with 'Impact:', 'Policy analysis:', or 'What’s the coverage?'. These paragraphs should flow like natural writing. The overall tone must track the grade; for D, use a measured, evidence-first tone that underscores major shortcomings.
 
@@ -83,8 +88,6 @@ Your written response for this research section should consist of only a compact
 2. STAKEHOLDER: Official policy objectives and narratives from the legislator's official website and/or social media which might give higher-level context into their policy decisions
 3. NEWS: Any newsworthy events which might include the legislator
 4. FUNDER: Find out who is funding this legislator's campaigns
-
-
 			""";
 	// Adding "non-partisan" to this prompt was considered, however it was found that adding it causes Chat GPT to add a "both sides" paragraph at the end, even on legislators with a very poor score. For that reason, it was removed, as our goal here is to help inform voters, not confuse them with "both sides" type rhetoric.
 	// Adding "for the voters" was found to sometimes add a nonsense sentence at the end, i.e. "voters should consider positives and negatives... bla bla bla". It's possible Chat GPT gets scared and over-thinks things if it knows it's informing voters.
@@ -319,8 +322,16 @@ Your written response for this research section should consist of only a compact
 		else
 			ns = leg.getNamespace().getDescription() + " State";
 		
+		List<String> structuralStatList = new ArrayList<String>();
+		for (var s : StructuralAnalysis.values()) {
+			structuralStatList.add(s.getDisplayName() + ": " + (Math.round(leg.getInterpretation().getStructuralStats().getStat(s)*100)) + "% of this legislator's bills " + tooltipForPillar(s));
+		}
+		var structural_stats = String.join("\n", structuralStatList);
+		
 		return PROMPT_TEMPLATE
+				.replace("{{date}}", java.time.LocalDate.now().toString())
 				.replace("{{namespace}}", ns)
+				.replace("{{structural_stats}}", structural_stats)
 				.replace("{{letterGrade}}", grade)
 				.replace("{{politicianType}}", leg.getTerms().last().getChamber() == LegislativeChamber.UPPER ? "Senator" : "House Representative")
 				.replace("{{fullName}}", leg.getName().getOfficial_full())
@@ -331,6 +342,25 @@ Your written response for this research section should consist of only a compact
 					    : grade.equals("D") ? "mostly disapproving critique"
 					    : "harsh critique")
 				.replace("{{behavior}}", grade.equals("A") || grade.equals("B") ? "specific accomplishments" : (grade.equals("C") || grade.equals("D") ? "specific accomplishments or alarming behavior" : "alarming behavior"));
+	}
+	
+	public static String tooltipForPillar(StructuralAnalysis pillar) {
+	    if (StructuralAnalysis.PRECISION.equals(pillar))
+	      return "accurately target causal mechanisms";
+	    else if (StructuralAnalysis.EVIDENCE.equals(pillar))
+	      return "are supported by credible evidence or data";
+	    else if (StructuralAnalysis.FEASIBILITY.equals(pillar))
+	      return "are realistic and practically implementable";
+	    else if (StructuralAnalysis.BUDGET.equals(pillar))
+	      return "pass a detailed budget analysis";
+	    else if (StructuralAnalysis.FAIRNESS.equals(pillar))
+	      return "distribute benefits and burdens fairly";
+	    else if (StructuralAnalysis.GOVERNANCE.equals(pillar))
+	      return "respect core civic principles";
+	    else if (StructuralAnalysis.RISK.equals(pillar))
+	      return "identify and mitigate potential risks";
+	    else
+	      return "";
 	}
 	
 	public static String describeTimePeriod(LocalDate periodStart, LocalDate periodEnd)
@@ -387,5 +417,85 @@ Your written response for this research section should consist of only a compact
 		leg.setImpactMap(impact);
 		interp.setRating(total == 0 ? 0 : (int)Math.round(rating / total));
 		interp.setStructuralStats(structStats.divideByTotalSummed());
+	}
+	
+	public void recalculateAllLegislators() {
+		for(val dataset : data.getBuildDatasets())
+			recalculateLegislators(dataset);
+	}
+	
+	/**
+	 * Recalculates all legislator stats and bill interactions without actually re-interpreting their activity. Saves on AI interpretation costs while
+	 * still allowing stats and interactions to remain up-to-date.
+	 */
+	public void recalculateLegislators(PoliscoreDatasetIF dataset) {
+		Log.info("Recalculating legislators for " + dataset.getDescription());
+		
+		for (var leg : dataset.query(Legislator.class))
+		{
+			updateInteractionsInterp(leg);
+			
+			LegislatorInterpretation interp = new LegislatorInterpretation(dataset.getNamespace(), dataset.getCode(), leg.getCode(), OpenAIService.metadata(), null);
+			val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
+			
+			if (interpOp.isPresent()) { interp = interpOp.get(); }
+			
+			// If there exists an interp from a previous session, backfill the interactions until we get to 1000
+			// We're skipping data from the 118th congress because the data in the 118th congress used a very primitive prompt
+			if (!dataset.getCode().equals("119") && getInteractionsForInterpretation(leg).size() < 1000) {
+				// If an interpretation from this session doesn't exist, grab one from the previous session.
+				var previousDataset = data.getPreviousDataset(dataset);
+				
+				if (previousDataset != null) {
+					// Pull textual interpretation from previous session if ours doesn't exist
+					if (StringUtils.isBlank(interp.getShortExplain()) || StringUtils.isBlank(interp.getLongExplain())) {
+						val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousDataset.getNamespace(), previousDataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
+						if (prevInterpOp.isPresent()) {
+							if (StringUtils.isBlank(interp.getShortExplain()))
+								interp.setShortExplain(prevInterpOp.get().getShortExplain());
+							if (StringUtils.isBlank(interp.getLongExplain())) {
+								interp.setLongExplain(prevInterpOp.get().getLongExplain());
+								interp.setLastUpdate(prevInterpOp.get().getLastUpdate());
+							}
+						}
+					}
+					
+					// Pull interactions from previous session if they've been interpreted
+					val prevLeg = previousDataset.get(Legislator.generateId(previousDataset.getNamespace(), previousDataset.getCode(), leg.getCode()), Legislator.class).orElse(null);
+					if (prevLeg != null) {
+						val prevInteracts = getInteractionsForInterpretation(prevLeg).iterator();
+						while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
+							val interact = prevInteracts.next();
+							val interactInterpOp = s3.get(BillInterpretation.generateId(interact.getBillId(), null), BillInterpretation.class);
+							
+							if (interactInterpOp.isPresent() && interactInterpOp.get().getIssueStats() != null) {
+								var issueStats = interactInterpOp.get().getIssueStats();
+								interact.setRating(Math.round(issueStats.getRating() * interact.getJudgementWeight() * 0.9f));
+								interact.setIssueStats(issueStats);
+								leg.getInteractionsPrivate1().add(interact);
+							}
+						}
+					}
+				}
+			}
+			
+			val interactions = getInteractionsForInterpretation(leg);
+			
+			interp.setHash(calculateInterpHashCode(leg));
+			
+			// We don't even calculate the stats unless there's at least 100. We have some integrity around here.
+			if (interactions.size() >= 100) {
+				DoubleIssueStats stats = calculateAgregateInteractionStats(leg);
+				interp.setIssueStats(stats.toIssueStats());
+			}
+			
+			leg.setInteractions(interactions.stream()
+					.filter(i -> i.getIssueStats() != null && i.getRating() != null)
+					.sorted((a,b) -> a.getDate().compareTo(b.getDate())).collect(Collectors.toCollection(LegislatorBillInteractionList::new)));
+			
+			leg.setInterpretation(interp);
+			
+			calculateImpactAndRating(leg, interp);
+		}
 	}
 }

@@ -18,6 +18,7 @@ public class LegislatorInterpretationParser {
 	public static enum State {
 		REASONING("(?i)Reasoning Steps:"),
 		SHORT_REPORT("(?i)Short Report:"),
+		CASUAL_REPORT("(?i)Casual Report:"),
 		LONG_REPORT("(?i)Long Report:"),
 		REFERENCES("(?i)References:");
 
@@ -56,6 +57,8 @@ public class LegislatorInterpretationParser {
 			interp.setShortExplain(interp.getShortExplain() + "\n" + line);
 		} else if (State.LONG_REPORT.equals(state)) {
 			interp.setLongExplain(interp.getLongExplain() + "\n" + line);
+		} else if (State.CASUAL_REPORT.equals(state)) {
+			interp.setCasualExplain(interp.getCasualExplain() + "\n" + line);
 		} else if (State.REASONING.equals(state)) {
 			interp.setReasoning(interp.getReasoning() + "\n" + line);
 		} else if (State.REFERENCES.equals(state)) {

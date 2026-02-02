@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -102,6 +103,8 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	
 	private SessionInterpretation sessionInterp = null;
 	
+	private boolean hasRecalcedLegislators = false;
+	
 	@SneakyThrows
 	public void process(BuildReport report, File input)
 	{
@@ -164,34 +167,24 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	}
 	
 	private void importLegislator(final BatchOpenAIResponse resp) {
-//		if (!resp.getCustomData().contains("D000197")) return;
+		if (!hasRecalcedLegislators) {
+			legInterp.recalculateAllLegislators();
+			hasRecalcedLegislators = true;
+		}
 		
 		val dataset = data.getDataset(resp.getCustomData().getOid());
 		val leg = dataset.get(resp.getCustomData().getOid().replace(LegislatorInterpretation.ID_CLASS_PREFIX, Legislator.ID_CLASS_PREFIX), Legislator.class).orElseThrow();
 		
-//		if (ddb.exists(leg.getId(), Legislator.class)) return;
+		LegislatorInterpretation interp = leg.getInterpretation();
 		
-		legInterp.updateInteractionsInterp(leg);
-		
-		LegislatorInterpretation interp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretation.class)
-				.orElse(new LegislatorInterpretation(leg.getNamespace(), leg.getSessionCode(), leg.getCode(), null, null));
+		if (interp == null)
+			throw new UnsupportedOperationException(leg.getId() + " interpretation was null!");
 		
 		interp.setMetadata(OpenAIService.metadata());
 		interp.setHash(legInterp.calculateInterpHashCode(leg));
 		
-		DoubleIssueStats stats = legInterp.calculateAgregateInteractionStats(leg);
-		interp.setIssueStats(stats.toIssueStats());
-		
 		val interpText = resp.getResponse().getBody().getChoices().get(0).getMessage().getContent();
 		new LegislatorInterpretationParser(interp).parse(interpText);
-		
-		leg.setInteractions(legInterp.getInteractionsForInterpretation(leg).stream()
-				.filter(i -> i.getIssueStats() != null)
-				.sorted((a,b) -> a.getDate().compareTo(b.getDate())).limit(1100).collect(Collectors.toCollection(LegislatorBillInteractionList::new)));
-		
-		leg.setInterpretation(interp);
-		
-		legInterp.calculateImpactAndRating(leg, interp);
 		
 		interp.setLastUpdate(LocalDateTime.now());
 		

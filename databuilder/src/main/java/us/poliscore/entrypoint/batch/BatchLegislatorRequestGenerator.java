@@ -25,8 +25,7 @@ import us.poliscore.ai.OpenAIModel;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.BuildReport;
-import us.poliscore.model.DoubleIssueStats;
-import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.model.IssueStats;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.CongressionalBillType;
@@ -43,19 +42,19 @@ import us.poliscore.service.storage.S3PersistenceService;
 @QuarkusMain(name="BatchLegislatorRequestGenerator")
 public class BatchLegislatorRequestGenerator implements QuarkusApplication
 {
-//	public static final List<String> specificFetch = null;
-	public static final List<String> specificFetch = Arrays.asList(
-			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "C001112"),
-			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "B001267"),
-			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "G000603")
-		);
+	public static final List<String> specificFetch = null;
+//	public static final List<String> specificFetch = Arrays.asList(
+//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "G000596"),
+//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "H001100"),
+//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "B001257")
+//		);
 	
 	public static final LocalDateTime OLDER_THAN = null;
 //	public static final LocalDateTime OLDER_THAN = specificFetch == null ? Period.ofMonths(1) : null;
 //	public static final LocalDateTime OLDER_THAN = LocalDateTime.now().minus(Period.ofMonths(6));
 //	public static final LocalDateTime OLDER_THAN = LocalDate.of(2025, 8, 14).atStartOfDay();
 	
-	public static final int MAX_REQUESTS = specificFetch != null ? -1 : 100;
+	public static final int MAX_REQUESTS = specificFetch != null ? -1 : 600;
 	
 	public static final boolean CHECK_S3_EXISTS = specificFetch == null && OLDER_THAN == null;
 	
@@ -90,9 +89,8 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		
 		int block = 1;
 		
-//		for (PoliscoreDataset dataset : buildDatasets) {
+		for (PoliscoreDatasetIF dataset : data.getBuildDatasets())
 		{
-			PoliscoreDatasetIF dataset = data.getDataset(LegislativeNamespace.US_CONGRESS, 2025);
 			dataset.optimizeExists(s3, LegislatorInterpretation.class);
 			processDataset(dataset, true, block);
 		}
@@ -177,32 +175,36 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 //			}
 //		}
 		
-		legInterp.updateInteractionsInterp(leg);
+		if (leg.getInterpretation() == null) {
+			Log.info("Skipping " + leg.getId() + " because they did not have an interpretation.");
+			return;
+		}
 		
-		DoubleIssueStats stats = legInterp.calculateAgregateInteractionStats(leg);
+		var stats = leg.getInterpretation().getIssueStats();
+		String grade = stats.getLetterGrade(dataset.getConfig().getMultiplier());
 		
 		List<String> billMsgs = new ArrayList<String>();
 		Set<String> includedBills = new HashSet<String>();
 		
 		// Include the top bills which explain the legislator's grade 
-		if (stats.getLetterGrade().equals("A") || stats.getLetterGrade().equals("B"))
+		if (grade.equals("A") || grade.equals("B"))
 			includeBillsByGrade(leg, billMsgs, includedBills, 20, false);
-		else if (stats.getLetterGrade().equals("C")) {
+		else if (grade.equals("C")) {
 			includeBillsByGrade(leg, billMsgs, includedBills, 13, false);
 			includeBillsByGrade(leg, billMsgs, includedBills, 7, true);
-		} else if (stats.getLetterGrade().equals("D")) {
+		} else if (grade.equals("D")) {
 			includeBillsByGrade(leg, billMsgs, includedBills, 7, false);
 			includeBillsByGrade(leg, billMsgs, includedBills, 13, true);
 		} else
 			includeBillsByGrade(leg, billMsgs, includedBills, 20, true);
 		
 		// Include the top bills which explain the legislator's top scoring issues.
-		if (stats.getLetterGrade().equals("A") || stats.getLetterGrade().equals("B"))
+		if (grade.equals("A") || grade.equals("B"))
 			includeBillsByTopIssues(leg, stats, billMsgs, includedBills, 3, false);
-		else if (stats.getLetterGrade().equals("C")) {
+		else if (grade.equals("C")) {
 			includeBillsByTopIssues(leg, stats, billMsgs, includedBills, 2, false);
 			includeBillsByTopIssues(leg, stats, billMsgs, includedBills, 1, true);
-		} else if (stats.getLetterGrade().equals("D")) {
+		} else if (grade.equals("D")) {
 			includeBillsByTopIssues(leg, stats, billMsgs, includedBills, 1, false);
 			includeBillsByTopIssues(leg, stats, billMsgs, includedBills, 2, true);
 		} else
@@ -211,11 +213,12 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		if (includedBills.size() == 0)
 			return;
 		
-		createRequest(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), leg, LegislatorInterpretationService.getAiPrompt(dataset, leg, stats.toIssueStats()), String.join("\n", billMsgs));
+		createRequest(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), leg, LegislatorInterpretationService.getAiPrompt(dataset, leg, stats), String.join("\n", billMsgs));
 	}
 
-	private void includeBillsByTopIssues(Legislator leg, DoubleIssueStats stats, List<String> billMsgs, Set<String> includedBills, int amount, boolean ascending) {
-		
+	private void includeBillsByTopIssues(Legislator leg, IssueStats stats, List<String> billMsgs, Set<String> includedBills, int amount, boolean ascending) {
+		val dataset = data.getDataset(leg.getId());
+		var multiplier = dataset.getConfig().getMultiplier();
 		var issues = Arrays.asList(TrackedIssue.values()).stream().filter(i -> !i.equals(TrackedIssue.OverallBenefitToSociety));
 		
 		if (ascending)
@@ -227,12 +230,12 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		{
 			billMsgs.add("\nLargest Contributors To \"" + issue.getName() + "\" Score:");
 			
-			if (stats.getLetterGrade(issue).equals("A") || stats.getLetterGrade(issue).equals("B"))
+			if (stats.getLetterGrade(issue, multiplier).equals("A") || stats.getLetterGrade(issue, multiplier).equals("B"))
 				includeBillsByIssue(leg, billMsgs, includedBills, issue, 20, false);
-			else if (stats.getLetterGrade(issue).equals("C")) {
+			else if (stats.getLetterGrade(issue, multiplier).equals("C")) {
 				includeBillsByIssue(leg, billMsgs, includedBills, issue, 10, false);
 				includeBillsByIssue(leg, billMsgs, includedBills, issue, 10, true);
-			} else if (stats.getLetterGrade(issue).equals("D")) {
+			} else if (stats.getLetterGrade(issue, multiplier).equals("D")) {
 				includeBillsByIssue(leg, billMsgs, includedBills, issue, 13, true);
 				includeBillsByIssue(leg, billMsgs, includedBills, issue, 7, false);
 			} else
