@@ -45,14 +45,65 @@ import us.poliscore.model.session.SessionInterpretation.PartyBillInteraction;
 import us.poliscore.model.session.SessionInterpretation.PartyInterpretation;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
+// TODO : Allow AI to reference legislators?
 @ApplicationScoped
 public class PartyInterpretationService {
 	public static final String PROMPT_TEMPLATE = """
-			You are part of a U.S. non-partisan oversight committee which has graded the {{partyName}} party for the {{session}}. The evaluations were compiled based on grading every bill within the session, and then aggregating the scores. The party has received the following policy area grades (scores range from -100 to 100):
-			
-			{{stats}}
-			
-			Based on these scores, this party has received the overall letter grade: {{letterGrade}}. You will be given summaries of bills this party has introduced within this session, sorted by two different scoring and sorting mechanisms: rating and impact. Rating was calculated by directly sorting the bills based on the \"Overall Benefit to Society\" metric. Impact is a metric which factors in rating, number of cosponsors, and how far the bill made it through the legislative process (i.e. laws are more important than bills). Highest and lowest rated bills can be useful for knowing what the extremes of the party are up to, versus impact is useful for knowing what the party actually found coalitions around. Please generate a layman's, concise, five paragraph, {{analysisType}}. Begin your first paragraph by focusing on higher level goals, highlighting any {{behavior}}, identifying trends, and pointing out major focuses and priorities of the party. Your next three paragraphs will attempt to explain why the party received the scores they did in the following policy areas: [{{highlightPolicyAreas}}] and should reference specific bill titles (in quotes). Do not include the party's policy area grade scores and do not mention their letter grade in your summary.
+You are part of an independent U.S. legislative watchdog which has used AI with a non-paristan bill evaluation prompt to analyze every bill in the current legislative session. These bill analyses were aggregated up to the political parties and used to evaluate the recent performance of the {{partyName}} party for the {{session}}. You have opinions on policy (derived from the bill analyses) and are not afraid to voice them or take sides. You do not engage in "both sides" analyses. This party has received the following policy area scores (scores range from -100 to 100):
+
+{{stats}}
+
+Based on these scores, this party has received the overall letter grade: {{letterGrade}}. You will be given summaries of bills this party has introduced within this session, sorted by two different scoring and sorting mechanisms: rating and impact.
+
+Rating was calculated by directly sorting the bills based on the \"Overall Benefit to Society\" metric. Impact is a metric which factors in rating, number of cosponsors, and how far the bill made it through the legislative process (i.e. laws are more important than bills). Highest and lowest rated bills can be useful for knowing what the extremes of the party are up to, versus impact is useful for knowing what the party actually found coalitions around.
+
+These bills have already been graded by our system and their grade will be listed first in the summary as a letter grade from A to F. The bill's system id will be provided to you in parentheses, and always starts with BIL/. Here is an example: (BIL/us/congress/119/hr/1).
+
+Bills shall be referenced via a markdown link syntax, where the link URL is the id [name of the bill](BIL/us/congress/119/hr/1). Do not ever use [link] as the description of your link. Bills which were not included in your bill interaction summaries may be referenced by understanding our predictable id system:
+1. A bill id always starts with BIL/
+2. The namespace (follows next after BIL/) for congress is always 'us/congress'. For states, it is 'us/' followed by the state code. For Colorado this is 'us/co'. For Arizona it is 'us/az'.
+3. Next comes the 'session code'. For congress this is '119' for the 119th congress. '118' for the 118th congress. State legislatures are unfortunately more complicated; the number here is the legiscan session id, which you should be able to infer from the provided bill interaction summaries.
+4. Lastly comes the chamber code and the bill number. For congress, the chamber code may be 'hr' (for house of representatives), 's' for senate, or sjres / hjres. For state legislatures, this is typically one of: hb, sb, hcr, etc. 
+Remember: your links must STRICTLY adhere to markdown link syntax. That means [description](id).
+
+In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Short Report:') in your response. Do not include the section instructions in your response. Do not include the party's policy area grade scores and do not mention their letter grade. Your target audience is voters in the general public and may span a wide variety of educational and cultural backgrounds. Avoid using politically divisive words or phrases (such as 'social equity'). Use direct, plain language. Avoid hedging phrases (e.g., “some say,” “it could be argued”). Do not balance for its own sake; weight conclusions by evidence. When asked to provide links or research, do not ever invent them.
+
+Reasoning Steps:
+This is your first section, and it includes several steps. You are to fill out each step in your response, thinking carefully at each step. By the end of this reasoning section, you will have developed a more informed and accurate analysis which you will use to fill out the final analysis sections.
+
+Step 1. Identify a right-wing narrative and a left-wing narrative in public discourse. What do people like about this party? What do they dislike? Is there any relevant news coverage or national events which may have been written about this party? Is the coverage positive? Negative?
+Step 2. Identify the party's point of view. You can fetch this from social media, their official website and any official government sources. 
+Step 3. Identify patterns in their recent policy history, which has already been sorted and grouped for you.
+Step 4. Query the web to find out the media's current coverage of this party. Are there any recent controversies or achievements? Take care not to introduce partisan bias into the analysis at this step.
+Step 5. Identify any problematic or synergistic relationships with funders.
+Step 6. Identify an over-arching narrative, in alignment with the grade they have already received. This narrative should pull-in all the information we previously referenced and should attempt to form a high-level analysis of the party and their activity. If the party received an F score, create a narrative about why this philosophy is wrong and why it's causing harm to society. If they received a D score, provide an evidence-led mostly-disapproving critique, stressing the substantial shortcomings. If they received a C score, provide a balanced view of both notable strengths and weaknesses. If they received a B score, focus on their strengths while briefly mentioning minor areas of improvement. A scores should receive glowing commendations.
+
+Long Report:
+Generate a {{analysisType}}. Your report shall be 5 paragraph long, the content of which is as follows:
+1. Your first paragraph will be a high level summary of the party's recent work. This summary needs to condense all the research you’ve previously done into easy, digestable talking points, pointing out major focuses, priorities and values of the party and highlighting any {{behavior}}. Mention any higher level philosophies or groups that they may subscribe or belong to. Write your most noteworthy and interesting information here, we want to hook the reader early.
+2. Illuminate exactly why this party received the scores they did with a concrete policy analysis. Mention how the policy aligns with their stated campaign goals, and where that policy aligns (or doesn't) with the needs of their constituents. If prominent constituents or groups have commented publicly on their policy, mention that here. Refrain from listing more than ten bills here, we want overall trends and notable bills (not just a dump of bills), especially if they align with painting a larger picture or focus of the party's work. 
+3. Document your findings from your news/web research, providing concrete links to articles where relevant.
+4. Identify who typically funds their campaigns, mentioning a few big ones and highlighting overall trends. If you found any problematic or synergistic relationships with funders make sure to mention them.
+5. Conclude by painting a picture of their impact to society, both unrealized (proposed but not law), and realized.
+When referring to the party, please use their name, rather than "the party". You may use markdown to format your text, linking to concrete sources where appropriate. Bills shall be referenced via a markdown link syntax, where the link URL is the id [name of the bill](BIL/us/congress/119/hr/1). Do not ever use [link] as the description of your link. Your tone here should be professional yet approachable. We want these concepts to be easy to digest for your average person whilst also respecting the integrity of the analysis. Don't lead each paragraph with 'Impact:', 'Policy analysis:', or 'What’s the coverage?'. These paragraphs should flow like natural writing. The overall tone must track the grade; for D, use a measured, evidence-first tone that underscores major shortcomings.
+Before printing this line, internally verify that all your links are using the correct syntax.
+
+Casual Report:
+Your audience is the general public, written at the high-school education level. Your primary goal here is to take the insights from the long report and make them available for your average person. Begin by explaining the high level goals of the party and a high level summary of how they attempted to achieve those goals. Then, explain all the essential logic required to understand their predicted impact to society, including any research, expert opinions, societal wisdom and/or any competing concerns which may exist. Conclude with your findings. Should be between one and three paragraphs long, depending on the complexity of their history and the topics covered (controversial topics require more evidence to support your conclusions). Do not use acronyms, such as GPO, CBO, etc. If you must use them, they must be defined. You may link to sources using markdown link syntax, where relevant. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
+
+Short Report:
+Generate a layman's, concise, single sentence describing the primary focuses of the party, not more than 150 characters. Should start with "Focuses on". Should not include the name of the party. Do not include any formatting text such as stars or dashes.
+
+References:
+Your written response for this research section should consist of only a compact JSON array of references, on a single line, of the following format:
+[ { "type": "MISCONDUCT | STAKEHOLDER | NEWS | FUNDER", "source": "Name of the source of the information", "date": "yyyy/mm/dd", "description": "A description of the resource", "url": "http://example.com" } ]
+
+1. MISCONDUCT: Any misconduct events that may have happened with this party. This includes formal misconduct reprimands by a comittee or the legislature, as well as any misconduct which might be highlighted by official medial organizations.
+2. STAKEHOLDER: Official policy objectives and narratives from the party's official website and/or social media which might give higher-level context into their policy decisions
+3. NEWS: Any newsworthy events which might include the party
+4. FUNDER: Find out who is funding this party's campaigns
+
+Before printing the final line, internally verify the output is a JSON array of objects; each object contains exactly the keys: type, source, date, description, url; every value is a string; type is one of MISCONDUCT | STAKEHOLDER | NEWS | FUNDER; date is formatted yyyy/mm/dd. If not, correct it until it passes.
 			""";
 	
 	public static final OpenAIModel partyInterpModel = OpenAIModel.DEFAULT_MODEL;
@@ -69,7 +120,31 @@ public class PartyInterpretationService {
 	
 	private HashMap<Party, Map<TrackedIssue, PriorityQueue<PartyBillInteraction>>> worstBillsByIssue;
 	
-	public List<InterpretationRequest> process(List<PoliscoreDatasetIF> buildDatasets) throws IOException
+	public void recalculateDatasets(List<PoliscoreDatasetIF> buildDatasets) {
+		for (var dataset : buildDatasets) {
+			var newInterp = recalculateStats(dataset);
+			
+			// If there's an existing interp, copy the values over
+			val oldInterp = s3.get(SessionInterpretation.generateId(dataset.getNamespace(), dataset.getCode()), SessionInterpretation.class).orElse(null);
+			if (oldInterp != null) {
+				newInterp.setMetadata(oldInterp.getMetadata());
+				
+				for (var party : Party.values()) {
+					newInterp.getPartyInterp(party).setLongExplain(oldInterp.getPartyInterp(party).getLongExplain());
+					newInterp.getPartyInterp(party).setShortExplain(oldInterp.getPartyInterp(party).getShortExplain());
+					newInterp.getPartyInterp(party).setReasoning(oldInterp.getPartyInterp(party).getReasoning());
+					newInterp.getPartyInterp(party).setCasualExplain(oldInterp.getPartyInterp(party).getCasualExplain());
+					newInterp.getPartyInterp(party).setReferences(oldInterp.getPartyInterp(party).getReferences());
+				}
+			}
+			
+			if (newInterp.isComplete(dataset.hasIndependentPartyMembers())) {
+				dataset.put(newInterp);
+			}
+		}
+	}
+	
+	public List<InterpretationRequest> interpret(List<PoliscoreDatasetIF> buildDatasets) throws IOException
 	{
 		for (val dataset : buildDatasets) {
 			val hasIndependent = dataset.hasIndependentPartyMembers();
@@ -142,7 +217,7 @@ public class PartyInterpretationService {
 				val party = sponsor.getTerms().last().getParty();
 				val partyCosponsors = b.getCosponsors().stream().filter(sp -> dataset.exists(sp.getId(), Legislator.class) && dataset.get(sp.getId(), Legislator.class).get().getParty().equals(party)).toList();
 						
-				val pbi = new PartyBillInteraction(b.getId(), b.getName(), b.getStatus(), b.getType(), b.getIntroducedDate(), b.getSponsor(), partyCosponsors, b.getRating(), b.getImpact(), interp.getShortExplain());
+				val pbi = new PartyBillInteraction(b.getId(), b.getName(), b.getStatus(), b.getType(), b.getIntroducedDate(), b.getSponsor(), partyCosponsors, b.getRating(), b.getImpact(), b.getInterpretation().getIssueStats().getLetterGrade(dataset.getConfig().getMultiplier()), interp.getShortExplain());
 				mostImpactfulBills.get(party).add(pbi);
 				leastImpactfulBills.get(party).add(pbi);
 				bestBills.get(party).add(pbi);
@@ -150,17 +225,19 @@ public class PartyInterpretationService {
 				
 				for(val issue : TrackedIssue.values())
 				{
-					var issuePbi = new PartyBillInteraction(b.getId(), b.getName(), b.getStatus(), b.getType(), b.getIntroducedDate(), b.getSponsor(), partyCosponsors, interp.getIssueStats().getStat(issue), b.getImpact(issue), interp.getShortExplain());
+					var issuePbi = new PartyBillInteraction(b.getId(), b.getName(), b.getStatus(), b.getType(), b.getIntroducedDate(), b.getSponsor(), partyCosponsors, interp.getIssueStats().getStat(issue), b.getImpact(issue), b.getInterpretation().getIssueStats().getLetterGrade(dataset.getConfig().getMultiplier()), interp.getShortExplain());
 					bestBillsByIssue.get(party).get(issue).offer(issuePbi);
 					worstBillsByIssue.get(party).get(issue).offer(issuePbi);
 				}
+				
+				val ps = doublePartyStats.get(party);
+				doublePartyStats.put(party, ps.sum(interp.getIssueStats().toDoubleIssueStats()));
 			}
 		}
 		for (val l : dataset.query(Legislator.class)) {
-			val op = s3.get(LegislatorInterpretation.generateId(sessionStats.getSession().getNamespace(), sessionStats.getSession().getCode(), l.getCode()), LegislatorInterpretation.class);
+			val legInterp = l.getInterpretation();
 			
-			if (op.isPresent()) {
-				val interp = op.get();
+			if (legInterp != null && legInterp.getRating() != null) {
 				val party = l.getParty();
 				
 				l.clearInteractions();
@@ -169,13 +246,12 @@ public class PartyInterpretationService {
 				l.getTerms().clear();
 				l.getTerms().add(t);
 				
-				l.setInterpretation(interp);
-				
 				bestLegislators.get(party).add(l);
 				worstLegislators.get(party).add(l);
 				
-				val ps = doublePartyStats.get(party);
-				doublePartyStats.put(party, ps.sum(interp.getIssueStats().toDoubleIssueStats()));
+				// Party stats are better if they're simply an aggregate of the bills
+//				val ps = doublePartyStats.get(party);
+//				doublePartyStats.put(party, ps.sum(legInterp.getIssueStats().toDoubleIssueStats()));
 			}
 		}
 		
@@ -256,7 +332,7 @@ public class PartyInterpretationService {
 				msg.add(StringUtils.join(queueTake(10, worstBillsByIssue.get(interp.getParty()).get(issue)).stream().map(i -> i.getShortExplainForInterp()).toArray(), "\n"));
 		}
 		
-		createRequest(dataset.getRegularSession().getKey(), interp.getParty(), PartyInterpretationService.getAiPrompt(dataset.getRegularSession(), interp.getParty(), interp.getStats()), StringUtils.join(msg, "\n"));
+		createRequest(dataset.getRegularSession().getKey(), interp.getParty(), PartyInterpretationService.getAiPrompt(dataset, dataset.getRegularSession(), interp.getParty(), interp.getStats()), StringUtils.join(msg, "\n"));
 	}
 	
 	private List<PartyBillInteraction> queueTake(int amt, PriorityQueue<PartyBillInteraction> queue)
@@ -318,8 +394,8 @@ public class PartyInterpretationService {
 		return highlightPolicyAreas;
 	}
 	
-	public static String getAiPrompt(LegislativeSession session, Party party, IssueStats stats) {
-		val grade = stats.getLetterGrade(1.0f);
+	public static String getAiPrompt(PoliscoreDatasetIF dataset, LegislativeSession session, Party party, IssueStats stats) {
+		val grade = stats.getLetterGrade(dataset.getConfig().getMultiplier());
 		
 		String sessionName;
 		if (session.getNamespace().equals(LegislativeNamespace.US_CONGRESS))

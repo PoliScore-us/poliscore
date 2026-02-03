@@ -110,7 +110,7 @@ public class IssueStats {
 	
 	@JsonIgnore
 	public String getLetterGrade(TrackedIssue issue, float datasetMultiplier) {
-		double credit = this.getStat(issue);
+		double credit = this.getStat(issue) * datasetMultiplier;
 		
 		if (credit >= 40) return "A";
 		else if (credit >= 30 && credit < 40) return "B";

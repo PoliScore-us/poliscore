@@ -4,6 +4,9 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
+
+import org.apache.commons.lang3.StringUtils;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -25,12 +28,14 @@ import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Party;
 import us.poliscore.model.Persistable;
+import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill.BillSponsor;
 import us.poliscore.model.bill.BillStatus;
 import us.poliscore.model.dynamodb.DdbDataPage;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.AIInterpretationMetadataConverter;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.LegislatorBillInteractionSetConverterProvider;
 import us.poliscore.model.legislator.Legislator;
+import us.poliscore.util.ParsingUtil;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.CompressedPartyStatsConverter;
 
 @Data
@@ -88,6 +93,14 @@ public class SessionInterpretation implements Persistable {
 		@NonNull
 		protected String longExplain;
 		
+		protected String shortExplain;
+		
+		protected String casualExplain;
+		
+		protected String reasoning;
+		
+		protected String references;
+		
 		@NonNull
 		protected PartyBillSet mostImportantBills = new PartyBillSet();
 		
@@ -105,6 +118,31 @@ public class SessionInterpretation implements Persistable {
 		
 		@NonNull
 		protected PartyLegislatorSet worstLegislators = new PartyLegislatorSet();
+		
+		public void validate()
+		{
+			if (StringUtils.isBlank(getLongExplain()))
+				throw new IllegalStateException("Long explain was blank for " + party.getName());
+			
+			if (StringUtils.isBlank(getShortExplain()))
+				throw new IllegalStateException("Short explain was blank for " + party.getName());
+			
+			if (StringUtils.isBlank(getCasualExplain()))
+				throw new IllegalStateException("Casual explain was blank for " + party.getName());
+			
+			if (ParsingUtil.containsJson(longExplain))
+				throw new IllegalStateException("longExplain contained json for " + party.getName());
+			
+			if (ParsingUtil.containsJson(shortExplain))
+				throw new IllegalStateException("shortExplain contained json for " + party.getName());
+			
+			if (ParsingUtil.containsJson(casualExplain))
+				throw new IllegalStateException("casualExplain contained json for " + party.getName());
+			
+			if (stats == null || !stats.hasStat(TrackedIssue.OverallBenefitToSociety)) {
+				throw new IllegalStateException("Unable to parse valid issue stats for " + party.getName());
+			}
+		}
 	}
 	
 	@Data
@@ -116,7 +154,7 @@ public class SessionInterpretation implements Persistable {
 	public static class PartyBillInteraction implements Comparable<PartyBillInteraction>
 	{
 		@NonNull
-		protected String id;
+		protected String billId;
 		
 		@NonNull
 		@EqualsAndHashCode.Exclude
@@ -146,12 +184,16 @@ public class SessionInterpretation implements Persistable {
 		protected Integer impact;
 		
 		@EqualsAndHashCode.Exclude
+		@NonNull
+		protected String letterGrade;
+		
+		@EqualsAndHashCode.Exclude
 		protected String shortExplain;
 		
 		@DynamoDbIgnore
 		@JsonIgnore
 		public String getShortExplainForInterp() {
-			return "- " + this.name + " (" + billStatus.getDescription() + ") (" + (cosponsors.size()) + " cosponsors" + getCosponsorPartyDescription() + ")" + ": " + this.shortExplain;
+			return "- " + " \"" + name + "\" (Grade: " + letterGrade + ") (" + cosponsors.size() + " cosponsors" + getCosponsorPartyDescription() + ") (" + billStatus.getDescription() + ") (" + billId + "): " + shortExplain;
 		}
 		
 		protected String getCosponsorPartyDescription() {
@@ -199,6 +241,25 @@ public class SessionInterpretation implements Persistable {
 
 		public PartyLegislatorSet(Collection c) {
 			super(c);
+		}
+	}
+
+	public boolean isComplete(boolean hasIndependent) {
+		if (hasIndependent)
+			return democrat != null && democrat.longExplain != null && republican != null && republican.longExplain != null && independent != null && independent.longExplain != null;
+		else
+			return democrat != null && democrat.longExplain != null && republican != null && republican.longExplain != null;
+	}
+
+	public PartyInterpretation getPartyInterp(Party party) {
+		if (Party.REPUBLICAN.equals(party)) {
+			return republican;
+		} else if (Party.INDEPENDENT.equals(party)) {
+			return independent;
+		} else if (Party.DEMOCRAT.equals(party)) {
+			return democrat;
+		} else {
+			throw new UnsupportedOperationException(party != null ? party.getName() : "null");
 		}
 	}
 }

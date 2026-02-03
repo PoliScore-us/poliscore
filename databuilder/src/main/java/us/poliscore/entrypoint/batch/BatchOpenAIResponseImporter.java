@@ -6,11 +6,11 @@ import java.io.FileReader;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -25,7 +25,6 @@ import jakarta.inject.Inject;
 import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.val;
-import us.poliscore.PartyBillLinker;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
 import us.poliscore.ai.BatchOpenAIResponse;
@@ -41,14 +40,13 @@ import us.poliscore.model.bill.BillInterpretationParser;
 import us.poliscore.model.bill.BillSlice;
 import us.poliscore.model.bill.BillText;
 import us.poliscore.model.legislator.Legislator;
-import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
 import us.poliscore.model.legislator.LegislatorInterpretation;
 import us.poliscore.model.legislator.LegislatorInterpretationParser;
+import us.poliscore.model.party.PartyInterpretationParser;
 import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.model.press.PressInterpretationParser;
 import us.poliscore.model.session.SessionInterpretation;
 import us.poliscore.model.session.SessionInterpretation.PartyInterpretation;
-import us.poliscore.model.session.SessionInterpretationOld;
 import us.poliscore.parsing.BillSlicer;
 import us.poliscore.parsing.XMLBillSlicer;
 import us.poliscore.service.BillService;
@@ -101,7 +99,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	
 	private List<Bill> interpretedBillsWithErrors = new ArrayList<Bill>();
 	
-	private SessionInterpretation sessionInterp = null;
+	private Map<String,SessionInterpretation> sessionInterpMap = new HashMap<String, SessionInterpretation>();
 	
 	private boolean hasRecalcedLegislators = false;
 	
@@ -132,7 +130,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 					importLegislator(resp);
 				} else if (resp.getCustomData().getOid().startsWith(PressInterpretation.ID_CLASS_PREFIX)) {
 					importPressInterp(resp);
-				} else if (resp.getCustomData().getOid().startsWith(SessionInterpretationOld.ID_CLASS_PREFIX)) {
+				} else if (resp.getCustomData().getOid().startsWith(SessionInterpretation.ID_CLASS_PREFIX)) {
 					importParty(resp);
 				} else {
 					throw new UnsupportedOperationException("Unexpected object type " + resp.getCustom_id());
@@ -146,9 +144,13 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			}
 		}
 		
-		if (sessionInterp != null) {
-			s3.put(sessionInterp);
-			ddb.put(sessionInterp);
+		for (var sessionInterp : sessionInterpMap.values()) {
+			val dataset = data.getDataset(sessionInterp.getId());
+			if (sessionInterp.isComplete(dataset.hasIndependentPartyMembers())) {
+				dataset.put(sessionInterp);
+				s3.put(sessionInterp);
+				ddb.put(sessionInterp);
+			}
 		}
 		
 		if (erroredLines.size() > 0) {
@@ -195,27 +197,39 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	private void importParty(final BatchOpenAIResponse resp) {
 		val dataset = data.getDataset(resp.getCustomData().getOid());
 		
-		if (sessionInterp == null) {
+		// SIT/us/co/2243/DEMOCRAT
+		String sessionKey = resp.getCustomData().getOid().split("/")[1] + "/" + resp.getCustomData().getOid().split("/")[2] + "/" + resp.getCustomData().getOid().split("/")[3];
+		String partyName = resp.getCustomData().getOid().split("/")[4];
+		
+		SessionInterpretation sessionInterp;
+		if (!sessionInterpMap.containsKey(sessionKey)) {
+			if (!hasRecalcedLegislators) {
+				legInterp.recalculateAllLegislators();
+				hasRecalcedLegislators = true;
+			}
+			
 			sessionInterp = partyService.recalculateStats(dataset);
+		} else {
+			sessionInterp = sessionInterpMap.get(sessionKey);
 		}
-		val interpText = resp.getResponse().getBody().getChoices().get(0).getMessage().getContent();
 		
 		PartyInterpretation partyInterp;
-		
-		if (resp.getCustomData().getOid().contains(Party.DEMOCRAT.name())) {
+		if (partyName.equals(Party.DEMOCRAT.name())) {
 			partyInterp = sessionInterp.getDemocrat();
-		} else if (resp.getCustomData().getOid().contains(Party.REPUBLICAN.name())) {
+		} else if (partyName.equals(Party.REPUBLICAN.name())) {
 			partyInterp = sessionInterp.getRepublican();
-		} else if (resp.getCustomData().getOid().contains(Party.INDEPENDENT.name())) {
+		} else if (partyName.equals(Party.INDEPENDENT.name())) {
 			partyInterp = sessionInterp.getIndependent();
 		} else {
 			throw new UnsupportedOperationException();
 		}
 		
-		partyInterp.setLongExplain(interpText);
-		PartyBillLinker.linkPartyBillsSinglePass(partyInterp, sessionInterp, dataset, s3);
+		val interpText = resp.getResponse().getBody().getChoices().get(0).getMessage().getContent();
+		new PartyInterpretationParser(partyInterp).parse(interpText);
 		
 		sessionInterp.setMetadata(OpenAIService.metadata());
+		
+		sessionInterpMap.put(sessionKey, sessionInterp);
 	}
 
 	@SneakyThrows

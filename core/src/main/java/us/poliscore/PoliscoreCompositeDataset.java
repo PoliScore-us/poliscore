@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import lombok.val;
 import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.dataset.PoliscoreDatasetIF;
@@ -18,6 +21,8 @@ import us.poliscore.service.storage.S3PersistenceService;
 
 public class PoliscoreCompositeDataset implements ObjectStorageServiceIF, PoliscoreDatasetIF {
 
+	protected Logger logger = LoggerFactory.getLogger(PoliscoreCompositeDataset.class);
+	
 	protected List<PoliscoreDatasetIF> datasets = new ArrayList<>();
 	
 	protected DeploymentConfig config;
@@ -50,11 +55,16 @@ public class PoliscoreCompositeDataset implements ObjectStorageServiceIF, Polisc
 
 	@Override
 	public <T extends Persistable> void put(T obj) {
-//		for (ObjectStorageServiceIF dataset : datasets) {
-//			dataset.put(obj);
-//		}
+		for (var dataset : datasets) {
+			if (((PoliscoreDataset)dataset).getSession().isRegular()) {
+				dataset.put(obj);
+				return;
+			}
+		}
 		
-		throw new UnsupportedOperationException("TODO : Composite dataset is read only (for now)");
+		// If we couldn't find a "regular session" dataset, just grab the first one.
+		logger.error("Not sure which dataset to add to... Picking a random one. This might be a bug?");
+		datasets.get(0).put(obj);
 	}
 
 	@Override

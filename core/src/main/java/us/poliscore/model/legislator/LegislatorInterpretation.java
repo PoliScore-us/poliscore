@@ -67,13 +67,25 @@ public class LegislatorInterpretation extends SessionPersistable
 	
 	public void validate()
 	{
+		if (StringUtils.isBlank(getLongExplain()))
+			throw new IllegalStateException("Long explain was blank for " + getId());
+		
+		if (StringUtils.isBlank(getShortExplain()))
+			throw new IllegalStateException("Short explain was blank for " + getId());
+		
+		if (StringUtils.isBlank(getCasualExplain()))
+			throw new IllegalStateException("Casual explain was blank for " + getId());
+		
 		if (ParsingUtil.containsJson(longExplain))
 			throw new IllegalStateException("longExplain contained json for " + getId());
 		
 		if (ParsingUtil.containsJson(shortExplain))
-			throw new IllegalStateException("longExplain contained json for " + getId());
+			throw new IllegalStateException("shortExplain contained json for " + getId());
 		
-		if (getIssueStats() == null || !getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety) || StringUtils.isBlank(getLongExplain())) {
+		if (ParsingUtil.containsJson(casualExplain))
+			throw new IllegalStateException("casualExplain contained json for " + getId());
+		
+		if (getIssueStats() == null || !getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety)) {
 			throw new IllegalStateException("Unable to parse valid issue stats for " + getId());
 		}
 	}

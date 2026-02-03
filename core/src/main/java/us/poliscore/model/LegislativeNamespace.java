@@ -113,6 +113,14 @@ public enum LegislativeNamespace {
 		return LegiscanState.fromAbbreviation(toAbbreviation());
 	}
 	
+	/**
+	 * MUST return empty string for congress. Otherwise, returns 'toAbbreviation'.
+	 * @return
+	 */
+	public String getStateCode() {
+		return getNamespace().equals(LegislativeNamespace.US_CONGRESS) ? "" : toAbbreviation();
+	}
+	
 	@Override
     @JsonValue
     public String toString() {
