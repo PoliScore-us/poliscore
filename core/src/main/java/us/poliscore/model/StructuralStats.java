@@ -65,6 +65,7 @@ public class StructuralStats {
 	public void addStat(StructuralAnalysis issue, double value)
 	{
 		stats.put(issue, getStat(issue) + value);
+		totalSummed = totalSummed + 1;
 	}
 	
 //	public StructrualStats sum(StructrualStats incoming)

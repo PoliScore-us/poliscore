@@ -31,6 +31,7 @@ import us.poliscore.model.Party;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
+import us.poliscore.model.bill.StructuralAnalysis;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.session.SessionInterpretation;
 import us.poliscore.model.session.SessionInterpretation.PartyBillInteraction;
@@ -263,8 +264,8 @@ Before printing the final line, internally verify the output is a JSON array of 
 				val ps = doublePartyStats.get(party);
 				doublePartyStats.put(party, ps.sum(interp.getIssueStats().toDoubleIssueStats()));
 				
-				// TODO
-//				partyStats.get(party).getStructuralStats().
+				if (interp.getStructuralAnalysisPassFail() != null)
+					partyStats.get(party).setStructuralStats(partyStats.get(party).getStructuralStats().addAll(interp.getStructuralAnalysisPassFail()));
 			}
 		}
 		for (val l : dataset.query(Legislator.class)) {
@@ -309,6 +310,8 @@ Before printing the final line, internally verify the output is a JSON array of 
 				if (!bestLegislators.get(party).isEmpty()) ps.getBestLegislators().add(bestLegislators.get(party).poll());
 				if (!worstLegislators.get(party).isEmpty()) ps.getWorstLegislators().add(worstLegislators.get(party).poll());
 			}
+			
+			ps.setStructuralStats(ps.getStructuralStats().divideByTotalSummed());
 		}
 		
 		sessionStats.setDemocrat(partyStats.get(Party.DEMOCRAT));

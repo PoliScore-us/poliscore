@@ -106,8 +106,10 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	protected void initialDataSetup(List<PoliscoreDatasetIF> buildDatasets) {
 		for (val dataset : buildDatasets) {
-//			data.syncS3LegislatorImages(dataset);
-//			data.syncS3BillText(dataset);
+			if (INTERPRET_NEW_BILLS) {
+				data.syncS3LegislatorImages(dataset); // TODO : Doesn't really belong in this if switch but it works for my current usecases
+				data.syncS3BillText(dataset);
+			}
 			
 			dataset.optimizeExists(s3, BillInterpretation.class);
 			dataset.optimizeExists(s3, LegislatorInterpretation.class);
