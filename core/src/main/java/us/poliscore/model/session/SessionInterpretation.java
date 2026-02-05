@@ -4,10 +4,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
@@ -28,15 +28,16 @@ import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Party;
 import us.poliscore.model.Persistable;
+import us.poliscore.model.StructuralStats;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill.BillSponsor;
 import us.poliscore.model.bill.BillStatus;
 import us.poliscore.model.dynamodb.DdbDataPage;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.AIInterpretationMetadataConverter;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.LegislatorBillInteractionSetConverterProvider;
+import us.poliscore.model.dynamodb.JacksonAttributeConverter.CompressedPartyStatsConverter;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.util.ParsingUtil;
-import us.poliscore.model.dynamodb.JacksonAttributeConverter.CompressedPartyStatsConverter;
 
 @Data
 @DynamoDbBean
@@ -101,6 +102,8 @@ public class SessionInterpretation implements Persistable {
 		
 		protected String references;
 		
+		protected StructuralStats structuralStats = new StructuralStats();
+		
 		@NonNull
 		protected PartyBillSet mostImportantBills = new PartyBillSet();
 		
@@ -153,8 +156,10 @@ public class SessionInterpretation implements Persistable {
 	@EqualsAndHashCode
 	public static class PartyBillInteraction implements Comparable<PartyBillInteraction>
 	{
+		// Lots of existing assumptions that this is the bill id.
 		@NonNull
-		protected String billId;
+		@JsonAlias("billId")
+		protected String id;
 		
 		@NonNull
 		@EqualsAndHashCode.Exclude
@@ -193,7 +198,7 @@ public class SessionInterpretation implements Persistable {
 		@DynamoDbIgnore
 		@JsonIgnore
 		public String getShortExplainForInterp() {
-			return "- " + " \"" + name + "\" (Grade: " + letterGrade + ") (" + cosponsors.size() + " cosponsors" + getCosponsorPartyDescription() + ") (" + billStatus.getDescription() + ") (" + billId + "): " + shortExplain;
+			return "- " + " \"" + name + "\" (Grade: " + letterGrade + ") (" + cosponsors.size() + " cosponsors" + getCosponsorPartyDescription() + ") (" + billStatus.getDescription() + ") (" + id + "): " + shortExplain;
 		}
 		
 		protected String getCosponsorPartyDescription() {

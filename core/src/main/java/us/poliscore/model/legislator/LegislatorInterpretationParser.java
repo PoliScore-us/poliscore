@@ -35,8 +35,10 @@ public class LegislatorInterpretationParser {
 
 	public void parse(String text) {
 		interp.setShortExplain("");
+		interp.setCasualExplain("");
 		interp.setLongExplain("");
 		interp.setReasoning("");
+		interp.setReferences("");
 
 		try (final Scanner scanner = new Scanner(text)) {
 			while (scanner.hasNextLine()) {
