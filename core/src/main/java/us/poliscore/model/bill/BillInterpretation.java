@@ -34,6 +34,7 @@ import us.poliscore.model.dynamodb.JacksonAttributeConverter.AIInterpretationMet
 import us.poliscore.model.dynamodb.StructuralAnalysisExplainAttributeConverter;
 import us.poliscore.model.dynamodb.StructuralAnalysisPassFailAttributeConverter;
 import us.poliscore.model.press.PressInterpretation;
+import us.poliscore.util.ParsingUtil;
 
 @Data
 @EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
@@ -172,11 +173,11 @@ public class BillInterpretation extends SessionPersistable
 		
 		issueStats.validate();
 		
-		strValidate(getLongExplain(), "long explain", 15_000);
+		ParsingUtil.strValidate(getLongExplain(), "long explain", 15_000);
 		
 		if (getSliceIndex() == null) {
-			strValidate(getLaymansReport(), "casual report", 6000);
-			strValidate(getShortExplain(), "short explain", 3000);
+			ParsingUtil.strValidate(getLaymansReport(), "casual report", 6000);
+			ParsingUtil.strValidate(getShortExplain(), "short explain", 3000);
 		}
 		
 		if (structuralAnalysisExplain.size() != StructuralAnalysis.values().length)
@@ -186,22 +187,11 @@ public class BillInterpretation extends SessionPersistable
 			throw new RuntimeException("Structural analysis pass fail missing");
 		
 		for (var sa : StructuralAnalysis.values()) {
-			strValidate(structuralAnalysisExplain.get(sa), "structural analysis pillar [" + sa.name() + "]", 3000);
+			ParsingUtil.strValidate(structuralAnalysisExplain.get(sa), "structural analysis pillar [" + sa.name() + "]", 3000);
 			
 			if (structuralAnalysisPassFail.get(sa) == null)
 				throw new RuntimeException("Structural analysis pillar [" + sa.name() + "] pass/faill was null");
 		}
-	}
-	
-	private void strValidate(String str, String attrName, int maxLen) {
-		if (StringUtils.isBlank(str))
-			throw new RuntimeException(attrName + " was blank");
-		
-		if (str.length() > maxLen)
-			throw new RuntimeException(attrName + " exceeded max length [" + str.length() + "]");
-		
-		if (str.contains("[[\"") || str.contains("\"]]"))
-			throw new RuntimeException(attrName + " contained 'json-like' syntax.");
 	}
 	
 	@JsonIgnore

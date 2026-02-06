@@ -60,7 +60,7 @@ Bills shall be referenced via a markdown link syntax, where the link URL is the 
 Remember: your links must STRICTLY adhere to markdown link syntax. That means [description](id).
 
 During your internal reasoning process (do not output), you may want to start by prioritizing completeness of information. This may result in overflowing the requested report length and/or "conciseness" rules. As you progress in your reasoning process, slim the content until it adheres to the specifications, prioritizing retaining important, novel or compelling narratives and traceability from shocking claim to reputable evidence. Your final output must adhere to the following specifications (refer to this when deciding if you are finished reasoning):
-1. All sections of this prompt must be filled out
+1. All sections of this prompt must be filled out, and each section body must be printed with its header.
 2. The long report must be exactly 5, concise paragraphs, with novel or compelling narratives and traceability from claim to evidence. The casual report should be between one and three paragraphs.
 3. The references section is valid JSON and follows the specified format (more on that later)
 4. All links are using the correct syntax

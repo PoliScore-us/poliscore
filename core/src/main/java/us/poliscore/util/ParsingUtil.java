@@ -6,6 +6,8 @@ import java.util.Deque;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.StringUtils;
+
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
@@ -51,40 +53,73 @@ public class ParsingUtil {
      */
     public static boolean containsJson(String text) {
         if (text == null) return false;
+        
+        if (anyLineStartsWithArrayJson(text)) return true;
 
         // Fast prefilter: must contain an opening brace/bracket and a colon (very common in JSON)
-        if (!containsAny(text, '{', '[', ':')) return false;
+//        if (!containsAny(text, '{', '[', ':')) return false;
 
-        for (String candidate : extractBraceBlocks(text)) {
-            if (candidate.length() < MIN_CANDIDATE_LEN) continue;
+//        for (String candidate : extractBraceBlocks(text)) {
+//            if (candidate.length() < MIN_CANDIDATE_LEN) continue;
+//
+//            if (!OBJECT_LIKE_REGEX.matcher(candidate).find() &&
+//                !ARRAY_LIKE_REGEX.matcher(candidate).find()) {
+//                continue; // must at least look like an object/array wrapper
+//            }
+//
+//            if (!hasReasonableStructuralDensity(candidate)) continue;
+//
+//            // Strong signals: quoted keys with colon, and at least one plausible value form
+//            int kvHits = countMatches(KEY_VALUE_REGEX, candidate);
+//            boolean hasQuotedKey = QUOTED_KEY_REGEX.matcher(candidate).find();
+//
+//            if (kvHits >= MIN_KEY_VALUE_HITS && hasQuotedKey) {
+//                return true; // confident enough
+//            }
+//
+//            // Slightly looser fallback: objects with many commas/colons and some quoted text
+//            if (isLooselyJsonish(candidate)) {
+//                return true;
+//            }
+//        }
 
-            if (!OBJECT_LIKE_REGEX.matcher(candidate).find() &&
-                !ARRAY_LIKE_REGEX.matcher(candidate).find()) {
-                continue; // must at least look like an object/array wrapper
-            }
+        return false;
+    }
+    
+    public static void strValidate(String str, String attrName, int maxLen) {
+		if (StringUtils.isBlank(str))
+			throw new RuntimeException(attrName + " was blank");
+		
+		if (str.length() > maxLen)
+			throw new RuntimeException(attrName + " exceeded max length [" + str.length() + "]");
+		
+		if (ParsingUtil.containsJson(str))
+			throw new RuntimeException(attrName + " contained 'json-like' syntax.");
+	}
 
-            if (!hasReasonableStructuralDensity(candidate)) continue;
+    // =========================
+    // Implementation details
+    // =========================
+    
+    private static boolean anyLineStartsWithArrayJson(String text) {
+        if (text == null || text.isEmpty()) {
+            return false;
+        }
 
-            // Strong signals: quoted keys with colon, and at least one plausible value form
-            int kvHits = countMatches(KEY_VALUE_REGEX, candidate);
-            boolean hasQuotedKey = QUOTED_KEY_REGEX.matcher(candidate).find();
+        String[] lines = text.split("\\R"); // handles \n, \r\n, etc.
+        for (String line : lines) {
+            String trimmed = line.stripLeading();
 
-            if (kvHits >= MIN_KEY_VALUE_HITS && hasQuotedKey) {
-                return true; // confident enough
-            }
-
-            // Slightly looser fallback: objects with many commas/colons and some quoted text
-            if (isLooselyJsonish(candidate)) {
+            if (trimmed.startsWith("[[")
+                || trimmed.startsWith("]]")
+                || trimmed.startsWith("[{")
+                || trimmed.startsWith("}]")) {
                 return true;
             }
         }
 
         return false;
     }
-
-    // =========================
-    // Implementation details
-    // =========================
 
     private static boolean containsAny(String s, char a, char b, char c) {
         boolean ha = false, hb = false, hc = false;

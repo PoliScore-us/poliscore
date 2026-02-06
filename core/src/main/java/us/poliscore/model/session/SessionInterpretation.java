@@ -124,23 +124,9 @@ public class SessionInterpretation implements Persistable {
 		
 		public void validate()
 		{
-			if (StringUtils.isBlank(getLongExplain()))
-				throw new IllegalStateException("Long explain was blank for " + party.getName());
-			
-			if (StringUtils.isBlank(getShortExplain()))
-				throw new IllegalStateException("Short explain was blank for " + party.getName());
-			
-			if (StringUtils.isBlank(getCasualExplain()))
-				throw new IllegalStateException("Casual explain was blank for " + party.getName());
-			
-			if (ParsingUtil.containsJson(longExplain))
-				throw new IllegalStateException("longExplain contained json for " + party.getName());
-			
-			if (ParsingUtil.containsJson(shortExplain))
-				throw new IllegalStateException("shortExplain contained json for " + party.getName());
-			
-			if (ParsingUtil.containsJson(casualExplain))
-				throw new IllegalStateException("casualExplain contained json for " + party.getName());
+			ParsingUtil.strValidate(getLongExplain(), "long explain (" + party.getName() + ")", 15_000);
+			ParsingUtil.strValidate(getCasualExplain(), "casual report (" + party.getName() + ")", 6000);
+			ParsingUtil.strValidate(getShortExplain(), "short explain (" + party.getName() + ")", 3000);
 			
 			if (stats == null || !stats.hasStat(TrackedIssue.OverallBenefitToSociety)) {
 				throw new IllegalStateException("Unable to parse valid issue stats for " + party.getName());

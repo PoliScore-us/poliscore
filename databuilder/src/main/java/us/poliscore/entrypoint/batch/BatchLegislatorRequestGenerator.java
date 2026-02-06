@@ -26,6 +26,7 @@ import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.BuildReport;
 import us.poliscore.model.IssueStats;
+import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.CongressionalBillType;
@@ -42,19 +43,21 @@ import us.poliscore.service.storage.S3PersistenceService;
 @QuarkusMain(name="BatchLegislatorRequestGenerator")
 public class BatchLegislatorRequestGenerator implements QuarkusApplication
 {
-	public static final List<String> specificFetch = null;
-//	public static final List<String> specificFetch = Arrays.asList(
-//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "G000596"),
-//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "H001100"),
-//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "B001257")
-//		);
+//	public static final List<String> specificFetch = null;
+	public static final List<String> specificFetch = Arrays.asList(
+//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "L000583")
+			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "H001100"),
+			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "B000825"),
+			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "C001137"),
+			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "E000300")
+		);
 	
 	public static final LocalDateTime OLDER_THAN = null;
 //	public static final LocalDateTime OLDER_THAN = specificFetch == null ? Period.ofMonths(1) : null;
 //	public static final LocalDateTime OLDER_THAN = LocalDateTime.now().minus(Period.ofMonths(6));
 //	public static final LocalDateTime OLDER_THAN = LocalDate.of(2025, 8, 14).atStartOfDay();
 	
-	public static final int MAX_REQUESTS = specificFetch != null ? -1 : 600;
+	public static final int MAX_REQUESTS = specificFetch != null ? -1 : 1000;
 	
 	public static final boolean CHECK_S3_EXISTS = specificFetch == null && OLDER_THAN == null;
 	
@@ -74,8 +77,6 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	private List<InterpretationRequest> requests = new ArrayList<InterpretationRequest>();
 	
 	protected BuildReport report;
-	
-	private List<File> writtenFiles = new ArrayList<File>();
 	
 	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
