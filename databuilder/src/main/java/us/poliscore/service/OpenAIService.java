@@ -192,9 +192,10 @@ public class OpenAIService {
     	}
     	
     	if (!response.status().get().equals(ResponseStatus.COMPLETED)) {
-    		if (response.status().get().equals(ResponseStatus.INCOMPLETE) && model.isSupportsReasoning() && ReasoningEffort.LOW.equals(effort)) {
-    			request.setReasoningEffort(ReasoningEffort.MEDIUM);
-    			logger.error("Low reasoning attempt caused a reponse status INCOMPLETE. Retrying request at MEDIUM reasoning level.");
+    		if (response.status().get().equals(ResponseStatus.INCOMPLETE) && model.isSupportsReasoning() && !ReasoningEffort.HIGH.equals(effort)) {
+    			ReasoningEffort newReasoning = ReasoningEffort.LOW.equals(effort) ? ReasoningEffort.MEDIUM : ReasoningEffort.HIGH;
+    			request.setReasoningEffort(newReasoning);
+    			logger.error(effort.asString() + " reasoning attempt caused a reponse status INCOMPLETE. Retrying request at " + newReasoning.asString() + " reasoning level.");
     			return chat(request); // Retry the request with higher reasoning
     		} else
     			throw new RuntimeException("OpenAI's response status was not equal to completed. " + response.status().get());
