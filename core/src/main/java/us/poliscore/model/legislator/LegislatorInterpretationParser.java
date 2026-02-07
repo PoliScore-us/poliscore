@@ -51,7 +51,80 @@ public class LegislatorInterpretationParser {
 			}
 		}
 		
+		stripShortMultiLines();
+		
 		interp.validate();
+	}
+	
+	private void stripShortMultiLines() {
+	    String text = interp.getShortExplain();
+	    if (text == null || text.isBlank()) {
+	        return;
+	    }
+
+	    // Normalize newlines so we can handle Windows/Mac/Linux consistently
+	    text = text.replace("\r\n", "\n").replace('\r', '\n');
+
+	    // Split preserving trailing empty lines (we want to be able to trim them explicitly)
+	    String[] lines = text.split("\n", -1);
+
+	    // 1) Trim trailing whitespace on every line
+	    for (int i = 0; i < lines.length; i++) {
+	        lines[i] = lines[i].replaceAll("[ \\t\\f\\u000B]+$", "");
+	    }
+
+	    // 2) Remove leading/trailing "empty" lines where "empty" includes:
+	    //    - blank lines
+	    //    - lines that are exactly "--" (after the trailing-whitespace trim above)
+	    int start = 0;
+	    while (start < lines.length && (lines[start].isBlank() || lines[start].equals("--"))) {
+	        start++;
+	    }
+
+	    int end = lines.length - 1;
+	    while (end >= start && (lines[end].isBlank() || lines[end].equals("--"))) {
+	        end--;
+	    }
+
+	    // If everything got stripped, set to empty (or null if you prefer)
+	    if (start > end) {
+	        interp.setShortExplain("");
+	        return;
+	    }
+
+	    // 3) Rebuild, also collapsing consecutive blank lines inside the body to a single blank line
+	    StringBuilder sb = new StringBuilder();
+	    boolean lastWasBlank = false;
+
+	    for (int i = start; i <= end; i++) {
+	        String line = lines[i];
+	        boolean isBlank = line.isBlank();
+
+	        if (isBlank) {
+	            if (lastWasBlank) {
+	                continue; // strip extra empty newlines
+	            }
+	            lastWasBlank = true;
+	            sb.append('\n'); // keep a single blank line
+	            continue;
+	        }
+
+	        lastWasBlank = false;
+	        sb.append(line);
+	        if (i < end) sb.append('\n');
+	    }
+
+	    // If we ended with a newline due to a blank line, trim it off
+	    String stripped = sb.toString();
+	    while (stripped.endsWith("\n")) {
+	        stripped = stripped.substring(0, stripped.length() - 1);
+	    }
+	    
+	    if (text.endsWith("--")) {
+	    	text = text.substring(0, text.length()-2);
+	    }
+
+	    interp.setShortExplain(stripped);
 	}
 
 	private void processContent(String line) {
