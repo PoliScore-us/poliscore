@@ -2,7 +2,7 @@
 *A Framework and Benchmark Suite for Policy Quality Engineering*
 
 
-PoliScore is a 🚨**WORK IN PROGRESS**🚨. Much of the published website was NOT generated with these principles in mind (yet). What you're about to read is more of  a roadmap than a description of how the current website works.
+PoliScore is a 🚨**WORK IN PROGRESS**🚨
 
 
 PoliScore is a first-principles framework for evaluating the structural quality of public policy, together with **PoliBench**, a benchmark suite for assessing whether AI systems can reason reliably about legislation.
@@ -15,46 +15,28 @@ The core idea is to treat policy evaluation as an engineering discipline: **poli
 
 PoliScore evaluates legislation along seven core dimensions of policy quality:
 
-1. **Problem Clarity \& Causal Validity**  
-   Does the bill clearly define the problem and target the relevant causal mechanisms?
+1. **Precision**  
+   Does the policy accurately diagnose the underlying issue and target the relevant causal mechanisms?
 
-2. **Evidence Base \& Empirical Support**  
-   Is the intervention grounded in empirical research, historical precedent, or credible comparative data?
+2. **Evidence**  
+   Is the proposed intervention supported by empirical research, historical precedent, or meaningful comparative data?
 
-3. **Implementation Feasibility**  
-   Can existing institutions realistically execute the mandates with available resources, logistics, and time?
+3. **Feasibility**  
+   Can existing institutions realistically execute the policy given resource, logistical, administrative, and temporal constraints? 
 
-4. **Economic Efficiency \& Fiscal Sustainability**  
-   Are resources used responsibly, with sustainable funding and acceptable economic distortions?
+4. **Budget**  
+   Does the policy use resources responsibly, minimize waste, and avoid unsustainable long-term obligations? 
 
-5. **Distributional Impact \& Fairness**  
-   How are benefits and burdens distributed across groups, and are any imbalances defensible?
+5. **Fairness**  
+   How are benefits and burdens distributed across populations, and does the policy unjustifiably disadvantage certain groups? 
 
-6. **Governance Integrity \& Institutional Risk**  
-   Does the policy maintain transparency, accountability, and resilience while minimizing opportunities for abuse?
+6. **Governance**  
+   Does the policy maintain transparency, accountability, and resilience while minimizing opportunities for corruption or abuse? 
 
-7. **Unintended Consequences \& Systemic Risk**  
-   Does the bill introduce fragility, perverse incentives, or cascading systemic risks?
+7. **Risk**  
+   Does the policy introduce fragility, perverse incentives, or cascading failures that undermine the intended outcomes? 
 
 These dimensions are derived from work in political philosophy, welfare economics, institutional theory, governance studies, and systems thinking.
-
----
-
-## 📊 PoliBench: Benchmarking AI Policy Reasoning
-
-**PoliBench** operationalizes the PoliScore framework into a set of evaluation tasks for AI models. It focuses on whether a model can:
-
-- Identify unclear or mis-specified policy problems  
-- Detect infeasible mandates and administrative overload  
-- Recognize governance risks (e.g., concentrated power, weak oversight)  
-- Reason about distributional effects and burden shifting  
-- Anticipate unintended consequences and system-level fragility  
-
-PoliBench is:
-
-- **Model-agnostic** – any LLM or policy analysis system can be evaluated against it  
-- **Dimension-aligned** – tasks are grouped by the seven PoliScore pillars  
-- **Reproducible** – designed so that results can be compared across models and over time  
 
 ---
 
@@ -85,21 +67,6 @@ PoliScore and PoliBench are intended for:
 - **Policy analysts and think tanks** – adding structured, non-partisan diagnostics to existing workflows  
 - **Civic technology projects** – helping voters and journalists understand the structural quality of legislation  
 - **Educators** – teaching policy design, institutional analysis, and AI evaluation  
-
----
-
-## 🧪 Example Workflow (Conceptual)
-
-A typical PoliScore-based workflow might look like:
-
-1. Ingest a bill or legislative proposal.  
-2. Segment it into sections, mandates, definitions, and appropriations.  
-3. For each PoliScore dimension, run a structured analysis prompt or evaluation module.  
-4. Generate per-dimension scores (0–100) plus textual explanations.  
-5. Aggregate into a composite PoliScore, with clear caveats and limitations.  
-6. Provide a human-readable report highlighting strengths, weaknesses, and cross-dimension interactions.
-
-PoliBench can then be used to benchmark and calibrate the AI models used in steps 3–5.
 
 ---
 
