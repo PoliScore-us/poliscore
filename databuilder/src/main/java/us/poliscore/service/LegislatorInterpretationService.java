@@ -482,6 +482,7 @@ Your written response for this research section should consist of only a compact
 							if (StringUtils.isBlank(interp.getLongExplain())) {
 								interp.setLongExplain(prevInterpOp.get().getLongExplain());
 								interp.setLastUpdate(prevInterpOp.get().getLastUpdate());
+								interp.getMetadata().setDate(prevInterpOp.get().getMetadata().getDate());
 							}
 						}
 					}

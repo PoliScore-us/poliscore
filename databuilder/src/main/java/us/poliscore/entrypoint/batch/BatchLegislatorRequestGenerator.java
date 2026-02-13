@@ -43,14 +43,14 @@ import us.poliscore.service.storage.S3PersistenceService;
 @QuarkusMain(name="BatchLegislatorRequestGenerator")
 public class BatchLegislatorRequestGenerator implements QuarkusApplication
 {
-//	public static final List<String> specificFetch = null;
-	public static final List<String> specificFetch = Arrays.asList(
-//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "L000583")
-			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "H001100"),
-			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "B000825"),
-			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "C001137"),
-			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "E000300")
-		);
+	public static final List<String> specificFetch = null;
+//	public static final List<String> specificFetch = Arrays.asList(
+//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "L000583"),
+//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "H001100"),
+//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "B000825"),
+//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "C001137"),
+//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "E000300")
+//		);
 	
 	public static final LocalDateTime OLDER_THAN = null;
 //	public static final LocalDateTime OLDER_THAN = specificFetch == null ? Period.ofMonths(1) : null;
@@ -59,7 +59,8 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	
 	public static final int MAX_REQUESTS = specificFetch != null ? -1 : 1000;
 	
-	public static final boolean CHECK_S3_EXISTS = specificFetch == null && OLDER_THAN == null;
+	public static final boolean CHECK_S3_EXISTS = false;
+//	public static final boolean CHECK_S3_EXISTS = specificFetch == null && OLDER_THAN == null;
 	
 	public static final OpenAIModel interpModel = OpenAIModel.DEFAULT_MODEL;
 	
@@ -182,6 +183,10 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		}
 		
 		var stats = leg.getInterpretation().getIssueStats();
+		if (stats == null) {
+			Log.info("Skipping " + leg.getId() + " because they did not have any issue stats.");
+			return;
+		}
 		String grade = stats.getLetterGrade(dataset.getConfig().getMultiplier());
 		
 		List<String> billMsgs = new ArrayList<String>();

@@ -24,13 +24,17 @@ public class BuildReport {
 	
 	double totalProcessingCost = 0;
 	
+	int normalRequests = 0;
+	
+	int flexRequests = 0;
+	
 	public void fatal(Throwable t) { fatalErrors.add(t); }
 	
 	public boolean hasFatal() { return !fatalErrors.isEmpty(); }
 	
 	@Override
 	public String toString() {
-		String result = "interpreted " + interpretedBills.size() + " bills and " + interpretedLegislators.size() + " legislators.";
+		String result = "interpreted " + interpretedBills.size() + " bills and " + interpretedLegislators.size() + " legislators, amounting to " + flexRequests + " flex and " + normalRequests + " requests.";
 		
 		if (interpretedBills.size() > 0)
 			result += "\n\n" + String.join("\n", interpretedBills.stream().map(b -> b.getId()).toList());

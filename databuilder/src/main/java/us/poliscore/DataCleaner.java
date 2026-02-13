@@ -24,6 +24,7 @@ import us.poliscore.model.bill.BillInterpretationParser.StructuralAnalysisParser
 import us.poliscore.model.bill.BillText;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorInterpretation;
+import us.poliscore.model.legislator.LegislatorInterpretationParser;
 import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
@@ -53,10 +54,16 @@ public class DataCleaner implements QuarkusApplication {
 	
 	protected void process() throws IOException
 	{
-//		val dataset = data.importDataset(LegislativeNamespace.US_CONGRESS, 2026);
-		val dataset = data.importDataset(LegislativeNamespace.US_COLORADO, 2026);
+		val dataset = data.importDataset(LegislativeNamespace.US_CONGRESS, 2026);
+//		val dataset = data.importDataset(LegislativeNamespace.US_COLORADO, 2026);
 		
-		deleteInvalidBillTexts(dataset);
+		val interp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), "119", "C001116"), LegislatorInterpretation.class).get();
+		
+		interp.validate();
+		
+		System.out.println(LegislatorInterpretationParser.stripMultiLines(interp.getShortExplain()));
+		
+//		deleteInvalidBillTexts(dataset);
 		
 //		validateLegislatorInterps(dataset);
 		

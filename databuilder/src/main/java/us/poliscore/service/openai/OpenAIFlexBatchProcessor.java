@@ -14,7 +14,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -83,6 +82,8 @@ public class OpenAIFlexBatchProcessor {
 		// Totals (money/tokens) — thread-safe without contention:
 		final LongAdder promptTokens = new LongAdder();
 		final LongAdder completionTokens = new LongAdder();
+		final LongAdder flexRequests = new LongAdder();
+		final LongAdder normalRequests = new LongAdder();
 		final LongAdder totalTokens = new LongAdder();
 		final DoubleAdder totalUsd = new DoubleAdder();
 
@@ -181,6 +182,13 @@ public class OpenAIFlexBatchProcessor {
 									  promptTokens.add(usage.promptTokens());
 									  completionTokens.add(usage.completionTokens());
 									  totalTokens.add(usage.totalTokens());
+									  
+									  if ("flex".equals(usage.actualServiceTier()))
+										  flexRequests.add(1);
+									  else {
+										  normalRequests.add(1);
+										  Log.warn("Expected flex, but request actually ran as " + usage.actualServiceTier());
+									  }
 									}
 									totalUsd.add(chat.costUsd());
 
@@ -224,13 +232,12 @@ public class OpenAIFlexBatchProcessor {
 			writerThread.join();
 		}
 
-		// Set totals on BuildReport (you’ll need to add fields + setters if not
-		// present)
-		// Example fields:
+		// Set totals on BuildReport
 		report.setTotalProcessingCost(totalUsd.sum());
+		report.setFlexRequests((int) flexRequests.sum());
+		report.setFlexRequests((int) normalRequests.sum());
 
-		// If fatal happened mid-way, import what we have (same semantics as your
-		// current code)
+		// If fatal happened mid-way, import what we have
 		if (fatal.get() != null) {
 			if (writtenRequests.get() > 0) {
 				responseImporter.process(report, outputFile);
@@ -265,6 +272,7 @@ public class OpenAIFlexBatchProcessor {
 		usageNode.put("prompt_tokens", chat.usage() == null ? 0l : chat.usage().promptTokens());
 		usageNode.put("completion_tokens", chat.usage() == null ? 0l : chat.usage().completionTokens());
 		usageNode.put("total_tokens", chat.usage() == null ? 0l : chat.usage().totalTokens());
+		usageNode.put("service_tier", chat.usage() == null ? "" : chat.usage().actualServiceTier());
 		responseNode.set("usage", usageNode);
 
 		val responseEnvelope = MAPPER.createObjectNode();

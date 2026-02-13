@@ -51,15 +51,17 @@ public class LegislatorInterpretationParser {
 			}
 		}
 		
-		stripShortMultiLines();
+		interp.setShortExplain(stripMultiLines(interp.getShortExplain()));
+		interp.setCasualExplain(stripMultiLines(interp.getCasualExplain()));
+		interp.setLongExplain(stripMultiLines(interp.getLongExplain()));
 		
 		interp.validate();
 	}
 	
-	private void stripShortMultiLines() {
-	    String text = interp.getShortExplain();
+	public static String stripMultiLines(String shortExplain) {
+	    String text = shortExplain;
 	    if (text == null || text.isBlank()) {
-	        return;
+	        return null;
 	    }
 
 	    // Normalize newlines so we can handle Windows/Mac/Linux consistently
@@ -77,39 +79,32 @@ public class LegislatorInterpretationParser {
 	    //    - blank lines
 	    //    - lines that are exactly "--" (after the trailing-whitespace trim above)
 	    int start = 0;
-	    while (start < lines.length && (lines[start].isBlank() || lines[start].equals("--"))) {
+	    while (start < lines.length && (lines[start].isBlank() || lines[start].equals("-") || lines[start].equals("--") || lines[start].equals("---"))) {
 	        start++;
 	    }
 
 	    int end = lines.length - 1;
-	    while (end >= start && (lines[end].isBlank() || lines[end].equals("--"))) {
+	    while (end >= start && (lines[end].isBlank() || lines[end].equals("-") || lines[end].equals("--") || lines[end].equals("---"))) {
 	        end--;
 	    }
 
 	    // If everything got stripped, set to empty (or null if you prefer)
 	    if (start > end) {
-	        interp.setShortExplain("");
-	        return;
+	        return "";
 	    }
 
 	    // 3) Rebuild, also collapsing consecutive blank lines inside the body to a single blank line
 	    StringBuilder sb = new StringBuilder();
-	    boolean lastWasBlank = false;
 
 	    for (int i = start; i <= end; i++) {
 	        String line = lines[i];
 	        boolean isBlank = line.isBlank();
 
 	        if (isBlank) {
-	            if (lastWasBlank) {
-	                continue; // strip extra empty newlines
-	            }
-	            lastWasBlank = true;
 	            sb.append('\n'); // keep a single blank line
 	            continue;
 	        }
 
-	        lastWasBlank = false;
 	        sb.append(line);
 	        if (i < end) sb.append('\n');
 	    }
@@ -119,12 +114,8 @@ public class LegislatorInterpretationParser {
 	    while (stripped.endsWith("\n")) {
 	        stripped = stripped.substring(0, stripped.length() - 1);
 	    }
-	    
-	    if (text.endsWith("--")) {
-	    	text = text.substring(0, text.length()-2);
-	    }
 
-	    interp.setShortExplain(stripped);
+	    return stripped;
 	}
 
 	private void processContent(String line) {

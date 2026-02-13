@@ -121,5 +121,7 @@ public class BatchOpenAIResponse {
 		protected Object completion_tokens_details;
 		
 		protected Object prompt_tokens_details;
+		
+		protected String service_tier;
 	}
 }

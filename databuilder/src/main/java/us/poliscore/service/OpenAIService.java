@@ -88,7 +88,7 @@ public class OpenAIService {
 	
 	private final ConcurrentHashMap<String, MinuteRateLimiter> limiters = new ConcurrentHashMap<>();
 	
-	public record Usage(long promptTokens, long completionTokens) {
+	public record Usage(long promptTokens, long completionTokens, String actualServiceTier) {
 	  public long totalTokens() { return promptTokens + completionTokens; }
 	}
 
@@ -210,8 +210,8 @@ public class OpenAIService {
     			.reduce("", (a,b) -> a + b);
     	
     	Usage usage = response.usage()
-	      .map(u -> new Usage(u.inputTokens(), u.outputTokens())) // <-- rename to what your SDK exposes
-	      .orElse(new Usage(0, 0));
+	      .map(u -> new Usage(u.inputTokens(), u.outputTokens(), response.serviceTier().map(t -> t.asString()).orElse(null))) // <-- rename to what your SDK exposes
+	      .orElse(new Usage(0, 0, null));
 
     	double costUsd = _model.estimateCostUsd(usage);
 

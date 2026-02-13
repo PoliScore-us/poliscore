@@ -48,8 +48,13 @@ public enum OpenAIModel {
 	public double estimateCostUsd(Usage usage) {
 		if (usage == null)
 			return 0.0d;
-		return (usage.promptTokens() / 1_000_000d) * inputUsdPer1M
-				+ (usage.completionTokens() / 1_000_000d) * outputUsdPer1M;
+		
+		// If we requested flex, but OpenAI didn't honor our request, then we get charged double...
+		double inputPrice = "normal".equals(usage.actualServiceTier()) ? 2*inputUsdPer1M : inputUsdPer1M;
+		double outputPrice = "normal".equals(usage.actualServiceTier()) ? 2*outputUsdPer1M : outputUsdPer1M;
+		
+		return (usage.promptTokens() / 1_000_000d) * inputPrice
+				+ (usage.completionTokens() / 1_000_000d) * outputPrice;
 	}
 
 	// ---- Lookup by id ----

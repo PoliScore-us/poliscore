@@ -59,7 +59,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 //);
 
 	public static final List<String> billSkipList = Arrays.asList(
-//		Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 7148)
+		Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 7148) // TODO : I think because this one is split into sections?
 	);
 	
 	public static final boolean CHECK_S3_EXISTS = specificFetch == null;
