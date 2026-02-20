@@ -102,7 +102,7 @@ Casual Report:
 Your audience is the general public, written at the high-school education level. Your primary goal here is to take the insights from the long report and make them available for your average person. Begin by explaining the high level goals of the representative and a high level summary of how they attempted to achieve those goals. Then, explain all the essential logic required to understand their predicted impact to society, including any research, expert opinions, societal wisdom and/or any competing concerns which may exist. Conclude with your findings. Should be between one and three paragraphs long, depending on the complexity of their history and the topics covered (controversial topics require more evidence to support your conclusions). Do not use acronyms, such as GPO, CBO, etc. If you must use them, they must be defined. You may link to sources using markdown link syntax, where relevant. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
 
 Short Report:
-Generate a layman's, concise, single sentence describing the primary focuses of the representative, not more than 150 characters. Should start with "Focuses on". Should not include the name of the representative. Do not include any formatting text such as stars or dashes.
+Generate a layman's, concise, single sentence describing the primary focuses of the representative, not more than 150 characters. Try to remain somewhat neutral in tone here. Should start with "Focuses on". Should not include the name of the representative. Do not include any formatting text such as stars or dashes.
 
 References:
 Your written response for this research section should consist of only a compact JSON array of references, on a single line, of the following format:
@@ -477,6 +477,8 @@ Your written response for this research section should consist of only a compact
 					if (StringUtils.isBlank(interp.getShortExplain()) || StringUtils.isBlank(interp.getLongExplain())) {
 						val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousDataset.getNamespace(), previousDataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
 						if (prevInterpOp.isPresent()) {
+							if (StringUtils.isBlank(interp.getCasualExplain()))
+								interp.setCasualExplain(prevInterpOp.get().getCasualExplain());
 							if (StringUtils.isBlank(interp.getShortExplain()))
 								interp.setShortExplain(prevInterpOp.get().getShortExplain());
 							if (StringUtils.isBlank(interp.getLongExplain())) {

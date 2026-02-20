@@ -79,7 +79,9 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 				if (addendum.get().getBirthday() != null)
 					leg.setBirthday(addendum.get().getBirthday());
 			} else if (!isManualRun) {
-				leg.setOfficialUrl(guessOfficialUrl(leg, dataset, null));
+				if (StringUtils.isBlank(leg.getOfficialUrl()))
+					leg.setOfficialUrl(guessOfficialUrl(leg, dataset, null));
+				
 				leg.setBirthday(Legislator.DEFAULT_BIRTHDAY);
 			}
 		}

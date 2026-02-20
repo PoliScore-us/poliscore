@@ -148,7 +148,7 @@ public class BillInterpretationService {
 			""";
 	
 	public static final String slicePromptTemplate = """
-			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, evaluating whether or not the following bill will produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Impact:') in your response. Do not include the section instructions in your response. Do not ever use 'I' language (as in, I reached this conclusion because...).
+			You will be given the text of a United States bill. Your role is to be a non-partisan oversight committee, performing an impact analysis which evaluates whether or not the following bill is predicted to produce a positive overall benefit to society. In your response, fill out the sections as listed in the following template. Each section will have detailed instructions on how to fill it out. Make sure to include the section title (such as, 'Impact:') in your response. Do not include the section instructions in your response. Do not ever use 'I' language (as in, I reached this conclusion because...).
 
 			Structural Analysis:
 			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing EXACTLY one of "<PASS>", or "<FAIL>" (not mixed), denoting that the bill has either passed or failed that pillar of the structural analysis.

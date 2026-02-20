@@ -407,6 +407,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	
 	protected void importLegislator(LegiscanPeopleView view, PoliscoreDataset regularDataset) {
 	    if (view == null || StringUtils.isBlank(view.getName())) return;
+//	    if (view.getPartyId() == 0) return; // Kansas allows committees to sponsor bills. And so you have committees being added as "legiscan people" where most of the fields are blank. We can't handle that data yet it's way too different.
 
 	    val leg = new Legislator();
 	    leg.setLegiscanId(view.getPeopleId());
@@ -417,6 +418,9 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		else
 			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getCode(), String.valueOf(view.getPeopleId()));
 		leg.setId(legId);
+		
+		if (view.getBio() != null && view.getBio().getLinks() != null && view.getBio().getLinks().getOfficial() != null)
+			leg.setOfficialUrl(view.getBio().getLinks().getOfficial().get("website"));
 		
 	    // Build and set name
 	    val name = new Legislator.LegislatorName();

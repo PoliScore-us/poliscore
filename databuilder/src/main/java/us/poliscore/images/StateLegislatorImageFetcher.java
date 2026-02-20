@@ -1,6 +1,8 @@
 package us.poliscore.images;
 
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.KeyStore;
 import java.util.Optional;
 
@@ -22,7 +24,6 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.val;
-import us.poliscore.PoliscoreDataset;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.service.storage.S3PersistenceService;
@@ -147,7 +148,8 @@ public class StateLegislatorImageFetcher extends AbstractLegislatorImageFetcher 
 	    Element candidate = null;
 	    for (val img : imgs) {
 	    	if (img.attr("src").toLowerCase().contains(leg.getName().getFirst().toLowerCase())
-	    			|| img.attr("src").toLowerCase().contains(leg.getName().getLast().toLowerCase())) {
+	    			|| img.attr("src").toLowerCase().contains(leg.getName().getLast().toLowerCase())
+	    			|| img.attr("src").toLowerCase().contains("images/legislators/house") || img.attr("src").toLowerCase().contains("images/legislators/senate")) {
 	    		candidate = img;
 	    		break;
 	    	}
@@ -161,12 +163,61 @@ public class StateLegislatorImageFetcher extends AbstractLegislatorImageFetcher 
 //	        return "https://www.congress.gov" + img.attr("src");
 //	    }
 	    
-	    String url = candidate.attr("src");
-	    if (!url.contains("https://") && !url.contains("http://")) {
-	    	// TODO : Absolute versus relative
-	    }
+	    String url = toAbsoluteImageUrl(candidate, officialUrl);
+	    
+	    if (url == null || url.isBlank()) return null;
 	    
 	    return url;
+	}
+	
+	public static String toAbsoluteImageUrl(Element candidate, String pageUrl) {
+	    if (candidate == null || pageUrl == null || pageUrl.isBlank()) {
+	        return null;
+	    }
+
+	    try {
+	        // 1️⃣ Try Jsoup’s built-in resolution first
+	        String abs = candidate.absUrl("src");
+	        if (abs != null && !abs.isBlank()) {
+	            URI absUri = new URI(abs);
+	            if (absUri.getScheme() != null && absUri.getHost() != null) {
+	                return abs;
+	            }
+	        }
+
+	        // 2️⃣ Fallback to raw src attribute
+	        String src = candidate.attr("src");
+	        if (src == null || src.isBlank()) {
+	            return null;
+	        }
+
+	        src = src.trim();
+
+	        URI base = new URI(pageUrl);
+
+	        // 3️⃣ Protocol-relative: //cdn.site.com/image.jpg
+	        if (src.startsWith("//")) {
+	            String scheme = base.getScheme() != null ? base.getScheme() : "https";
+	            return scheme + ":" + src;
+	        }
+
+	        // 4️⃣ Already absolute?
+	        URI srcUri = new URI(src);
+	        if (srcUri.getScheme() != null && srcUri.getHost() != null) {
+	            return src;
+	        }
+
+	        // 5️⃣ Relative → resolve against base
+	        URI resolved = base.resolve(src);
+	        if (resolved.getScheme() != null && resolved.getHost() != null) {
+	            return resolved.toString();
+	        }
+
+	    } catch (URISyntaxException e) {
+	        // swallow and return null — scraper shouldn’t crash
+	    }
+
+	    return null;
 	}
 	
 //	protected String getOfficialUrl(Legislator leg, PoliscoreDataset dataset) {
