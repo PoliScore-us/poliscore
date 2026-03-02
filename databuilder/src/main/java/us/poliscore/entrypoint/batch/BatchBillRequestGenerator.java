@@ -198,8 +198,9 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 				if (slices.isEmpty())
 					throw new UnsupportedOperationException("Slicer returned zero slices?");
 				
+				// The XMLBillSlicer returns the document text without the xml nodes, which usually results in bill text about half the size. For this reason, it's possible that the splitter could return a slice of size 1.
 				if (slices.size() == 1) {
-					if (!StringUtils.isBlank(slices.get(0).getText()) && sBillText.length() > billProcessModel.getContextWindowStringLength())
+					if (!StringUtils.isBlank(slices.get(0).getText()))
 						sBillText = slices.get(0).getText();
 
 					createRequest(BillInterpretation.generateId(b.getId(), null), b, null,

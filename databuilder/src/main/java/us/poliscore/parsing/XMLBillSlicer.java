@@ -22,6 +22,9 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillSlice;
 import us.poliscore.model.bill.BillText;
 
+/**
+ * Even though this slicer is operating on XML, the return is the text content inside the XML. This helps us save on tokens and return larger slices.
+ */
 public class XMLBillSlicer implements BillSlicer {
 
 	protected Bill bill;

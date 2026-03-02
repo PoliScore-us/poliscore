@@ -15,7 +15,7 @@ public class TextBillSlicer implements BillSlicer {
     // Overlap in characters between slices for context continuity
     private static final int OVERLAP_SIZE = 200;
 
-    // TODO : Slice at natural langauge boundaries (such as the end of a sentence, whatever)
+    // TODO : Slice at natural language boundaries (such as the end of a sentence, whatever)
     @Override
     public List<BillSlice> slice(Bill bill, BillText text, int maxSectionLength) {
         final List<BillSlice> slices = new ArrayList<>();

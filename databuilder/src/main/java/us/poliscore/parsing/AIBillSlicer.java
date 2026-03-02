@@ -36,6 +36,15 @@ import us.poliscore.model.bill.BillText;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
+/**
+ * This slicer gets AI to identify sections semantically throughout the bill and then return sections to split across. It's an interesting concept, and there was ultimately some
+ * success, however this concept will have to be revisited later if there's interest since it's too complicated for now. With 119/hr1 ai split the bill into related sections
+ * (i.e. defense, agriculture, finance, etc) which was interesting, however it was found that one section in the bill (agriculture) itself was simply gigantic.
+ * 
+ * This slicer was abandoned (for now) because it split the bill into ten sections (but the XML slicer only needs 2) and because the ultimate utility in this approach comes from
+ * exploring the bill in depth for the end user. That sort of exploration might also be nice to have related bills? I don't know. I kinda just ran out of resources and abandoned this.
+ * 
+ */
 @ApplicationScoped
 public class AIBillSlicer implements BillSlicer {
 	public static final String prompt = """
