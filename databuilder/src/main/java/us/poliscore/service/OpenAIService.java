@@ -162,8 +162,8 @@ public class OpenAIService {
 			        Tool.ofWebSearch(WebSearchTool.builder().type(Type.WEB_SEARCH_PREVIEW).build())
 			        ));
 		
-//		if (_model != OpenAIModel.GPT41)
-//			paramBuilder.serviceTier(ResponseCreateParams.ServiceTier.FLEX);
+		if (_model != OpenAIModel.GPT41)
+			paramBuilder.serviceTier(ResponseCreateParams.ServiceTier.FLEX);
 		
 		if (_model.isSupportsTemperature())
 			paramBuilder.temperature(0.0d); // We don't want randomness. Give us predictability and accuracy
