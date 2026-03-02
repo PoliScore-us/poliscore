@@ -23,12 +23,14 @@ public class TextBillSlicer implements BillSlicer {
         final int totalLength = fullText.length();
 
         int start = 0;
+        int sliceNum = 0;
 
         while (start < totalLength) {
             int end = Math.min(start + maxSectionLength, totalLength);
             String sectionText = fullText.substring(start, end);
 
             BillSlice slice = new BillSlice();
+            slice.setSliceIndex(sliceNum++);
             slice.setBill(bill);
             slice.setText(sectionText);
             slice.setStart(String.valueOf(start));
@@ -45,23 +47,26 @@ public class TextBillSlicer implements BillSlicer {
 
         return slices;
     }
-
+    
     public static List<String> sliceRaw(String text) {
-		int aEnd = lastIndexOfRegex(text.substring(0, (text.length() / 2) + 200), "\\s");
-		int bStart = ((text.length() / 2) - 200) + indexOfRegex(text.substring((text.length() / 2) - 200), "\\s") + 1;
-		
-		if (aEnd == -1 || bStart == -1) {
-			return Arrays.asList(
-				text.substring(0, text.length()/2),
-				text.substring(text.length()/2)
-			);
-		}
-				
-		return Arrays.asList(
-			text.substring(0, aEnd),
-			text.substring(bStart)
-		);
-	}
+        int mid = text.length() / 2;
+
+        int windowStart = Math.max(0, mid - 200);
+        int windowEnd   = Math.min(text.length(), mid + 200);
+
+        String window = text.substring(windowStart, windowEnd);
+
+        int splitInWindow = lastIndexOfRegex(window, "\\s");
+        if (splitInWindow == -1) {
+            return Arrays.asList(text.substring(0, mid), text.substring(mid));
+        }
+
+        int split = windowStart + splitInWindow;
+        return Arrays.asList(
+            text.substring(0, split),
+            text.substring(split + 1)
+        );
+    }
 	
 	public static int indexOfRegex(String str, String regex)
 	{

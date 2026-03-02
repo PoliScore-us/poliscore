@@ -53,6 +53,7 @@ import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.bill.OpenAIBatchJsonlSerializer;
 import us.poliscore.entrypoint.DatabaseBuilder;
 import us.poliscore.entrypoint.batch.BatchOpenAIResponseImporter;
+import us.poliscore.model.AIAggregateInterpretationMetadata;
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.AISliceInterpretationMetadata;
 import us.poliscore.model.BuildReport;
@@ -99,6 +100,11 @@ public class OpenAIService {
 		return AIInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.AGENTIC_WEB_SEARCH);
 	}
 	
+	public static AIAggregateInterpretationMetadata metadata(List<BillSlice> slices)
+	{
+		return AIAggregateInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.AGENTIC_WEB_SEARCH, slices);
+	}
+	
 	public static AIInterpretationMetadata metadata(BillSlice slice)
 	{
 		return AISliceInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.AGENTIC_WEB_SEARCH, slice);
@@ -133,7 +139,7 @@ public class OpenAIService {
 		String userMsg = request.getUserMsg();
 		val effort = Objects.requireNonNullElse(request.getReasoningEffort(), ReasoningEffort.LOW);
 		
-		if (userMsg.length() > model.getContextWindowStringLength()) {
+		if (model != OpenAIModel.GPT41 && userMsg.length() > model.getContextWindowStringLength()) {
 			throw new IndexOutOfBoundsException();
 		}
 		if (StringUtils.isEmpty(systemMsg) || StringUtils.isEmpty(userMsg)) {
@@ -156,7 +162,8 @@ public class OpenAIService {
 			        Tool.ofWebSearch(WebSearchTool.builder().type(Type.WEB_SEARCH_PREVIEW).build())
 			        ));
 		
-		paramBuilder.serviceTier(ResponseCreateParams.ServiceTier.FLEX);
+//		if (_model != OpenAIModel.GPT41)
+//			paramBuilder.serviceTier(ResponseCreateParams.ServiceTier.FLEX);
 		
 		if (_model.isSupportsTemperature())
 			paramBuilder.temperature(0.0d); // We don't want randomness. Give us predictability and accuracy

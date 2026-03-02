@@ -29,12 +29,13 @@ import us.poliscore.model.BuildReport;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
+import us.poliscore.model.bill.BillPrompt;
 import us.poliscore.model.bill.BillSlice;
 import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.CongressionalBillType;
-import us.poliscore.parsing.BillSlicer;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
+import us.poliscore.service.BillSlicerService;
 import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
@@ -46,8 +47,9 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 	public static final List<String> specificFetch = null;
 //	public static final List<String> specificFetch = Arrays.asList(
-//	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 282)
-//	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 6)
+//	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 1)
+//	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 7148),
+//	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 7567)
 //);
 //public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_COLORADO, "2173", "sb", 317));
 
@@ -59,8 +61,6 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 //);
 
 	public static final List<String> billSkipList = Arrays.asList(
-		Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 7148), // TODO : I think because this one is split into sections?
-		Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 7567) // TODO : Another giant bill
 	);
 	
 	public static final boolean CHECK_S3_EXISTS = specificFetch == null;
@@ -84,6 +84,9 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 	@Inject
 	private GovernmentDataService data;
+	
+	@Inject
+	private BillSlicerService billSlicer;
 
 	private long totalRequests = 0;
 
@@ -188,20 +191,20 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 			if (userMsg.length() >= billProcessModel.getContextWindowStringLength()) {
 
-				List<BillSlice> slices = BillSlicer.factory(b.getText()).slice(b, b.getText(),
+				List<BillSlice> slices = billSlicer.slice(b, b.getText(),
 						billProcessModel.getContextWindowStringLength()
 								- (userMsg.length() - b.getText().getDocument().length()));
 
 				if (slices.isEmpty())
 					throw new UnsupportedOperationException("Slicer returned zero slices?");
-
+				
 				if (slices.size() == 1) {
-					if (!StringUtils.isBlank(slices.get(0).getText()))
+					if (!StringUtils.isBlank(slices.get(0).getText()) && sBillText.length() > billProcessModel.getContextWindowStringLength())
 						sBillText = slices.get(0).getText();
 
 					createRequest(BillInterpretation.generateId(b.getId(), null), b, null,
-							billInterpreter.getPromptForBill(b, false, enableWebSearch),
-							billInterpreter.getUserMsgForBill(b, b.getText().getDocument(), billProcessModel),
+							BillPrompt.getPromptForBill(b, false, enableWebSearch),
+							billInterpreter.getUserMsgForBill(b, sBillText, billProcessModel),
 							sBillText);
 				} else {
 					val sliceInterps = new ArrayList<BillInterpretation>();
@@ -218,7 +221,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 							if (s3.exists(oid, BillInterpretation.class))
 								continue;
 							
-							createRequest(oid, b, slice.getSliceIndex(), BillInterpretationService.slicePrompt,
+							createRequest(oid, b, slice.getSliceIndex(), BillPrompt.slicePrompt,
 									slice.getText(), slice.getText());
 						} else {
 							sliceInterps.add(sliceInterp.get());
@@ -248,14 +251,14 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 						}
 
 						String sliceTexts = String.join("\n", summaries);
-						createRequest(oid, b, null, billInterpreter.getPromptForBill(b, true, enableWebSearch),
+						createRequest(oid, b, null, BillPrompt.getPromptForBill(b, true, enableWebSearch),
 								billInterpreter.getUserMsgForBill(b, sliceTexts, billProcessModel),
 								sliceTexts);
 					}
 				}
 			} else {
 				createRequest(BillInterpretation.generateId(b.getId(), null), b, null,
-						billInterpreter.getPromptForBill(b, false, enableWebSearch), userMsg, sBillText);
+						BillPrompt.getPromptForBill(b, false, enableWebSearch), userMsg, sBillText);
 			}
 		}
 	}

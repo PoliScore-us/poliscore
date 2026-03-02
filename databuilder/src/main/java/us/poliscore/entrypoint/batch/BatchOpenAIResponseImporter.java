@@ -29,6 +29,8 @@ import us.poliscore.PoliscoreUtil;
 import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
 import us.poliscore.ai.BatchOpenAIResponse;
 import us.poliscore.entrypoint.DatabaseBuilder;
+import us.poliscore.model.AIAggregateInterpretationMetadata;
+import us.poliscore.model.AISliceInterpretationMetadata;
 import us.poliscore.model.BuildReport;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.InterpretationOrigin;
@@ -47,9 +49,8 @@ import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.model.press.PressInterpretationParser;
 import us.poliscore.model.session.SessionInterpretation;
 import us.poliscore.model.session.SessionInterpretation.PartyInterpretation;
-import us.poliscore.parsing.BillSlicer;
-import us.poliscore.parsing.XMLBillSlicer;
 import us.poliscore.service.BillService;
+import us.poliscore.service.BillSlicerService;
 import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
@@ -91,6 +92,9 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	
 	@Inject
 	private GovernmentDataService data;
+	
+	@Inject
+	private BillSlicerService billSlicer;
 	
 	@Inject
 	private PartyInterpretationService partyService;
@@ -257,15 +261,29 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			
 			if (sliceIndex == null)
 			{
-				bi.setMetadata(OpenAIService.metadata());
 				bi.setId(BillInterpretation.generateId(bill.getId(), bi.getOrigin(), null));
+				
+				if (s3.exists(BillInterpretation.generateId(bill.getId(), bi.getOrigin(), 0), BillInterpretation.class)) {
+					String sessionKey = billId.substring(StringUtils.ordinalIndexOf(billId, "/", 1)+1, StringUtils.ordinalIndexOf(billId, "/", 4));
+					String objectKey = billId.substring(StringUtils.ordinalIndexOf(billId, "/", 4)+1);
+					
+					List<BillSlice> slices = new ArrayList<BillSlice>();
+					for (var sliceInterp : s3.query(BillInterpretation.class, sessionKey, objectKey)) {
+						if (sliceInterp.getBillId().equals(bill.getId()) && sliceInterp.getMetadata() instanceof AISliceInterpretationMetadata) {
+							var sliceMetadata = (AISliceInterpretationMetadata) sliceInterp.getMetadata();
+							slices.add(new BillSlice(bill, null, sliceInterp.getSliceIndex(), sliceInterp.getGenBillTitle(), sliceInterp.getShortExplain(), sliceMetadata.getStart(), sliceMetadata.getEnd()));
+						}
+					}
+					bi.setMetadata(OpenAIService.metadata(slices));
+				} else
+					bi.setMetadata(OpenAIService.metadata());
 			}
 			else
 			{
 				val billText = s3.get(BillText.generateId(bill.getId()), BillText.class).orElseThrow();
 				bill.setText(billText);
 				
-				List<BillSlice> slices = BillSlicer.factory(billText).slice(bill, billText, BatchBillRequestGenerator.billProcessModel.getContextWindowStringLength());
+				List<BillSlice> slices = billSlicer.slice(bill, billText, BatchBillRequestGenerator.billProcessModel.getContextWindowStringLength());
 				
 				bi.setMetadata(OpenAIService.metadata(slices.get(sliceIndex)));
 				bi.setId(BillInterpretation.generateId(billId, bi.getOrigin(), sliceIndex));
@@ -287,9 +305,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			if (!bi.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety)) {
 				if (sliceIndex != null) {throw new RuntimeException("Did not find OverallBenefitToSociety stat on interpretation");  }
 				
-				val billText = s3.get(BillText.generateId(bill.getId()), BillText.class).orElseThrow();
-				
-				List<BillSlice> slices = new XMLBillSlicer().slice(bill, billText, BatchBillRequestGenerator.billProcessModel.getContextWindowStringLength());
+				List<BillSlice> slices = ((AIAggregateInterpretationMetadata)bi.getMetadata()).getSlices();
 				
 				if (slices.size() <= 1) { throw new RuntimeException("Expected multiple slices on [" + billId + "] since OpenAI did not include benefit to society issue stat"); }
 				
@@ -297,14 +313,13 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 				List<BillInterpretation> sliceInterps = new ArrayList<BillInterpretation>();
 				
 				for (int i = 0; i < slices.size(); ++i) {
-					val sliceInterp = s3.get(BillInterpretation.generateId(billId, bi.getOrigin(), sliceIndex), BillInterpretation.class).orElseThrow();
+					val sliceInterp = s3.get(BillInterpretation.generateId(billId, bi.getOrigin(), i), BillInterpretation.class).orElseThrow();
 					
 					billStats = billStats.sum(sliceInterp.getIssueStats().toDoubleIssueStats());
 					sliceInterps.add(sliceInterp);
 				}
 				
 				bi.setIssueStats(billStats.divideByTotalSummed().toIssueStats());
-				bi.setSliceInterpretations(sliceInterps);
 			}
 			
 			if (StringUtils.isBlank(bi.getLongExplain()) || (sliceIndex == null && (StringUtils.isBlank(bi.getShortExplain()) || bi.getIssueStats() == null || !bi.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety)))) {

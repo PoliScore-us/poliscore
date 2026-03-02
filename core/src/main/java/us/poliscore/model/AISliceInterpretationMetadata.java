@@ -10,6 +10,10 @@ import us.poliscore.model.bill.BillSlice;
 @DynamoDbBean
 public class AISliceInterpretationMetadata extends AIInterpretationMetadata {
 	
+	protected String sliceName;
+	
+	protected String sliceDescription;
+	
 	protected String start;
 	
 	protected String end;

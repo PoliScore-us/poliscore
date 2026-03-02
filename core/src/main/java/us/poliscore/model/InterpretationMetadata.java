@@ -11,7 +11,8 @@ import lombok.Data;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY)
 @JsonSubTypes({
     @JsonSubTypes.Type(value = AISliceInterpretationMetadata.class, name = "AISliceInterpretationMetadata"),
-    @JsonSubTypes.Type(value = AIInterpretationMetadata.class, name = "AIInterpretationMetadata") }
+    @JsonSubTypes.Type(value = AIInterpretationMetadata.class, name = "AIInterpretationMetadata"),
+    @JsonSubTypes.Type(value = AIAggregateInterpretationMetadata.class, name = "AIAggregateInterpretationMetadata")}
 )
 abstract public class InterpretationMetadata {
 	

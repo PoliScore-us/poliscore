@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -17,11 +19,15 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.val;
 import us.poliscore.dataset.PoliscoreDatasetIF;
+import us.poliscore.model.AIAggregateInterpretationMetadata;
+import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
+import us.poliscore.model.bill.BillSlice;
 import us.poliscore.model.bill.BillInterpretationParser.StructuralAnalysisParser;
 import us.poliscore.model.bill.BillText;
+import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorInterpretation;
 import us.poliscore.model.legislator.LegislatorInterpretationParser;
@@ -57,17 +63,26 @@ public class DataCleaner implements QuarkusApplication {
 		val dataset = data.importDataset(LegislativeNamespace.US_CONGRESS, 2026);
 //		val dataset = data.importDataset(LegislativeNamespace.US_COLORADO, 2026);
 		
-		val interp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), "119", "C001116"), LegislatorInterpretation.class).get();
-		
-		interp.validate();
-		
-		System.out.println(LegislatorInterpretationParser.stripMultiLines(interp.getShortExplain()));
+//		val interp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), "119", "C001116"), LegislatorInterpretation.class).get();
+//		
+//		interp.validate();
+//		
+//		System.out.println(LegislatorInterpretationParser.stripMultiLines(interp.getShortExplain()));
 		
 //		deleteInvalidBillTexts(dataset);
 		
 //		validateLegislatorInterps(dataset);
 		
 //		reparseStructuralAnalysisInterps(dataset);
+		
+		String billId = Bill.generateId(dataset.getNamespace(), "119", CongressionalBillType.HR, 1);
+		String sessionKey = billId.substring(StringUtils.ordinalIndexOf(billId, "/", 1)+1, StringUtils.ordinalIndexOf(billId, "/", 4));
+		String objectKey = billId.substring(StringUtils.ordinalIndexOf(billId, "/", 4)+1);
+		for (var interp : s3.query(BillInterpretation.class, sessionKey, objectKey)) {
+			if (interp.getIssueStats() == null)
+				s3.delete(interp.getId(), BillInterpretation.class);
+		}
+		
         
 		System.out.println("Program complete.");
 	}

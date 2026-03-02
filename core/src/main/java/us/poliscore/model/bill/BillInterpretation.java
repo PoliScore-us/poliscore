@@ -5,11 +5,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.AllArgsConstructor;
@@ -23,6 +23,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConve
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
+import us.poliscore.model.AIAggregateInterpretationMetadata;
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.AISliceInterpretationMetadata;
 import us.poliscore.model.InterpretationOrigin;
@@ -38,6 +39,7 @@ import us.poliscore.util.ParsingUtil;
 
 @Data
 @EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
+@JsonIgnoreProperties(value = { "sliceInterpretations" })
 @DynamoDbBean
 @RegisterForReflection
 @NoArgsConstructor
@@ -117,10 +119,6 @@ public class BillInterpretation extends SessionPersistable
 	
 	protected LocalDate lastPressQuery = LocalDate.EPOCH;
 	
-	@NonNull 
-	@Getter(onMethod = @__({ @DynamoDbIgnore})) // Some bils (such as OBBB) are too large to fit in DDB in one record with all the slices too 
-	protected List<BillInterpretation> sliceInterpretations = new ArrayList<BillInterpretation>();
-	
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(AIInterpretationMetadataConverter.class)}))
 	protected AIInterpretationMetadata metadata;
 	
@@ -165,13 +163,14 @@ public class BillInterpretation extends SessionPersistable
 	
 	@JsonIgnore
 	@DynamoDbIgnore
-	public void validate() {
+	public void validate(boolean isParser) {
 		if (pressInterps == null || pressInterps.size() == 0) {
 			logger.warn("Interpretation had no references! This might not be an error, but it's not ideal either.");
 //			throw new InterpretationMissingReferencesException("The interpretation had no references.");
 		}
 		
-		issueStats.validate();
+		if (!(isParser && getMetadata() instanceof AIAggregateInterpretationMetadata))
+			issueStats.validate();
 		
 		ParsingUtil.strValidate(getLongExplain(), "long explain", 15_000);
 		
@@ -198,7 +197,7 @@ public class BillInterpretation extends SessionPersistable
 	@DynamoDbIgnore
 	public boolean isValid() {
 		try {
-			validate();
+			validate(false);
 			return true;
 		} catch(Throwable t) {
 			return false;
@@ -211,16 +210,18 @@ public class BillInterpretation extends SessionPersistable
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() { return metadata.getDate(); }
 	@JsonIgnore public void setDate(LocalDate date) { }
 	
-	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return getRating(null); }
+	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public Integer getRating() { return getRating(null); }
 	public Integer getRating(TrackedIssue issue) {
 		if (rating != null)
 			return rating;
 		if (quality != null)
 			return quality;
+		if (issueStats != null)
+			return issueStats.getImpact(issue);
 		
-		return issueStats.getImpact(issue);
+		return null;
 	}
-	public void setRating(int rating) { }
+	public void setRating(Integer rating) { }
 	
 	@JsonIgnore public Integer getImpact(TrackedIssue issue) { return issueStats.getImpact(issue); }
 	@JsonIgnore public void setImpact() { }

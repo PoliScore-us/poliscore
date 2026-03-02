@@ -2,8 +2,6 @@ package us.poliscore.parsing;
 
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
-
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillSlice;
 import us.poliscore.model.bill.BillText;
@@ -17,12 +15,4 @@ public interface BillSlicer {
 //	public static int MAX_SECTION_LENGTH = 3500000;
 	
 	public List<BillSlice> slice(Bill bill, BillText btx, int maxSectionLength);
-	
-	public static BillSlicer factory(BillText btx) {
-		if (!StringUtils.isBlank(btx.getXml())) {
-			return new XMLBillSlicer();
-		} else {
-			return new TextBillSlicer();
-		}
-	}
 }

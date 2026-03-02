@@ -111,7 +111,7 @@ public class BillInterpretationParser {
         interp.setStructuralAnalysisPassFail(saParsed.getResults());
         interp.setStructuralAnalysisExplain(saParsed.getAnalyses());
         
-        interp.validate();
+        interp.validate(true);
 	}
 
 	private String standardizeFormatting(String line) {
