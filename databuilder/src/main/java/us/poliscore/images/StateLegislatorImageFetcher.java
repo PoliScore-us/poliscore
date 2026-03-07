@@ -149,7 +149,10 @@ public class StateLegislatorImageFetcher extends AbstractLegislatorImageFetcher 
 	    for (val img : imgs) {
 	    	if (img.attr("src").toLowerCase().contains(leg.getName().getFirst().toLowerCase())
 	    			|| img.attr("src").toLowerCase().contains(leg.getName().getLast().toLowerCase())
-	    			|| img.attr("src").toLowerCase().contains("images/legislators/house") || img.attr("src").toLowerCase().contains("images/legislators/senate")) {
+	    			|| img.attr("alt").toLowerCase().contains(leg.getName().getFirst().toLowerCase())
+	    			|| img.attr("alt").toLowerCase().contains(leg.getName().getLast().toLowerCase())
+	    			|| img.attr("src").toLowerCase().contains("images/legislators/house") || img.attr("src").toLowerCase().contains("images/legislators/senate")
+	    			|| img.attr("src").toLowerCase().contains("images/members")) {
 	    		candidate = img;
 	    		break;
 	    	}

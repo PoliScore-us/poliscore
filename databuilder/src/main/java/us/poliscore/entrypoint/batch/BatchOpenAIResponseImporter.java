@@ -68,10 +68,10 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 //	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/unprocessed.jsonl").getAbsolutePath();
 	
 //	Canceled half-way through a batch (bills)
-//	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/openapi-bills.out.jsonl").getAbsolutePath();
+	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/openapi-bills.out.jsonl").getAbsolutePath();
 	
 	// TODO : If we need to reimport
-	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/openapi-legislators-feball.out.jsonl").getAbsolutePath();
+//	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/openapi-legislators-feball.out.jsonl").getAbsolutePath();
 	
 	public Logger logger = LoggerFactory.getLogger(BatchOpenAIResponseImporter.class);
 	
@@ -283,7 +283,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 				val billText = s3.get(BillText.generateId(bill.getId()), BillText.class).orElseThrow();
 				bill.setText(billText);
 				
-				List<BillSlice> slices = billSlicer.slice(bill, billText, BatchBillRequestGenerator.billProcessModel.getContextWindowStringLength());
+				List<BillSlice> slices = billSlicer.slice(bill, billText, BatchBillRequestGenerator.billProcessModel);
 				
 				bi.setMetadata(OpenAIService.metadata(slices.get(sliceIndex)));
 				bi.setId(BillInterpretation.generateId(billId, bi.getOrigin(), sliceIndex));

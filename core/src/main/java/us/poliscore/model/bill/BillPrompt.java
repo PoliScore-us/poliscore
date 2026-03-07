@@ -333,7 +333,7 @@ Example (format reference only)
  Before printing the final line, internally verify the output is a JSON array of arrays, each inner array has length 8, and every element is a string; if not, correct it until it passes.
 			""";
 	
-	public static String getPromptForBill(Bill bill, boolean isAggregate, boolean searchEnabled) {
+	public static String getPromptForBill(boolean isAggregate, boolean searchEnabled) {
 		String prompt;
 		
 		if (isAggregate) {

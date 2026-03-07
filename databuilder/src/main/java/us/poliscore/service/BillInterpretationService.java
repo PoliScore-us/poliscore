@@ -64,34 +64,34 @@ public class BillInterpretationService {
 		String userMsg = "";
 		final String billTextMsg = "Official Bill Text:\n" + billText;
 		
-		if (!DatabaseBuilder.AGENTIC_WEB_SEARCH) {
-			var pressInterps = billService.getPressInterps(bill.getId());
-			
-			if (pressInterps.size() > 0) {
-				String header = "References:\n" + "The following articles were pulled from a web search for this bill and were included to provide additional context for the interpretation. Their inclusion does not represent an endorsement of the opinions expressed from the source. Often a web search for a bill will reveal key legislative stakeholders, so view these articles with a skeptical eye. We want to prioritize what's best for all of America, not necessarily a few key stakeholders. Feel free to cite these sources using markdown link syntax in your long report if appropriate and relevant.\n\n";
-				
-				int context = billTextMsg.length() + header.length();
-				
-				for (int i = 0; i < pressInterps.size(); ++i)
-				{
-					var interp = pressInterps.get(i);
-					
-					String pressText = interp.getAuthor() + "(" + interp.getOrigin().getUrl() + ") - " + interp.getOrigin().getTitle() + ":\n" + interp.getLongExplain() + "\n\n";
-					
-					context += pressText.length();
-					
-					if (context < model.getContextWindowStringLength()) {
-						if (i == 0) {
-							userMsg = header;
-						}
-						
-						userMsg += pressText;
-					} else {
-						break;
-					}
-				}
-			}
-		}
+//		if (!DatabaseBuilder.AGENTIC_WEB_SEARCH) {
+//			var pressInterps = billService.getPressInterps(bill.getId());
+//			
+//			if (pressInterps.size() > 0) {
+//				String header = "References:\n" + "The following articles were pulled from a web search for this bill and were included to provide additional context for the interpretation. Their inclusion does not represent an endorsement of the opinions expressed from the source. Often a web search for a bill will reveal key legislative stakeholders, so view these articles with a skeptical eye. We want to prioritize what's best for all of America, not necessarily a few key stakeholders. Feel free to cite these sources using markdown link syntax in your long report if appropriate and relevant.\n\n";
+//				
+//				int context = billTextMsg.length() + header.length();
+//				
+//				for (int i = 0; i < pressInterps.size(); ++i)
+//				{
+//					var interp = pressInterps.get(i);
+//					
+//					String pressText = interp.getAuthor() + "(" + interp.getOrigin().getUrl() + ") - " + interp.getOrigin().getTitle() + ":\n" + interp.getLongExplain() + "\n\n";
+//					
+//					context += pressText.length();
+//					
+//					if (context < model.getContextWindowStringLength()) {
+//						if (i == 0) {
+//							userMsg = header;
+//						}
+//						
+//						userMsg += pressText;
+//					} else {
+//						break;
+//					}
+//				}
+//			}
+//		}
 		
 		userMsg += billTextMsg;
 		

@@ -8,5 +8,7 @@
     { "namespace": "us/az",       "year": 2026, "multiplier": 2.0, "build": true },
     { "namespace": "us/az",       "year": 2025, "multiplier": 2.0, "build": false },
     
-    { "namespace": "us/nm",       "year": 2026, "multiplier": 2.0, "build": true }
+    { "namespace": "us/nm",       "year": 2026, "multiplier": 2.0, "build": true },
+    
+    { "namespace": "us/tx",       "year": 2026, "multiplier": 2.0, "build": true }
 ]

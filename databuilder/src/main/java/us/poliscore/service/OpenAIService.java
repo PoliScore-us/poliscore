@@ -83,6 +83,8 @@ public class OpenAIService {
 	
 	@Inject OpenAIFlexBatchProcessor flexBatchProcessor;
 	
+	@Inject TokenEstimatorService tokenEstimatorService;
+	
 	protected LocalDateTime nextCallTime = null;
 	
 	volatile OpenAIClient openAiClient;
@@ -139,7 +141,7 @@ public class OpenAIService {
 		String userMsg = request.getUserMsg();
 		val effort = Objects.requireNonNullElse(request.getReasoningEffort(), ReasoningEffort.LOW);
 		
-		if (model != OpenAIModel.GPT41 && userMsg.length() > model.getContextWindowStringLength()) {
+		if (model != OpenAIModel.GPT41 && tokenEstimatorService.estimateTokenCount(request.getSystemMsg(), request.getUserMsg()) > model.getContextWindowTokens()) {
 			throw new IndexOutOfBoundsException();
 		}
 		if (StringUtils.isEmpty(systemMsg) || StringUtils.isEmpty(userMsg)) {
@@ -155,7 +157,7 @@ public class OpenAIService {
 				.instructions(systemMsg)
 		        .input(userMsg)
 		        .model(_model.getId())
-		        .maxOutputTokens(_model.getMaxOutputTokens());
+		        .maxOutputTokens(OpenAIModel.MAX_OUTPUT_TOKENS);
 		
 		if (_model.isSupportsSearch())
 			paramBuilder.tools(List.of(
@@ -173,14 +175,18 @@ public class OpenAIService {
 			
 		val params = paramBuilder.build();
 		
+//		BadRequestException.class // OpenAI threw this once saying our prompt was invalid. Seems to be something they do non-deterministically on rare occasion. Try again.
+		// com.openai.errors.BadRequestException: 400: Your input exceeds the context window of this model. Please adjust your input and try again.
+		
 		Log.info("Intepreting " + request.getData().getOid() + " using model " + model.getId() + " with reasoning effort " + effort.asString() + " and message size " + userMsg.length());
 		RetryPolicy<Response> retryPolicy = RetryPolicy.<Response>builder()
 			    .handle(SocketTimeoutException.class, InternalServerException.class,
-			    		OpenAIInvalidDataException.class, // Even though this runs counter to their documentation, this exception is actually thrown wrapping a "SocketException: connection reset", so we definitely want to retry it.
-			    		BadRequestException.class // OpenAI threw this once saying our prompt was invalid. Seems to be something they do non-deterministically on rare occasion. Try again.
+			    		OpenAIInvalidDataException.class // Even though this runs counter to their documentation, this exception is actually thrown wrapping a "SocketException: connection reset", so we definitely want to retry it.
 			    		)
 			    .handleIf((failure) -> {
-			        String msg = failure.getMessage();
+			        String msg = failure.getMessage() == null ? null : failure.getMessage().toLowerCase();
+			        if (msg == null) return false;
+			        if (failure instanceof BadRequestException) { return !msg.contains("exceeds the context window"); }
 			        return msg != null && msg.toLowerCase().contains("rate limit");
 			    })
 //			    .handleResultIf(r -> r == null || !r.status().isPresent() || r.status().get() != ResponseStatus.COMPLETED)

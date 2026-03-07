@@ -16,44 +16,47 @@ import org.w3c.dom.Node;
 
 import com.amazonaws.util.CollectionUtils;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
+import us.poliscore.ai.OpenAIModel;
 import us.poliscore.model.bill.Bill;
+import us.poliscore.model.bill.BillPrompt;
 import us.poliscore.model.bill.BillSlice;
 import us.poliscore.model.bill.BillText;
+import us.poliscore.service.TokenEstimatorService;
 
 /**
  * Even though this slicer is operating on XML, the return is the text content inside the XML. This helps us save on tokens and return larger slices.
  */
+@ApplicationScoped
 public class XMLBillSlicer implements BillSlicer {
 
-	protected Bill bill;
-	
 	private int sliceIndex = 0;
 	
-	private int maxSectionLength;
+	private String title;
+	
+	@Inject TokenEstimatorService tokenEstimatorService;
 	
 	@Override
 	@SneakyThrows
-	public List<BillSlice> slice(Bill bill, BillText btx, int maxSectionLength) {
-		this.bill = bill;
+	public List<BillSlice> slice(Bill bill, BillText btx, OpenAIModel model) {
 		Node doc = (Node) toDoc(btx.getXml());
 		
-		val title = getTitle(doc);
+		title = getTitle(doc);
 		val body = $(doc).find("legis-body");
 		if (StringUtils.isNotBlank(title) && body.isNotEmpty()) {
 			doc = body.get().get(0);
 		}
 		
-		this.maxSectionLength = maxSectionLength - title.length() - 1;
-		
-		val slices = divideAndConquer(doc);
+		val slices = divideAndConquer(bill, model, doc);
 		
 		if (slices.size() == 1) return slices;
 		
 		int i = 0;
 		for (val s : slices) {
-			s.setText(title + s.getText());
+			s.setText(title + "\n" + s.getText());
 			s.setSliceIndex(i++);
 		}
 
@@ -70,19 +73,19 @@ public class XMLBillSlicer implements BillSlicer {
 		return "Bill title: " + title.text() + "\nSection content:\n";
 	}
 	
-	protected List<BillSlice> divideAndConquer(Node node) {
+	protected List<BillSlice> divideAndConquer(Bill bill, OpenAIModel model, Node node) {
 		val text = $(node).text();
 		
-		if (text.length() < maxSectionLength) {
-			return Arrays.asList(buildSlice($(node).xpath(), $(node).xpath(), text));
-		} else if (node.getChildNodes().getLength() == 0 && text.length() >= maxSectionLength) {
+		if (!exceedsLength(text, model)) {
+			return Arrays.asList(buildSlice(bill, $(node).xpath(), $(node).xpath(), text));
+		} else if (node.getChildNodes().getLength() == 0 && exceedsLength(text, model)) {
 			val slices = TextBillSlicer.sliceRaw(text);
 			val list = new ArrayList<BillSlice>();
-			slices.forEach(s -> list.add(buildSlice($(node).xpath(), $(node).xpath(), s)));
+			slices.forEach(s -> list.add(buildSlice(bill, $(node).xpath(), $(node).xpath(), s)));
 			return list;
 		}
 		
-		val sections = $(node).children().map(c -> divideAndConquer(c.element())).stream().reduce(new ArrayList<BillSlice>(), (a,b) -> CollectionUtils.mergeLists(a, b));
+		val sections = $(node).children().map(c -> divideAndConquer(bill, model, c.element())).stream().reduce(new ArrayList<BillSlice>(), (a,b) -> CollectionUtils.mergeLists(a, b));
 		
 		val result = new ArrayList<BillSlice>();
 		int i = 0;
@@ -90,22 +93,26 @@ public class XMLBillSlicer implements BillSlicer {
 			StringBuilder cur = new StringBuilder();
 			String start = sections.get(i).getStart();
 			
-			while (i < sections.size() && cur.length() + sections.get(i).getText().length() < maxSectionLength-1) {
+			while (i < sections.size() && exceedsLength(cur + "\n" + sections.get(i).getText(), model)) {
 				if (cur.length() > 0) { cur.append("\n"); }
 				
 				cur.append(sections.get(i).getText());
 				i++;
 			}
 			
-			result.add(buildSlice(start, sections.get(i-1).getEnd(), cur.toString()));
+			result.add(buildSlice(bill, start, sections.get(i-1).getEnd(), cur.toString()));
 		}
 		
 		return result;
 	}
+	
+	private boolean exceedsLength(String text, OpenAIModel model) {
+		return tokenEstimatorService.estimateTokenCount(BillPrompt.slicePrompt, title + "\n" + text) > model.getContextWindowTokens();
+	}
 
-	private BillSlice buildSlice(String xpathStart, String xpathEnd, String sectionText) {
+	private BillSlice buildSlice(Bill bill, String xpathStart, String xpathEnd, String sectionText) {
 		BillSlice slice = new BillSlice();
-		slice.setBill(this.bill);
+		slice.setBill(bill);
 		slice.setText(sectionText);
 		slice.setStart(xpathStart);
 		slice.setEnd(xpathEnd);

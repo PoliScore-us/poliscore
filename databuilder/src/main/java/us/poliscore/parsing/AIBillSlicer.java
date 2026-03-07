@@ -44,6 +44,9 @@ import us.poliscore.service.storage.LocalCachedS3Service;
  * This slicer was abandoned (for now) because it split the bill into ten sections (but the XML slicer only needs 2) and because the ultimate utility in this approach comes from
  * exploring the bill in depth for the end user. That sort of exploration might also be nice to have related bills? I don't know. I kinda just ran out of resources and abandoned this.
  * 
+ * 
+ * TODO : Use the new OpenAIModel.estimateTokenCount method
+ * TODO : Audit to make sure its using the new SLICER_MODEL correctly (as opposed to the new 'model' input param)
  */
 @ApplicationScoped
 public class AIBillSlicer implements BillSlicer {
@@ -56,7 +59,7 @@ Your output should be ONLY a machine-readable JSON array (with no wrapper-text o
 4. end - an XML node reference to the end of the section of the format: tag[@id='X']
 			""";
 	
-	public static final OpenAIModel model = OpenAIModel.GPT41;
+	public static final OpenAIModel SLICER_MODEL = OpenAIModel.GPT41;
 	
 	@Inject private OpenAIService ai;
 	
@@ -64,11 +67,15 @@ Your output should be ONLY a machine-readable JSON array (with no wrapper-text o
 	
 	@Inject ObjectMapper mapper;
 	
+	private OpenAIModel model;
+	
 	record AiSliceResponse(String name, String description, String start, String end) { }
 
 	@Override
 	@SneakyThrows
-	public List<BillSlice> slice(Bill bill, BillText btx, int maxSectionLength) {
+	public List<BillSlice> slice(Bill bill, BillText btx, OpenAIModel model) {
+		this.model = model;
+		
 		// If it's been sliced before, we have to return the slice as-is.
 		var interp = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class).orElse(null);
 		
@@ -93,7 +100,7 @@ Your output should be ONLY a machine-readable JSON array (with no wrapper-text o
 			return slices;
 		}
 		
-		var slices = newSlice(bill, btx, maxSectionLength);
+		var slices = newSlice(bill, btx);
 		
 		// Save the slices in a persistent way so that we can reconstruct them later
 		interp = new BillInterpretation();
@@ -106,7 +113,7 @@ Your output should be ONLY a machine-readable JSON array (with no wrapper-text o
 	}
 	
 	@SneakyThrows
-	protected List<BillSlice> newSlice(Bill bill, BillText btx, int maxSectionLength) {
+	protected List<BillSlice> newSlice(Bill bill, BillText btx) {
 		
 		
 		RetryPolicy<List<BillSlice>> retryPolicy = RetryPolicy.<List<BillSlice>>builder()
@@ -118,14 +125,14 @@ Your output should be ONLY a machine-readable JSON array (with no wrapper-text o
 			    .build();
 		
 		return Failsafe.with(retryPolicy).get(() -> {
-			return newSliceInRetry(bill, btx, maxSectionLength);
+			return newSliceInRetry(bill, btx);
 		});
 	}
 	
 	@SneakyThrows
-	protected List<BillSlice> newSliceInRetry(Bill bill, BillText btx, int maxSectionLength) {
+	protected List<BillSlice> newSliceInRetry(Bill bill, BillText btx) {
 		try {
-			var request = new InterpretationRequest(new CustomData("aislicer/" + bill.getId()), prompt, btx.getXml(), model, null);
+			var request = new InterpretationRequest(new CustomData("aislicer/" + bill.getId()), prompt, btx.getXml(), SLICER_MODEL, null);
 			
 			var response = ai.chat(request);
 			

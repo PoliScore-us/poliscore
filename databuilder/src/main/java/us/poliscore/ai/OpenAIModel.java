@@ -2,6 +2,10 @@ package us.poliscore.ai;
 
 import java.util.NoSuchElementException;
 
+import com.knuddels.jtokkit.Encodings;
+import com.knuddels.jtokkit.api.Encoding;
+import com.knuddels.jtokkit.api.EncodingType;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import us.poliscore.service.OpenAIService.Usage;
@@ -23,6 +27,9 @@ public enum OpenAIModel {
 	public static final OpenAIModel DEFAULT_MODEL = GPT51;
 
 	public static final OpenAIModel DEFAULT_MODEL_MINI = GPT5mini;
+	
+	// Because we have a reasoning model, this max output is important because it gets fed back into the input again, reducing our potential max input tokens
+	public static final int MAX_OUTPUT_TOKENS = 100_000;
 
 	// ---- Fields ----
 	private final String id;
@@ -34,6 +41,11 @@ public enum OpenAIModel {
 	private final RateLimit rateLimit;
 	private final double inputUsdPer1M;
 	private final double outputUsdPer1M;
+	
+	public int getContextWindowTokens() {
+		// We're dividing this in half because we need to reserve room for internal reasoning as well as web search tooling.
+		return this.contextWindowTokens / 2;
+	}
 
 	public int getContextWindowStringLength() {
 		return contextWindowTokens * 2; // TODO : Technically this should work at *4 ? But in practice I'm not seeing it

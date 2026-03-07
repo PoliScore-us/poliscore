@@ -37,13 +37,14 @@ import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
 import us.poliscore.service.BillSlicerService;
 import us.poliscore.service.GovernmentDataService;
+import us.poliscore.service.TokenEstimatorService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 @QuarkusMain(name = "BatchBillRequestGenerator")
 public class BatchBillRequestGenerator implements QuarkusApplication {
 	public static final boolean REPROCESS_INVALID_BILLS = false;
 
-	public static final int MAX_BILL_PROCESS = 3000; // -1 for infinite
+	public static final int MAX_BILL_PROCESS = 5000; // -1 for infinite
 
 	public static final List<String> specificFetch = null;
 //	public static final List<String> specificFetch = Arrays.asList(
@@ -87,6 +88,8 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 	
 	@Inject
 	private BillSlicerService billSlicer;
+	
+	@Inject TokenEstimatorService tokenEstimatorService;
 
 	private long totalRequests = 0;
 
@@ -145,6 +148,9 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 		if (specificFetch == null) {
 			stream = andNotInList(stream, billSkipList);
 			stream = andNotAlreadyInterpretedOrInvalid(stream, includePressDirtyBills);
+			
+			// Texas has a gigantic number of bills. We don't want to do all of them just yet.
+			billIsIntroducedAfter(stream, LocalDate.of(2026, 3, 1));
 
 			// stream = ifInterpretedThenInSession(stream, "119");
 			// stream = ifInterpretedThenByModel(stream, "gpt-4.1");
@@ -187,13 +193,13 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 			String sBillText = b.getText().getDocument();
 			if (StringUtils.isBlank(sBillText)) throw new UnsupportedOperationException("Bill text is empty for " + b.getId());
 
+			String systemMsg = BillPrompt.getPromptForBill(false, enableWebSearch);
 			val userMsg = billInterpreter.getUserMsgForBill(b, sBillText, billProcessModel);
 
-			if (userMsg.length() >= billProcessModel.getContextWindowStringLength()) {
+			
+			if (tokenEstimatorService.estimateTokenCount(systemMsg + "\n" + userMsg) > billProcessModel.getContextWindowTokens()) {
 
-				List<BillSlice> slices = billSlicer.slice(b, b.getText(),
-						billProcessModel.getContextWindowStringLength()
-								- (userMsg.length() - b.getText().getDocument().length()));
+				List<BillSlice> slices = billSlicer.slice(b, b.getText(), billProcessModel);
 
 				if (slices.isEmpty())
 					throw new UnsupportedOperationException("Slicer returned zero slices?");
@@ -204,7 +210,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 						sBillText = slices.get(0).getText();
 
 					createRequest(BillInterpretation.generateId(b.getId(), null), b, null,
-							BillPrompt.getPromptForBill(b, false, enableWebSearch),
+							systemMsg,
 							billInterpreter.getUserMsgForBill(b, sBillText, billProcessModel),
 							sBillText);
 				} else {
@@ -222,6 +228,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 							if (s3.exists(oid, BillInterpretation.class))
 								continue;
 							
+							// TODO : Does the slicer take the slice prompt size into account?
 							createRequest(oid, b, slice.getSliceIndex(), BillPrompt.slicePrompt,
 									slice.getText(), slice.getText());
 						} else {
@@ -230,6 +237,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 					}
 
 					if (sliceInterps.size() == slices.size()) {
+						systemMsg = BillPrompt.getPromptForBill(true, enableWebSearch);
 						List<String> summaries = new ArrayList<>();
 
 						for (int i = 0; i < slices.size(); ++i) {
@@ -241,7 +249,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 						if (CHECK_S3_EXISTS && billInterpreter.isInterpreted(oid))
 							continue;
 
-						if (String.join("\n", summaries).length() > billProcessModel.getContextWindowStringLength()) {
+						if (tokenEstimatorService.estimateTokenCount(systemMsg, billInterpreter.getUserMsgForBill(b, String.join("\n", summaries), billProcessModel)) > billProcessModel.getContextWindowTokens()) {
 							summaries = new ArrayList<>();
 							for (int i = 0; i < slices.size(); ++i) {
 								val split = sliceInterps.get(i).getLongExplain().split("\n");
@@ -252,14 +260,13 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 						}
 
 						String sliceTexts = String.join("\n", summaries);
-						createRequest(oid, b, null, BillPrompt.getPromptForBill(b, true, enableWebSearch),
+						createRequest(oid, b, null, systemMsg,
 								billInterpreter.getUserMsgForBill(b, sliceTexts, billProcessModel),
 								sliceTexts);
 					}
 				}
 			} else {
-				createRequest(BillInterpretation.generateId(b.getId(), null), b, null,
-						BillPrompt.getPromptForBill(b, false, enableWebSearch), userMsg, sBillText);
+				createRequest(BillInterpretation.generateId(b.getId(), null), b, null, systemMsg, userMsg, sBillText);
 			}
 		}
 	}
@@ -295,6 +302,10 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 		return stream.filter(b -> beforeDate.isAfter(
 				s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getDate()));
 	}
+	
+	private Stream<Bill> billIsIntroducedAfter(Stream<Bill> stream, LocalDate beforeDate) {
+		return stream.filter(b -> b.getIntroducedDate().isAfter(beforeDate));
+	}
 
 	private Stream<Bill> ifInterpretedThenHasZeroSearchReferences(Stream<Bill> stream) {
 		return stream.filter(b -> s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get()
@@ -309,10 +320,10 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 	private void createRequest(String oid, Bill bill, Integer sliceIndex, String systemMsg, String userMsg, String billText) {
 		if (StringUtils.isBlank(billText)) throw new UnsupportedOperationException("Bill text is empty for " + bill.getId() + (sliceIndex != null ? " slice " + sliceIndex : ""));
 		
-		if (userMsg.length() >= billProcessModel.getContextWindowStringLength()) {
-			throw new RuntimeException("Max user message length exceeded on " + oid + " (" + userMsg.length() + " > "
-					+ billProcessModel.getContextWindowStringLength());
-		}
+		// Since checking this is now expensive, we will comment it out. We already do these checks before we invoke createRequest so this is redundant anyway.
+//		if (billProcessModel.estimateTokenCount(systemMsg + "\n" + userMsg) > billProcessModel.getContextWindowTokens()) {
+//			throw new RuntimeException("Max user message length exceeded on " + oid);
+//		}
 
 		val req = InterpretationRequest.builder().data(new CustomData(oid)).systemMsg(systemMsg).userMsg(userMsg)
 				.requestedModel(billProcessModel).build();
