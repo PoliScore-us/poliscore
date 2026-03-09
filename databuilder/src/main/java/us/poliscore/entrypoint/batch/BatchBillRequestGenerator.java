@@ -150,7 +150,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 			stream = andNotAlreadyInterpretedOrInvalid(stream, includePressDirtyBills);
 			
 			// Texas has a gigantic number of bills. We don't want to do all of them just yet.
-			billIsIntroducedAfter(stream, LocalDate.of(2026, 3, 1));
+			stream = billIsIntroducedAfter(stream, LocalDate.of(2026, 3, 1));
 
 			// stream = ifInterpretedThenInSession(stream, "119");
 			// stream = ifInterpretedThenByModel(stream, "gpt-4.1");

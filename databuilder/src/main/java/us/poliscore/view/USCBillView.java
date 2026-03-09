@@ -9,6 +9,7 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.Data;
 import software.amazon.awssdk.utils.StringUtils;
@@ -43,7 +44,8 @@ public class USCBillView {
 	
 	protected String url;
 	
-//	protected LocalDateTime updated_at;
+	@JsonProperty("updated_at")
+	protected String updated_at_raw;
 	
 	protected LocalDate introduced_at;
 	
@@ -52,6 +54,24 @@ public class USCBillView {
 	protected List<USCBillSponsor> cosponsors;
 	
 	private List<Action> actions;
+	
+	@JsonIgnore
+	public LocalDate getUpdatedAt() {
+	    if (updated_at_raw == null) return null;
+
+	    try {
+	        // First try parsing full datetime
+	        return OffsetDateTime.parse(updated_at_raw).toLocalDate();
+	    } catch (DateTimeParseException e) {
+	        try {
+	            // Fallback: plain date
+	            LocalDate date = LocalDate.parse(updated_at_raw);
+	            return date.atStartOfDay().atOffset(ZoneOffset.UTC).toLocalDate();
+	        } catch (DateTimeParseException e2) {
+	            return null;
+	        }
+	    }
+	}
 	
 	@JsonIgnore
 	public LocalDate getLastActionDate() {
@@ -69,6 +89,7 @@ public class USCBillView {
 	@Data
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class Action {
+		@JsonProperty("acted_at")
 	    private String acted_at_raw;
 	    private String text;
 	    private String type;

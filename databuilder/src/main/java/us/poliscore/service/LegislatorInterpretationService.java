@@ -435,7 +435,7 @@ Your written response for this research section should consist of only a compact
 				}
 			}
 			
-			if (billInterp != null && billInterp.getStructuralAnalysisPassFail() != null) {
+			if (interact.getJudgementWeight() > 0 && billInterp != null && billInterp.getStructuralAnalysisPassFail() != null) {
 				structStats = structStats.addAll(billInterp.getStructuralAnalysisPassFail());
 			}
 		}

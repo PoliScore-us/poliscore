@@ -450,7 +450,7 @@ public class USCDatasetProvider implements DatasetProvider {
     	}
     	
     	bill.setCosponsors(view.getCosponsors().stream().map(s -> s.convert(dataset)).collect(Collectors.toList()));
-    	bill.setLastActionDate(view.getLastActionDate());
+    	bill.setLastActionDate(view.getUpdatedAt() ==  null ? view.getLastActionDate() : view.getUpdatedAt());
     	bill.setOfficialUrl("https://www.congress.gov/bill/" + dataset.getSession().getCode() + "th-congress/" + getCongressGovBillType(bill) + "/" + bill.getNumber());
     	
     	if (view.getSponsor() != null && !StringUtils.isBlank(view.getSponsor().getBioguide_id()))

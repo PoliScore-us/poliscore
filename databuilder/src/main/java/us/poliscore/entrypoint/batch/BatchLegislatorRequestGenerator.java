@@ -3,6 +3,7 @@ package us.poliscore.entrypoint.batch;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -26,7 +27,6 @@ import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.BuildReport;
 import us.poliscore.model.IssueStats;
-import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.CongressionalBillType;
@@ -54,13 +54,13 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	
 	public static final LocalDateTime OLDER_THAN = null;
 //	public static final LocalDateTime OLDER_THAN = specificFetch == null ? Period.ofMonths(1) : null;
-//	public static final LocalDateTime OLDER_THAN = LocalDateTime.now().minus(Period.ofMonths(6));
+//	public static final LocalDateTime OLDER_THAN = LocalDateTime.now().minus(Period.ofMonths(20));
 //	public static final LocalDateTime OLDER_THAN = LocalDate.of(2025, 8, 14).atStartOfDay();
 	
 	public static final int MAX_REQUESTS = specificFetch != null ? -1 : 1000;
 	
-	public static final boolean CHECK_S3_EXISTS = false;
-//	public static final boolean CHECK_S3_EXISTS = specificFetch == null && OLDER_THAN == null;
+//	public static final boolean CHECK_S3_EXISTS = false;
+	public static final boolean CHECK_S3_EXISTS = specificFetch == null && OLDER_THAN == null;
 	
 	public static final OpenAIModel interpModel = OpenAIModel.DEFAULT_MODEL;
 	

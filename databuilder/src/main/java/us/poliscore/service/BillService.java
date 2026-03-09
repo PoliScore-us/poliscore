@@ -74,14 +74,22 @@ public class BillService {
 
 	public void ddbPersist(Bill b, BillInterpretation interp)
 	{
-		b.setLastUpdate(interp.getLastUpdate());
+		ddbPersist(b, interp, true);
+	}
+	
+	public void ddbPersist(Bill b, BillInterpretation interp, boolean populateIssueStats)
+	{
+		var billLastAction = b.getLastActionDate() == null || interp.getLastUpdate().isAfter(b.getLastActionDate().atStartOfDay()) ? interp.getLastUpdate() : b.getLastActionDate().atStartOfDay();
+		b.setLastUpdate(billLastAction);
 		
 		populatePressInterps(interp);
 		b.setInterpretation(interp);
 		ddb.put(b);
 		
-		for(TrackedIssue issue : TrackedIssue.values()) {
-			ddb.put(new BillIssueStat(issue, b.getImpact(issue), b));
+		if (populateIssueStats) {
+			for(TrackedIssue issue : TrackedIssue.values()) {
+				ddb.put(new BillIssueStat(issue, b.getImpact(issue), b));
+			}
 		}
 	}
 	
