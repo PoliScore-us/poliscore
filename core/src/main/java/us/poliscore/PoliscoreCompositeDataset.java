@@ -115,6 +115,11 @@ public class PoliscoreCompositeDataset implements ObjectStorageServiceIF, Polisc
 	}
 	
 	@Override
+	public String toString() {
+		return this.getDescription();
+	}
+	
+	@Override
 	public int getStartYear() {
 	    return this.datasets.stream()
 	        .mapToInt(d -> d.getStartYear())

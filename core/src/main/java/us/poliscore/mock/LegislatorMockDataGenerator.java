@@ -76,7 +76,7 @@ public final class LegislatorMockDataGenerator {
 
         // LegiScan-ish numeric id (mock)
         leg.setLegiscanId(10_000 + rnd.nextInt(90_000));
-        leg.setId(Legislator.generateId(dataset.getNamespace(), dataset.getCode(), String.valueOf(leg.getLegiscanId())));
+        leg.setId(Legislator.generateId(dataset.getNamespace(), dataset.getRegularSession().getCode(), String.valueOf(leg.getLegiscanId())));
 
         // Chamber/party/district
         var chamber = pick(CHAMBERS);

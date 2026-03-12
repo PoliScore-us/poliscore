@@ -108,7 +108,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		var list = dataset.query(Legislator.class).stream()
 				.filter(l -> specificFetch == null || specificFetch.contains(l.getId()))
 				.filter(l -> l.getInteractions().size() > 0)
-				.filter(l -> !CHECK_S3_EXISTS || !s3.exists(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), l.getCode()), LegislatorInterpretation.class))
+				.filter(l -> !CHECK_S3_EXISTS || !s3.exists(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getRegularSession().getCode(), l.getCode()), LegislatorInterpretation.class))
 				.filter(l -> interpIsOlderThan(l, dataset))
 //				.filter(l -> interpHasGrade("D", l, dataset) || interpHasGrade("C", l, dataset))
 //				.filter(l -> l.getNamespace().equals(LegislativeNamespace.US_COLORADO)
@@ -133,7 +133,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	}
 	
 	private boolean interpHasGrade(String grade, Legislator leg, PoliscoreDatasetIF dataset) {
-		val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
+		val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getRegularSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
 		if (interpOp.isEmpty()) return true;
 		if (interpOp.get().getIssueStats() == null) return true;
 		
@@ -143,7 +143,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	private boolean interpIsOlderThan(Legislator leg, PoliscoreDatasetIF dataset) {
 		if (OLDER_THAN == null) return true;
 		
-		val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
+		val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getRegularSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
 		if (interpOp.isEmpty()) return true;
 		if (interpOp.get().getLastUpdate() == null) return true;
 		
@@ -219,7 +219,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		if (includedBills.size() == 0)
 			return;
 		
-		createRequest(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), leg, LegislatorInterpretationService.getAiPrompt(dataset, leg, stats), String.join("\n", billMsgs));
+		createRequest(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getRegularSession().getCode(), leg.getCode()), leg, LegislatorInterpretationService.getAiPrompt(dataset, leg, stats), String.join("\n", billMsgs));
 	}
 
 	private void includeBillsByTopIssues(Legislator leg, IssueStats stats, List<String> billMsgs, Set<String> includedBills, int amount, boolean ascending) {

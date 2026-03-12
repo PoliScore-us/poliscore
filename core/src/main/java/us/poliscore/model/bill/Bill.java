@@ -123,6 +123,10 @@ public class Bill extends SessionPersistable {
 		return name;
 	}
 	
+	public LocalDate getLastActionDate() {
+		return lastActionDate != null ? lastActionDate : introducedDate;
+	}
+	
 	@JsonIgnore
 	@DynamoDbIgnore
 	public String getWebappUrlPath() {
@@ -138,13 +142,13 @@ public class Bill extends SessionPersistable {
 		if (getNamespace().equals(LegislativeNamespace.US_CONGRESS))
 			return this.getId().substring(0, StringUtils.ordinalIndexOf(getId(), "/", 4));
 		else {
-			return getNamespace() + "/" + String.valueOf(SessionInfoService.lookupRegularSession(getNamespace(), getSessionCode()).getEndDate().getYear());
+			return ID_CLASS_PREFIX + "/" + getNamespace() + "/" + String.valueOf(SessionInfoService.lookupRegularSession(getNamespace(), getSessionCode()).getEndDate().getYear());
 		}
 	}
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 	
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() {
-		if (lastActionDate != null) return lastActionDate;
+//		if (lastActionDate != null) return lastActionDate;
 		
 		return introducedDate;
 	}
@@ -156,15 +160,17 @@ public class Bill extends SessionPersistable {
 	
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_ABS_INDEX }) public int getRatingAbs() { return Math.abs(interpretation.getRating()); }
 	@JsonIgnore public void setRatingAbs(int rating) { }
-	
-	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_IMPACT_INDEX }) public int getImpact() { return getImpact(TrackedIssue.OverallBenefitToSociety); }
+
+	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_IMPACT_INDEX })
+	public int getImpact() { return (int)(getImpact(TrackedIssue.OverallBenefitToSociety, status.getDescription().toLowerCase().trim().equals("law") ? DEFAULT_IMPACT_LAW_WEIGHT : 0.0d) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getLastActionDate(), LocalDate.now()))); }
 	public void setImpact(int impact) { }
 	
-	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_IMPACT_ABS_INDEX }) public int getImpactAbs() { return Math.abs(getImpact()); }
+	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_IMPACT_ABS_INDEX })
+	public int getImpactAbs() { return (int)(Math.abs(getImpact()) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getLastActionDate(), LocalDate.now()))); }
 	@JsonIgnore public int getImpactAbs(TrackedIssue issue, double lawWeight) { return Math.abs(getImpact(issue, lawWeight)); }
 	public void setImpactAbs(int impact) { }
 	
-	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_HOT_INDEX }) public int getHot() { return (int)(getImpactAbs(TrackedIssue.OverallBenefitToSociety, 1.0d) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getDate(), LocalDate.now()))); }
+	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_HOT_INDEX }) public int getHot() { return (int)(getImpactAbs(TrackedIssue.OverallBenefitToSociety, 0.0d) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getLastActionDate(), LocalDate.now()))); }
 	public void setHot(int hot) { }
 	
 	@JsonIgnore public int getImpact(TrackedIssue issue) { return getImpact(issue, DEFAULT_IMPACT_LAW_WEIGHT); };

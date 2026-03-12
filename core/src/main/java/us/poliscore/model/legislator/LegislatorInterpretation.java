@@ -33,9 +33,9 @@ public class LegislatorInterpretation extends SessionPersistable
 {
 	public static final String ID_CLASS_PREFIX = "LIT";
 	
-	public static String generateId(LegislativeNamespace ns, String sessionKey, String legislatorCode)
+	public static String generateId(LegislativeNamespace ns, String regularSessionCode, String legislatorCode)
 	{
-		return SessionPersistable.generateId(ID_CLASS_PREFIX, ns, sessionKey, legislatorCode);
+		return SessionPersistable.generateId(ID_CLASS_PREFIX, ns, regularSessionCode, legislatorCode);
 	}
 	
 	protected IssueStats issueStats;

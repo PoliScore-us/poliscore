@@ -200,7 +200,7 @@ public class DataCleaner implements QuarkusApplication {
 		int invalid = 0;
 		
 		for (val leg : dataset.query(Legislator.class)) {
-			var interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
+			var interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getRegularSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
 			
 			if (interpOp.isPresent())
 			{

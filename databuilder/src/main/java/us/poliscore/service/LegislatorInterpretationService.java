@@ -89,8 +89,8 @@ Step 6. Identify any problematic or synergistic relationships with funders.
 Step 7. Identify an over-arching narrative, in alignment with the grade they have already received. This narrative should pull-in all the information we previously referenced and should attempt to form a high-level analysis of the legislator and their activity. If the legislator received an F score, create a narrative about why this philosophy is wrong and why it's causing harm to society. If they received a D score, provide an evidence-led mostly-disapproving critique, stressing the substantial shortcomings. If they received a C score, provide a balanced view of both notable strengths and weaknesses. If they received a B score, focus on their strengths while briefly mentioning minor areas of improvement. A scores should receive glowing commendations. 
 
 Long Report:
-Generate a {{analysisType}} consisting of EXACTLY 6 paragraphs. Each paragraph must be a single paragraph block and must not exceed 120 words. If you feel additional explanation is needed, prioritize summarization over expansion. Never create additional paragraphs to add nuance. The content of your paragraphs are as follows:
-1. Your first paragraph will be a high-level summary of the following: the legislator's district and consituents, the legislator's priorities over the last year, and what have they actually managed to accomplish, highlighting any {{behavior}}. Write your most noteworthy and interesting information here, we want to hook the reader early.
+Generate a well-referenced report of this legislator's recent activity consisting of EXACTLY 6 paragraphs. Each paragraph must be a single paragraph block and must not exceed 120 words. If you feel additional explanation is needed, prioritize summarization over expansion. Never create additional paragraphs to add nuance. The content of your paragraphs are as follows:
+1. Your first paragraph will be a high-level summary of the following: the legislator's district and consituents, the legislator's priorities over the last year, and what have they actually managed to accomplish, highlighting any specific accomplishments or alarming behavior. Write your most noteworthy and interesting information here, we want to hook the reader early.
 2. Dive deep into the legislator's constituency. Include the most interesting or relevant information from your previous research.
 3. Identify who typically funds their campaigns, mentioning a few big ones and highlighting overall trends. If you found any problematic or synergistic relationships with funders make sure to mention them.
 4. Dive deep into what they've attempted to accomplish during the last year. Compare and contrast this legislator's policy portfolio with their stated campaign goals, and where that policy aligns (or doesn't) with the needs of their constituents. If prominent constituents or groups have commented publicly on their policy, mention that here. Refrain from listing more than ten bills here, we want overall trends and notable bills (not just a dump of bills), especially if they align with painting a larger picture or focus of the legislator’s work.
@@ -102,7 +102,7 @@ Casual Report:
 Your audience is the general public, written at the high-school education level. Your primary goal here is to take the insights from the long report and make them available for your average person. Begin by explaining the high level goals of the representative and a high level summary of how they attempted to achieve those goals. Then, explain all the essential logic required to understand their predicted impact to society, including any research, expert opinions, societal wisdom and/or any competing concerns which may exist. Conclude with your findings. Should be between one and three paragraphs long, depending on the complexity of their history and the topics covered (controversial topics require more evidence to support your conclusions). Do not use acronyms, such as GPO, CBO, etc. If you must use them, they must be defined. You may link to sources using markdown link syntax, where relevant. Do not include any formatting text such as stars or dashes (excluding links). Do not include non-human readable text such as XML ids.
 
 Short Report:
-Generate a layman's, concise, single sentence describing the primary focuses of the representative, not more than 150 characters. Try to remain somewhat neutral in tone here. Should start with "Focuses on". Should not include the name of the representative. Do not include any formatting text such as stars or dashes.
+Generate a layman's, concise, single sentence describing the primary focuses of the representative, not more than 150 characters. Should start with "Focuses on". Should not include the name of the representative. Do not include any formatting text such as stars or dashes.
 
 References:
 Your written response for this research section should consist of only a compact JSON array of references, on a single line, of the following format:
@@ -171,7 +171,7 @@ Your written response for this research section should consist of only a compact
 	{
 		if (prevDataset == null) return;
 		
-		val prevLeg = ddb.get(Legislator.generateId(prevDataset.getNamespace(), prevDataset.getCode(), leg.getCode()), Legislator.class).orElse(null);
+		val prevLeg = ddb.get(Legislator.generateId(prevDataset.getNamespace(), prevDataset.getRegularSession().getCode(), leg.getCode()), Legislator.class).orElse(null);
 		if (prevLeg == null) return;
 		
 		val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
@@ -366,8 +366,8 @@ Your written response for this research section should consist of only a compact
 					    grade.equals("A") || grade.equals("B") ? "commendation"
 					    : grade.equals("C") ? "mixed analysis"
 					    : grade.equals("D") ? "mostly disapproving critique"
-					    : "harsh critique")
-				.replace("{{behavior}}", grade.equals("A") || grade.equals("B") ? "specific accomplishments" : (grade.equals("C") || grade.equals("D") ? "specific accomplishments or alarming behavior" : "alarming behavior"));
+					    : "disapproving critique");
+//				.replace("{{behavior}}", grade.equals("A") || grade.equals("B") ? "specific accomplishments" : (grade.equals("C") || grade.equals("D") ? "specific accomplishments or alarming behavior" : "alarming behavior"));
 	}
 	
 	public static String tooltipForPillar(StructuralAnalysis pillar) {
@@ -461,7 +461,7 @@ Your written response for this research section should consist of only a compact
 		{
 			updateInteractionsInterp(leg);
 			
-			LegislatorInterpretation interp = new LegislatorInterpretation(dataset.getNamespace(), dataset.getCode(), leg.getCode(), OpenAIService.metadata(), null);
+			LegislatorInterpretation interp = new LegislatorInterpretation(dataset.getNamespace(), dataset.getRegularSession().getCode(), leg.getCode(), OpenAIService.metadata(), null);
 			val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
 			
 			if (interpOp.isPresent()) { interp = interpOp.get(); }

@@ -195,7 +195,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
     	else
     		bill.setType(getChamberCode(bill.getOriginatingChamber()) + view.getBillType().getCode());
 		
-		bill.setId(Bill.generateId(dataset.getNamespace(), dataset.getCode(), bill.getType(), bill.getNumber()));
+		bill.setId(Bill.generateId(dataset.getNamespace(), dataset.getSession().getCode(), bill.getType(), bill.getNumber()));
 		
 		bill.setName(view.getTitle());
     	bill.setStatus(buildStatus(view, regularDataset.getSession()));
@@ -278,9 +278,9 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	private BillSponsor convertSponsor(LegiscanSponsorView view, PoliscoreDataset regularDataset) {
 		String legId;
 		if (regularDataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getCode(), view.getBioguideId());
+			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), view.getBioguideId());
 		else
-			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getCode(), String.valueOf(view.getPeopleId()));
+			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), String.valueOf(view.getPeopleId()));
 		
 		var leg = regularDataset.get(legId, Legislator.class).get();
 		
@@ -356,7 +356,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		try
 		{
 			// TODO : I don't think this will work for congress (since the congress legislator code is bioguide id not people id) but we don't use legiscan for congress anyway
-			leg = regularDataset.get(Legislator.generateId(regularDataset.getNamespace(), regularDataset.getCode(), String.valueOf(vote.getPeopleId())), Legislator.class).orElseThrow();
+			leg = regularDataset.get(Legislator.generateId(regularDataset.getNamespace(), regularDataset.getSession().getCode(), String.valueOf(vote.getPeopleId())), Legislator.class).orElseThrow();
 		}
 		catch (NoSuchElementException ex)
 		{
@@ -414,9 +414,9 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    
 	    String legId;
 		if (regularDataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getCode(), view.getBioguideId());
+			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), view.getBioguideId());
 		else
-			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getCode(), String.valueOf(view.getPeopleId()));
+			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), String.valueOf(view.getPeopleId()));
 		leg.setId(legId);
 		
 		if (view.getBio() != null && view.getBio().getLinks() != null && view.getBio().getLinks().getOfficial() != null)

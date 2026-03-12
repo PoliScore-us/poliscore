@@ -54,9 +54,9 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	
 	public static final LocalDate DEFAULT_BIRTHDAY = LocalDate.of(1970, 1, 1);
 	
-	public static String generateId(LegislativeNamespace ns, String sessionCode, String legislatorCode)
+	public static String generateId(LegislativeNamespace ns, String regularSessionCode, String legislatorCode)
 	{
-		return SessionPersistable.generateId(ID_CLASS_PREFIX, ns, sessionCode, legislatorCode);
+		return SessionPersistable.generateId(ID_CLASS_PREFIX, ns, regularSessionCode, legislatorCode);
 	}
 	
 	@NonNull

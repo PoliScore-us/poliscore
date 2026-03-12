@@ -135,7 +135,7 @@ public class USCDatasetProvider implements DatasetProvider {
 	        }
 			
 			Legislator leg = new Legislator();
-			leg.setId(Legislator.generateId(dataset.getNamespace(), dataset.getCode(), view.getId().getBioguide()));
+			leg.setId(Legislator.generateId(dataset.getNamespace(), dataset.getRegularSession().getCode(), view.getId().getBioguide()));
 			leg.setName(view.getName().convert());
 			leg.setLisId(view.getId().getLis());
 			leg.setBirthday(view.getBio().getBirthday());

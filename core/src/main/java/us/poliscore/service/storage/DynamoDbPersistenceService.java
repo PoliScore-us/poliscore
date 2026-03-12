@@ -337,13 +337,13 @@ public class DynamoDbPersistenceService implements ObjectStorageServiceIF
 	    return query(clazz, -1, null, null, null, null, storageBucket);
 	}
 	
-	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, String sessionKey)
+	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, String datasetKey)
 	{
-		return query(clazz, sessionKey, -1, null, null, null, null);
+		return query(clazz, datasetKey, -1, null, null, null, null);
 	}
 	
-	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, String sessionKey, int pageSize, String index, Boolean ascending, String exclusiveStartKey, String sortKey) {
-		final String storageBucket = Persistable.getClassStorageBucket(clazz, sessionKey);
+	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, String datasetKey, int pageSize, String index, Boolean ascending, String exclusiveStartKey, String sortKey) {
+		final String storageBucket = Persistable.getClassStorageBucket(clazz, datasetKey);
 		
 		return query(clazz, pageSize, index, ascending, exclusiveStartKey, sortKey, storageBucket);
 	}

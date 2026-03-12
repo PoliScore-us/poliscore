@@ -3,6 +3,8 @@ package us.poliscore;
 import java.time.Year;
 import java.util.NoSuchElementException;
 
+import org.apache.commons.lang3.StringUtils;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -16,6 +18,7 @@ import us.poliscore.model.Persistable;
 import us.poliscore.model.SessionPersistable;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.legislator.Legislator;
+import us.poliscore.service.SessionInfoService;
 import us.poliscore.service.storage.MemoryObjectStore;
 import us.poliscore.service.storage.S3PersistenceService;
 
@@ -62,7 +65,12 @@ public class PoliscoreDataset extends MemoryObjectStore implements PoliscoreData
 	
 	@Override
 	public String getCode() {
-		return session.getCode();
+//		return session.getCode();
+		
+		if (getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+			return session.getCode();
+		else
+			return String.valueOf(getRegularSession().getEndDate().getYear());
 	}
 	
 	@Override
@@ -91,6 +99,11 @@ public class PoliscoreDataset extends MemoryObjectStore implements PoliscoreData
 	@Override
 	public String getDescription() {
 		return session.getDescription();
+	}
+	
+	@Override
+	public String toString() {
+		return this.getDescription();
 	}
 
 	@Override
