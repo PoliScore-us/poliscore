@@ -302,7 +302,7 @@ Required JSON shape - The output must be a JSON array. Each element must be a JS
 [url, author, title, authors_opinion_int_string, authors_opinion_text, summary, long_summary, reference_type]
 
 1. url: full URL string
-2. author: author name or "Unknown"
+2. author: Author name or "Unknown". Preference shall be given to the organization over a particular author (i.e. prefer 'The Madeup Journal' over 'Joe Schmoe'), with optimal record being 'Organization - Person' (i.e. 'The Madeup Journal - Joe Schmoe').
 3. title: article/page title
 4. authors_opinion_int_string: a string integer from "-100" to "100" representing the author's opinion on the bill, either positive (in favor) or negative (against).
 5. authors_opinion_text: one of: "N/A" | "Mixed" | "Neutral" | "For" | "Against". Again, represents the author's opinion, either for or against, the bill itself.
