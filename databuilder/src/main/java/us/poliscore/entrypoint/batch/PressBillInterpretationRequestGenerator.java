@@ -297,7 +297,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		} else {
 			bills = dataset.query(Bill.class).stream().filter(b ->
 //						b.isIntroducedInSession(PoliscoreUtil.CURRENT_SESSION) &&
-				s3.exists(BillText.generateId(b.getId()), BillText.class));
+				billService.hasBillText(b));
 //						&& b.getIntroducedDate().isBefore(LocalDate.now().minus(10, ChronoUnit.DAYS)) // Must be at least x days old (otherwise there won't be press coverage) - Commented out. If we're going to pass the bill text through AI we might as well scan for press. Ideally this filter criteria would exactly match the bill request generator
 		}
 		

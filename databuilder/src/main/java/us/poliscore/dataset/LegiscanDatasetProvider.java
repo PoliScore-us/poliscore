@@ -3,7 +3,9 @@ package us.poliscore.dataset;
 import java.time.LocalDate;
 import java.util.Base64;
 import java.util.Comparator;
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.apache.pdfbox.Loader;
@@ -27,6 +29,7 @@ import us.poliscore.dataset.augmentation.PoliscoreDatasetAugmentor;
 import us.poliscore.images.StateLegislatorImageFetcher;
 import us.poliscore.legiscan.cache.CachedLegiscanDatasetResult;
 import us.poliscore.legiscan.service.CachedLegiscanService;
+import us.poliscore.legiscan.view.LegiscanBillTextView;
 import us.poliscore.legiscan.view.LegiscanBillType;
 import us.poliscore.legiscan.view.LegiscanBillView;
 import us.poliscore.legiscan.view.LegiscanChamber;
@@ -38,6 +41,7 @@ import us.poliscore.legiscan.view.LegiscanSponsorView;
 import us.poliscore.legiscan.view.LegiscanState;
 import us.poliscore.legiscan.view.LegiscanStatus;
 import us.poliscore.legiscan.view.LegiscanTextMetadataView;
+import us.poliscore.legiscan.view.LegiscanTextType;
 import us.poliscore.legiscan.view.LegiscanVoteDetailView;
 import us.poliscore.legiscan.view.LegiscanVoteStatus;
 import us.poliscore.model.CongressionalSession;
@@ -50,6 +54,7 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.Bill.BillSponsor;
 import us.poliscore.model.bill.BillStatus;
 import us.poliscore.model.bill.BillText;
+import us.poliscore.model.bill.BillTextFormat;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislativeTerm;
@@ -57,7 +62,7 @@ import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCos
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
 import us.poliscore.service.LegislatorService;
-import us.poliscore.service.storage.S3PersistenceService;
+import us.poliscore.service.storage.CachedS3Service;
 
 @ApplicationScoped
 @Named("legiscan")
@@ -75,7 +80,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	@Inject protected PoliscoreDatasetAugmentor psLegScraper;
 	@Inject protected StateLegislatorImageFetcher stateImageFetcher;
 	
-	@Inject private S3PersistenceService s3;
+	@Inject private CachedS3Service s3;
 	
 	@Inject
 	protected CachedLegiscanService legiscan;
@@ -454,53 +459,113 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	public void syncS3BillText(PoliscoreDatasetIF dataset) {
 		dataset.optimizeExists(s3, BillText.class);
 		
-		int count = 0;
+		int uploadCount = 0;
+		int migratedCount = 0;
 		
 		for (val bill : dataset.query(Bill.class)) {
 			val legiBill = legiscan.getBill(bill.getLegiscanId());
 			if (legiBill.getTexts().size() == 0) continue;
 			
-			// TODO : This won't allow for text updates or amendments
-			if (s3.exists(BillText.generateId(bill.getId()), BillText.class)) continue;
+			List<BillText> versionedBillTexts = legiBill.getTexts().stream()
+					.sorted(Comparator.comparing(LegiscanTextMetadataView::getDate, Comparator.nullsFirst(Comparator.naturalOrder()))
+							.thenComparing(LegiscanTextMetadataView::getDocId, Comparator.nullsFirst(Comparator.naturalOrder())))
+					.map(metadata -> fetchBillTextVersion(bill, metadata))
+					.filter(Objects::nonNull)
+					.collect(Collectors.toList());
 			
-			var metadata = legiBill.getTexts().stream()
-				    .max(Comparator.comparing(
-				        LegiscanTextMetadataView::getDate,
-				        Comparator.nullsFirst(Comparator.naturalOrder())
-				    )).get();
-			
-			val doc = legiscan.getBillText(metadata.getDocId());
-			
-			String text;
-			if (doc.getMime().equals(LegiscanMimeType.PDF)) {
-				byte[] pdfBytes = Base64.getDecoder().decode(doc.getDoc());
-				
-				try (PDDocument document = Loader.loadPDF(pdfBytes)) {
-		            PDFTextStripper stripper = new PDFTextStripper();
-		            text = stripper.getText(document);
-		        }
-			} else if (doc.getMime().equals(LegiscanMimeType.RICH_TEXT_FORMAT) || doc.getMime().equals(LegiscanMimeType.HTML)) {
-				byte[] pdfBytes = Base64.getDecoder().decode(doc.getDoc());
-
-				text = new String(pdfBytes);
-			} else {
-				throw new UnsupportedOperationException("Unsupported bill text MIME type [" + doc.getMime().name() + "]");
+			for (val billText : versionedBillTexts) {
+				if (upsertBillText(billText)) {
+					uploadCount++;
+				}
 			}
 			
-			if (StringUtils.isBlank(text)) {
-				logger.error("Bill text was blank for " + bill.getId() + ". Skipping s3 upload to allow further processing, but you might want to look into this when you get a chance.");
-				continue;
+			if (!versionedBillTexts.isEmpty() && migrateLegacyBillText(bill, versionedBillTexts)) {
+				migratedCount++;
 			}
-			
-			BillText bt = BillText.factoryFromText(bill.getId(), text, doc.getDate());
-			s3.put(bt);
-			
-			count++;
 		}
 		
 		dataset.clearExistsOptimize(s3, BillText.class);
 		
-		Log.info("Uploaded " + count + " new bill texts to s3 from Legiscan provider.");
+		Log.info("Uploaded " + uploadCount + " versioned bill texts to s3 from Legiscan provider and migrated " + migratedCount + " legacy bill texts.");
+	}
+	
+	@SneakyThrows
+	protected BillText fetchBillTextVersion(Bill bill, LegiscanTextMetadataView metadata) {
+		val doc = legiscan.getBillText(metadata.getDocId());
+		String text = extractBillText(doc);
+		
+		if (StringUtils.isBlank(text)) {
+			logger.error("Bill text was blank for " + bill.getId() + " version " + buildBillTextVersion(metadata) + ". Skipping s3 upload to allow further processing, but you might want to look into this when you get a chance.");
+			return null;
+		}
+		
+		return BillText.factory(bill.getId(), text, doc.getDate(), buildBillTextVersion(metadata), getBillTextFormat(doc));
+	}
+	
+	@SneakyThrows
+	protected String extractBillText(LegiscanBillTextView doc) {
+		if (doc.getMime().equals(LegiscanMimeType.PDF)) {
+			byte[] pdfBytes = Base64.getDecoder().decode(doc.getDoc());
+			
+			try (PDDocument document = Loader.loadPDF(pdfBytes)) {
+	            PDFTextStripper stripper = new PDFTextStripper();
+	            return stripper.getText(document);
+	        }
+		}
+		
+		if (doc.getMime().equals(LegiscanMimeType.RICH_TEXT_FORMAT) || doc.getMime().equals(LegiscanMimeType.HTML)) {
+			byte[] textBytes = Base64.getDecoder().decode(doc.getDoc());
+			return new String(textBytes);
+		}
+		
+		throw new UnsupportedOperationException("Unsupported bill text MIME type [" + doc.getMime().name() + "]");
+	}
+	
+	protected BillTextFormat getBillTextFormat(LegiscanBillTextView doc) {
+		if (doc.getMime().equals(LegiscanMimeType.HTML)) {
+			return BillTextFormat.HTML;
+		}
+		
+		if (doc.getMime().equals(LegiscanMimeType.RICH_TEXT_FORMAT)) {
+			return BillTextFormat.RTF;
+		}
+		
+		return BillTextFormat.TEXT;
+	}
+	
+	protected String buildBillTextVersion(LegiscanTextMetadataView metadata) {
+		LegiscanTextType type = null;
+		if (metadata.getTypeId() != null) {
+			try {
+				type = LegiscanTextType.fromValue(metadata.getTypeId());
+			}
+			catch (IllegalArgumentException ignored) { }
+		}
+		
+		String typeToken = type != null
+				? type.name()
+				: (StringUtils.isBlank(metadata.getTypeCode()) ? "DOC" : metadata.getTypeCode().trim().toUpperCase().replaceAll("[^A-Z0-9]+", "_"));
+		return typeToken + "-" + metadata.getDocId();
+	}
+	
+	protected boolean upsertBillText(BillText candidate) {
+		if (s3.exists(candidate.getId(), BillText.class))
+			return false;
+		
+		s3.put(candidate);
+		return true;
+	}
+	
+	protected boolean migrateLegacyBillText(Bill bill, List<BillText> versionedBillTexts) {
+		val legacyId = BillText.generateId(bill.getId());
+		val legacy = s3.get(legacyId, BillText.class).orElse(null);
+		if (legacy == null) {
+			return false;
+		}
+		
+		s3.delete(legacyId, BillText.class);
+		Log.info("Migrated legacy state bill text " + legacyId + " to versioned key.");
+		return true;
 	}
 
 }

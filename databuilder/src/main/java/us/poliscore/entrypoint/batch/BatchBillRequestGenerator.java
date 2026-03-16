@@ -46,12 +46,12 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 	public static final int MAX_BILL_PROCESS = 5000; // -1 for infinite
 
-	public static final List<String> specificFetch = null;
-//	public static final List<String> specificFetch = Arrays.asList(
-//	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 1)
+//	public static final List<String> specificFetch = null;
+	public static final List<String> specificFetch = Arrays.asList(
+	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 1383)
 //	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 7148),
 //	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 7567)
-//);
+);
 //public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_COLORADO, "2173", "sb", 317));
 
 //public static final List<String> specificFetch = Arrays.asList(
@@ -143,7 +143,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 		var stream = dataset.query(Bill.class).stream()
 				.filter(b -> specificFetch == null || specificFetch.contains(b.getId()))
-				.filter(b -> s3.exists(BillText.generateId(b.getId()), BillText.class));
+				.filter(b -> billService.hasBillText(b));
 
 		if (specificFetch == null) {
 			stream = andNotInList(stream, billSkipList);

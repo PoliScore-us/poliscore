@@ -56,6 +56,10 @@ public class LocalCachedS3Service extends S3PersistenceService implements Applic
 	{
 		return memory.exists(id, clazz) || local.exists(id, clazz) || super.exists(id, clazz);
 	}
+	
+	public <T extends Persistable> boolean existsByPrefix(Class<T> clazz, String sessionKey, String objectKeyPrefix) {
+		return super.existsByPrefix(clazz, sessionKey, objectKeyPrefix);
+	}
 
 	@Override
 	public <T extends Persistable> List<T> query(Class<T> clazz) {

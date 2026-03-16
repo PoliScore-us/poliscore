@@ -1,6 +1,8 @@
 package us.poliscore.service.storage;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -153,6 +155,25 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 		}
 	}
 	
+	@SneakyThrows
+	public <T extends Persistable> boolean existsByPrefix(Class<T> clazz, String sessionKey, String objectKeyPrefix)
+	{
+		val storageBucket = Persistable.getClassStorageBucket(clazz, sessionKey);
+		val fullPrefix = storageBucket + "/" + objectKeyPrefix;
+		
+		if (objectsInBucket.containsKey(storageBucket)) {
+			return objectsInBucket.get(storageBucket).stream().anyMatch(id -> id.startsWith(fullPrefix));
+		}
+		
+		val resp = getClient().listObjectsV2(ListObjectsV2Request.builder()
+				.bucket(BUCKET_NAME)
+				.prefix(fullPrefix)
+				.maxKeys(1)
+				.build());
+		
+		return !resp.contents().isEmpty();
+	}
+	
 	@Override
 	public <T extends Persistable> List<T> query(Class<T> clazz) {
 //		return query(clazz, sessionKey, null, -1, true);
@@ -171,50 +192,8 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	@SneakyThrows
 	public <T extends Persistable> List<T> query(Class<T> clazz, String sessionKey, QueryCriteria criteria)
 	{
-	    val keys = new java.util.ArrayList<String>();
-	    String continuationToken = null;
-	    
 	    String storageBucket = Persistable.getClassStorageBucket(clazz, sessionKey);
-	    
-	    String fullPrefix = storageBucket;
-	    if (criteria.getObjectKeyPrefix() != null) {
-	        fullPrefix += "/" + criteria.getObjectKeyPrefix();
-	    }
-
-	    // First: collect all matching keys
-	    do {
-	        val builder = ListObjectsV2Request.builder()
-	                .bucket(BUCKET_NAME)
-	                .prefix(fullPrefix)
-	                .maxKeys(1000); // AWS maximum per request
-
-	        if (continuationToken != null) {
-	            builder.continuationToken(continuationToken);
-	        }
-
-	        val resp = getClient().listObjectsV2(builder.build());
-
-//	        for (val s3Object : resp.contents()) {
-//	            keys.add(s3Object.key());
-//	        }
-	        
-	        for (val s3Object : resp.contents()) {
-	            Instant lastModified = s3Object.lastModified();
-
-	            if ((criteria.getLastModifiedAfter() == null || lastModified.isAfter(criteria.getLastModifiedAfter())) &&
-	                (criteria.getLastModifiedBefore() == null || lastModified.isBefore(criteria.getLastModifiedBefore()))) {
-	                keys.add(s3Object.key());
-	            }
-	        }
-
-	        continuationToken = resp.nextContinuationToken();
-	    }
-	    while (continuationToken != null);
-
-	    // Now: sort keys if needed
-	    if (!criteria.isAscending()) {
-	        keys.sort(java.util.Collections.reverseOrder());
-	    }
+	    val keys = getQueryKeys(clazz, storageBucket, criteria);
 
 	    val results = new java.util.ArrayList<T>();
 
@@ -230,6 +209,75 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	    }
 
 	    return results;
+	}
+	
+	protected <T extends Persistable> List<String> getQueryKeys(Class<T> clazz, String storageBucket, QueryCriteria criteria) {
+		val optimizedKeys = getQueryKeysFromOptimizeExists(storageBucket, criteria);
+		if (optimizedKeys.isPresent()) {
+			return optimizedKeys.get();
+		}
+		
+	    val keys = new java.util.ArrayList<String>();
+	    String continuationToken = null;
+	    val fullPrefix = buildFullPrefix(storageBucket, criteria.getObjectKeyPrefix());
+
+	    do {
+	        val builder = ListObjectsV2Request.builder()
+	                .bucket(BUCKET_NAME)
+	                .prefix(fullPrefix)
+	                .maxKeys(1000); // AWS maximum per request
+
+	        if (continuationToken != null) {
+	            builder.continuationToken(continuationToken);
+	        }
+
+	        val resp = getClient().listObjectsV2(builder.build());
+	        
+	        for (val s3Object : resp.contents()) {
+	            Instant lastModified = s3Object.lastModified();
+
+	            if ((criteria.getLastModifiedAfter() == null || lastModified.isAfter(criteria.getLastModifiedAfter())) &&
+	                (criteria.getLastModifiedBefore() == null || lastModified.isBefore(criteria.getLastModifiedBefore()))) {
+	                keys.add(s3Object.key());
+	            }
+	        }
+
+	        continuationToken = resp.nextContinuationToken();
+	    }
+	    while (continuationToken != null);
+
+	    if (!criteria.isAscending()) {
+	        keys.sort(Collections.reverseOrder());
+	    }
+		
+		return keys;
+	}
+	
+	protected Optional<List<String>> getQueryKeysFromOptimizeExists(String storageBucket, QueryCriteria criteria) {
+		if (criteria.getLastModifiedAfter() != null || criteria.getLastModifiedBefore() != null) {
+			return Optional.empty();
+		}
+		
+		if (!objectsInBucket.containsKey(storageBucket)) {
+			return Optional.empty();
+		}
+		
+		val fullPrefix = buildFullPrefix(storageBucket, criteria.getObjectKeyPrefix());
+		Comparator<String> comparator = criteria.isAscending() ? Comparator.naturalOrder() : Comparator.reverseOrder();
+		
+		return Optional.of(objectsInBucket.get(storageBucket).stream()
+				.filter(id -> id.startsWith(fullPrefix))
+				.map(this::getObjectKey)
+				.sorted(comparator)
+				.toList());
+	}
+	
+	protected String buildFullPrefix(String storageBucket, String objectKeyPrefix) {
+		if (objectKeyPrefix == null) {
+			return storageBucket;
+		}
+		
+		return storageBucket + "/" + objectKeyPrefix;
 	}
 
 	@SneakyThrows

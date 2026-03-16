@@ -170,6 +170,7 @@ public class Bill extends SessionPersistable {
 	@JsonIgnore public int getImpactAbs(TrackedIssue issue, double lawWeight) { return Math.abs(getImpact(issue, lawWeight)); }
 	public void setImpactAbs(int impact) { }
 	
+	// TODO : Maybe don't completely hide "final" statuses here, but make them decay super fast
 	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_HOT_INDEX }) public int getHot() { if (status.getDescription().toLowerCase().startsWith("vetoed")) return 0; else return (int) (getImpactAbs(TrackedIssue.OverallBenefitToSociety, 0.0d) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getLastActionDate(), LocalDate.now()))); }
 	public void setHot(int hot) { }
 	

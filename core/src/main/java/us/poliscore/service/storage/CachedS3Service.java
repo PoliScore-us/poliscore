@@ -14,18 +14,15 @@ import us.poliscore.service.MemoryObjectService;
 
 @ApplicationScoped
 @DefaultBean
-public class CachedS3Service implements ApplicationDataStoreIF
+public class CachedS3Service extends S3PersistenceService
 {
 	@Inject
 	private MemoryObjectService memory;
 	
-	@Inject
-	private S3PersistenceService s3;
-	
 	@Override
 	public void put(Persistable obj) {
 		memory.put(obj);
-		s3.put(obj);
+		super.put(obj);
 	}
 
 	@Override
@@ -36,7 +33,7 @@ public class CachedS3Service implements ApplicationDataStoreIF
 			return memory.get(id, clazz);
 		}
 		
-		Optional<T> result = s3.get(id, clazz);
+		Optional<T> result = super.get(id, clazz);
 		
 		if (result.isPresent())
 		{
@@ -49,27 +46,27 @@ public class CachedS3Service implements ApplicationDataStoreIF
 	@Override
 	public <T extends Persistable> boolean exists(String id, Class<T> clazz)
 	{
-		return memory.exists(id, clazz) || s3.exists(id, clazz);
+		return memory.exists(id, clazz) || super.exists(id, clazz);
 	}
 
 	public <T extends Persistable> void optimizeExists(Class<T> clazz, String sessionKey) {
-		s3.optimizeExists(clazz, sessionKey);
+		super.optimizeExists(clazz, sessionKey);
 	}
 
 	@Override
 	public <T extends Persistable> long count(Class<T> clazz) {
-		return s3.count(clazz);
+		return super.count(clazz);
 	}
 	
 	@Override
 	public <T extends Persistable> List<T> query(Class<T> clazz) {
-		return s3.query(clazz);
+		return super.query(clazz);
 	}
 
 	@Override
 	public <T extends Persistable> List<T> query(Class<T> clazz, int pageSize, String index, Boolean ascending,
 			String startKey, String sortKey, String storageBucket) {
-		return s3.query(clazz, pageSize, index, ascending, startKey, sortKey, storageBucket);
+		return super.query(clazz, pageSize, index, ascending, startKey, sortKey, storageBucket);
 	}
 	
 }

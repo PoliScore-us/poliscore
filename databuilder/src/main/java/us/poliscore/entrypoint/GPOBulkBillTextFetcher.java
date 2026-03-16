@@ -11,10 +11,10 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
@@ -40,7 +40,7 @@ import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.BillTextPublishVersion;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.service.GovernmentDataService;
-import us.poliscore.service.storage.S3PersistenceService;
+import us.poliscore.service.storage.CachedS3Service;
 
 /**
  * Used to fetch bulk bill data from the GPO's bulk bill store. More info at:
@@ -56,7 +56,7 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	
 	public static List<String> FETCH_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
-	@Inject private S3PersistenceService s3;
+	@Inject private CachedS3Service s3;
 	@Inject private GovernmentDataService data;
 	
 	@SneakyThrows
@@ -122,29 +122,19 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 			}
 			
 			// Upload to S3
-			Set<String> processedBills = new HashSet<String>();
-			for (File f : PoliscoreUtil.allFilesWhere(typeStore, f -> f.getName().endsWith(".xml")).stream()
-					.sorted(Comparator.comparing(File::getName).thenComparing((a,b) -> BillTextPublishVersion.parseFromBillTextName(a.getName()).billMaturityCompareTo(BillTextPublishVersion.parseFromBillTextName(b.getName()))))
-					.collect(Collectors.toList()))
-			{
-				String number = f.getName().replace("BILLS-" + dataset.getCode() + billType, "").replaceAll("\\D", "");
-				val billId = Bill.generateId(dataset.getNamespace(), dataset.getCode(), CongressionalBillType.valueOf(billType.toUpperCase()), Integer.parseInt(number));
-				
-				// TODO : This S3 exists check won't work if there's a new version of the bill text.
-				if (!processedBills.contains(billId) && !s3.exists(BillText.generateId(billId), BillText.class))
-				{
-					try
-					{
-						val date = parseDate(f);
-						
-						BillText bt = BillText.factoryFromXml(billId, FileUtils.readFileToString(f, "UTF-8"), date);
-						s3.put(bt);
-					}
-					catch (Throwable t) {
-						Log.error("Exception encountered processing " + billId, t);			
-					}
-					
-					processedBills.add(billId);
+			Map<String, List<File>> filesByBill = PoliscoreUtil.allFilesWhere(typeStore, f -> f.getName().endsWith(".xml")).stream()
+					.sorted(Comparator.comparing(File::getName))
+					.collect(Collectors.groupingBy(
+							f -> buildBillId(dataset, billType, f),
+							java.util.LinkedHashMap::new,
+							Collectors.toList()));
+			
+			for (val entry : filesByBill.entrySet()) {
+				try {
+					syncBillTextVersions(entry.getKey(), entry.getValue());
+				}
+				catch (Throwable t) {
+					Log.error("Exception encountered processing " + entry.getKey(), t);
 				}
 			}
 		}
@@ -168,11 +158,14 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	public Optional<String> getBillText(Bill bill)
 	{
 		val parent = new File(PoliscoreUtil.APP_DATA, "bill-text/" + bill.getSessionCode() + "/" + bill.getType());
+		File[] childFiles = parent.listFiles();
+		if (childFiles == null) {
+			return Optional.empty();
+		}
 		
-		val text = Arrays.asList(parent.listFiles()).stream()
+		val text = Arrays.asList(childFiles).stream()
 				.filter(f -> f.getName().contains(bill.getSessionCode() + bill.getType().toLowerCase() + bill.getNumber()))
-				.sorted((a,b) -> BillTextPublishVersion.parseFromBillTextName(a.getName()).billMaturityCompareTo(BillTextPublishVersion.parseFromBillTextName(b.getName())))
-				.findFirst();
+				.max((a,b) -> BillTextPublishVersion.parseFromBillTextName(a.getName()).billMaturityCompareTo(BillTextPublishVersion.parseFromBillTextName(b.getName())));
 		
 		if (text.isPresent())
 		{
@@ -196,5 +189,47 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
         Quarkus.waitForExit();
         return 0;
     }
+	
+	@SneakyThrows
+	protected void syncBillTextVersions(String billId, List<File> versionFiles) {
+		val billTexts = versionFiles.stream()
+				.map(file -> buildBillText(billId, file))
+				.sorted(Comparator.comparing(BillText::getVersion)
+						.thenComparing(BillText::getLastUpdated, Comparator.nullsFirst(Comparator.naturalOrder())))
+				.collect(Collectors.toList());
+		
+		for (val billText : billTexts) {
+			upsertVersionedBillText(billText);
+		}
+		
+		migrateLegacyBillText(billId, billTexts);
+	}
+	
+	protected String buildBillId(PoliscoreDatasetIF dataset, String billType, File f) {
+		String number = f.getName().replace("BILLS-" + dataset.getCode() + billType, "").replaceAll("\\D", "");
+		return Bill.generateId(dataset.getNamespace(), dataset.getCode(), CongressionalBillType.valueOf(billType.toUpperCase()), Integer.parseInt(number));
+	}
+	
+	@SneakyThrows
+	protected BillText buildBillText(String billId, File file) {
+		BillTextPublishVersion version = BillTextPublishVersion.parseFromBillTextName(file.getName());
+		return BillText.factory(billId, FileUtils.readFileToString(file, "UTF-8"), parseDate(file), version, us.poliscore.model.bill.BillTextFormat.XML);
+	}
+	
+	protected void upsertVersionedBillText(BillText candidate) {
+		if (s3.exists(candidate.getId(), BillText.class)) return;
+		
+		s3.put(candidate);
+	}
+	
+	protected void migrateLegacyBillText(String billId, List<BillText> versionedBillTexts) {
+		val legacyId = BillText.generateId(billId);
+		
+		if (!s3.exists(legacyId, BillText.class)) return;
+		
+		// The versioned GPO upload already happened above, so we only need to retire the legacy key.
+		s3.delete(legacyId, BillText.class);
+		Log.info("Migrated legacy bill text " + legacyId + " to versioned key.");
+	}
 	
 }

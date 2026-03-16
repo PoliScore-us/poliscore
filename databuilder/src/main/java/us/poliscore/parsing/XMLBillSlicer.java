@@ -42,7 +42,7 @@ public class XMLBillSlicer implements BillSlicer {
 	@Override
 	@SneakyThrows
 	public List<BillSlice> slice(Bill bill, BillText btx, OpenAIModel model) {
-		Node doc = (Node) toDoc(btx.getXml());
+		Node doc = (Node) toDoc(btx.getText());
 		
 		title = getTitle(doc);
 		val body = $(doc).find("legis-body");

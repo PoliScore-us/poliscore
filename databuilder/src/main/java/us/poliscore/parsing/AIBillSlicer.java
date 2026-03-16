@@ -88,7 +88,7 @@ Your output should be ONLY a machine-readable JSON array (with no wrapper-text o
 			    var s = slices.get(i);
 			    
 			    String sliceXml = extractXmlRangeWithJoox(
-	                    btx.getXml(),
+	                    btx.getText(),
 	                    s.getStart(),
 	                    s.getEnd()
 	            );
@@ -132,7 +132,7 @@ Your output should be ONLY a machine-readable JSON array (with no wrapper-text o
 	@SneakyThrows
 	protected List<BillSlice> newSliceInRetry(Bill bill, BillText btx) {
 		try {
-			var request = new InterpretationRequest(new CustomData("aislicer/" + bill.getId()), prompt, btx.getXml(), SLICER_MODEL, null);
+			var request = new InterpretationRequest(new CustomData("aislicer/" + bill.getId()), prompt, btx.getText(), SLICER_MODEL, null);
 			
 			var response = ai.chat(request);
 			
@@ -140,7 +140,7 @@ Your output should be ONLY a machine-readable JSON array (with no wrapper-text o
 			
 			List<BillSlice> slices = new ArrayList<>();
 			
-			var doc = parseXmlNoDtd(btx.getXml());
+			var doc = parseXmlNoDtd(btx.getText());
 	
 			for (int i = 0; i < aiSlices.size(); i++) {
 			    var s = aiSlices.get(i);
@@ -156,7 +156,7 @@ Your output should be ONLY a machine-readable JSON array (with no wrapper-text o
 			    }
 
 			    // build XML from nodes (you can factor this into a helper that takes start/end nodes)
-			    String sliceXml = extractXmlRangeWithJoox(btx.getXml(), start.canonicalXpath, end.canonicalXpath);
+			    String sliceXml = extractXmlRangeWithJoox(btx.getText(), start.canonicalXpath, end.canonicalXpath);
 			    
 			    if (sliceXml.length() > OpenAIModel.GPT51.getContextWindowStringLength())
 			    	throw new RuntimeException("Slice size too large! " + sliceXml.length() + " > " + OpenAIModel.GPT51.getContextWindowStringLength());

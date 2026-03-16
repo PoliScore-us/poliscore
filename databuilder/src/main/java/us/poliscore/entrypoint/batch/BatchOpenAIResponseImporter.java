@@ -280,7 +280,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			}
 			else
 			{
-				val billText = s3.get(BillText.generateId(bill.getId()), BillText.class).orElseThrow();
+				val billText = billService.getBillText(bill).orElseThrow();
 				bill.setText(billText);
 				
 				List<BillSlice> slices = billSlicer.slice(bill, billText, BatchBillRequestGenerator.billProcessModel);

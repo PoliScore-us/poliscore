@@ -93,10 +93,10 @@ public class DataCleaner implements QuarkusApplication {
 		for (Bill b : dataset.query(Bill.class)) {
 			var dbill = ddb.get(b.getId(), Bill.class).orElse(null);
 			
-			val op = s3.get(BillText.generateId(b.getId()), BillText.class);
+			val op = billService.getBillText(b);
 			
 			if (op.isPresent() && StringUtils.isBlank(op.get().getDocument())) {
-				s3.delete(BillText.generateId(b.getId()), BillText.class);
+				s3.delete(op.get().getId(), BillText.class);
 				count++;
 			}
 		}
@@ -260,4 +260,3 @@ public class DataCleaner implements QuarkusApplication {
 		Quarkus.asyncExit(0);
 	}
 }
-
