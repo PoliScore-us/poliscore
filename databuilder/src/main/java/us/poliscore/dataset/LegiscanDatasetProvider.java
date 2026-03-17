@@ -1,11 +1,13 @@
 package us.poliscore.dataset;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.pdfbox.Loader;
@@ -111,28 +113,32 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	}
 	
 	protected PoliscoreDataset importDataset(LegiscanDatasetView view, DeploymentConfig ref, PoliscoreDataset regularDataset) {
-		CachedLegiscanDatasetResult cached = legiscan.cacheDataset(view);
-		
-		var session = buildSession(!view.isSpecial(), cached.getDataset().getSessionId(), cached.getDataset().getState(), cached.getDataset().getYearStart(), cached.getDataset().getYearEnd());
-		
-		PoliscoreDataset dataset = new PoliscoreDataset(session, ref);
-		if (regularDataset == null) {
-			regularDataset = dataset;
-			for (var person : cached.getPeople().values()) {
-				importLegislator(person, regularDataset);
-			}
-			psLegScraper.augmentLegislators(dataset);
-		}
-		
-		for (var bill : cached.getBills().values()) {
-			importBill(bill, dataset, regularDataset);
-		}
-		
-		for (var vote : cached.getVotes().values()) {
-			importRollCall(vote, dataset, regularDataset);
-		}
-		
-		return dataset;
+	    CachedLegiscanDatasetResult cached = legiscan.cacheDataset(view);
+
+	    var session = buildSession(!view.isSpecial(), cached.getDataset().getSessionId(), cached.getDataset().getState(), cached.getDataset().getYearStart(), cached.getDataset().getYearEnd());
+
+	    PoliscoreDataset dataset = new PoliscoreDataset(session, ref);
+	    if (regularDataset == null) {
+	        regularDataset = dataset;
+	    }
+
+	    for (var person : cached.getPeople().values()) {
+	        importLegislator(person, regularDataset);
+	    }
+
+	    if (regularDataset == dataset) {
+	        psLegScraper.augmentLegislators(dataset);
+	    }
+
+	    for (var bill : cached.getBills().values()) {
+	        importBill(bill, dataset, regularDataset);
+	    }
+
+	    for (var vote : cached.getVotes().values()) {
+	        importRollCall(vote, dataset, regularDataset);
+	    }
+
+	    return dataset;
 	}
 	
 	public static LegiscanState namespaceToState(LegislativeNamespace namespace) {
@@ -188,12 +194,16 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		
 		bill.setNumber(Integer.parseInt(view.getBillNumber().replaceAll("[^\\d]", "")));
 		
-		if (view.getHistory().size() == 0) {
+		val originatingChamber = resolveOriginatingChamber(view);
+		val introducedDate = resolveIntroducedDate(view);
+		val lastActionDate = resolveLastActionDate(view);
+		
+		if (originatingChamber.isEmpty() || introducedDate.isEmpty() || lastActionDate.isEmpty()) {
 			logger.warn("Legiscan bill " + view.getBillId() + " did not have any history and thus cannot be imported.");
 			return;
 		}
 			
-		bill.setOriginatingChamber(LegislativeChamber.fromLegiscanChamber(view.getHistory().get(0).getChamber()));
+		bill.setOriginatingChamber(originatingChamber.get());
 		
 		if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
     		bill.setType(toCongressionalBillType(view).name());
@@ -204,11 +214,11 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		
 		bill.setName(view.getTitle());
     	bill.setStatus(buildStatus(view, regularDataset.getSession()));
-    	bill.setIntroducedDate(view.getHistory().getFirst().getDate());
+    	bill.setIntroducedDate(introducedDate.get());
     	bill.setSponsor(convertSponsor(view.getSponsors().getFirst(), regularDataset));
     	if (view.getSponsors().size() > 1)
     		bill.setCosponsors(view.getSponsors().subList(1, view.getSponsors().size()).stream().map(s -> convertSponsor(s, regularDataset)).collect(Collectors.toList()));
-    	bill.setLastActionDate(view.getHistory().getLast().getDate());
+    	bill.setLastActionDate(lastActionDate.get());
     	bill.setLegiscanId(view.getBillId());
     	bill.setOfficialUrl(view.getStateLink());
     	
@@ -247,14 +257,102 @@ public class LegiscanDatasetProvider implements DatasetProvider {
     	
     	dataset.put(bill);
 	}
+
+	protected Optional<LegislativeChamber> resolveOriginatingChamber(LegiscanBillView view) {
+		if (StringUtils.isNotBlank(view.getBillNumber()) && Character.toUpperCase(view.getBillNumber().charAt(0)) == 'J') {
+			return Optional.of(LegislativeChamber.JOINT);
+		}
+
+		Optional<LegiscanChamber> legiscanChamber = resolveLegiscanChamber(view);
+		if (legiscanChamber.isPresent()) {
+			return Optional.of(LegislativeChamber.fromLegiscanChamber(legiscanChamber.get()));
+		}
+		
+		return Optional.empty();
+	}
+
+	protected static Optional<LegiscanChamber> resolveLegiscanChamber(LegiscanBillView view) {
+		if (view.getHistory() != null && !view.getHistory().isEmpty() && view.getHistory().getFirst().getChamber() != null) {
+			return Optional.of(view.getHistory().getFirst().getChamber());
+		}
+
+		for (String chamberCode : java.util.Arrays.asList(view.getBody(), view.getCurrentBody())) {
+			if (StringUtils.isBlank(chamberCode)) {
+				continue;
+			}
+
+			try {
+				return Optional.of(LegiscanChamber.fromCode(chamberCode));
+			}
+			catch (IllegalArgumentException ignored) { }
+		}
+
+		if (StringUtils.isNotBlank(view.getBillNumber())) {
+			char prefix = Character.toUpperCase(view.getBillNumber().charAt(0));
+			if (prefix == 'H') {
+				return Optional.of(LegiscanChamber.HOUSE);
+			}
+			if (prefix == 'S') {
+				return Optional.of(LegiscanChamber.SENATE);
+			}
+			if (prefix == 'J') {
+				return Optional.of(LegiscanChamber.NOT_APPLICABLE);
+			}
+		}
+
+		return Optional.empty();
+	}
+
+	protected Optional<LocalDate> resolveIntroducedDate(LegiscanBillView view) {
+		if (view.getHistory() != null && !view.getHistory().isEmpty() && view.getHistory().getFirst().getDate() != null) {
+			return Optional.of(view.getHistory().getFirst().getDate());
+		}
+
+		return collectBillDates(view).stream().min(LocalDate::compareTo);
+	}
+
+	protected Optional<LocalDate> resolveLastActionDate(LegiscanBillView view) {
+		if (view.getHistory() != null && !view.getHistory().isEmpty() && view.getHistory().getLast().getDate() != null) {
+			return Optional.of(view.getHistory().getLast().getDate());
+		}
+
+		return collectBillDates(view).stream().max(LocalDate::compareTo);
+	}
+
+	protected List<LocalDate> collectBillDates(LegiscanBillView view) {
+		List<LocalDate> dates = new ArrayList<>();
+
+		if (view.getStatusDate() != null) {
+			dates.add(view.getStatusDate());
+		}
+
+		if (view.getTexts() != null) {
+			dates.addAll(view.getTexts().stream().map(LegiscanTextMetadataView::getDate).filter(Objects::nonNull).toList());
+		}
+
+		if (view.getProgress() != null) {
+			dates.addAll(view.getProgress().stream().map(p -> p.getDate()).filter(Objects::nonNull).toList());
+		}
+
+		if (view.getVotes() != null) {
+			dates.addAll(view.getVotes().stream().map(v -> v.getDate()).filter(Objects::nonNull).toList());
+		}
+
+		if (view.getAmendments() != null) {
+			dates.addAll(view.getAmendments().stream().map(a -> a.getDate()).filter(Objects::nonNull).toList());
+		}
+
+		return dates;
+	}
 	
 	public static CongressionalBillType toCongressionalBillType(LegiscanBillView bill) {
-	    if (bill == null || bill.getBillTypeCode() == null || bill.getHistory() == null || bill.getHistory().isEmpty()) {
-	        throw new IllegalArgumentException("Bill, billTypeCode, or history is missing");
+	    if (bill == null || bill.getBillTypeCode() == null) {
+	        throw new IllegalArgumentException("Bill or billTypeCode is missing");
 	    }
 
 	    String code = bill.getBillTypeCode();
-	    LegiscanChamber chamber = bill.getHistory().get(0).getChamber();
+	    LegiscanChamber chamber = resolveLegiscanChamber(bill)
+	    		.orElseThrow(() -> new IllegalArgumentException("Bill chamber could not be determined"));
 
 	    // Treat UNICAM as SENATE
 	    boolean isHouse = chamber == LegiscanChamber.HOUSE;
@@ -298,7 +396,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    BillStatus status = new BillStatus();
 	    status.setSourceStatus(view.getStatus().getCode());
 
-	    final LegislativeChamber chamber = LegislativeChamber.fromLegiscanChamber(view.getHistory().get(0).getChamber());
+	    final LegislativeChamber chamber = resolveOriginatingChamber(view).orElseThrow();
 	    final LegiscanStatus stat = view.getStatus();
 	    final boolean sessionOver = session.isOver();
 	    final String executor = session.getNamespace() == LegislativeNamespace.US_CONGRESS ? "President" : "Governor";
@@ -445,8 +543,20 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    term.setChamber(LegislativeChamber.fromLegiscanRole(view.getRole()));
 	    leg.getTerms().add(term);
 	    
-	    regularDataset.put(leg);
+		val existing = regularDataset.get(legId, Legislator.class);
+		if (existing.isPresent()) {
+			val existingLeg = existing.get();
+			
+			if (StringUtils.isBlank(existingLeg.getOfficialUrl()))
+				existingLeg.setOfficialUrl(leg.getOfficialUrl());
+			
+			existingLeg.getTerms().addAll(leg.getTerms());
+			return;
+		}
+		
+		regularDataset.put(leg);
 	}
+
 
 	@Override
 	public void syncS3LegislatorImages(PoliscoreDatasetIF dataset) {
