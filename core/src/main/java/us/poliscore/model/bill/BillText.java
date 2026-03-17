@@ -1,6 +1,9 @@
 package us.poliscore.model.bill;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -26,6 +29,9 @@ import us.poliscore.model.SessionPersistable;
 public class BillText extends SessionPersistable
 {
 	public static final String ID_CLASS_PREFIX = "BTX";
+	private static final Pattern DUBLIN_CORE_DATE_PATTERN = Pattern.compile("<(?:\\w+:)?date>([^<]+)</(?:\\w+:)?date>");
+	private static final Pattern ACTION_DATE_PATTERN = Pattern.compile("<action-date[^>]*date=\"(\\d{8})\"");
+	private static final Pattern ATTESTATION_DATE_PATTERN = Pattern.compile("<attestation-date[^>]*date=\"(\\d{8})\"");
 	
 	@Deprecated // TODO : Remove this after patching
 	public static String generateId(String billId) { return billId.replace(Bill.ID_CLASS_PREFIX, ID_CLASS_PREFIX); }
@@ -46,9 +52,7 @@ public class BillText extends SessionPersistable
 	protected String billId;
 	
 	protected String text;
-	
-	protected LocalDate lastUpdated;
-	
+
 	protected String version;
 	
 	protected BillTextFormat format;
@@ -65,12 +69,43 @@ public class BillText extends SessionPersistable
 		val txt = new BillText();
 		txt.billId = billId;
 		txt.text = text;
-		txt.lastUpdated = lastUpdated;
+		txt.setLastUpdate(lastUpdated != null ? lastUpdated.atStartOfDay() : null);
 		txt.version = version;
 		txt.format = format;
 		txt.id = generateId(billId, version);
 		return txt;
 	}
+	
+	@JsonIgnore
+    protected transient boolean loadedLegacyXml;
+
+    public void setText(String text) {
+        this.text = text;
+    }
+
+    @JsonSetter("text")
+    public void jsonSetText(String text) {
+        if (StringUtils.isBlank(text) && loadedLegacyXml && StringUtils.isNotBlank(this.text)) {
+            return;
+        }
+
+        this.text = text;
+    }
+
+    @Deprecated
+    @JsonSetter("xml")
+    public void jsonSetXml(String xml) {
+        if (StringUtils.isBlank(xml)) {
+            return;
+        }
+
+        this.text = xml;
+        this.loadedLegacyXml = true;
+
+        if (format == null) {
+            this.format = BillTextFormat.XML;
+        }
+    }
 	
 	@JsonIgnore
 	@DynamoDbIgnore
@@ -94,27 +129,67 @@ public class BillText extends SessionPersistable
 	public String getXml() {
 		return BillTextFormat.XML.equals(getEffectiveFormat()) ? text : null;
 	}
-	
-	@Deprecated
-	@JsonSetter("xml")
-	public void setXml(String xml) {
-		if (StringUtils.isBlank(xml)) {
-			return;
+
+	@JsonIgnore
+	@DynamoDbIgnore
+	public LocalDate getLastUpdated() {
+		return getLastUpdate() != null ? getLastUpdate().toLocalDate() : null;
+	}
+
+	@JsonSetter("lastUpdated")
+	public void setLastUpdated(LocalDate lastUpdated) {
+		super.setLastUpdate(lastUpdated != null ? lastUpdated.atStartOfDay() : null);
+	}
+
+	@Override
+	public LocalDateTime getLastUpdate() {
+		LocalDateTime lastUpdate = super.getLastUpdate();
+		if (lastUpdate != null) {
+			return lastUpdate;
 		}
 		
-		this.text = xml;
-		if (format == null) {
-			this.format = BillTextFormat.XML;
+		LocalDate derivedDate = deriveDateFromDocument();
+		if (derivedDate == null) {
+			return null;
 		}
+		
+		LocalDateTime derivedDateTime = derivedDate.atStartOfDay();
+		super.setLastUpdate(derivedDateTime);
+		return derivedDateTime;
 	}
 	
 	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public String getStorageBucket() { return super.getStorageBucket(); }
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() { return lastUpdated; }
-	@JsonIgnore public void setDate(LocalDate date) { lastUpdated = date; }
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() { return getLastUpdated(); }
+	@JsonIgnore public void setDate(LocalDate date) { super.setLastUpdate(date != null ? date.atStartOfDay() : null); }
 	
 	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return 0; }
 	@JsonIgnore public void setRating(int rating) { }
+
+	@JsonIgnore
+	@DynamoDbIgnore
+	protected LocalDate deriveDateFromDocument() {
+		if (StringUtils.isBlank(text) || !BillTextFormat.XML.equals(getEffectiveFormat())) {
+			return null;
+		}
+		
+		val dublinCoreMatch = DUBLIN_CORE_DATE_PATTERN.matcher(text);
+		if (dublinCoreMatch.find()) {
+			return LocalDate.parse(dublinCoreMatch.group(1).trim(), DateTimeFormatter.ISO_LOCAL_DATE);
+		}
+		
+		val actionDateMatch = ACTION_DATE_PATTERN.matcher(text);
+		if (actionDateMatch.find()) {
+			return LocalDate.parse(actionDateMatch.group(1), DateTimeFormatter.BASIC_ISO_DATE);
+		}
+		
+		val attestationDateMatch = ATTESTATION_DATE_PATTERN.matcher(text);
+		if (attestationDateMatch.find()) {
+			return LocalDate.parse(attestationDateMatch.group(1), DateTimeFormatter.BASIC_ISO_DATE);
+		}
+		
+		return null;
+	}
 	
 }

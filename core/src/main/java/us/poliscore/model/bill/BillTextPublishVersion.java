@@ -1,6 +1,7 @@
 package us.poliscore.model.bill;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 
 public enum BillTextPublishVersion {
 	/// Important! ///
@@ -74,22 +75,29 @@ public enum BillTextPublishVersion {
 	
 	public static BillTextPublishVersion parseFromBillTextName(String fileName)
 	{
+		var bn = FilenameUtils.getBaseName(fileName);
+		String normalized = normalizeFileNameSuffix(bn);
+		
 		for (BillTextPublishVersion v : BillTextPublishVersion.values())
 		{
-			var bn = FilenameUtils.getBaseName(fileName);
-			
-			if (String.valueOf(bn.charAt(bn.length()-1)).matches("\\d"))
-			{
-				bn = bn.substring(0, bn.length()-1); // TODO : We should probably create a 'GPOBillTextName' Comparator which accounts for this properly
-			}
-			
-			if (bn.endsWith(v.name().toLowerCase()) || bn.endsWith(v.name().toUpperCase()))
+			if (normalized.endsWith(v.name()))
 			{
 				return v;
 			}
 		}
 		
 		throw new RuntimeException("file name " + fileName + " could not be parsed");
+	}
+	
+	protected static String normalizeFileNameSuffix(String fileBaseName) {
+		String normalized = StringUtils.upperCase(fileBaseName);
+		
+		// GPO sometimes appends stage-count digits (e.g. RH2, RFS2)
+		// and/or star-print markers (e.g. EH1S = first-star-print of EH).
+		normalized = normalized.replaceFirst("\\d+S$", "");
+		normalized = normalized.replaceFirst("\\d+$", "");
+		
+		return normalized;
 	}
 
 	/**

@@ -2,7 +2,6 @@ package us.poliscore.service;
 
 import java.io.File;
 import java.net.URI;
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -38,18 +37,6 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 @ApplicationScoped
 @Priority(4)
 public class BillService {
-	private static final Comparator<BillText> DEFAULT_BILL_TEXT_COMPARATOR = Comparator
-			.comparing(BillText::getLastUpdated, Comparator.nullsFirst(Comparator.naturalOrder()))
-			.thenComparing(BillText::getVersion, Comparator.nullsFirst(Comparator.naturalOrder()))
-			.thenComparing(BillText::getId, Comparator.nullsFirst(Comparator.naturalOrder()));
-	
-	// Congressional publish maturity is only a fallback when lastUpdated is missing or tied.
-	private static final Comparator<BillText> CONGRESSIONAL_BILL_TEXT_COMPARATOR = Comparator
-			.comparing(BillText::getLastUpdated, Comparator.nullsFirst(Comparator.naturalOrder()))
-			.thenComparingInt(BillService::getVersionSortOrder)
-			.thenComparing(BillText::getVersion, Comparator.nullsFirst(Comparator.naturalOrder()))
-			.thenComparing(BillText::getId, Comparator.nullsFirst(Comparator.naturalOrder()));
-	
 	@Inject
 	private LocalCachedS3Service s3;
 	
@@ -61,37 +48,9 @@ public class BillService {
 	
 	@Inject
 	private GovernmentDataService data;
-
-	private static int getVersionSortOrder(BillText billText) {
-		if (billText == null || StringUtils.isBlank(billText.getVersion())) {
-			return Integer.MIN_VALUE;
-		}
-		
-		String versionToken = billText.getVersion();
-		int separator = versionToken.indexOf('-');
-		if (separator != -1) {
-			versionToken = versionToken.substring(0, separator);
-		}
-		
-		try {
-			return BillTextPublishVersion.valueOf(versionToken).ordinal();
-		}
-		catch (IllegalArgumentException ignored) { }
-		
-		try {
-			return LegiscanTextType.valueOf(versionToken).ordinal();
-		}
-		catch (IllegalArgumentException ignored) { }
-		
-		return 0;
-	}
 	
 	protected Comparator<BillText> getBillTextComparator(Bill bill) {
-		if (bill.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
-			return CONGRESSIONAL_BILL_TEXT_COMPARATOR;
-		}
-		
-		return DEFAULT_BILL_TEXT_COMPARATOR;
+		return Comparator.comparing(BillText::getLastUpdate);
 	}
 	
 	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
@@ -216,12 +175,13 @@ public class BillService {
 //		{
 //			return Optional.empty();
 //		}
-    	val legacyBillText = s3.get(BillText.generateId(bill.getId()), BillText.class);
-    	if (legacyBillText.isPresent()) {
-    		return legacyBillText;
-    	}
     	
-    	return getBillTexts(bill).stream().max(getBillTextComparator(bill));
+    	val op = getBillTexts(bill).stream().max(getBillTextComparator(bill));
+    	
+    	if (op.isPresent())
+    		return op;
+    	
+    	return Optional.empty();
 	}
     
     public boolean hasBillText(Bill bill)
@@ -231,13 +191,27 @@ public class BillService {
     }
     
     public List<BillText> getBillTexts(Bill bill) {
-    	String sessionKey = getSessionKey(bill.getId());
-    	String objectKey = getVersionedObjectKeyPrefix(bill.getId());
-    	
-    	return s3.query(BillText.class, sessionKey, objectKey).stream()
-    			.filter(bt -> bill.getId().equals(bt.getBillId()))
-    			.sorted(getBillTextComparator(bill))
-    			.collect(Collectors.toList());
+        String sessionKey = getSessionKey(bill.getId());
+        String objectKey = getVersionedObjectKeyPrefix(bill.getId());
+
+        List<BillText> billTexts = s3.query(BillText.class, sessionKey, objectKey).stream()
+                .filter(bt -> bill.getId().equals(bt.getBillId()))
+                .collect(Collectors.toList());
+
+        List<String> missingDateIds = billTexts.stream()
+                .filter(bt -> bt.getLastUpdate() == null)
+                .map(bt -> "billTextId=" + bt.getId() + ", version=" + bt.getVersion())
+                .collect(Collectors.toList());
+
+        if (!missingDateIds.isEmpty()) {
+            throw new IllegalStateException(
+                    "Bill texts did not have a date for bill " + bill.getId() + ": "
+                    + String.join("; ", missingDateIds));
+        }
+
+        return billTexts.stream()
+                .sorted(getBillTextComparator(bill))
+                .collect(Collectors.toList());
     }
     
     protected String getSessionKey(String billId) {

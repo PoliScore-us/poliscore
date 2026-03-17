@@ -238,7 +238,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	    Log.info("About to deep research birthdays for " + legs.size() + " legislators...");
 
 	    StringBuilder sb = new StringBuilder();
-	    sb.append(dataset.getNamespace().getDescription() + " State Legislature\n");
+	    sb.append(dataset.getNamespace().getDescription() + "\n");
 	    sb.append("List of legislators:\n");
 
 	    for (Legislator leg : legs) {

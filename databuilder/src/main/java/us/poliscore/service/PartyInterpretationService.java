@@ -435,7 +435,7 @@ Before printing the final line, internally verify the output is a JSON array of 
 		if (session.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
 			sessionName = String.valueOf(session.getCode()) + "th congressional session";
 		else
-			sessionName = String.valueOf(session.getStartDate().getYear()) + "-" + String.valueOf(session.getEndDate().getYear()) + " " + session.getNamespace().getDescription() + " state legislature";
+			sessionName = String.valueOf(session.getStartDate().getYear()) + "-" + String.valueOf(session.getEndDate().getYear()) + " " + session.getNamespace().getDescription();
 		
 		return PROMPT_TEMPLATE
 				.replace("{{partyName}}", party.getName())

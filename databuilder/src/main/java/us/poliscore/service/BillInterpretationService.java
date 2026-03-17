@@ -1,5 +1,7 @@
 package us.poliscore.service;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -7,7 +9,7 @@ import jakarta.inject.Inject;
 import lombok.NonNull;
 import lombok.val;
 import us.poliscore.ai.OpenAIModel;
-import us.poliscore.entrypoint.DatabaseBuilder;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.InterpretationOrigin;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
@@ -40,6 +42,9 @@ public class BillInterpretationService {
 	@Inject
 	protected BillService billService;
 	
+	@Inject
+	private GovernmentDataService data;
+	
 	public Optional<BillInterpretation> getByBillId(String billId)
 	{
 		return getByBillId(billId, InterpretationOrigin.POLISCORE);
@@ -61,7 +66,12 @@ public class BillInterpretationService {
 //		
 //		return userMsg;
 		
-		String userMsg = "";
+		PoliscoreDatasetIF dataset = data.getDataset(bill.getId());
+		
+		String userMsg = "Today's Date: " + LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) + "\n";
+		userMsg += "Legislature: " + dataset.getDescription() + "\n";
+		userMsg += "Bill: " + bill.getDescription() + "\n";
+		userMsg += "Sponsor: " + bill.getSponsor().getName().getOfficial_full() + "\n";
 		final String billTextMsg = "Official Bill Text:\n" + billText;
 		
 //		if (!DatabaseBuilder.AGENTIC_WEB_SEARCH) {

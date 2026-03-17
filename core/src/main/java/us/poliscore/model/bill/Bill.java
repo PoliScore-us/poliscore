@@ -123,6 +123,12 @@ public class Bill extends SessionPersistable {
 		return name;
 	}
 	
+	@JsonIgnore
+	@DynamoDbIgnore
+	public String getDescription() {
+		return getName() + " (" + getType().toLowerCase() + " " + getNumber() + ")";
+	}
+	
 	public LocalDate getLastActionDate() {
 		return lastActionDate != null ? lastActionDate : introducedDate;
 	}

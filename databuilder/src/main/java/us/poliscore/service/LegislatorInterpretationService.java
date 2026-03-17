@@ -346,7 +346,7 @@ Your written response for this research section should consist of only a compact
 		if (leg.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
 			ns = "Congressional";
 		else
-			ns = leg.getNamespace().getDescription() + " State";
+			ns = leg.getNamespace().getDescription();
 		
 		List<String> structuralStatList = new ArrayList<String>();
 		for (var s : StructuralAnalysis.values()) {

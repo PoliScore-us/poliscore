@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -13,13 +14,12 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.jsoup.Jsoup;
 
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
@@ -32,7 +32,6 @@ import lombok.SneakyThrows;
 import lombok.val;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
-import software.amazon.awssdk.utils.StringUtils;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.bill.Bill;
@@ -40,7 +39,7 @@ import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.BillTextPublishVersion;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.service.GovernmentDataService;
-import us.poliscore.service.storage.CachedS3Service;
+import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
  * Used to fetch bulk bill data from the GPO's bulk bill store. More info at:
@@ -53,10 +52,13 @@ import us.poliscore.service.storage.CachedS3Service;
 public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	
 	public static final String URL_TEMPLATE = "https://www.govinfo.gov/bulkdata/BILLS/{{congress}}/{{session}}/{{type}}/BILLS-{{congress}}-{{session}}-{{type}}.zip";
+	private static final Pattern DUBLIN_CORE_DATE_PATTERN = Pattern.compile("<(?:\\w+:)?date>([^<]+)</(?:\\w+:)?date>");
+	private static final Pattern ACTION_DATE_PATTERN = Pattern.compile("<action-date[^>]*date=\"(\\d{8})\"");
+	private static final Pattern ATTESTATION_DATE_PATTERN = Pattern.compile("<attestation-date[^>]*date=\"(\\d{8})\"");
 	
 	public static List<String> FETCH_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
-	@Inject private CachedS3Service s3;
+	@Inject private LocalCachedS3Service s3;
 	@Inject private GovernmentDataService data;
 	
 	@SneakyThrows
@@ -147,11 +149,23 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	@SneakyThrows
 	protected LocalDate parseDate(File f)
 	{
-		val text = Jsoup.parse(f).select("bill dublinCore dc|date").text();
+		val text = FileUtils.readFileToString(f, StandardCharsets.UTF_8);
+		val dublinCoreMatch = DUBLIN_CORE_DATE_PATTERN.matcher(text);
+		if (dublinCoreMatch.find()) {
+			return LocalDate.parse(dublinCoreMatch.group(1).trim(), DateTimeFormatter.ISO_LOCAL_DATE);
+		}
 		
-		if (StringUtils.isBlank(text)) return null;
+		val actionDateMatch = ACTION_DATE_PATTERN.matcher(text);
+		if (actionDateMatch.find()) {
+			return LocalDate.parse(actionDateMatch.group(1), DateTimeFormatter.BASIC_ISO_DATE);
+		}
 		
-		return LocalDate.parse(text, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+		val attestationDateMatch = ATTESTATION_DATE_PATTERN.matcher(text);
+		if (attestationDateMatch.find()) {
+			return LocalDate.parse(attestationDateMatch.group(1), DateTimeFormatter.BASIC_ISO_DATE);
+		}
+		
+		return null;
 	}
 	
 	@SneakyThrows
@@ -206,8 +220,22 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	}
 	
 	protected String buildBillId(PoliscoreDatasetIF dataset, String billType, File f) {
-		String number = f.getName().replace("BILLS-" + dataset.getCode() + billType, "").replaceAll("\\D", "");
-		return Bill.generateId(dataset.getNamespace(), dataset.getCode(), CongressionalBillType.valueOf(billType.toUpperCase()), Integer.parseInt(number));
+		return Bill.generateId(dataset.getNamespace(), dataset.getCode(), CongressionalBillType.valueOf(billType.toUpperCase()), extractBillNumber(dataset.getCode(), billType, f.getName()));
+	}
+	
+	protected int extractBillNumber(String datasetCode, String billType, String fileName) {
+		String prefix = "BILLS-" + datasetCode + billType;
+		if (!fileName.startsWith(prefix)) {
+			throw new IllegalArgumentException("Unexpected GPO file name " + fileName + " for dataset " + datasetCode + " and bill type " + billType);
+		}
+		
+		String remainder = fileName.substring(prefix.length());
+		String number = remainder.replaceFirst("^([0-9]+).*$", "$1");
+		if (!number.matches("\\d+")) {
+			throw new IllegalArgumentException("Unable to extract bill number from GPO file name " + fileName);
+		}
+		
+		return Integer.parseInt(number);
 	}
 	
 	@SneakyThrows

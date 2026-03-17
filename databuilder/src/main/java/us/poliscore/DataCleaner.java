@@ -75,15 +75,7 @@ public class DataCleaner implements QuarkusApplication {
 		
 //		reparseStructuralAnalysisInterps(dataset);
 		
-		String billId = Bill.generateId(dataset.getNamespace(), "119", CongressionalBillType.HR, 1);
-		String sessionKey = billId.substring(StringUtils.ordinalIndexOf(billId, "/", 1)+1, StringUtils.ordinalIndexOf(billId, "/", 4));
-		String objectKey = billId.substring(StringUtils.ordinalIndexOf(billId, "/", 4)+1);
-		for (var interp : s3.query(BillInterpretation.class, sessionKey, objectKey)) {
-			if (interp.getIssueStats() == null)
-				s3.delete(interp.getId(), BillInterpretation.class);
-		}
 		
-        
 		System.out.println("Program complete.");
 	}
 	
@@ -103,7 +95,6 @@ public class DataCleaner implements QuarkusApplication {
 		
 		System.out.println("Deleted " + count + " corrupt bill texts");
 	}
-	
 	public void reparseStructuralAnalysisInterps(PoliscoreDatasetIF dataset) {
 		
 		int count = 0;

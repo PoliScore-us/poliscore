@@ -46,12 +46,12 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 	public static final int MAX_BILL_PROCESS = 5000; // -1 for infinite
 
-//	public static final List<String> specificFetch = null;
-	public static final List<String> specificFetch = Arrays.asList(
-	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 1383)
+	public static final List<String> specificFetch = null;
+//	public static final List<String> specificFetch = Arrays.asList(
+//	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 1383)
 //	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 7148),
 //	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 7567)
-);
+//);
 //public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_COLORADO, "2173", "sb", 317));
 
 //public static final List<String> specificFetch = Arrays.asList(

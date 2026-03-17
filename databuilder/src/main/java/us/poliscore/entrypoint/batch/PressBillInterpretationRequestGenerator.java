@@ -507,7 +507,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
     	if (bill.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
     		id += bill.getSessionCode() + "th Congress";
     	} else {
-    		id += "State of " + bill.getNamespace().getDescription();
+    		id += bill.getNamespace().getDescription();
     	}
     	
     	return id + ", " +

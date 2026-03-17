@@ -62,7 +62,7 @@ import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCos
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
 import us.poliscore.service.LegislatorService;
-import us.poliscore.service.storage.CachedS3Service;
+import us.poliscore.service.storage.LocalCachedS3Service;
 
 @ApplicationScoped
 @Named("legiscan")
@@ -80,7 +80,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	@Inject protected PoliscoreDatasetAugmentor psLegScraper;
 	@Inject protected StateLegislatorImageFetcher stateImageFetcher;
 	
-	@Inject private CachedS3Service s3;
+	@Inject private LocalCachedS3Service s3;
 	
 	@Inject
 	protected CachedLegiscanService legiscan;
@@ -499,7 +499,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 			return null;
 		}
 		
-		return BillText.factory(bill.getId(), text, doc.getDate(), buildBillTextVersion(metadata), getBillTextFormat(doc));
+		return BillText.factory(bill.getId(), text, metadata.getDate(), buildBillTextVersion(metadata), getBillTextFormat(doc));
 	}
 	
 	@SneakyThrows

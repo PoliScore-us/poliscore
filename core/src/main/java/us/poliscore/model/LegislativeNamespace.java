@@ -137,7 +137,7 @@ public enum LegislativeNamespace {
 
 		try {
 			LegiscanState state = LegiscanState.fromAbbreviation(abbr);
-			return capitalizeFully(state.name().replace('_', ' '));
+			return capitalizeFully(state.name().replace('_', ' ')) + " State Legislature";
 		} catch (IllegalArgumentException e) {
 			// fallback for special cases like "us/dc"
 			switch (abbr) {
