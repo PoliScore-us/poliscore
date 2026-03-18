@@ -459,7 +459,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		try
 		{
 			// TODO : I don't think this will work for congress (since the congress legislator code is bioguide id not people id) but we don't use legiscan for congress anyway
-			leg = regularDataset.get(Legislator.generateId(regularDataset.getNamespace(), regularDataset.getSession().getCode(), String.valueOf(vote.getPeopleId())), Legislator.class).orElseThrow();
+			leg = regularDataset.get(Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), String.valueOf(vote.getPeopleId())), Legislator.class).orElseThrow();
 		}
 		catch (NoSuchElementException ex)
 		{

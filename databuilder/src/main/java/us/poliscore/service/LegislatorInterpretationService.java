@@ -462,7 +462,7 @@ Your written response for this research section should consist of only a compact
 			updateInteractionsInterp(leg);
 			
 			LegislatorInterpretation interp = new LegislatorInterpretation(dataset.getNamespace(), dataset.getRegularSession().getCode(), leg.getCode(), OpenAIService.metadata(), null);
-			val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
+			val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getRegularSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
 			
 			if (interpOp.isPresent()) { interp = interpOp.get(); }
 			
@@ -475,7 +475,7 @@ Your written response for this research section should consist of only a compact
 				if (previousDataset != null) {
 					// Pull textual interpretation from previous session if ours doesn't exist
 					if (StringUtils.isBlank(interp.getShortExplain()) || StringUtils.isBlank(interp.getLongExplain())) {
-						val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousDataset.getNamespace(), previousDataset.getCode(), leg.getCode()), LegislatorInterpretation.class);
+						val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousDataset.getNamespace(), previousDataset.getRegularSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
 						if (prevInterpOp.isPresent()) {
 							if (StringUtils.isBlank(interp.getCasualExplain()))
 								interp.setCasualExplain(prevInterpOp.get().getCasualExplain());
@@ -490,7 +490,7 @@ Your written response for this research section should consist of only a compact
 					}
 					
 					// Pull interactions from previous session if they've been interpreted
-					val prevLeg = previousDataset.get(Legislator.generateId(previousDataset.getNamespace(), previousDataset.getCode(), leg.getCode()), Legislator.class).orElse(null);
+					val prevLeg = previousDataset.get(Legislator.generateId(previousDataset.getNamespace(), previousDataset.getRegularSession().getCode(), leg.getCode()), Legislator.class).orElse(null);
 					if (prevLeg != null) {
 						val prevInteracts = getInteractionsForInterpretation(prevLeg).iterator();
 						while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {

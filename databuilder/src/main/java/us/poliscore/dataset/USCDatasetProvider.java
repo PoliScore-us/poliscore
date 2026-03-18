@@ -219,7 +219,7 @@ public class USCDatasetProvider implements DatasetProvider {
 			if (vote.getId().length() == 4 && vote.getId().startsWith("S"))
 				leg = dataset.query(Legislator.class).stream().filter(l -> vote.getId().equals(l.getLisId())).findFirst().orElseThrow();
 			else
-				leg = dataset.get(Legislator.generateId(LegislativeNamespace.US_CONGRESS, dataset.getSession().getCode(), vote.getId()), Legislator.class).orElseThrow();
+				leg = dataset.get(Legislator.generateId(LegislativeNamespace.US_CONGRESS, dataset.getRegularSession().getCode(), vote.getId()), Legislator.class).orElseThrow();
 		}
 		catch (NoSuchElementException ex)
 		{
