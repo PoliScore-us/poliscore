@@ -22,7 +22,8 @@ public class PoliscoreDatasetProvider implements DatasetProvider {
 	
 	protected DatasetProvider getProvider(LegislativeNamespace namespace) {
 		if (namespace == null || namespace.equals(LegislativeNamespace.US_CONGRESS)) {
-			return usc;
+//			return usc;
+			return legiscan;
 		} else {
 			return legiscan;
 		}

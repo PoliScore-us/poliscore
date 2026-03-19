@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import io.quarkus.logging.Log;
@@ -147,9 +146,8 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	}
 	
 	@SneakyThrows
-	protected LocalDate parseDate(File f)
+	public static LocalDate parseDate(String text)
 	{
-		val text = FileUtils.readFileToString(f, StandardCharsets.UTF_8);
 		val dublinCoreMatch = DUBLIN_CORE_DATE_PATTERN.matcher(text);
 		if (dublinCoreMatch.find()) {
 			return LocalDate.parse(dublinCoreMatch.group(1).trim(), DateTimeFormatter.ISO_LOCAL_DATE);
@@ -241,7 +239,7 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	@SneakyThrows
 	protected BillText buildBillText(String billId, File file) {
 		BillTextPublishVersion version = BillTextPublishVersion.parseFromBillTextName(file.getName());
-		return BillText.factory(billId, FileUtils.readFileToString(file, "UTF-8"), parseDate(file), version, us.poliscore.model.bill.BillTextFormat.XML);
+		return BillText.factory(billId, FileUtils.readFileToString(file, "UTF-8"), parseDate(FileUtils.readFileToString(file, StandardCharsets.UTF_8)), version, us.poliscore.model.bill.BillTextFormat.XML);
 	}
 	
 	protected void upsertVersionedBillText(BillText candidate) {

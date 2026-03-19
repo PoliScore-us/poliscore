@@ -28,6 +28,8 @@ import us.poliscore.PoliscoreCompositeDataset;
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.dataset.augmentation.PoliscoreDatasetAugmentor;
+import us.poliscore.entrypoint.GPOBulkBillTextFetcher;
+import us.poliscore.images.CongressionalLegislatorImageFetcher;
 import us.poliscore.images.StateLegislatorImageFetcher;
 import us.poliscore.legiscan.cache.CachedLegiscanDatasetResult;
 import us.poliscore.legiscan.service.CachedLegiscanService;
@@ -57,12 +59,14 @@ import us.poliscore.model.bill.Bill.BillSponsor;
 import us.poliscore.model.bill.BillStatus;
 import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.BillTextFormat;
+import us.poliscore.model.bill.BillTextPublishVersion;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislativeTerm;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCosponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
+import us.poliscore.service.BillService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
@@ -78,9 +82,12 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	
 	@Inject
 	protected LegislatorService lService;
+	@Inject
+	protected BillService billService;
 	
 	@Inject protected PoliscoreDatasetAugmentor psLegScraper;
 	@Inject protected StateLegislatorImageFetcher stateImageFetcher;
+	@Inject protected CongressionalLegislatorImageFetcher congressionalImageFetcher;
 	
 	@Inject private LocalCachedS3Service s3;
 	
@@ -142,7 +149,11 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	}
 	
 	public static LegiscanState namespaceToState(LegislativeNamespace namespace) {
-		return LegiscanState.fromAbbreviation(namespace.getNamespace().replace("us/", ""));
+		if (namespace.equals(LegislativeNamespace.US_CONGRESS))
+			return LegiscanState.CONGRESS;
+		else
+			return LegiscanState.fromAbbreviation(namespace.getNamespace().replace("us/", ""));
+		
 	}
 	
 	public static LegislativeSession buildSession(boolean regular, int sessionId, LegiscanState state, int yearStart, int yearEnd) {
@@ -380,9 +391,12 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	
 	private BillSponsor convertSponsor(LegiscanSponsorView view, PoliscoreDataset regularDataset) {
 		String legId;
-		if (regularDataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), view.getBioguideId());
-		else
+		if (regularDataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
+			if (StringUtils.isNotBlank(view.getBioguideId()))
+				legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), view.getBioguideId());
+			else
+				legId = legislatorByPeopleId(regularDataset, view.getPeopleId()).getId();
+		} else
 			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), String.valueOf(view.getPeopleId()));
 		
 		var leg = regularDataset.get(legId, Legislator.class).get();
@@ -458,8 +472,11 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		Legislator leg;
 		try
 		{
-			// TODO : I don't think this will work for congress (since the congress legislator code is bioguide id not people id) but we don't use legiscan for congress anyway
-			leg = regularDataset.get(Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), String.valueOf(vote.getPeopleId())), Legislator.class).orElseThrow();
+			if (!dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+				leg = regularDataset.get(Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), String.valueOf(vote.getPeopleId())), Legislator.class).orElseThrow();
+			else {
+				leg = legislatorByPeopleId(regularDataset, vote.getPeopleId());
+			}
 		}
 		catch (NoSuchElementException ex)
 		{
@@ -486,6 +503,10 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		interaction.setId(LegislatorBillVote.generateId(interaction.getLegId(), interaction.getDate(), interaction.getBillId()));
 		
 		leg.addBillInteraction(interaction);
+	}
+	
+	protected Legislator legislatorByPeopleId(PoliscoreDataset regularDataset, Integer peopleId) {
+		return regularDataset.query(Legislator.class).stream().filter(l -> l.getLegiscanId().equals(peopleId)).findFirst().orElseThrow();
 	}
 	
 	public static VoteStatus toVoteStatus(LegiscanVoteStatus legiscanVoteStatus) {
@@ -516,10 +537,13 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    leg.setLegiscanId(view.getPeopleId());
 	    
 	    String legId;
-		if (regularDataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+		if (regularDataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
+			if (view.getBioguideId() == null) throw new NullPointerException();
 			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), view.getBioguideId());
-		else
+		} else
 			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), String.valueOf(view.getPeopleId()));
+		
+		if (legId.contains("null")) throw new NullPointerException();
 		leg.setId(legId);
 		
 		if (view.getBio() != null && view.getBio().getLinks() != null && view.getBio().getLinks().getOfficial() != null)
@@ -561,7 +585,10 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	@Override
 	public void syncS3LegislatorImages(PoliscoreDatasetIF dataset) {
 //		openstates.syncS3LegislatorImages(dataset);
-		stateImageFetcher.syncS3LegislatorImages(dataset);
+		if (!dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+			stateImageFetcher.syncS3LegislatorImages(dataset);
+		else
+			congressionalImageFetcher.syncS3LegislatorImages(dataset);
 	}
 	
 	@Override
@@ -574,29 +601,78 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		
 		for (val bill : dataset.query(Bill.class)) {
 			val legiBill = legiscan.getBill(bill.getLegiscanId());
-			if (legiBill.getTexts().size() == 0) continue;
+			if (legiBill.getTexts().isEmpty()) continue;
 			
-			List<BillText> versionedBillTexts = legiBill.getTexts().stream()
-					.sorted(Comparator.comparing(LegiscanTextMetadataView::getDate, Comparator.nullsFirst(Comparator.naturalOrder()))
-							.thenComparing(LegiscanTextMetadataView::getDocId, Comparator.nullsFirst(Comparator.naturalOrder())))
-					.map(metadata -> fetchBillTextVersion(bill, metadata))
-					.filter(Objects::nonNull)
-					.collect(Collectors.toList());
+			val latestMetadata = legiBill.getTexts().stream().max(Comparator.comparing(LegiscanTextMetadataView::getDate, Comparator.nullsFirst(Comparator.naturalOrder())));
+			if (latestMetadata.isEmpty()) continue;
 			
-			for (val billText : versionedBillTexts) {
-				if (upsertBillText(billText)) {
-					uploadCount++;
-				}
+			// Was already fetched using GPO fetcher
+			if (latestMetadata.get().getDate() != null && latestMetadata.get().getDate().isBefore(LocalDate.of(2026, 3, 10))) continue;
+			
+			if (s3.exists(BillText.generateId(bill.getId(), buildBillTextVersion(latestMetadata.get())), BillText.class)) { continue; }
+			
+			// Migrate bill text from older GPO format over to the newer legiscan format. Can be removed once migrated.
+			if (bill.getNamespace().equals(LegislativeNamespace.US_CONGRESS) && migrateCongressLegiscanBillTextCompatibility(bill, latestMetadata.get())) {
+				continue;
 			}
 			
-			if (!versionedBillTexts.isEmpty() && migrateLegacyBillText(bill, versionedBillTexts)) {
+			val latestBillText = fetchBillTextVersion(bill, latestMetadata.get());
+			if (latestBillText == null) continue;
+			
+			s3.put(latestBillText);
+			uploadCount++;
+			
+			// Bill text is now stored by version. Remove once migrated
+			if (migrateBillTextVersion(bill)) {
 				migratedCount++;
 			}
 		}
 		
 		dataset.clearExistsOptimize(s3, BillText.class);
 		
-		Log.info("Uploaded " + uploadCount + " versioned bill texts to s3 from Legiscan provider and migrated " + migratedCount + " legacy bill texts.");
+		Log.info("Uploaded " + uploadCount + " latest bill texts to s3 from Legiscan provider and migrated " + migratedCount + " legacy bill texts.");
+	}
+	
+	protected boolean migrateCongressLegiscanBillTextCompatibility(Bill bill, LegiscanTextMetadataView metadata) {
+		if (bill == null || metadata == null || StringUtils.isBlank(metadata.getStateLink())) {
+			return false;
+		}
+
+		if (!bill.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
+			return false;
+		}
+
+		String legiscanVersion = buildBillTextVersion(metadata);
+
+		try {
+			String stateLink = metadata.getStateLink();
+			String fileName = stateLink.substring(stateLink.lastIndexOf('/') + 1);
+
+			if (StringUtils.isBlank(fileName) || !fileName.startsWith("BILLS-")) {
+				return false;
+			}
+
+			BillTextPublishVersion gpoVersion = BillTextPublishVersion.parseFromBillTextName(fileName);
+			String gpoBillTextId = BillText.generateId(bill.getId(), gpoVersion);
+
+			BillText existing = s3.get(gpoBillTextId, BillText.class).orElse(null);
+			if (existing == null) {
+				return false;
+			}
+
+			BillText migrated = BillText.factory(
+					bill.getId(),
+					existing.getText(),
+					existing.getLastUpdated(),
+					legiscanVersion,
+					existing.getEffectiveFormat()
+			);
+
+			s3.put(migrated);
+			return true;
+		} catch (Exception ex) {
+			return false;
+		}
 	}
 	
 	@SneakyThrows
@@ -609,7 +685,15 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 			return null;
 		}
 		
-		return BillText.factory(bill.getId(), text, metadata.getDate(), buildBillTextVersion(metadata), getBillTextFormat(doc));
+		LocalDate date = Objects.requireNonNullElse(metadata.getDate(), doc.getDate());
+		if (date == null && bill.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
+			date = GPOBulkBillTextFetcher.parseDate(text);
+		}
+		if (date == null) {
+			throw new NullPointerException();
+		}
+		
+		return BillText.factory(bill.getId(), text, date, buildBillTextVersion(metadata), getBillTextFormat(doc));
 	}
 	
 	@SneakyThrows
@@ -658,15 +742,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		return typeToken + "-" + metadata.getDocId();
 	}
 	
-	protected boolean upsertBillText(BillText candidate) {
-		if (s3.exists(candidate.getId(), BillText.class))
-			return false;
-		
-		s3.put(candidate);
-		return true;
-	}
-	
-	protected boolean migrateLegacyBillText(Bill bill, List<BillText> versionedBillTexts) {
+	protected boolean migrateBillTextVersion(Bill bill) {
 		val legacyId = BillText.generateId(bill.getId());
 		val legacy = s3.get(legacyId, BillText.class).orElse(null);
 		if (legacy == null) {
