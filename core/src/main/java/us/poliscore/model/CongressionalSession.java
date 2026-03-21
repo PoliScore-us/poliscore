@@ -7,9 +7,9 @@ import lombok.Getter;
 
 @Getter
 public enum CongressionalSession {
-	S117(117, LocalDate.of(2021, 1, 3), LocalDate.of(2023, 1, 3)),
-	S118(118, LocalDate.of(2023, 1, 3), LocalDate.of(2025, 1, 3)),
-	S119(119, LocalDate.of(2025, 1, 3), LocalDate.of(2027, 1, 3));
+	S117(117, LocalDate.of(2021, 1, 1), LocalDate.of(2022, 12, 31)),
+	S118(118, LocalDate.of(2023, 1, 1), LocalDate.of(2024, 12, 31)),
+	S119(119, LocalDate.of(2025, 1, 1), LocalDate.of(2026, 12, 31));
 	
 	private int number;
 	

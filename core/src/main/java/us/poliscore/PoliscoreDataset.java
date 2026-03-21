@@ -90,10 +90,7 @@ public class PoliscoreDataset extends MemoryObjectStore implements PoliscoreData
 
 	@Override
 	public int getEndYear() {
-		if (this.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-			return session.getEndDate().getYear() - 1;
-		else
-			return session.getEndDate().getYear();
+		return session.getEndDate().getYear();
 	}
 
 	@Override

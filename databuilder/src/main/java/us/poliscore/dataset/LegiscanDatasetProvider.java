@@ -562,8 +562,16 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    term.setStartDate(regularDataset.getSession().getStartDate());
 	    term.setEndDate(regularDataset.getSession().getEndDate());
 	    term.setParty(Party.from(view.getParty().name()));
-	    term.setState(view.getState());
-	    term.setDistrict(StringUtils.isBlank(view.getDistrict()) ? null : view.getDistrict());
+	    
+	    if (LegislativeNamespace.US_CONGRESS.equals(regularDataset.getNamespace())) {
+	    	var split = view.getDistrict().split("-");
+	    	term.setState(LegiscanState.fromAbbreviation(split[1]));
+	    	if (split.length > 2) term.setDistrict(split[2]);
+	    } else {
+		    term.setState(view.getState());
+		    term.setDistrict(StringUtils.isBlank(view.getDistrict()) ? null : view.getDistrict());
+	    }
+	    
 	    term.setChamber(LegislativeChamber.fromLegiscanRole(view.getRole()));
 	    leg.getTerms().add(term);
 	    

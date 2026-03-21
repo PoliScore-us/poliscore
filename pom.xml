@@ -8,9 +8,7 @@
   <packaging>pom</packaging>
             
   <modules>
-    <module>cdk</module>
     <module>core</module>
-    <module>webapp</module>
     <module>databuilder</module>
   </modules>
 </project>
