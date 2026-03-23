@@ -52,6 +52,11 @@ import us.poliscore.view.USCLegislatorView;
 import us.poliscore.view.USCRollCallData;
 import us.poliscore.view.USCRollCallData.USCRollCallVote;
 
+/**
+ * This USC provider was dropped in March 2026 in favor of Legiscan for a few reasons:
+ * 1. Bill status was found to often be wrong. For example, s. 1383 was reported as "sent to president" when the real status was "passover'. This was found to be the case for many other bills as well.
+ * 2. It's simply cleaner to have one primary data source rather than two distinct ones
+ */
 @ApplicationScoped
 @Named("usc")
 @DefaultBean

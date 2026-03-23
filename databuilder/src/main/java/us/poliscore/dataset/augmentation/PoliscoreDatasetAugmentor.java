@@ -27,6 +27,7 @@ import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
+import us.poliscore.dataset.USCDatasetProvider;
 import us.poliscore.images.StateLegislatorImageFetcher;
 import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.model.LegislativeChamber;
@@ -66,23 +67,42 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	@Inject
 	protected OpenStatesDatasetAugmentor openstates;
 	
+	@Inject
+	protected USCDatasetProvider usc;
+	
 	public static boolean isManualRun = false;
 	
 	public void augmentLegislators(PoliscoreDataset dataset) {
-		for (Legislator leg : dataset.query(Legislator.class)) {
-			val addendum = s3.get(PoliscoreScrapedLegislatorData.generateId(leg.getId()), PoliscoreScrapedLegislatorData.class);
+		if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+		{
+			var uscDataset = usc.importDataset(dataset.getConfig());
 			
-			if (addendum.isPresent()) {
-				if (StringUtils.isNotBlank(addendum.get().getOfficialUrl()))
-					leg.setOfficialUrl(addendum.get().getOfficialUrl());
+			for (Legislator leg : dataset.query(Legislator.class)) {
+				val addendum = uscDataset.get(leg.getId(), Legislator.class).orElse(null);
 				
-				if (addendum.get().getBirthday() != null)
-					leg.setBirthday(addendum.get().getBirthday());
-			} else if (!isManualRun) {
-				if (StringUtils.isBlank(leg.getOfficialUrl()))
-					leg.setOfficialUrl(guessOfficialUrl(leg, dataset, null));
+				if (addendum != null) {
+					leg.setBirthday(addendum.getBirthday());
+					leg.setTerms(addendum.getTerms());
+				}
+			}
+		}
+		else
+		{
+			for (Legislator leg : dataset.query(Legislator.class)) {
+				val addendum = s3.get(PoliscoreScrapedLegislatorData.generateId(leg.getId()), PoliscoreScrapedLegislatorData.class);
 				
-				leg.setBirthday(Legislator.DEFAULT_BIRTHDAY);
+				if (addendum.isPresent()) {
+					if (StringUtils.isNotBlank(addendum.get().getOfficialUrl()))
+						leg.setOfficialUrl(addendum.get().getOfficialUrl());
+					
+					if (addendum.get().getBirthday() != null)
+						leg.setBirthday(addendum.get().getBirthday());
+				} else if (!isManualRun) {
+					if (StringUtils.isBlank(leg.getOfficialUrl()))
+						leg.setOfficialUrl(guessOfficialUrl(leg, dataset, null));
+					
+					leg.setBirthday(Legislator.DEFAULT_BIRTHDAY);
+				}
 			}
 		}
 	}

@@ -4,7 +4,9 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
@@ -31,6 +33,7 @@ import us.poliscore.dataset.augmentation.PoliscoreDatasetAugmentor;
 import us.poliscore.entrypoint.GPOBulkBillTextFetcher;
 import us.poliscore.images.CongressionalLegislatorImageFetcher;
 import us.poliscore.images.StateLegislatorImageFetcher;
+import us.poliscore.legiscan.LegiscanVoteConverter;
 import us.poliscore.legiscan.cache.CachedLegiscanDatasetResult;
 import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.legiscan.view.LegiscanBillTextView;
@@ -47,13 +50,11 @@ import us.poliscore.legiscan.view.LegiscanStatus;
 import us.poliscore.legiscan.view.LegiscanTextMetadataView;
 import us.poliscore.legiscan.view.LegiscanTextType;
 import us.poliscore.legiscan.view.LegiscanVoteDetailView;
-import us.poliscore.legiscan.view.LegiscanVoteStatus;
 import us.poliscore.model.CongressionalSession;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Party;
-import us.poliscore.model.VoteStatus;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.Bill.BillSponsor;
 import us.poliscore.model.bill.BillStatus;
@@ -93,6 +94,9 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	
 	@Inject
 	protected CachedLegiscanService legiscan;
+	
+	private Map<Integer, Bill> legiscanIdToBill = new HashMap<Integer, Bill>();
+	private Map<Integer, Legislator> legiscanIdToLegislator = new HashMap<Integer, Legislator>();
 	
 	@Override
 	public PoliscoreDatasetIF importDataset(DeploymentConfig ref) {
@@ -266,6 +270,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
     		}
     	});
     	
+    	legiscanIdToBill.put(bill.getLegiscanId(), bill);
     	dataset.put(bill);
 	}
 
@@ -388,20 +393,13 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    throw new IllegalArgumentException("No matching CongressionalBillType for code: " + code + " and chamber: " + chamber);
 	}
 
-	
 	private BillSponsor convertSponsor(LegiscanSponsorView view, PoliscoreDataset regularDataset) {
-		String legId;
-		if (regularDataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
-			if (StringUtils.isNotBlank(view.getBioguideId()))
-				legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), view.getBioguideId());
-			else
-				legId = legislatorByPeopleId(regularDataset, view.getPeopleId()).getId();
-		} else
-			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), String.valueOf(view.getPeopleId()));
+		Legislator leg = legiscanIdToLegislator.get(view.getPeopleId());
+		if (leg == null) {
+			throw new NoSuchElementException("Could not find legislator with people id " + view.getPeopleId());
+		}
 		
-		var leg = regularDataset.get(legId, Legislator.class).get();
-		
-		var sponsor = new BillSponsor(legId, leg.getName());
+		var sponsor = new BillSponsor(leg.getId(), leg.getName());
 		sponsor.setParty(leg.getParty());
 		return sponsor;
 	}
@@ -469,65 +467,27 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	}
 	
 	protected void importVote(LegiscanRollCallView rollCall, LegiscanVoteDetailView vote, PoliscoreDataset dataset, PoliscoreDataset regularDataset) {
-		Legislator leg;
-		try
-		{
-			if (!dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-				leg = regularDataset.get(Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), String.valueOf(vote.getPeopleId())), Legislator.class).orElseThrow();
-			else {
-				leg = legislatorByPeopleId(regularDataset, vote.getPeopleId());
-			}
-		}
-		catch (NoSuchElementException ex)
-		{
+		Legislator leg = legiscanIdToLegislator.get(vote.getPeopleId());
+		if (leg == null) {
 			Log.warn("Could not find legislator with people id " + vote.getPeopleId());
 			return;
 		}
 		
-		Bill bill;
-		try
-		{
-			bill = dataset.query(Bill.class).stream().filter(b -> b.getLegiscanId() == rollCall.getBillId()).findFirst().get();
-		}
-		catch (NoSuchElementException ex)
-		{
+		Bill bill = legiscanIdToBill.get(rollCall.getBillId());
+		if (bill == null) {
 			Log.warn("Could not find bill with id " + rollCall.getBillId());
 			return;
 		}
 		
-		LegislatorBillVote interaction = new LegislatorBillVote(toVoteStatus(vote.getVote()));
-		interaction.setLegId(leg.getId());
-		interaction.setBillId(bill.getId());
-		interaction.setDate(rollCall.getDate());
-		interaction.setBillName(bill.getName());
-		interaction.setId(LegislatorBillVote.generateId(interaction.getLegId(), interaction.getDate(), interaction.getBillId()));
-		
-		leg.addBillInteraction(interaction);
+		LegislatorBillVote interaction = LegiscanVoteConverter.convert(rollCall, vote, leg, bill);
+
+		if (interaction != null)
+			leg.addBillInteraction(interaction);
 	}
 	
-	protected Legislator legislatorByPeopleId(PoliscoreDataset regularDataset, Integer peopleId) {
-		return regularDataset.query(Legislator.class).stream().filter(l -> l.getLegiscanId().equals(peopleId)).findFirst().orElseThrow();
-	}
-	
-	public static VoteStatus toVoteStatus(LegiscanVoteStatus legiscanVoteStatus) {
-	    if (legiscanVoteStatus == null) {
-	        throw new IllegalArgumentException("LegiscanVoteStatus cannot be null.");
-	    }
-
-	    switch (legiscanVoteStatus) {
-	        case YEA:
-	            return VoteStatus.AYE;
-	        case NAY:
-	            return VoteStatus.NAY;
-	        case ABSTAIN:
-	            return VoteStatus.PRESENT;
-	        case ABSENT:
-	            return VoteStatus.NOT_VOTING;
-	        default:
-	            throw new IllegalStateException("Unexpected value: " + legiscanVoteStatus);
-	    }
-	}
-
+//	protected Legislator legislatorByPeopleId(PoliscoreDataset regularDataset, Integer peopleId) {
+//		return regularDataset.query(Legislator.class).stream().filter(l -> l.getLegiscanId().equals(peopleId)).findFirst().orElseThrow();
+//	}
 	
 	protected void importLegislator(LegiscanPeopleView view, PoliscoreDataset regularDataset) {
 	    if (view == null || StringUtils.isBlank(view.getName())) return;
@@ -586,6 +546,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 			return;
 		}
 		
+		legiscanIdToLegislator.put(leg.getLegiscanId(), leg);
 		regularDataset.put(leg);
 	}
 
