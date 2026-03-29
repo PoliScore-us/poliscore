@@ -10,21 +10,11 @@ import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
-import lombok.val;
-import us.poliscore.PoliscoreUtil;
-import us.poliscore.model.TrackedIssue;
-import us.poliscore.model.bill.Bill;
-import us.poliscore.model.bill.BillInterpretation;
-import us.poliscore.model.bill.BillSlice;
-import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.CongressionalBillType;
-import us.poliscore.parsing.BillSlicer;
-import us.poliscore.parsing.XMLBillSlicer;
 import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.MemoryObjectService;
-import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 import us.poliscore.service.storage.LocalFilePersistenceService;
 
@@ -36,9 +26,6 @@ public class DataSandbox implements QuarkusApplication
 	
 	@Inject
 	private LocalFilePersistenceService localStore;
-	
-	@Inject
-	private DynamoDbPersistenceService ddb;
 	
 	@Inject
 	private LocalCachedS3Service s3;

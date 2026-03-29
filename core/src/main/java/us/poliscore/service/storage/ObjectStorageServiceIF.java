@@ -11,6 +11,11 @@ public interface ObjectStorageServiceIF
 	public <T extends Persistable> Optional<T> get(String id, Class<T> clazz);
 	
 	public <T extends Persistable> void put(T obj);
+
+	public default <T extends Persistable> void putIfLatest(T obj)
+	{
+		put(obj);
+	}
 	
 	public <T extends Persistable> boolean exists(String id, Class<T> clazz);
 	

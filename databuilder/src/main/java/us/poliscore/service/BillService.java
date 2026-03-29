@@ -1,6 +1,5 @@
 package us.poliscore.service;
 
-import java.io.File;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -8,7 +7,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import io.quarkus.logging.Log;
@@ -17,22 +15,16 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
-import us.poliscore.legiscan.view.LegiscanTextType;
-import us.poliscore.Environment;
-import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.InterpretationOrigin;
-import us.poliscore.model.LegislativeNamespace;
-import us.poliscore.model.Persistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillIssueStat;
 import us.poliscore.model.bill.BillText;
-import us.poliscore.model.bill.BillTextPublishVersion;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.press.PressInterpretation;
-import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
+import us.poliscore.service.storage.ObjectStorageServiceIF;
 
 @ApplicationScoped
 @Priority(4)
@@ -42,9 +34,6 @@ public class BillService {
 	
 	@Inject
 	protected LegislatorService lService;
-	
-	@Inject
-	private DynamoDbPersistenceService ddb;
 	
 	@Inject
 	private GovernmentDataService data;
@@ -57,7 +46,7 @@ public class BillService {
 	
 	public void populatePressInterps(BillInterpretation interp)
 	{
-		var pressInterps = s3.query(PressInterpretation.class, interp.getBillId().replace(Bill.ID_CLASS_PREFIX + "/", ""));
+		var pressInterps = s3.query(PressInterpretation.class, data.getDataset(interp.getId()).getRegularSession().getKey());
 		
 //		pressInterps = pressInterps.stream().filter(i -> i.getBillId().equals(interp.getBillId()) && !InterpretationOrigin.POLISCORE.equals(i.getOrigin()) && !i.isNoInterp()).collect(Collectors.toList());
 		
@@ -78,25 +67,24 @@ public class BillService {
 		interp.setPressInterps(pressInterps);
 	}
 
-	public void ddbPersist(Bill b, BillInterpretation interp)
+	public void persist(Bill b, BillInterpretation interp, ObjectStorageServiceIF store)
 	{
-		ddbPersist(b, interp, true);
+		persist(b, interp, store, true);
 	}
-	
-	public void ddbPersist(Bill b, BillInterpretation interp, boolean populateIssueStats)
+
+	public void persist(Bill b, BillInterpretation interp, ObjectStorageServiceIF store, boolean populateIssueStats)
+	{
+		applyInterpretation(b, interp);
+		store.put(b);
+	}
+
+	public void applyInterpretation(Bill b, BillInterpretation interp)
 	{
 		var billLastAction = b.getLastActionDate() == null || interp.getLastUpdate().isAfter(b.getLastActionDate().atStartOfDay()) ? interp.getLastUpdate() : b.getLastActionDate().atStartOfDay();
 		b.setLastUpdate(billLastAction);
 		
 		populatePressInterps(interp);
 		b.setInterpretation(interp);
-		ddb.put(b);
-		
-		if (populateIssueStats) {
-			for(TrackedIssue issue : TrackedIssue.values()) {
-				ddb.put(new BillIssueStat(issue, b.getImpact(issue), b));
-			}
-		}
 	}
 	
 	public List<PressInterpretation> getPressInterps(String billId) {

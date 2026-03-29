@@ -28,13 +28,12 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.StructuralAnalysis;
 import us.poliscore.model.legislator.Legislator;
+import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
 import us.poliscore.model.legislator.LegislatorBillInteraction;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCosponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
 import us.poliscore.model.legislator.LegislatorInterpretation;
-import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
-import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
@@ -122,10 +121,6 @@ Your written response for this research section should consist of only a compact
 	@Inject
 	private LocalCachedS3Service s3;
 	
-	
-	@Inject
-	private DynamoDbPersistenceService ddb;
-	
 	@Inject
 	private GovernmentDataService data;
 	
@@ -169,19 +164,21 @@ Your written response for this research section should consist of only a compact
 	// Backfill the interactions until we get to 1000
 	public void backfillInteractionsFromPreviousSession(Legislator leg, PoliscoreDatasetIF prevDataset)
 	{
-		if (prevDataset == null) return;
+//		if (prevDataset == null) return;
+//		
+//		val prevLeg = ddb.get(Legislator.generateId(prevDataset.getNamespace(), prevDataset.getRegularSession().getCode(), leg.getCode()), Legislator.class).orElse(null);
+//		if (prevLeg == null) return;
+//		
+//		val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
+//		while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
+//			val n = prevInteracts.next();
+//			if (n.getIssueStats() != null) {
+//				n.setRating(Math.round(n.getIssueStats().getRating() * n.getJudgementWeight() * 0.9f));
+//				leg.getInteractionsPrivate1().add(n);
+//			}
+//		}
 		
-		val prevLeg = ddb.get(Legislator.generateId(prevDataset.getNamespace(), prevDataset.getRegularSession().getCode(), leg.getCode()), Legislator.class).orElse(null);
-		if (prevLeg == null) return;
-		
-		val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
-		while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
-			val n = prevInteracts.next();
-			if (n.getIssueStats() != null) {
-				n.setRating(Math.round(n.getIssueStats().getRating() * n.getJudgementWeight() * 0.9f));
-				leg.getInteractionsPrivate1().add(n);
-			}
-		}
+		throw new UnsupportedOperationException("TODO");
 	}
 	
 	public List<LegislatorBillInteraction> getInteractionsForInterpretation(Legislator leg)
@@ -493,7 +490,7 @@ Your written response for this research section should consist of only a compact
 					val prevLeg = previousDataset.get(Legislator.generateId(previousDataset.getNamespace(), previousDataset.getRegularSession().getCode(), leg.getCode()), Legislator.class).orElse(null);
 					if (prevLeg != null) {
 						val prevInteracts = getInteractionsForInterpretation(prevLeg).iterator();
-						while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
+						while (getInteractionsForInterpretation(leg).size() < 1000 && prevInteracts.hasNext()) {
 							val interact = prevInteracts.next();
 							val interactInterpOp = s3.get(BillInterpretation.generateId(interact.getBillId(), null), BillInterpretation.class);
 							
@@ -501,7 +498,7 @@ Your written response for this research section should consist of only a compact
 								var issueStats = interactInterpOp.get().getIssueStats();
 								interact.setRating(Math.round(issueStats.getRating() * interact.getJudgementWeight() * 0.9f));
 								interact.setIssueStats(issueStats);
-								leg.getInteractionsPrivate1().add(interact);
+								leg.addBillInteraction(interact);
 							}
 						}
 					}
