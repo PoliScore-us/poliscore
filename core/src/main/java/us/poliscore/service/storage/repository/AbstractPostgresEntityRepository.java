@@ -21,20 +21,28 @@ import jakarta.transaction.Transactional;
 import lombok.SneakyThrows;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.Persistable;
+import us.poliscore.service.storage.PostgresSchemaSupport;
 import us.poliscore.service.storage.PaginatedList;
 
 public abstract class AbstractPostgresEntityRepository<T extends Persistable> {
 
-	private static final String CURSOR_DELIMITER = "~`~";
+	protected static final String CURSOR_DELIMITER = "~`~";
 	protected static final int DEFAULT_BATCH_SIZE = 1000;
 	private static final ObjectMapper MAPPER = PoliscoreUtil.getObjectMapper();
 
 	@Inject
 	Instance<EntityManager> entityManagerInstance;
 
+	@Inject
+	PostgresSchemaSupport schemaSupport;
+
 	protected abstract Class<T> entityClass();
 
 	protected abstract String tableName();
+
+	protected String qualifiedTableName() {
+		return schemaSupport.qualifyTable(tableName());
+	}
 
 	protected EntityManager requireEntityManager() {
 		return entityManagerInstance.get();
@@ -138,7 +146,7 @@ public abstract class AbstractPostgresEntityRepository<T extends Persistable> {
 		Cursor cursor = Cursor.parse(startKey, numericColumn);
 		List<Object> params = new ArrayList<>();
 
-		StringBuilder sql = new StringBuilder("SELECT * FROM ").append(tableName()).append(" WHERE storage_bucket = ?");
+		StringBuilder sql = new StringBuilder("SELECT * FROM ").append(qualifiedTableName()).append(" WHERE storage_bucket = ?");
 		params.add(storageBucket);
 
 		if (sortKey != null) {
@@ -253,7 +261,7 @@ public abstract class AbstractPostgresEntityRepository<T extends Persistable> {
 		return null;
 	}
 
-	private static final class Cursor {
+	protected static final class Cursor {
 		private final String id;
 		private final Object value;
 
@@ -262,7 +270,7 @@ public abstract class AbstractPostgresEntityRepository<T extends Persistable> {
 			this.value = value;
 		}
 
-		private static Cursor parse(String raw, boolean numericColumn) {
+		protected static Cursor parse(String raw, boolean numericColumn) {
 			if (StringUtils.isBlank(raw)) {
 				return null;
 			}
@@ -274,6 +282,14 @@ public abstract class AbstractPostgresEntityRepository<T extends Persistable> {
 
 			Object value = numericColumn ? Long.valueOf(parts[1]) : parts[1];
 			return new Cursor(parts[0], value);
+		}
+
+		protected String id() {
+			return id;
+		}
+
+		protected Object value() {
+			return value;
 		}
 	}
 

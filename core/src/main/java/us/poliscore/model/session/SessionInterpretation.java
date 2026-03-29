@@ -29,9 +29,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import us.poliscore.model.AIInterpretationMetadata;
@@ -52,7 +50,6 @@ import us.poliscore.model.legislator.Legislator;
 import us.poliscore.util.ParsingUtil;
 
 @Data
-@DynamoDbBean
 @RegisterForReflection
 @NoArgsConstructor
 @Entity
@@ -135,7 +132,6 @@ public class SessionInterpretation implements Persistable {
 	public void setDate(LocalDate date) { }
 
 	@Data
-	@DynamoDbBean
 	@NoArgsConstructor
 	@RegisterForReflection
 	@AllArgsConstructor
@@ -188,7 +184,6 @@ public class SessionInterpretation implements Persistable {
 	}
 	
 	@Data
-	@DynamoDbBean
 	@NoArgsConstructor
 	@AllArgsConstructor
 	@RegisterForReflection
@@ -234,7 +229,6 @@ public class SessionInterpretation implements Persistable {
 		@EqualsAndHashCode.Exclude
 		protected String shortExplain;
 		
-		@DynamoDbIgnore
 		@JsonIgnore
 		public String getShortExplainForInterp() {
 			return "- " + " \"" + name + "\" (Grade: " + letterGrade + ") (" + cosponsors.size() + " cosponsors" + getCosponsorPartyDescription() + ") (" + billStatus.getDescription() + ") (" + id + "): " + shortExplain;
@@ -254,7 +248,6 @@ public class SessionInterpretation implements Persistable {
 			}
 		}
 		
-		@DynamoDbIgnore
 		@JsonIgnore
 		public Integer getImpact() {
 			return impact;
@@ -270,7 +263,6 @@ public class SessionInterpretation implements Persistable {
 	 * TreeSet was decided against for these methods because TreeSet doesn't allow duplicates on the 'compareTo' method (which is sorted on rating for legislators)
 	 */
 	
-	@DynamoDbBean(converterProviders = LegislatorBillInteractionSetConverterProvider.class)
 	@NoArgsConstructor
 	public static class PartyBillSet extends ArrayList<PartyBillInteraction> {
 
@@ -279,7 +271,6 @@ public class SessionInterpretation implements Persistable {
 		}
 	}
 	
-	@DynamoDbBean(converterProviders = LegislatorBillInteractionSetConverterProvider.class)
 	@NoArgsConstructor
 	public static class PartyLegislatorSet extends ArrayList<Legislator> {
 

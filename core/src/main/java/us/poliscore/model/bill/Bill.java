@@ -3,7 +3,9 @@ package us.poliscore.model.bill;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -24,8 +26,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -45,7 +45,6 @@ import us.poliscore.service.SessionInfoService;
 @Data
 @EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @NoArgsConstructor
-@DynamoDbBean
 @RegisterForReflection
 @Entity
 @Table(name = "bill", indexes = {
@@ -116,6 +115,11 @@ public class Bill extends SessionPersistable {
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(columnDefinition = "jsonb")
 	protected BillInterpretation interpretation;
+
+	@JsonIgnore
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "issue_impact_map", columnDefinition = "jsonb")
+	protected Map<TrackedIssue, Integer> issueImpactMap = new HashMap<TrackedIssue, Integer>();
 	
 //	protected List<PressInterpretation> pressInterps;
 	
@@ -162,7 +166,6 @@ public class Bill extends SessionPersistable {
 		}
 	}
 	
-	@DynamoDbIgnore
 	@JsonIgnore
 	public BillText getText()
 	{
@@ -187,7 +190,6 @@ public class Bill extends SessionPersistable {
 	}
 	
 	@JsonIgnore
-	@DynamoDbIgnore
 	public String getDescription() {
 		return getName() + " (" + getType().toLowerCase() + " " + getNumber() + ")";
 	}
@@ -197,7 +199,6 @@ public class Bill extends SessionPersistable {
 	}
 	
 	@JsonIgnore
-	@DynamoDbIgnore
 	public String getWebappUrlPath() {
 		return "bill/" + (getNamespace().equals(LegislativeNamespace.US_CONGRESS) ? "" : getSessionCode() + "/") + getType().toLowerCase() + "/" + getNumber();
 	}
@@ -292,9 +293,18 @@ public class Bill extends SessionPersistable {
 		
 		return percent;
 	}
+
+	@JsonIgnore
+	public Map<TrackedIssue, Integer> getIssueImpactMap()
+	{
+		if ((issueImpactMap == null || issueImpactMap.isEmpty()) && canCalculateDerivedMetrics()) {
+			refreshIssueImpactMap();
+		}
+
+		return issueImpactMap;
+	}
 	
 	@Data
-	@DynamoDbBean
 	@RequiredArgsConstructor
 	@NoArgsConstructor
 	@AllArgsConstructor
@@ -320,13 +330,12 @@ public class Bill extends SessionPersistable {
 	}
 	
 	@Data
-	@DynamoDbBean
 	@RequiredArgsConstructor
 	@NoArgsConstructor
 	public static class BillSponsorOld {
 		
 		@JsonIgnore
-		@Getter(onMethod = @__({ @DynamoDbIgnore }))
+		@Getter
 		protected String bioguide_id;
 		
 		@NonNull
@@ -349,6 +358,7 @@ public class Bill extends SessionPersistable {
 	{
 		storageBucketValue = getStorageBucket();
 		dateValue = getDate() == null ? null : getDate().toString();
+		refreshIssueImpactMap();
 		ratingValue = interpretation == null || interpretation.getRating() == null ? null : Long.valueOf(interpretation.getRating());
 		ratingAbsValue = ratingValue == null ? null : Math.abs(ratingValue);
 		impactValue = canCalculateDerivedMetrics() ? Long.valueOf(getImpact()) : null;
@@ -359,5 +369,22 @@ public class Bill extends SessionPersistable {
 	private boolean canCalculateDerivedMetrics()
 	{
 		return interpretation != null && status != null && getLastActionDate() != null;
+	}
+
+	private void refreshIssueImpactMap()
+	{
+		if (issueImpactMap == null) {
+			issueImpactMap = new HashMap<TrackedIssue, Integer>();
+		} else {
+			issueImpactMap.clear();
+		}
+
+		if (!canCalculateDerivedMetrics() || interpretation.getIssueStats() == null) {
+			return;
+		}
+
+		for (TrackedIssue issue : TrackedIssue.values()) {
+			issueImpactMap.put(issue, getImpact(issue));
+		}
 	}
 }

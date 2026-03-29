@@ -27,9 +27,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
 import us.poliscore.legiscan.view.LegiscanState;
@@ -49,7 +47,6 @@ import us.poliscore.model.dynamodb.LegiscanStateConverter;
 
 @Data
 @EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
-@DynamoDbBean
 @NoArgsConstructor
 @RegisterForReflection
 @Entity
@@ -90,7 +87,7 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	@Column(columnDefinition = "jsonb")
 	protected LegislatorInterpretation interpretation;
 	
-	@Getter(onMethod = @__({ @JsonIgnore, @DynamoDbIgnore }))
+	@Getter(onMethod = @__({ @JsonIgnore }))
 	protected Integer legiscanId;
 	
 	protected LocalDate birthday = null;
@@ -136,7 +133,6 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	}
 	
 	@JsonIgnore
-	@DynamoDbIgnore
 	public Party getParty()
 	{
 		return this.terms.last().getParty();
@@ -225,7 +221,6 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	private Long impactAbsValue;
 	
 	@Data
-	@DynamoDbBean
 	@NoArgsConstructor
 	@AllArgsConstructor
 	public static class LegislatorName {
@@ -239,7 +234,6 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	}
 	
 	@Data
-	@DynamoDbBean
 	@AllArgsConstructor
 	@NoArgsConstructor
 	@EqualsAndHashCode
@@ -269,13 +263,10 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 		
 	}
 	
-	@DynamoDbBean(converterProviders = LegislatorBillInteractionSetConverterProvider.class)
 	public static class LegislatorBillInteractionList extends ArrayList<LegislatorBillInteraction> {}
 	
-	@DynamoDbBean(converterProviders = LegislatorBillInteractionSetConverterProvider.class)
 	public static class LegislatorBillInteractionSet extends TreeSet<LegislatorBillInteraction> {}
 	
-	@DynamoDbBean
 	public static class LegislatorLegislativeTermSortedSet extends TreeSet<LegislativeTerm> {}
 
 	@Override
