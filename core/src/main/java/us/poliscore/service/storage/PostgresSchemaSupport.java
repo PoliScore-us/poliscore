@@ -10,7 +10,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 @ApplicationScoped
 public class PostgresSchemaSupport {
 
-	@ConfigProperty(name = "quarkus.hibernate-orm.database.default-schema", defaultValue = "blue")
+	@ConfigProperty(name = "quarkus.hibernate-orm.database.default-schema", defaultValue = "public")
 	Optional<String> configuredSchema;
 
 	public Optional<String> schema() {

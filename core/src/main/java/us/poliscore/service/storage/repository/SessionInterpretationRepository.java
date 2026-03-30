@@ -10,22 +10,6 @@ import us.poliscore.model.session.SessionInterpretation;
 @Transactional
 public class SessionInterpretationRepository extends AbstractPostgresEntityRepository<SessionInterpretation> {
 
-	private static final String UPSERT_SQL = """
-			INSERT INTO session_interpretation (
-				id, session, democrat, republican, independent, metadata, storage_bucket, date_value
-			) VALUES (
-				?, CAST(? AS jsonb), CAST(? AS jsonb), CAST(? AS jsonb), CAST(? AS jsonb), CAST(? AS jsonb), ?, ?
-			)
-			ON CONFLICT (id) DO UPDATE SET
-				session = EXCLUDED.session,
-				democrat = EXCLUDED.democrat,
-				republican = EXCLUDED.republican,
-				independent = EXCLUDED.independent,
-				metadata = EXCLUDED.metadata,
-				storage_bucket = EXCLUDED.storage_bucket,
-				date_value = EXCLUDED.date_value
-			""";
-
 	@Override
 	protected Class<SessionInterpretation> entityClass() {
 		return SessionInterpretation.class;
@@ -47,7 +31,7 @@ public class SessionInterpretationRepository extends AbstractPostgresEntityRepos
 	}
 
 	public void putAll(List<SessionInterpretation> sessionInterpretations) {
-		executeBatch(UPSERT_SQL, sessionInterpretations, this::bindUpsert);
+		executeBatch(upsertSql(), sessionInterpretations, this::bindUpsert);
 	}
 
 	private void bindUpsert(java.sql.PreparedStatement stmt, SessionInterpretation sessionInterpretation) throws java.sql.SQLException {
@@ -60,5 +44,23 @@ public class SessionInterpretationRepository extends AbstractPostgresEntityRepos
 		setJson(stmt, i++, sessionInterpretation.getMetadata());
 		stmt.setString(i++, sessionInterpretation.getStorageBucket());
 		stmt.setString(i++, sessionInterpretation.getDate() == null ? null : sessionInterpretation.getDate().toString());
+	}
+
+	private String upsertSql() {
+		return """
+				INSERT INTO %s (
+					id, session, democrat, republican, independent, metadata, storage_bucket, date_value
+				) VALUES (
+					?, CAST(? AS jsonb), CAST(? AS jsonb), CAST(? AS jsonb), CAST(? AS jsonb), CAST(? AS jsonb), ?, ?
+				)
+				ON CONFLICT (id) DO UPDATE SET
+					session = EXCLUDED.session,
+					democrat = EXCLUDED.democrat,
+					republican = EXCLUDED.republican,
+					independent = EXCLUDED.independent,
+					metadata = EXCLUDED.metadata,
+					storage_bucket = EXCLUDED.storage_bucket,
+					date_value = EXCLUDED.date_value
+				""".formatted(qualifiedTableName());
 	}
 }
