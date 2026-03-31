@@ -95,8 +95,7 @@ public class BillRepository extends AbstractPostgresEntityRepository<Bill> {
 			query.setParameter(i + 1, params.get(i));
 		}
 
-		@SuppressWarnings("unchecked")
-		List<Bill> bills = query.getResultList();
+		List<Bill> bills = readOnlyResultList(query);
 		return bills.stream()
 				.map(bill -> new BillIssueStat(issue, bill.getImpact(issue), bill))
 				.toList();

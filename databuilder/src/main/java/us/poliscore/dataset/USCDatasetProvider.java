@@ -8,6 +8,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -41,7 +42,6 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillStatus;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
-import us.poliscore.model.legislator.Legislator.LegislatorLegislativeTermSortedSet;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCosponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
@@ -67,7 +67,7 @@ public class USCDatasetProvider implements DatasetProvider {
 	public static boolean updatedLegislatorFiles = false;
 	
 	@ConfigProperty(name = "poliscore.usc.data")
-    File uscDataDir;
+    Optional<File> uscDataDir;
 	
 	@Inject
 	private CongressionalLegislatorImageFetcher congressionalImageFetcher;
@@ -147,7 +147,7 @@ public class USCDatasetProvider implements DatasetProvider {
 			leg.setOfficialUrl("https://www.congress.gov/member/" + leg.getName().getFirst().toLowerCase().replace(" ", "-") + "-" + leg.getName().getLast().toLowerCase().replace(" ", "-") + '/' + leg.getCode());
 			leg.setTerms(view.getTerms().stream()
 					.map(t -> t.convert())
-					.collect(Collectors.toCollection(LegislatorLegislativeTermSortedSet::new)));
+					.collect(Collectors.toCollection(java.util.TreeSet::new)));
 			
 			if (leg.isMemberOfSession(dataset.getRegularSession()))
 			{
@@ -163,7 +163,7 @@ public class USCDatasetProvider implements DatasetProvider {
 		long totalVotes = 0;
 		long skipped = 0;
 		
-		for (File fCongress : Arrays.asList(uscDataDir.listFiles()).stream()
+		for (File fCongress : Arrays.asList(uscDataDir.get().listFiles()).stream()
 				.filter(f -> f.getName().matches("\\d+") && f.isDirectory())
 				.sorted((a,b) -> a.getName().compareTo(b.getName()))
 				.collect(Collectors.toList()))
@@ -263,7 +263,7 @@ public class USCDatasetProvider implements DatasetProvider {
 		
 		long totalBills = 0;
 		
-		for (File fCongress : Arrays.asList(uscDataDir.listFiles()).stream()
+		for (File fCongress : Arrays.asList(uscDataDir.get().listFiles()).stream()
 				.filter(f -> f.getName().matches("\\d+") && f.isDirectory())
 				.sorted((a,b) -> a.getName().compareTo(b.getName()))
 				.collect(Collectors.toList()))

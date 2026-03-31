@@ -10,6 +10,7 @@ import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.Session;
+import org.hibernate.query.NativeQuery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -115,7 +116,10 @@ public abstract class AbstractPostgresEntityRepository<T extends Persistable> {
 	}
 
 	public Optional<T> get(String id) {
-		return Optional.ofNullable(requireEntityManager().find(entityClass(), id));
+		Query query = requireEntityManager().createNativeQuery("SELECT * FROM " + qualifiedTableName() + " WHERE id = ?", entityClass());
+		query.setParameter(1, id);
+		List<T> rows = readOnlyResultList(query);
+		return rows.stream().findFirst();
 	}
 
 	public boolean exists(String id) {
@@ -180,7 +184,7 @@ public abstract class AbstractPostgresEntityRepository<T extends Persistable> {
 			query.setParameter(i + 1, params.get(i));
 		}
 
-		List<T> rows = query.getResultList();
+		List<T> rows = readOnlyResultList(query);
 		String lastEvaluatedKey = null;
 		for (T item : rows) {
 			Object lastValue = readProperty(item, propertyForIndex(resolvedIndex));
@@ -188,6 +192,12 @@ public abstract class AbstractPostgresEntityRepository<T extends Persistable> {
 		}
 
 		return new PaginatedList<>(rows, pageSize, startKey, lastEvaluatedKey);
+	}
+
+	@SuppressWarnings("unchecked")
+	protected <R> List<R> readOnlyResultList(Query query) {
+		query.unwrap(NativeQuery.class).setReadOnly(true);
+		return query.getResultList();
 	}
 
 	protected String columnForIndex(String index) {

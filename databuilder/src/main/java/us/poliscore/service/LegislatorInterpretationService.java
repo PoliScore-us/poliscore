@@ -28,7 +28,6 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.StructuralAnalysis;
 import us.poliscore.model.legislator.Legislator;
-import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
 import us.poliscore.model.legislator.LegislatorBillInteraction;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCosponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
@@ -520,7 +519,7 @@ Your written response for this research section should consist of only a compact
 			
 			leg.setInteractions(interactions.stream()
 					.filter(i -> i.getIssueStats() != null && i.getRating() != null)
-					.sorted((a,b) -> a.getDate().compareTo(b.getDate())).collect(Collectors.toCollection(LegislatorBillInteractionList::new)));
+					.sorted((a,b) -> a.getDate().compareTo(b.getDate())).collect(Collectors.toCollection(ArrayList::new)));
 			
 			leg.setInterpretation(interp);
 			

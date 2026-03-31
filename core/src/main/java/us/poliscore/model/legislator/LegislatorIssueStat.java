@@ -1,5 +1,7 @@
 package us.poliscore.model.legislator;
 
+import java.util.TreeSet;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
@@ -7,19 +9,17 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
-import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.LegislatorLegislativeTermSortedSetConverter;
-import us.poliscore.model.legislator.Legislator.LegislatorLegislativeTermSortedSet;
+import us.poliscore.model.legislator.Legislator.LegislativeTerm;
 import us.poliscore.model.legislator.Legislator.LegislatorName;
 
 @Data
@@ -60,7 +60,7 @@ public class LegislatorIssueStat implements Persistable {
 	
 	@NonNull
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(LegislatorLegislativeTermSortedSetConverter.class) }))
-	protected LegislatorLegislativeTermSortedSet terms;
+	protected TreeSet<LegislativeTerm> terms;
 	
 	@JsonIgnore @DynamoDbIgnore public String getSession() { return legislatorId.split("/")[3]; }
 	@JsonIgnore @DynamoDbIgnore public LegislativeNamespace getNamespace() { return LegislativeNamespace.of(legislatorId.split("/")[1] + "/" + legislatorId.split("/")[2]); }

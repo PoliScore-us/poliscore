@@ -3,9 +3,13 @@ package us.poliscore.model.legislator;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeSet;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,8 +29,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
@@ -41,7 +43,6 @@ import us.poliscore.model.Persistable;
 import us.poliscore.model.SessionPersistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.dynamodb.IssueStatsMapLongAttributeConverter;
-import us.poliscore.model.dynamodb.JacksonAttributeConverter.LegislatorBillInteractionSetConverterProvider;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.LegislatorLegislativeTermSortedSetConverter;
 import us.poliscore.model.dynamodb.LegiscanStateConverter;
 
@@ -101,22 +102,22 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(LegislatorLegislativeTermSortedSetConverter.class) }))
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(columnDefinition = "jsonb")
-	protected LegislatorLegislativeTermSortedSet terms = new LegislatorLegislativeTermSortedSet();
+	protected TreeSet<LegislativeTerm> terms = new TreeSet<LegislativeTerm>();
 	
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(columnDefinition = "jsonb")
-	private LegislatorBillInteractionList interactions = new LegislatorBillInteractionList();
+	private List<LegislatorBillInteraction> interactions = new ArrayList<LegislatorBillInteraction>();
 	
 	@JsonProperty
-	public LegislatorBillInteractionList getInteractions()
+	public List<LegislatorBillInteraction> getInteractions()
 	{
 		return interactions;
 	}
 	
 	@JsonProperty
-	public void setInteractions(LegislatorBillInteractionList list)
+	public void setInteractions(List<LegislatorBillInteraction> list)
 	{
-		interactions = list == null ? new LegislatorBillInteractionList() : list;
+		interactions = list == null ? new ArrayList<LegislatorBillInteraction>() : new ArrayList<LegislatorBillInteraction>(list);
 	}
 	
 	public void clearInteractions() {
@@ -263,12 +264,6 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 		
 	}
 	
-	public static class LegislatorBillInteractionList extends ArrayList<LegislatorBillInteraction> {}
-	
-	public static class LegislatorBillInteractionSet extends TreeSet<LegislatorBillInteraction> {}
-	
-	public static class LegislatorLegislativeTermSortedSet extends TreeSet<LegislativeTerm> {}
-
 	@Override
 	public int compareTo(Legislator o) {
 		return Integer.valueOf(Objects.requireNonNullElse(this.getRating(),-1)).compareTo(Objects.requireNonNullElse(o.getRating(),-1));

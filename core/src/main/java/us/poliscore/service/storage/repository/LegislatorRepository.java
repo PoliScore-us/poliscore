@@ -76,8 +76,7 @@ public class LegislatorRepository extends AbstractPostgresEntityRepository<Legis
 			query.setParameter(i + 1, params.get(i));
 		}
 
-		@SuppressWarnings("unchecked")
-		List<Legislator> legislators = query.getResultList();
+		List<Legislator> legislators = readOnlyResultList(query);
 		return legislators.stream()
 				.map(legislator -> new LegislatorIssueStat(issue, legislator.getImpact(issue), legislator))
 				.toList();
