@@ -29,6 +29,7 @@ import us.poliscore.service.storage.repository.SessionInterpretationRepository;
 public class PostgresSyncService {
 
 	private static final int HOT_REFRESH_LIMIT = 1000;
+	private static final int BILL_UPSERT_CHUNK_SIZE = 1000;
 
 	@Inject
 	private PostgresPersistenceService postgres;
@@ -67,6 +68,7 @@ public class PostgresSyncService {
 		var lastUpdateMap = billRepository.getLastUpdateMap(dataset.getKey());
 		Set<String> updatedSet = new HashSet<>();
 		var billsToUpsert = new ArrayList<Bill>();
+		int syncedBillCount = 0;
 		for (Bill bill : dataset.query(Bill.class)) {
 			val interp = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class);
 			if (interp.isEmpty()) {
@@ -92,10 +94,20 @@ public class PostgresSyncService {
 				billsToUpsert.add(bill);
 				lastUpdateMap.put(bill.getId(), billLastAction);
 				updatedSet.add(bill.getId());
+
+				if (billsToUpsert.size() >= BILL_UPSERT_CHUNK_SIZE) {
+					billRepository.putAll(billsToUpsert);
+					syncedBillCount += billsToUpsert.size();
+					billsToUpsert.clear();
+				}
 			}
 		}
-		billRepository.putAll(billsToUpsert);
-		Log.info("Synced " + billsToUpsert.size() + " changed bills to postgres");
+		if (!billsToUpsert.isEmpty()) {
+			billRepository.putAll(billsToUpsert);
+			syncedBillCount += billsToUpsert.size();
+			billsToUpsert.clear();
+		}
+		Log.info("Synced " + syncedBillCount + " changed bills to postgres");
 
 		Log.info("Refreshing top " + HOT_REFRESH_LIMIT + " hot bills in postgres");
 		var hottestBills = new ArrayList<Bill>();

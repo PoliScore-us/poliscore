@@ -46,25 +46,7 @@ public class BillService {
 	
 	public void populatePressInterps(BillInterpretation interp)
 	{
-		var pressInterps = s3.query(PressInterpretation.class, data.getDataset(interp.getId()).getRegularSession().getKey());
-		
-//		pressInterps = pressInterps.stream().filter(i -> i.getBillId().equals(interp.getBillId()) && !InterpretationOrigin.POLISCORE.equals(i.getOrigin()) && !i.isNoInterp()).collect(Collectors.toList());
-		
-		pressInterps = pressInterps.stream()
-			    .filter(i -> {
-			        try {
-			            return i.getBillId().equals(interp.getBillId())
-			                && !InterpretationOrigin.POLISCORE.equals(i.getOrigin())
-			                && !i.isNoInterp();
-			        } catch (Exception e) {
-			            Log.warn("Skipping press interpretation due to error: " + i, e);
-			            return false; // skip this item if it errors
-			        }
-			    })
-			    .collect(Collectors.toList());
-
-		
-		interp.setPressInterps(pressInterps);
+		interp.setPressInterps(getPressInterps(interp.getBillId()));
 	}
 
 	public void persist(Bill b, BillInterpretation interp, ObjectStorageServiceIF store)
