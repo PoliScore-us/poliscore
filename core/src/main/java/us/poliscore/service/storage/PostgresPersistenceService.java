@@ -89,6 +89,16 @@ public class PostgresPersistenceService implements ObjectStorageServiceIF {
 	}
 
 	@Override
+	public Optional<Legislator> getLegislatorFirstPage(String id) {
+		return legislatorRepository.getFirstPage(id);
+	}
+
+	@Override
+	public Optional<Legislator> getLegislatorAllInteractions(String id) {
+		return legislatorRepository.getAllInteractions(id);
+	}
+
+	@Override
 	public <T extends Persistable> boolean exists(String id, Class<T> clazz) {
 		if (Bill.class.equals(clazz)) {
 			return billRepository.exists(id);

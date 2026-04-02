@@ -105,32 +105,67 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	protected TreeSet<LegislativeTerm> terms = new TreeSet<LegislativeTerm>();
 	
 	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(columnDefinition = "jsonb")
-	private List<LegislatorBillInteraction> interactions = new ArrayList<LegislatorBillInteraction>();
-	
+	@Column(name = "interactions", columnDefinition = "jsonb")
+	private List<LegislatorBillInteraction> interactionsAll = new ArrayList<LegislatorBillInteraction>();
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "interactions_first_page", columnDefinition = "jsonb")
+	private List<LegislatorBillInteraction> interactionsFirstPage = new ArrayList<LegislatorBillInteraction>();
+
 	@JsonProperty
 	public List<LegislatorBillInteraction> getInteractions()
 	{
-		return interactions;
+		if (interactionsAll != null && !interactionsAll.isEmpty()) {
+			return interactionsAll;
+		}
+
+		return interactionsFirstPage == null ? new ArrayList<LegislatorBillInteraction>() : interactionsFirstPage;
 	}
-	
+
 	@JsonProperty
 	public void setInteractions(List<LegislatorBillInteraction> list)
 	{
-		interactions = list == null ? new ArrayList<LegislatorBillInteraction>() : new ArrayList<LegislatorBillInteraction>(list);
+		interactionsAll = copyInteractions(list);
 	}
-	
+
+	@JsonIgnore
+	public List<LegislatorBillInteraction> getInteractionsAll()
+	{
+		return interactionsAll;
+	}
+
+	public void setInteractionsAll(List<LegislatorBillInteraction> list)
+	{
+		interactionsAll = copyInteractions(list);
+	}
+
+	@JsonIgnore
+	public List<LegislatorBillInteraction> getInteractionsFirstPage()
+	{
+		return interactionsFirstPage;
+	}
+
+	public void setInteractionsFirstPage(List<LegislatorBillInteraction> list)
+	{
+		interactionsFirstPage = copyInteractions(list);
+	}
+
 	public void clearInteractions() {
-		interactions.clear();
+		interactionsAll.clear();
+		interactionsFirstPage.clear();
 	}
 	
 	public void addBillInteraction(LegislatorBillInteraction incoming)
 	{
-		interactions.removeIf(existing -> incoming.supercedes(existing));
+		interactionsAll.removeIf(existing -> incoming.supercedes(existing));
 		
-		if (!interactions.contains(incoming)) {
-			interactions.add(incoming);
+		if (!interactionsAll.contains(incoming)) {
+			interactionsAll.add(incoming);
 		}
+	}
+
+	private List<LegislatorBillInteraction> copyInteractions(List<LegislatorBillInteraction> list) {
+		return list == null ? new ArrayList<LegislatorBillInteraction>() : new ArrayList<LegislatorBillInteraction>(list);
 	}
 	
 	@JsonIgnore

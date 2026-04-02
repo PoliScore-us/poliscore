@@ -11,6 +11,7 @@ import us.poliscore.model.Persistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorIssueStat;
+import us.poliscore.service.storage.PaginatedList;
 
 @ApplicationScoped
 @Transactional
@@ -29,6 +30,23 @@ public class LegislatorRepository extends AbstractPostgresEntityRepository<Legis
 	@Override
 	public void put(Legislator entity) {
 		putAll(List.of(entity));
+	}
+
+	public java.util.Optional<Legislator> getFirstPage(String id) {
+		Query query = requireEntityManager().createNativeQuery("""
+				SELECT
+					id, last_update_value, name, officialurl, lisid, interpretation, legiscanid, birthday,
+					impactmap, terms, CAST('[]' AS jsonb) AS interactions, interactions_first_page, storage_bucket,
+					date_value, rating_value, rating_abs_value, location_value, impact_value, impact_abs_value
+				FROM
+				""" + qualifiedTableName() + " WHERE id = ?", Legislator.class);
+		query.setParameter(1, id);
+		List<Legislator> rows = readOnlyResultList(query);
+		return rows.stream().findFirst();
+	}
+
+	public java.util.Optional<Legislator> getAllInteractions(String id) {
+		return get(id);
 	}
 
 	@Override
@@ -82,6 +100,74 @@ public class LegislatorRepository extends AbstractPostgresEntityRepository<Legis
 				.toList();
 	}
 
+	@Override
+	public PaginatedList<Legislator> query(String datasetKey, int pageSize, String index, Boolean ascending, String startKey, String sortKey) {
+		return queryListPage(pageSize, index, ascending, startKey, sortKey, Persistable.getClassStorageBucket(entityClass(), datasetKey));
+	}
+
+	@Override
+	public PaginatedList<Legislator> query(int pageSize, String index, Boolean ascending, String startKey, String sortKey, String storageBucket) {
+		return queryListPage(pageSize, index, ascending, startKey, sortKey, storageBucket);
+	}
+
+	public PaginatedList<Legislator> queryListPage(int pageSize, String index, Boolean ascending, String startKey, String sortKey, String storageBucket) {
+		String resolvedIndex = org.apache.commons.lang3.StringUtils.defaultIfBlank(index, Persistable.OBJECT_BY_DATE_INDEX);
+		boolean resolvedAscending = ascending == null || ascending;
+		String column = columnForIndex(resolvedIndex);
+		boolean numericColumn = isNumericSortColumn(column);
+		Cursor cursor = Cursor.parse(startKey, numericColumn);
+		List<Object> params = new ArrayList<>();
+
+		StringBuilder sql = new StringBuilder("""
+				SELECT
+					id, last_update_value, name, officialurl, lisid, interpretation, legiscanid, birthday,
+					impactmap, terms, CAST('[]' AS jsonb) AS interactions, CAST('[]' AS jsonb) AS interactions_first_page, storage_bucket, date_value,
+					rating_value, rating_abs_value, location_value, impact_value, impact_abs_value
+				FROM
+				""").append(qualifiedTableName()).append(" WHERE storage_bucket = ?");
+		params.add(storageBucket);
+
+		if (sortKey != null) {
+			if (numericColumn) {
+				sql.append(" AND ").append(column).append(" = ?");
+				params.add(Long.valueOf(sortKey));
+			} else {
+				sql.append(" AND ").append(column).append(" LIKE ?");
+				params.add(sortKey + "%");
+			}
+		}
+
+		if (cursor != null) {
+			sql.append(" AND (");
+			sql.append(column).append(resolvedAscending ? " > ?" : " < ?");
+			sql.append(" OR (").append(column).append(" = ? AND id ").append(resolvedAscending ? ">" : "<").append(" ?))");
+			params.add(cursor.value());
+			params.add(cursor.value());
+			params.add(cursor.id());
+		}
+
+		String orderDirection = resolvedAscending ? "ASC" : "DESC";
+		sql.append(" ORDER BY ").append(column).append(" ").append(orderDirection).append(" NULLS LAST, id ").append(orderDirection);
+		if (pageSize > 0) {
+			sql.append(" LIMIT ?");
+			params.add(pageSize);
+		}
+
+		Query query = requireEntityManager().createNativeQuery(sql.toString(), Legislator.class);
+		for (int i = 0; i < params.size(); i++) {
+			query.setParameter(i + 1, params.get(i));
+		}
+
+		List<Legislator> rows = readOnlyResultList(query);
+		String lastEvaluatedKey = null;
+		for (Legislator item : rows) {
+			Object lastValue = readSortProperty(item, resolvedIndex);
+			lastEvaluatedKey = lastValue == null ? item.getId() : item.getId() + CURSOR_DELIMITER + String.valueOf(lastValue);
+		}
+
+		return new us.poliscore.service.storage.PaginatedList<>(rows, pageSize, startKey, lastEvaluatedKey);
+	}
+
 	private void bindUpsert(java.sql.PreparedStatement stmt, Legislator legislator) throws java.sql.SQLException {
 		int i = 1;
 		stmt.setString(i++, legislator.getId());
@@ -94,7 +180,8 @@ public class LegislatorRepository extends AbstractPostgresEntityRepository<Legis
 		stmt.setObject(i++, legislator.getBirthday());
 		setJson(stmt, i++, legislator.getImpactMap());
 		setJson(stmt, i++, legislator.getTerms());
-		setJson(stmt, i++, legislator.getInteractions());
+		setJson(stmt, i++, legislator.getInteractionsAll());
+		setJson(stmt, i++, legislator.getInteractionsFirstPage());
 		stmt.setString(i++, legislator.getStorageBucket());
 		stmt.setString(i++, legislator.getDate() == null ? null : legislator.getDate().toString());
 		stmt.setObject(i++, legislator.getRating() == null ? null : Long.valueOf(legislator.getRating()), Types.BIGINT);
@@ -135,15 +222,42 @@ public class LegislatorRepository extends AbstractPostgresEntityRepository<Legis
 		throw new UnsupportedOperationException("Unsupported issue sort index " + index);
 	}
 
+	private boolean isNumericSortColumn(String column) {
+		return column.endsWith("_value") && !column.equals("date_value") && !column.equals("location_value");
+	}
+
+	private Object readSortProperty(Legislator legislator, String index) {
+		if (Persistable.OBJECT_BY_DATE_INDEX.equals(index)) {
+			return legislator.getDateValue();
+		}
+		if (Persistable.OBJECT_BY_RATING_INDEX.equals(index) || Persistable.OBJECT_BY_ISSUE_RATING_INDEX.equals(index)) {
+			return legislator.getRatingValue();
+		}
+		if (Persistable.OBJECT_BY_RATING_ABS_INDEX.equals(index)) {
+			return legislator.getRatingAbsValue();
+		}
+		if (Persistable.OBJECT_BY_LOCATION_INDEX.equals(index)) {
+			return legislator.getLocationValue();
+		}
+		if (Persistable.OBJECT_BY_IMPACT_INDEX.equals(index) || Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX.equals(index)) {
+			return legislator.getImpactValue();
+		}
+		if (Persistable.OBJECT_BY_IMPACT_ABS_INDEX.equals(index)) {
+			return legislator.getImpactAbsValue();
+		}
+
+		throw new UnsupportedOperationException("Unsupported Postgres index " + index);
+	}
+
 	private String upsertSql() {
 		return """
 				INSERT INTO %s (
 					id, last_update_value, name, officialurl, lisid, interpretation, legiscanid, birthday,
-					impactmap, terms, interactions, storage_bucket, date_value,
+					impactmap, terms, interactions, interactions_first_page, storage_bucket, date_value,
 					rating_value, rating_abs_value, location_value, impact_value, impact_abs_value
 				) VALUES (
 					?, ?, CAST(? AS jsonb), ?, ?, CAST(? AS jsonb), ?, ?, CAST(? AS jsonb), CAST(? AS jsonb),
-					CAST(? AS jsonb), ?, ?, ?, ?, ?, ?, ?
+					CAST(? AS jsonb), CAST(? AS jsonb), ?, ?, ?, ?, ?, ?, ?
 				)
 				ON CONFLICT (id) DO UPDATE SET
 					last_update_value = EXCLUDED.last_update_value,
@@ -156,6 +270,7 @@ public class LegislatorRepository extends AbstractPostgresEntityRepository<Legis
 					impactmap = EXCLUDED.impactmap,
 					terms = EXCLUDED.terms,
 					interactions = EXCLUDED.interactions,
+					interactions_first_page = EXCLUDED.interactions_first_page,
 					storage_bucket = EXCLUDED.storage_bucket,
 					date_value = EXCLUDED.date_value,
 					rating_value = EXCLUDED.rating_value,

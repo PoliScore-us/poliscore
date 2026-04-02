@@ -188,6 +188,11 @@ public class Bill extends SessionPersistable {
 		
 		return name;
 	}
+
+	public void setShortName(String shortName)
+	{
+		// Derived field exposed for API compatibility. Ignore during deserialization.
+	}
 	
 	@JsonIgnore
 	public String getDescription() {

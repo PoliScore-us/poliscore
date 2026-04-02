@@ -5,10 +5,21 @@ import java.util.Optional;
 
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.Persistable;
+import us.poliscore.model.legislator.Legislator;
 
 public interface ObjectStorageServiceIF
 {
 	public <T extends Persistable> Optional<T> get(String id, Class<T> clazz);
+
+	public default Optional<Legislator> getLegislatorFirstPage(String id)
+	{
+		return get(id, Legislator.class);
+	}
+
+	public default Optional<Legislator> getLegislatorAllInteractions(String id)
+	{
+		return get(id, Legislator.class);
+	}
 	
 	public <T extends Persistable> void put(T obj);
 

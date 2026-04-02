@@ -190,6 +190,14 @@ Your written response for this research section should consist of only a compact
 				.sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed())
 				.collect(Collectors.toList());
 	}
+
+	public List<LegislatorBillInteraction> getInteractionsFirstPage(List<LegislatorBillInteraction> interactions)
+	{
+		return interactions.stream()
+				.sorted(Comparator.comparing(LegislatorBillInteraction::getRatingAbs, Comparator.nullsLast(Integer::compareTo)).reversed())
+				.limit(25)
+				.collect(Collectors.toCollection(ArrayList::new));
+	}
 	
 	/**
 	 * Returns true if the legislator meets all prerequisite criteria for interpretation (i.e. at least 100 bill interactions)
@@ -520,6 +528,7 @@ Your written response for this research section should consist of only a compact
 			leg.setInteractions(interactions.stream()
 					.filter(i -> i.getIssueStats() != null && i.getRating() != null)
 					.sorted((a,b) -> a.getDate().compareTo(b.getDate())).collect(Collectors.toCollection(ArrayList::new)));
+			leg.setInteractionsFirstPage(getInteractionsFirstPage(leg.getInteractionsAll()));
 			
 			leg.setInterpretation(interp);
 			

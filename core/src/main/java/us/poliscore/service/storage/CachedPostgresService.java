@@ -10,6 +10,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import us.poliscore.model.Persistable;
+import us.poliscore.model.legislator.Legislator;
 import us.poliscore.service.MemoryObjectService;
 
 @ApplicationScoped
@@ -56,6 +57,31 @@ public class CachedPostgresService implements ObjectStorageServiceIF {
 	}
 
 	@Override
+	@SneakyThrows
+	public Optional<Legislator> getLegislatorFirstPage(String id) {
+		if (memory.exists(id, Legislator.class)) {
+			return memory.get(id, Legislator.class);
+		}
+
+		return postgres.getLegislatorFirstPage(id);
+	}
+
+	@Override
+	@SneakyThrows
+	public Optional<Legislator> getLegislatorAllInteractions(String id) {
+		if (memory.exists(id, Legislator.class)) {
+			return memory.get(id, Legislator.class);
+		}
+
+		Optional<Legislator> result = postgres.getLegislatorAllInteractions(id);
+		if (result.isPresent()) {
+			cacheResult(Legislator.class, result.get());
+		}
+
+		return result;
+	}
+
+	@Override
 	public <T extends Persistable> boolean exists(String id, Class<T> clazz) {
 		if (memory.exists(id, clazz)) {
 			return true;
@@ -67,20 +93,20 @@ public class CachedPostgresService implements ObjectStorageServiceIF {
 	@Override
 	public <T extends Persistable> List<T> query(Class<T> clazz) {
 		List<T> list = postgres.query(clazz);
-		cacheResults(clazz, list);
+		cacheQueryResults(clazz, list);
 		return list;
 	}
 
 	public <T extends Persistable> PaginatedList<T> query(Class<T> clazz, String datasetKey, int pageSize, String index, Boolean ascending, String exclusiveStartKey, String sortKey) {
 		PaginatedList<T> list = postgres.query(clazz, datasetKey, pageSize, index, ascending, exclusiveStartKey, sortKey);
-		cacheResults(clazz, list);
+		cacheQueryResults(clazz, list);
 		return list;
 	}
 
 	@Override
 	public <T extends Persistable> List<T> query(Class<T> clazz, int pageSize, String index, Boolean ascending, String startKey, String sortKey, String storageBucket) {
 		List<T> list = postgres.query(clazz, pageSize, index, ascending, startKey, sortKey, storageBucket);
-		cacheResults(clazz, list);
+		cacheQueryResults(clazz, list);
 		return list;
 	}
 
@@ -94,6 +120,14 @@ public class CachedPostgresService implements ObjectStorageServiceIF {
 		for (T obj : list) {
 			cacheResult(clazz, obj);
 		}
+	}
+
+	private <T extends Persistable> void cacheQueryResults(Class<T> clazz, List<T> list) {
+		if (Legislator.class.equals(clazz)) {
+			return;
+		}
+
+		cacheResults(clazz, list);
 	}
 
 	@SneakyThrows
