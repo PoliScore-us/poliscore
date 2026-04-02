@@ -30,6 +30,7 @@ public class PostgresSyncService {
 
 	private static final int HOT_REFRESH_LIMIT = 1000;
 	private static final int BILL_UPSERT_CHUNK_SIZE = 1000;
+	private static final int LEGISLATOR_UPSERT_CHUNK_SIZE = 100;
 
 	@Inject
 	private PostgresPersistenceService postgres;
@@ -64,7 +65,13 @@ public class PostgresSyncService {
 		
 		
 		Log.info("Making sure that our postgres database is up-to-date with what exists on s3 (" + dataset.getNamespace().getNamespace() + " " + dataset.getEndYear() + ")");
+		Set<String> updatedSet = syncBillsToPostgres(dataset);
+		refreshHotBills(dataset, updatedSet);
+		syncLegislatorsToPostgres(dataset);
+		syncSessionInterpretationsToPostgres(dataset);
+	}
 
+	private Set<String> syncBillsToPostgres(PoliscoreDatasetIF dataset) {
 		var lastUpdateMap = billRepository.getLastUpdateMap(dataset.getKey());
 		Set<String> updatedSet = new HashSet<>();
 		var billsToUpsert = new ArrayList<Bill>();
@@ -96,19 +103,18 @@ public class PostgresSyncService {
 				updatedSet.add(bill.getId());
 
 				if (billsToUpsert.size() >= BILL_UPSERT_CHUNK_SIZE) {
-					billRepository.putAll(billsToUpsert);
-					syncedBillCount += billsToUpsert.size();
-					billsToUpsert.clear();
+					syncedBillCount += flushBillsToPostgres(billsToUpsert);
 				}
 			}
 		}
 		if (!billsToUpsert.isEmpty()) {
-			billRepository.putAll(billsToUpsert);
-			syncedBillCount += billsToUpsert.size();
-			billsToUpsert.clear();
+			syncedBillCount += flushBillsToPostgres(billsToUpsert);
 		}
 		Log.info("Synced " + syncedBillCount + " changed bills to postgres");
+		return updatedSet;
+	}
 
+	private void refreshHotBills(PoliscoreDatasetIF dataset, Set<String> updatedSet) {
 		Log.info("Refreshing top " + HOT_REFRESH_LIMIT + " hot bills in postgres");
 		var hottestBills = new ArrayList<Bill>();
 		for (Bill bill : billRepository.query(dataset.getKey(), HOT_REFRESH_LIMIT, Persistable.OBJECT_BY_HOT_INDEX, false, null, null)) {
@@ -118,18 +124,29 @@ public class PostgresSyncService {
 		}
 		billRepository.putAll(hottestBills);
 		Log.info("Refreshed " + hottestBills.size() + " hot bills in postgres");
+	}
 
+	private void syncLegislatorsToPostgres(PoliscoreDatasetIF dataset) {
 		Log.info("Pushing legislators to postgres");
 		var legislatorsToUpsert = new ArrayList<Legislator>();
+		int syncedLegislatorCount = 0;
 		for (var leg : dataset.query(Legislator.class)) {
 			if (leg.getInterpretation() != null) {
 				legService.applyInterpretation(leg, leg.getInterpretation());
 				legislatorsToUpsert.add(leg);
+
+				if (legislatorsToUpsert.size() >= LEGISLATOR_UPSERT_CHUNK_SIZE) {
+					syncedLegislatorCount += flushLegislatorsToPostgres(legislatorsToUpsert);
+				}
 			}
 		}
-		legislatorRepository.putAll(legislatorsToUpsert);
-		Log.info("Pushed " + legislatorsToUpsert.size() + " legislators to postgres");
+		if (!legislatorsToUpsert.isEmpty()) {
+			syncedLegislatorCount += flushLegislatorsToPostgres(legislatorsToUpsert);
+		}
+		Log.info("Pushed " + syncedLegislatorCount + " legislators to postgres");
+	}
 
+	private void syncSessionInterpretationsToPostgres(PoliscoreDatasetIF dataset) {
 		Log.info("Pushing session interps to postgres");
 		var sessionInterpretationsToUpsert = new ArrayList<SessionInterpretation>();
 		for (var session : dataset.query(SessionInterpretation.class)) {
@@ -139,5 +156,19 @@ public class PostgresSyncService {
 		}
 		sessionInterpretationRepository.putAll(sessionInterpretationsToUpsert);
 		Log.info("Pushed " + sessionInterpretationsToUpsert.size() + " updated session interpretations to postgres");
+	}
+
+	private int flushBillsToPostgres(ArrayList<Bill> billsToUpsert) {
+		int flushed = billsToUpsert.size();
+		billRepository.putAll(billsToUpsert);
+		billsToUpsert.clear();
+		return flushed;
+	}
+
+	private int flushLegislatorsToPostgres(ArrayList<Legislator> legislatorsToUpsert) {
+		int flushed = legislatorsToUpsert.size();
+		legislatorRepository.putAll(legislatorsToUpsert);
+		legislatorsToUpsert.clear();
+		return flushed;
 	}
 }
