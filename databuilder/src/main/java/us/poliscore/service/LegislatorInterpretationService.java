@@ -163,21 +163,26 @@ Your written response for this research section should consist of only a compact
 	// Backfill the interactions until we get to 1000
 	public void backfillInteractionsFromPreviousSession(Legislator leg, PoliscoreDatasetIF prevDataset)
 	{
-//		if (prevDataset == null) return;
-//		
-//		val prevLeg = ddb.get(Legislator.generateId(prevDataset.getNamespace(), prevDataset.getRegularSession().getCode(), leg.getCode()), Legislator.class).orElse(null);
-//		if (prevLeg == null) return;
-//		
-//		val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
-//		while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
-//			val n = prevInteracts.next();
-//			if (n.getIssueStats() != null) {
-//				n.setRating(Math.round(n.getIssueStats().getRating() * n.getJudgementWeight() * 0.9f));
-//				leg.getInteractionsPrivate1().add(n);
-//			}
-//		}
+		if (prevDataset == null) return;
+		if (leg.getInteractionsAll().size() >= 1000) return;
 		
-		throw new UnsupportedOperationException("TODO");
+		val prevLeg = prevDataset.get(Legislator.generateId(prevDataset.getNamespace(), prevDataset.getRegularSession().getCode(), leg.getCode()), Legislator.class).orElse(null);
+		if (prevLeg == null) return;
+		
+		updateInteractionsInterp(prevLeg);
+		
+		val prevInteracts = prevLeg.getInteractionsAll().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
+		
+		int c = leg.getInteractionsAll().size();
+		while (c < 1000 && prevInteracts.hasNext()) {
+			val n = prevInteracts.next();
+			
+			if (n.getIssueStats() != null) {
+				n.setRating(Math.round(n.getIssueStats().getRating() * n.getJudgementWeight() * 0.9f));
+				leg.getInteractionsAll().add(n);
+				c++;
+			}
+		}
 	}
 	
 	public List<LegislatorBillInteraction> getInteractionsForInterpretation(Legislator leg)

@@ -46,7 +46,9 @@ public class BillService {
 	
 	public void populatePressInterps(BillInterpretation interp)
 	{
-		interp.setPressInterps(getPressInterps(interp.getBillId()));
+		interp.setPressInterps(getPressInterps(interp.getBillId()).stream()
+				.map(this::trimForBillPayload)
+				.toList());
 	}
 
 	public void persist(Bill b, BillInterpretation interp, ObjectStorageServiceIF store)
@@ -83,6 +85,26 @@ public class BillService {
 				.collect(Collectors.toList());
 		
 		return s3PressInterps;
+	}
+
+	private PressInterpretation trimForBillPayload(PressInterpretation interp) {
+		var copy = new PressInterpretation();
+		copy.setId(interp.getId());
+		copy.setBillId(interp.getBillId());
+		copy.setOrigin(interp.getOrigin());
+		copy.setMetadata(interp.getMetadata());
+		copy.setGenArticleTitle(interp.getGenArticleTitle());
+		copy.setShortExplain(interp.getShortExplain());
+//		copy.setLongExplain(interp.getLongExplain());
+		copy.setSentimentText(interp.getSentimentText());
+		copy.setAuthor(interp.getAuthor());
+		copy.setType(interp.getType());
+		copy.setConfidence(interp.getConfidence());
+		copy.setSentiment(interp.getSentiment());
+		copy.setNoInterp(interp.isNoInterp());
+		copy.setLastUpdate(interp.getLastUpdate());
+		copy.setStorageBucket(interp.getStorageBucket());
+		return copy;
 	}
 	
 	public void wipeAllPressInterps(Bill b)
