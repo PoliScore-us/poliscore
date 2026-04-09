@@ -124,6 +124,8 @@ Before printing the final line, internally verify the output is a JSON array of 
 	
 	public void recalculateDatasets(List<PoliscoreDatasetIF> buildDatasets) {
 		for (var dataset : buildDatasets) {
+			if (dataset.getCode().equals("118")) continue;
+			
 			var newInterp = recalculateStats(dataset);
 			
 			// If there's an existing interp, copy the values over

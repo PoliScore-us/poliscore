@@ -42,7 +42,7 @@ public class DatabaseBuilder implements QuarkusApplication
 {
 	public static boolean INTERPRET_PRESS_BILLS = false;
 	
-	public static boolean INTERPRET_NEW_BILLS = false;
+	public static boolean INTERPRET_NEW_BILLS = true;
 	
 	public static boolean REINTERPRET_LEGISLATORS = false;
 	
