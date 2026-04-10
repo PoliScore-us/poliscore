@@ -109,6 +109,16 @@ public class BillInterpretation extends SessionPersistable
 	protected String longExplain;
 	
 	protected String laymansReport;
+
+	protected String sourceBillTextVersion;
+
+	protected LocalDate sourceBillTextDate;
+
+	protected Boolean billTextOutOfDate;
+
+	protected String latestBillTextVersion;
+
+	protected LocalDate latestBillTextDate;
 	
 	@NonNull
 	protected String billId;

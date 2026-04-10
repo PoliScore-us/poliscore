@@ -15,7 +15,7 @@ class BillTextTest {
 
 	@Test
 	void xmlFactoryStoresXmlInTextFieldAndMarksFormat() {
-		BillText billText = BillText.factory("BIL/us/congress/118/hr/1", "<bill/>", LocalDate.of(2024, 1, 1), BillTextPublishVersion.IH, BillTextFormat.XML);
+		BillText billText = BillText.factory("BIL/us/congress/118/hr/1", 0, "<bill/>", LocalDate.of(2024, 1, 1), BillTextPublishVersion.IH, BillTextFormat.XML);
 		
 		assertEquals("<bill/>", billText.getText());
 		assertEquals(BillTextFormat.XML, billText.getFormat());
@@ -43,7 +43,7 @@ class BillTextTest {
 
 	@Test
 	void billTextSerializesOnlyCanonicalLastUpdateField() throws Exception {
-		BillText billText = BillText.factory("BIL/us/congress/118/hr/1", "<bill/>", LocalDate.of(2024, 1, 1), BillTextPublishVersion.IH, BillTextFormat.XML);
+		BillText billText = BillText.factory("BIL/us/congress/118/hr/1", 0, "<bill/>", LocalDate.of(2024, 1, 1), BillTextPublishVersion.IH, BillTextFormat.XML);
 		
 		String json = PoliscoreUtil.getObjectMapper().writeValueAsString(billText);
 		

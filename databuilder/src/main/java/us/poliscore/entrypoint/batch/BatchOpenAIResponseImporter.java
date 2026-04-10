@@ -253,10 +253,12 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		try {
 			BillInterpretation bi = new BillInterpretation();
 			bi.setBill(bill);
+			BillText sourceBillText = null;
 			
 			if (sliceIndex == null)
 			{
 				bi.setId(BillInterpretation.generateId(bill.getId(), bi.getOrigin(), null));
+				sourceBillText = billService.getBillText(bill).orElseThrow();
 				
 				if (s3.exists(BillInterpretation.generateId(bill.getId(), bi.getOrigin(), 0), BillInterpretation.class)) {
 					String sessionKey = billId.substring(StringUtils.ordinalIndexOf(billId, "/", 1)+1, StringUtils.ordinalIndexOf(billId, "/", 4));
@@ -275,14 +277,17 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			}
 			else
 			{
-				val billText = billService.getBillText(bill).orElseThrow();
-				bill.setText(billText);
+				sourceBillText = billService.getBillText(bill).orElseThrow();
+				bill.setText(sourceBillText);
 				
-				List<BillSlice> slices = billSlicer.slice(bill, billText, BatchBillRequestGenerator.billProcessModel);
+				List<BillSlice> slices = billSlicer.slice(bill, sourceBillText, BatchBillRequestGenerator.billProcessModel);
 				
 				bi.setMetadata(OpenAIService.metadata(slices.get(sliceIndex)));
 				bi.setId(BillInterpretation.generateId(billId, bi.getOrigin(), sliceIndex));
 			}
+
+			bi.setSourceBillTextVersion(sourceBillText.getVersion());
+			bi.setSourceBillTextDate(sourceBillText.getLastUpdated());
 			
 			var msg = resp.getResponse().getBody().getChoices().get(0).getMessage();
 			var interpText = msg.getContent();

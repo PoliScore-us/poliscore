@@ -631,6 +631,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 
 			BillText migrated = BillText.factory(
 					bill.getId(),
+					metadata.getDocId(),
 					existing.getText(),
 					existing.getLastUpdated(),
 					legiscanVersion,
@@ -658,11 +659,32 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		if (date == null && bill.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
 			date = GPOBulkBillTextFetcher.parseDate(text);
 		}
+		if (date == null && isIntroducedBillText(metadata, doc)) {
+			date = bill.getIntroducedDate();
+		}
 		if (date == null) {
 			throw new NullPointerException();
 		}
 		
-		return BillText.factory(bill.getId(), text, date, buildBillTextVersion(metadata), getBillTextFormat(doc));
+		return BillText.factory(bill.getId(), doc.getDocId(), text, date, buildBillTextVersion(metadata), getBillTextFormat(doc));
+	}
+
+	protected boolean isIntroducedBillText(LegiscanTextMetadataView metadata, LegiscanBillTextView doc) {
+		if (metadata != null && metadata.getTypeId() != null) {
+			try {
+				if (LegiscanTextType.INTRODUCED.equals(metadata.getType())) {
+					return true;
+				}
+			} catch (IllegalArgumentException ignored) { }
+		}
+
+		if (doc != null) {
+			try {
+				return LegiscanTextType.INTRODUCED.equals(doc.getType());
+			} catch (IllegalArgumentException ignored) { }
+		}
+
+		return false;
 	}
 	
 	@SneakyThrows
