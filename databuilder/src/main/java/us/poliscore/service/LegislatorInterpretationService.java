@@ -39,9 +39,8 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
  * TODO :
- * 1. AI needs to be able to link bills that aren't currently included. Sometimes it discovers a bill during research, wants to cite it, and doesn't know how. Tell it the naming convention so it always knows how to cite.
- * 2. If you're going to take down an 'F' grade legislator, you absolutely need to come in hard and fast with receipts. I would suggest perhaps softening your analyses, even if slightly, keeping in mind that the goal here is to be a citation source. In that context, this cannot read like an opinion piece. It can make scathing criticisms, but they must be rooted in evidence.
- * 3. 
+ * 1. Polling data.
+ * 2. Make these analysis "system readable". I'd love to display "re-election chances" somewhere
  */
 @ApplicationScoped
 public class LegislatorInterpretationService
