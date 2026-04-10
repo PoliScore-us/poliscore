@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.UncheckedIOException;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.Cleanup;
@@ -21,16 +23,12 @@ import lombok.SneakyThrows;
 import lombok.val;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.enhanced.dynamodb.AttributeConverter;
-import software.amazon.awssdk.enhanced.dynamodb.AttributeConverterProvider;
 import software.amazon.awssdk.enhanced.dynamodb.AttributeValueType;
 import software.amazon.awssdk.enhanced.dynamodb.EnhancedType;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import software.amazon.awssdk.utils.ImmutableMap;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.AIInterpretationMetadata;
-import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
-import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionSet;
-import us.poliscore.model.legislator.Legislator.LegislatorLegislativeTermSortedSet;
+import us.poliscore.model.legislator.Legislator.LegislativeTerm;
 import us.poliscore.model.legislator.LegislatorBillInteraction;
 import us.poliscore.model.session.SessionInterpretation.PartyInterpretation;
 
@@ -38,15 +36,22 @@ public class JacksonAttributeConverter <T> implements AttributeConverter<T> {
 
 	private static Logger logger = LoggerFactory.getLogger(JacksonAttributeConverter.class);
 	
-    protected final Class<T> clazz;
+    protected final Class<? extends T> clazz;
+    protected final JavaType javaType;
     protected static final ObjectMapper mapper = PoliscoreUtil.getObjectMapper();
 
     static {
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
     }
 
-    public JacksonAttributeConverter(Class<T> clazz) {
+    public JacksonAttributeConverter(Class<? extends T> clazz) {
         this.clazz = clazz;
+        this.javaType = mapper.getTypeFactory().constructType(clazz);
+    }
+
+    public JacksonAttributeConverter(Class<? extends T> clazz, JavaType javaType) {
+        this.clazz = clazz;
+        this.javaType = javaType;
     }
 
     @Override
@@ -61,18 +66,19 @@ public class JacksonAttributeConverter <T> implements AttributeConverter<T> {
         }
     }
 
-    @Override
+	@Override
     public T transformTo(AttributeValue input) {
         try {
-        	return mapper.readValue(input.s(), this.clazz);
+        	return mapper.readValue(input.s(), this.javaType);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException("Unable to parse object", e);
         }
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public EnhancedType type() {
-        return EnhancedType.of(this.clazz);
+        return EnhancedType.of((Class<T>) this.clazz);
     }
 
     @Override
@@ -135,20 +141,6 @@ public class JacksonAttributeConverter <T> implements AttributeConverter<T> {
         }
     }
     
-    public static class LegislatorBillInteractionSetConverter extends JacksonAttributeConverter<LegislatorBillInteractionSet> {
-
-        public LegislatorBillInteractionSetConverter() {
-            super(LegislatorBillInteractionSet.class);
-        }
-    }
-    
-    public static class LegislatorBillInteractionListConverter extends JacksonAttributeConverter<LegislatorBillInteractionList> {
-
-        public LegislatorBillInteractionListConverter() {
-            super(LegislatorBillInteractionList.class);
-        }
-    }
-    
     public static class AIInterpretationMetadataConverter extends JacksonAttributeConverter<AIInterpretationMetadata> {
     	
     	public AIInterpretationMetadataConverter() {
@@ -156,31 +148,12 @@ public class JacksonAttributeConverter <T> implements AttributeConverter<T> {
     	}
     }
     
-    public static class LegislatorLegislativeTermSortedSetConverter extends JacksonAttributeConverter<LegislatorLegislativeTermSortedSet> {
+    public static class LegislatorLegislativeTermSortedSetConverter extends JacksonAttributeConverter<TreeSet<LegislativeTerm>> {
     	
+    	@SuppressWarnings("unchecked")
     	public LegislatorLegislativeTermSortedSetConverter() {
-    		super(LegislatorLegislativeTermSortedSet.class);
-    	}
-    }
-    
-//    public static class CompressedLegislatorLegislativeTermSortedSetConverter extends CompressedJacksonAttributeConverter<LegislatorLegislativeTermSortedSet> {
-//    	
-//    	public CompressedLegislatorLegislativeTermSortedSetConverter() {
-//    		super(LegislatorLegislativeTermSortedSet.class);
-//    	}
-//    }
-    
-    public static class CompressedLegislatorBillInteractionSetConverter extends CompressedJacksonAttributeConverter<LegislatorBillInteractionSet> {
-    	
-    	public CompressedLegislatorBillInteractionSetConverter() {
-    		super(LegislatorBillInteractionSet.class);
-    	}
-    }
-    
-    public static class CompressedLegislatorBillInteractionListConverter extends CompressedJacksonAttributeConverter<LegislatorBillInteractionList> {
-    	
-    	public CompressedLegislatorBillInteractionListConverter() {
-    		super(LegislatorBillInteractionList.class);
+    		super((Class<TreeSet<LegislativeTerm>>) (Class<?>) TreeSet.class,
+    				mapper.getTypeFactory().constructCollectionType(TreeSet.class, LegislativeTerm.class));
     	}
     }
     
@@ -189,41 +162,5 @@ public class JacksonAttributeConverter <T> implements AttributeConverter<T> {
     	public CompressedPartyStatsConverter() {
     		super(PartyInterpretation.class);
     	}
-    }
-    
-    public static final class LegislatorBillInteractionSetConverterProvider implements AttributeConverterProvider {
-        private final Map<EnhancedType<?>, AttributeConverter<?>> converterCache = ImmutableMap.of(
-                // 1. Add HttpCookieConverter to the internal cache.
-                EnhancedType.of(LegislatorBillInteractionSet.class), new LegislatorBillInteractionSetConverter());
-
-        public static LegislatorBillInteractionSetConverterProvider create() {
-            return new LegislatorBillInteractionSetConverterProvider();
-        }
-
-        // The SDK calls this method to find out if the provider contains a AttributeConverter instance
-        // for the EnhancedType<T> argument.
-        @SuppressWarnings("unchecked")
-        @Override
-        public <T> AttributeConverter<T> converterFor(EnhancedType<T> enhancedType) {
-            return (AttributeConverter<T>) converterCache.get(enhancedType);
-        }
-    }
-    
-    public static final class LegislatorBillInteractionListConverterProvider implements AttributeConverterProvider {
-        private final Map<EnhancedType<?>, AttributeConverter<?>> converterCache = ImmutableMap.of(
-                // 1. Add HttpCookieConverter to the internal cache.
-                EnhancedType.of(LegislatorBillInteractionList.class), new LegislatorBillInteractionListConverter());
-
-        public static LegislatorBillInteractionListConverterProvider create() {
-            return new LegislatorBillInteractionListConverterProvider();
-        }
-
-        // The SDK calls this method to find out if the provider contains a AttributeConverter instance
-        // for the EnhancedType<T> argument.
-        @SuppressWarnings("unchecked")
-        @Override
-        public <T> AttributeConverter<T> converterFor(EnhancedType<T> enhancedType) {
-            return (AttributeConverter<T>) converterCache.get(enhancedType);
-        }
     }
 }

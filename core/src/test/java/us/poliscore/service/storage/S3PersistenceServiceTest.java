@@ -59,7 +59,7 @@ class S3PersistenceServiceTest {
 	
 	private BillText billText(int billNumber, BillTextPublishVersion version) {
 		String billId = Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", CongressionalBillType.HR, billNumber);
-		return BillText.factory(billId, "<bill>" + billNumber + "</bill>", LocalDate.of(2025, 1, 1), version, BillTextFormat.XML);
+		return BillText.factory(billId, 0, "<bill>" + billNumber + "</bill>", LocalDate.of(2025, 1, 1), version, BillTextFormat.XML);
 	}
 	
 	private static class TestS3PersistenceService extends S3PersistenceService {

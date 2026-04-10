@@ -33,8 +33,6 @@ import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCos
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
 import us.poliscore.model.legislator.LegislatorInterpretation;
-import us.poliscore.model.legislator.Legislator.LegislatorBillInteractionList;
-import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
@@ -121,10 +119,6 @@ Your written response for this research section should consist of only a compact
 	@Inject
 	private LocalCachedS3Service s3;
 	
-	
-	@Inject
-	private DynamoDbPersistenceService ddb;
-	
 	@Inject
 	private GovernmentDataService data;
 	
@@ -169,16 +163,23 @@ Your written response for this research section should consist of only a compact
 	public void backfillInteractionsFromPreviousSession(Legislator leg, PoliscoreDatasetIF prevDataset)
 	{
 		if (prevDataset == null) return;
+		if (leg.getInteractionsAll().size() >= 1000) return;
 		
-		val prevLeg = ddb.get(Legislator.generateId(prevDataset.getNamespace(), prevDataset.getRegularSession().getCode(), leg.getCode()), Legislator.class).orElse(null);
+		val prevLeg = prevDataset.get(Legislator.generateId(prevDataset.getNamespace(), prevDataset.getRegularSession().getCode(), leg.getCode()), Legislator.class).orElse(null);
 		if (prevLeg == null) return;
 		
-		val prevInteracts = prevLeg.getInteractions().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
-		while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
+		updateInteractionsInterp(prevLeg);
+		
+		val prevInteracts = prevLeg.getInteractionsAll().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
+		
+		int c = leg.getInteractionsAll().size();
+		while (c < 1000 && prevInteracts.hasNext()) {
 			val n = prevInteracts.next();
+			
 			if (n.getIssueStats() != null) {
 				n.setRating(Math.round(n.getIssueStats().getRating() * n.getJudgementWeight() * 0.9f));
-				leg.getInteractionsPrivate1().add(n);
+				leg.getInteractionsAll().add(n);
+				c++;
 			}
 		}
 	}
@@ -192,6 +193,14 @@ Your written response for this research section should consist of only a compact
 				.filter(i -> isRelevant(i))
 				.sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed())
 				.collect(Collectors.toList());
+	}
+
+	public List<LegislatorBillInteraction> getInteractionsFirstPage(List<LegislatorBillInteraction> interactions)
+	{
+		return interactions.stream()
+				.sorted(Comparator.comparing(LegislatorBillInteraction::getRatingAbs, Comparator.nullsLast(Integer::compareTo)).reversed())
+				.limit(25)
+				.collect(Collectors.toCollection(ArrayList::new));
 	}
 	
 	/**
@@ -492,7 +501,7 @@ Your written response for this research section should consist of only a compact
 					val prevLeg = previousDataset.get(Legislator.generateId(previousDataset.getNamespace(), previousDataset.getRegularSession().getCode(), leg.getCode()), Legislator.class).orElse(null);
 					if (prevLeg != null) {
 						val prevInteracts = getInteractionsForInterpretation(prevLeg).iterator();
-						while (leg.getInteractionsPrivate1().size() < 1000 && prevInteracts.hasNext()) {
+						while (getInteractionsForInterpretation(leg).size() < 1000 && prevInteracts.hasNext()) {
 							val interact = prevInteracts.next();
 							val interactInterpOp = s3.get(BillInterpretation.generateId(interact.getBillId(), null), BillInterpretation.class);
 							
@@ -500,7 +509,7 @@ Your written response for this research section should consist of only a compact
 								var issueStats = interactInterpOp.get().getIssueStats();
 								interact.setRating(Math.round(issueStats.getRating() * interact.getJudgementWeight() * 0.9f));
 								interact.setIssueStats(issueStats);
-								leg.getInteractionsPrivate1().add(interact);
+								leg.addBillInteraction(interact);
 							}
 						}
 					}
@@ -522,7 +531,8 @@ Your written response for this research section should consist of only a compact
 			
 			leg.setInteractions(interactions.stream()
 					.filter(i -> i.getIssueStats() != null && i.getRating() != null)
-					.sorted((a,b) -> a.getDate().compareTo(b.getDate())).collect(Collectors.toCollection(LegislatorBillInteractionList::new)));
+					.sorted((a,b) -> a.getDate().compareTo(b.getDate())).collect(Collectors.toCollection(ArrayList::new)));
+			leg.setInteractionsFirstPage(getInteractionsFirstPage(leg.getInteractionsAll()));
 			
 			leg.setInterpretation(interp);
 			

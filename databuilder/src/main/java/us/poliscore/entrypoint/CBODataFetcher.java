@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
@@ -18,17 +17,12 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
-import us.poliscore.PoliscoreUtil;
-import us.poliscore.model.bill.Bill;
-import us.poliscore.model.bill.CBOBillAnalysis;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.service.BillInterpretationService;
 import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
-import us.poliscore.service.MemoryObjectService;
-import us.poliscore.service.storage.DynamoDbPersistenceService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 import us.poliscore.service.storage.LocalFilePersistenceService;
 
@@ -53,9 +47,6 @@ public class CBODataFetcher implements QuarkusApplication
 	
 	@Inject
 	private LocalFilePersistenceService localStore;
-	
-	@Inject
-	private DynamoDbPersistenceService ddb;
 	
 	@Inject
 	private LocalCachedS3Service s3;

@@ -56,7 +56,6 @@ import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
-import us.poliscore.service.storage.CachedDynamoDbService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
@@ -74,9 +73,6 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 //	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/openapi-legislators-feball.out.jsonl").getAbsolutePath();
 	
 	public Logger logger = LoggerFactory.getLogger(BatchOpenAIResponseImporter.class);
-	
-	@Inject
-	private CachedDynamoDbService ddb;
 	
 	@Inject
 	private LocalCachedS3Service s3;
@@ -156,7 +152,6 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			if (sessionInterp.isComplete(dataset.hasIndependentPartyMembers())) {
 				dataset.put(sessionInterp);
 				s3.put(sessionInterp);
-				ddb.put(sessionInterp);
 			}
 		}
 		
@@ -198,7 +193,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		interp.setLastUpdate(LocalDateTime.now());
 		
 		s3.put(interp);
-		legService.ddbPersist(leg, interp);
+		legService.applyInterpretation(leg, interp);
 	}
 	
 	private void importParty(final BatchOpenAIResponse resp) {
@@ -258,10 +253,12 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		try {
 			BillInterpretation bi = new BillInterpretation();
 			bi.setBill(bill);
+			BillText sourceBillText = null;
 			
 			if (sliceIndex == null)
 			{
 				bi.setId(BillInterpretation.generateId(bill.getId(), bi.getOrigin(), null));
+				sourceBillText = billService.getBillText(bill).orElseThrow();
 				
 				if (s3.exists(BillInterpretation.generateId(bill.getId(), bi.getOrigin(), 0), BillInterpretation.class)) {
 					String sessionKey = billId.substring(StringUtils.ordinalIndexOf(billId, "/", 1)+1, StringUtils.ordinalIndexOf(billId, "/", 4));
@@ -280,14 +277,17 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			}
 			else
 			{
-				val billText = billService.getBillText(bill).orElseThrow();
-				bill.setText(billText);
+				sourceBillText = billService.getBillText(bill).orElseThrow();
+				bill.setText(sourceBillText);
 				
-				List<BillSlice> slices = billSlicer.slice(bill, billText, BatchBillRequestGenerator.billProcessModel);
+				List<BillSlice> slices = billSlicer.slice(bill, sourceBillText, BatchBillRequestGenerator.billProcessModel);
 				
 				bi.setMetadata(OpenAIService.metadata(slices.get(sliceIndex)));
 				bi.setId(BillInterpretation.generateId(billId, bi.getOrigin(), sliceIndex));
 			}
+
+			bi.setSourceBillTextVersion(sourceBillText.getVersion());
+			bi.setSourceBillTextDate(sourceBillText.getLastUpdated());
 			
 			var msg = resp.getResponse().getBody().getChoices().get(0).getMessage();
 			var interpText = msg.getContent();
@@ -333,14 +333,11 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			bi.setLastUpdate(LocalDateTime.now());
 			
 			if (bi.getOrigin().equals(InterpretationOrigin.POLISCORE) && sliceIndex == null) {
-				billService.ddbPersist(bill, bi);
-				
+				billService.applyInterpretation(bill, bi);
 				importedBills.add(billId);
-			} else {
-				ddb.put(bi);
 			}
 			
-			// PopulatePressInterps must be called before we do this (which happens in billService.ddbPersist)
+			// PopulatePressInterps must be called before we do this (which happens in billService.applyInterpretation)
 			s3.put(bi);
 		} catch (Throwable t) {
 			interpretedBillsWithErrors.add(bill);

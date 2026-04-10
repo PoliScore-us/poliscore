@@ -7,6 +7,16 @@ import org.apache.commons.lang3.StringUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Access;
+import jakarta.persistence.AccessType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Converter;
+import jakarta.persistence.Id;
+import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -27,11 +37,17 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecon
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @RegisterForReflection
 @NoArgsConstructor
+@MappedSuperclass
+@Access(AccessType.FIELD)
 abstract public class SessionPersistable implements Persistable {
 	
 	@NonNull
+	@Id
+	@Column(name = "id", nullable = false)
 	protected String id;
 	
+	@Convert(converter = LocalDateTimeStringConverter.class)
+	@Column(name = "last_update_value")
 	protected LocalDateTime lastUpdate;
 	
 	@DynamoDbPartitionKey
@@ -78,6 +94,29 @@ abstract public class SessionPersistable implements Persistable {
 	public static String generateId(String idClassPrefix, LegislativeNamespace ns, String sessionCode, String objectCode)
 	{
 		return idClassPrefix + "/" + ns.getNamespace() + "/" + sessionCode + "/" + objectCode;
+	}
+
+	@PrePersist
+	@PreUpdate
+	protected void syncJpaState()
+	{
+		synchronizeJpaState();
+	}
+
+	protected void synchronizeJpaState() { }
+
+	@Converter
+	public static class LocalDateTimeStringConverter implements AttributeConverter<LocalDateTime, String> {
+
+		@Override
+		public String convertToDatabaseColumn(LocalDateTime attribute) {
+			return attribute == null ? null : attribute.toString();
+		}
+
+		@Override
+		public LocalDateTime convertToEntityAttribute(String dbData) {
+			return dbData == null || dbData.isBlank() ? null : LocalDateTime.parse(dbData);
+		}
 	}
 	
 }

@@ -32,6 +32,7 @@ import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
 import us.poliscore.service.storage.LocalCachedS3Service;
+import us.poliscore.service.storage.PostgresSyncService;
 
 /**
  * Run this to keep a deployed server up-to-date.
@@ -76,6 +77,9 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	@Inject
 	private LegislatorInterpretationService legInterp;
+
+	@Inject
+	private PostgresSyncService postgresSync;
 	
 	protected BuildReport report = new BuildReport();
 	
@@ -97,6 +101,8 @@ public class DatabaseBuilder implements QuarkusApplication
 		
 		interpretLegislators(buildDatasets);
 		interpretPartyStats(buildDatasets);
+		
+		syncPostgres(buildDatasets);
 		
 		System.out.println(report.toString());
 		FileUtils.write(new File(Environment.getDeployedPath(), "../buildreport.txt"), report.toString(), "UTF-8");
@@ -207,6 +213,17 @@ public class DatabaseBuilder implements QuarkusApplication
 		}
 		else {
 			partyInterpreter.recalculateDatasets(buildDatasets);
+		}
+	}
+
+	protected void syncPostgres(List<PoliscoreDatasetIF> buildDatasets)
+	{
+		if (!postgresSync.isEnabled()) {
+			return;
+		}
+
+		for (val dataset : buildDatasets) {
+			postgresSync.syncPostgresWithS3(dataset);
 		}
 	}
 	

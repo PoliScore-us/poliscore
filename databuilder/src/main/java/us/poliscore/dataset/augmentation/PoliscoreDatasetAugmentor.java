@@ -73,6 +73,10 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	public static boolean isManualRun = false;
 	
 	public void augmentLegislators(PoliscoreDataset dataset) {
+		if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS) && dataset.getCode().equals("118")) return;
+		
+		dataset.optimizeExists(s3, PoliscoreScrapedLegislatorData.class);
+		
 		if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
 		{
 			var uscDataset = usc.importDataset(dataset.getConfig());
@@ -89,6 +93,8 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 		else
 		{
 			for (Legislator leg : dataset.query(Legislator.class)) {
+				if (!s3.exists(PoliscoreScrapedLegislatorData.generateId(leg.getId()), PoliscoreScrapedLegislatorData.class)) continue;
+				
 				val addendum = s3.get(PoliscoreScrapedLegislatorData.generateId(leg.getId()), PoliscoreScrapedLegislatorData.class);
 				
 				if (addendum.isPresent()) {

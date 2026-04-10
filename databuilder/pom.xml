@@ -133,14 +133,6 @@
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
-      <artifactId>dynamodb</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>dynamodb-enhanced</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
       <artifactId>url-connection-client</artifactId>
     </dependency>
     <dependency>
@@ -160,9 +152,19 @@
       <version>2.17.1</version>
     </dependency>
     <dependency>
-      <groupId>io.quarkiverse.amazonservices</groupId>
-      <artifactId>quarkus-amazon-dynamodb-enhanced</artifactId>
-      <version>2.16.0</version>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-hibernate-orm</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jdbc-postgresql</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-agroal</artifactId>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>

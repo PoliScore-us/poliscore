@@ -13,7 +13,7 @@ import us.poliscore.service.OpenAIService.Usage;
 @Getter
 @AllArgsConstructor
 public enum OpenAIModel {
-
+	GPT54("gpt-5.4", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 1.25, 7.50),
 	GPT52("gpt-5.2", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.875, 7.00),
 	GPT51("gpt-5.1", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.625, 5.00),
 	GPT5("gpt-5", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.625, 5.00),

@@ -11,15 +11,25 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import jakarta.persistence.Access;
+import jakarta.persistence.AccessType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import us.poliscore.model.AIInterpretationMetadata;
@@ -34,36 +44,62 @@ import us.poliscore.model.bill.Bill.BillSponsor;
 import us.poliscore.model.bill.BillStatus;
 import us.poliscore.model.dynamodb.DdbDataPage;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.AIInterpretationMetadataConverter;
-import us.poliscore.model.dynamodb.JacksonAttributeConverter.LegislatorBillInteractionSetConverterProvider;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.CompressedPartyStatsConverter;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.util.ParsingUtil;
 
 @Data
-@DynamoDbBean
 @RegisterForReflection
 @NoArgsConstructor
+@Entity
+@Table(name = "session_interpretation", indexes = {
+		@Index(name = "session_interpretation_storage_bucket_idx", columnList = "storage_bucket"),
+		@Index(name = "session_interpretation_date_idx", columnList = "storage_bucket, date_value, id")
+})
+@Access(AccessType.FIELD)
 public class SessionInterpretation implements Persistable {
 	
 	public static final String ID_CLASS_PREFIX = "SIT";
 	
+	@Id
+	@Column(name = "id", nullable = false)
+	protected String id;
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(columnDefinition = "jsonb")
 	protected LegislativeSession session;
 	
 //	@Getter(onMethod = @__({ @DynamoDbConvertedBy(PartyStatsMapAttributeConverter.class) }))
 //	protected Map<Party, PartyStats> partyStats = new HashMap<Party, PartyStats>();
 	
 	@Getter(onMethod = @__({ @DdbDataPage("1"), @DynamoDbConvertedBy(CompressedPartyStatsConverter.class) }))
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(columnDefinition = "jsonb")
 	protected PartyInterpretation democrat;
 	
 	@Getter(onMethod = @__({ @DdbDataPage("2"), @DynamoDbConvertedBy(CompressedPartyStatsConverter.class) }))
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(columnDefinition = "jsonb")
 	protected PartyInterpretation republican;
 	
 	@Getter(onMethod = @__({ @DdbDataPage("3"), @DynamoDbConvertedBy(CompressedPartyStatsConverter.class) }))
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(columnDefinition = "jsonb")
 	protected PartyInterpretation independent;
 	
 	@NonNull
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(AIInterpretationMetadataConverter.class)}))
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(columnDefinition = "jsonb")
 	protected AIInterpretationMetadata metadata;
+
+	@JsonIgnore
+	@Column(name = "storage_bucket", nullable = false)
+	protected String storageBucketValue = ID_CLASS_PREFIX;
+
+	@JsonIgnore
+	@Column(name = "date_value")
+	protected String dateValue;
 	
 	public static String generateId(LegislativeNamespace namespace, String sessionCode)
 	{
@@ -71,18 +107,30 @@ public class SessionInterpretation implements Persistable {
 	}
 	
 	@DynamoDbPartitionKey
+	@Override
 	public String getId()
 	{
-		return generateId(session.getNamespace(), session.getCode());
+		if (StringUtils.isBlank(id) && session != null) {
+			id = generateId(session.getNamespace(), session.getCode());
+		}
+		return id;
 	}
 	
-	public void setId(String id) { }
+	@Override
+	public void setId(String id) { this.id = id; }
 
 	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX }) public String getStorageBucket() { return ID_CLASS_PREFIX; }
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 
+	@Transient
+	@JsonIgnore
+	public LocalDate getDate() {
+		return metadata == null ? null : metadata.getDate();
+	}
+
+	public void setDate(LocalDate date) { }
+
 	@Data
-	@DynamoDbBean
 	@NoArgsConstructor
 	@RegisterForReflection
 	@AllArgsConstructor
@@ -135,7 +183,6 @@ public class SessionInterpretation implements Persistable {
 	}
 	
 	@Data
-	@DynamoDbBean
 	@NoArgsConstructor
 	@AllArgsConstructor
 	@RegisterForReflection
@@ -181,7 +228,6 @@ public class SessionInterpretation implements Persistable {
 		@EqualsAndHashCode.Exclude
 		protected String shortExplain;
 		
-		@DynamoDbIgnore
 		@JsonIgnore
 		public String getShortExplainForInterp() {
 			return "- " + " \"" + name + "\" (Grade: " + letterGrade + ") (" + cosponsors.size() + " cosponsors" + getCosponsorPartyDescription() + ") (" + billStatus.getDescription() + ") (" + id + "): " + shortExplain;
@@ -201,7 +247,6 @@ public class SessionInterpretation implements Persistable {
 			}
 		}
 		
-		@DynamoDbIgnore
 		@JsonIgnore
 		public Integer getImpact() {
 			return impact;
@@ -217,7 +262,6 @@ public class SessionInterpretation implements Persistable {
 	 * TreeSet was decided against for these methods because TreeSet doesn't allow duplicates on the 'compareTo' method (which is sorted on rating for legislators)
 	 */
 	
-	@DynamoDbBean(converterProviders = LegislatorBillInteractionSetConverterProvider.class)
 	@NoArgsConstructor
 	public static class PartyBillSet extends ArrayList<PartyBillInteraction> {
 
@@ -226,7 +270,6 @@ public class SessionInterpretation implements Persistable {
 		}
 	}
 	
-	@DynamoDbBean(converterProviders = LegislatorBillInteractionSetConverterProvider.class)
 	@NoArgsConstructor
 	public static class PartyLegislatorSet extends ArrayList<Legislator> {
 
@@ -252,5 +295,14 @@ public class SessionInterpretation implements Persistable {
 		} else {
 			throw new UnsupportedOperationException(party != null ? party.getName() : "null");
 		}
+	}
+
+	@PrePersist
+	@PreUpdate
+	protected void synchronizeJpaState()
+	{
+		id = getId();
+		storageBucketValue = getStorageBucket();
+		dateValue = getDate() == null ? null : getDate().toString();
 	}
 }

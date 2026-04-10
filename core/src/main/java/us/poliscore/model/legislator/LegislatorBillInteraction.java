@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -99,6 +100,12 @@ public abstract class LegislatorBillInteraction implements Comparable<Legislator
 	@Override
 	public int compareTo(LegislatorBillInteraction interact) {
 		return interact.date.compareTo(this.date);
+	}
+
+	@JsonProperty("@type")
+	public String getJsonType()
+	{
+		return getClass().getSimpleName();
 	}
 	
 	public boolean supercedes(LegislatorBillInteraction similar)

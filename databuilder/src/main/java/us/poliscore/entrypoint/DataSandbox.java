@@ -3,42 +3,47 @@ package us.poliscore.entrypoint;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
+import lombok.SneakyThrows;
 import lombok.val;
-import us.poliscore.PoliscoreUtil;
+import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.model.Persistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
-import us.poliscore.model.bill.BillInterpretation;
-import us.poliscore.model.bill.BillSlice;
-import us.poliscore.model.bill.BillText;
+import us.poliscore.model.bill.BillIssueStat;
 import us.poliscore.model.bill.CongressionalBillType;
-import us.poliscore.parsing.BillSlicer;
-import us.poliscore.parsing.XMLBillSlicer;
 import us.poliscore.service.BillService;
 import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.MemoryObjectService;
-import us.poliscore.service.storage.DynamoDbPersistenceService;
+import us.poliscore.service.SessionInfoService;
+import us.poliscore.service.storage.CachedPostgresService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 import us.poliscore.service.storage.LocalFilePersistenceService;
 
 @QuarkusMain(name="DataSandbox")
 public class DataSandbox implements QuarkusApplication
 {
+	private static final String TRACKED_ISSUE_INDEX = "~ti~";
+	private static final Map<String, List<Bill>> cachedBills = new HashMap<String, List<Bill>>();
+
 	@Inject
 	private MemoryObjectService memService;
 	
 	@Inject
 	private LocalFilePersistenceService localStore;
-	
-	@Inject
-	private DynamoDbPersistenceService ddb;
 	
 	@Inject
 	private LocalCachedS3Service s3;
@@ -51,12 +56,23 @@ public class DataSandbox implements QuarkusApplication
 	
 	@Inject
 	private GovernmentDataService data;
+
+	@Inject
+	private CachedPostgresService ddb;
+
+	@Inject
+	private ObjectMapper mapper;
 	
 	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
 	protected void process() throws IOException
 	{
 		data.importAllDatasets();
+		
+		// https://5hta4jxn7q6cfcyxnvz4qmkyli0tambn.lambda-url.us-east-1.on.aws//getBills?index=ObjectsByIssueRating&pageSize=25&ascending=true&sortKey=CrimeAndLawEnforcement&year=2025&namespace=us/az
+		val out = getBills(25, Persistable.OBJECT_BY_ISSUE_RATING_INDEX, false, null, "CrimeAndLawEnforcement", 2025, LegislativeNamespace.US_ARIZONA.getNamespace());
+		System.out.println("Fetched " + out.size() + " bills");
+		System.out.println(mapper.writeValueAsString(out));
 		
 		
 //		val sessionStats = new SessionInterpretation();
@@ -224,6 +240,53 @@ public class DataSandbox implements QuarkusApplication
 		
 		
 		System.out.println("Program Complete");
+	}
+
+	@SneakyThrows
+	public List<Persistable> getBills(Integer _pageSize, String _index, Boolean _ascending, String _exclusiveStartKey,
+			String sortKey, Integer _year, String _namespace) {
+		val index = StringUtils.isNotBlank(_index) ? _index : Persistable.OBJECT_BY_DATE_INDEX;
+		val startKey = _exclusiveStartKey;
+		var pageSize = _pageSize == null ? 25 : _pageSize;
+		Boolean ascending = _ascending == null ? Boolean.TRUE : _ascending;
+
+		Integer year = _year == null ? java.time.LocalDate.now().getYear() : _year;
+		LegislativeNamespace namespace = StringUtils.isEmpty(_namespace) ? LegislativeNamespace.US_CONGRESS
+				: LegislativeNamespace.of(_namespace);
+		val session = SessionInfoService.lookupRegularSession(namespace, year);
+
+		String storageBucket;
+		if (namespace.equals(LegislativeNamespace.US_CONGRESS))
+			storageBucket = Persistable.getClassStorageBucket(Bill.class, namespace, session.getCode());
+		else {
+			storageBucket = Persistable.getIdClassPrefix(Bill.class) + "/" + namespace + "/"
+					+ String.valueOf(SessionInfoService.lookupRegularSession(namespace, session.getCode()).getEndDate().getYear());
+		}
+
+		val cacheable = StringUtils.isBlank(startKey) && pageSize == 25 && StringUtils.isBlank(sortKey)
+				&& !index.startsWith(TRACKED_ISSUE_INDEX)
+				&& !index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX)
+				&& !index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX);
+		val cacheKey = storageBucket + "-" + index + "-" + ascending.toString();
+		if (cacheable && cachedBills.containsKey(cacheKey))
+			return cachedBills.get(cacheKey).stream().map(l -> (Persistable) l).toList();
+
+		List<Bill> bills;
+		if (index.equals(Persistable.OBJECT_BY_ISSUE_IMPACT_INDEX)
+				|| index.equals(Persistable.OBJECT_BY_ISSUE_RATING_INDEX)) {
+			storageBucket = storageBucket + "/" + TrackedIssue.valueOf(sortKey).name();
+			sortKey = null;
+			val bii = ddb.query(BillIssueStat.class, pageSize, index, ascending, startKey, sortKey, storageBucket);
+			return bii.stream().map(l -> (Persistable) l).toList();
+		} else {
+			bills = ddb.query(Bill.class, pageSize, index, ascending, startKey, sortKey, storageBucket);
+		}
+
+		if (cacheable) {
+			cachedBills.put(cacheKey, bills);
+		}
+
+		return bills.stream().map(l -> (Persistable) l).toList();
 	}
 	
 	public static void main(String[] args) {

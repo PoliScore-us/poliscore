@@ -3,9 +3,13 @@ package us.poliscore.model.legislator;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeSet;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -13,15 +17,19 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import jakarta.persistence.Access;
+import jakarta.persistence.AccessType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
 import us.poliscore.legiscan.view.LegiscanState;
@@ -34,24 +42,29 @@ import us.poliscore.model.Party;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.SessionPersistable;
 import us.poliscore.model.TrackedIssue;
-import us.poliscore.model.dynamodb.DdbDataPage;
 import us.poliscore.model.dynamodb.IssueStatsMapLongAttributeConverter;
-import us.poliscore.model.dynamodb.JacksonAttributeConverter.CompressedLegislatorBillInteractionListConverter;
-import us.poliscore.model.dynamodb.JacksonAttributeConverter.LegislatorBillInteractionSetConverterProvider;
 import us.poliscore.model.dynamodb.JacksonAttributeConverter.LegislatorLegislativeTermSortedSetConverter;
 import us.poliscore.model.dynamodb.LegiscanStateConverter;
 
 @Data
 @EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
-@DynamoDbBean
 @NoArgsConstructor
 @RegisterForReflection
+@Entity
+@Table(name = "legislator", indexes = {
+		@Index(name = "legislator_storage_bucket_idx", columnList = "storage_bucket"),
+		@Index(name = "legislator_date_idx", columnList = "storage_bucket, date_value, id"),
+		@Index(name = "legislator_rating_idx", columnList = "storage_bucket, rating_value, id"),
+		@Index(name = "legislator_rating_abs_idx", columnList = "storage_bucket, rating_abs_value, id"),
+		@Index(name = "legislator_location_idx", columnList = "storage_bucket, location_value, id"),
+		@Index(name = "legislator_impact_idx", columnList = "storage_bucket, impact_value, id"),
+		@Index(name = "legislator_impact_abs_idx", columnList = "storage_bucket, impact_abs_value, id")
+})
+@Access(AccessType.FIELD)
 public class Legislator extends SessionPersistable implements Comparable<Legislator> {
 	
 	public static final String ID_CLASS_PREFIX = "LEG";
-	
-	public static final int INTERACTIONS_PAGE_SIZE = 900;
-	
+
 	public static final LocalDate DEFAULT_BIRTHDAY = LocalDate.of(1970, 1, 1);
 	
 	public static String generateId(LegislativeNamespace ns, String regularSessionCode, String legislatorCode)
@@ -60,85 +73,102 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	}
 	
 	@NonNull
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(columnDefinition = "jsonb")
 	protected LegislatorName name;
 	
 	// Url to the official bill (i.e. congress or the state website)
+	@Column(columnDefinition = "TEXT")
 	protected String officialUrl;
 	
 	// Senate Id (only used in congress) : https://github.com/usgpo/bill-status/issues/241
 	protected String lisId;
 	
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(columnDefinition = "jsonb")
 	protected LegislatorInterpretation interpretation;
 	
-	@Getter(onMethod = @__({ @JsonIgnore, @DynamoDbIgnore }))
+	@Getter(onMethod = @__({ @JsonIgnore }))
 	protected Integer legiscanId;
 	
 	protected LocalDate birthday = null;
 	
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(IssueStatsMapLongAttributeConverter.class) }))
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(columnDefinition = "jsonb")
 	public Map<TrackedIssue, Long> impactMap = new HashMap<TrackedIssue, Long>();
 	
 	@NonNull
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(LegislatorLegislativeTermSortedSetConverter.class) }))
-	protected LegislatorLegislativeTermSortedSet terms = new LegislatorLegislativeTermSortedSet();
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(columnDefinition = "jsonb")
+	protected TreeSet<LegislativeTerm> terms = new TreeSet<LegislativeTerm>();
 	
-	private LegislatorBillInteractionList interactionsPrivate1 = new LegislatorBillInteractionList();
-	@DdbDataPage
-	@DynamoDbConvertedBy(CompressedLegislatorBillInteractionListConverter.class)
-	@JsonIgnore
-	public LegislatorBillInteractionList getInteractionsPrivate1() {
-		return interactionsPrivate1;
-	}
-	private LegislatorBillInteractionList interactionsPrivate2 = new LegislatorBillInteractionList();
-	@DdbDataPage("2")
-	@DynamoDbConvertedBy(CompressedLegislatorBillInteractionListConverter.class)
-	@JsonIgnore
-	public LegislatorBillInteractionList getInteractionsPrivate2() {
-		return interactionsPrivate2;
-	}
-	
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "interactions", columnDefinition = "jsonb")
+	private List<LegislatorBillInteraction> interactionsAll = new ArrayList<LegislatorBillInteraction>();
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "interactions_first_page", columnDefinition = "jsonb")
+	private List<LegislatorBillInteraction> interactionsFirstPage = new ArrayList<LegislatorBillInteraction>();
+
 	@JsonProperty
-	public LegislatorBillInteractionList getInteractions()
+	public List<LegislatorBillInteraction> getInteractions()
 	{
-		var result = new LegislatorBillInteractionList();
-		result.addAll(interactionsPrivate1);
-		result.addAll(interactionsPrivate2);
-		return result;
+		if (interactionsAll != null && !interactionsAll.isEmpty()) {
+			return interactionsAll;
+		}
+
+		return interactionsFirstPage == null ? new ArrayList<LegislatorBillInteraction>() : interactionsFirstPage;
 	}
-	
+
 	@JsonProperty
-	public void setInteractions(LegislatorBillInteractionList list)
+	public void setInteractions(List<LegislatorBillInteraction> list)
 	{
-		interactionsPrivate1 = new LegislatorBillInteractionList();
-		interactionsPrivate1.addAll(list.subList(0, Math.min(INTERACTIONS_PAGE_SIZE, list.size())));
-		
-		interactionsPrivate2 = new LegislatorBillInteractionList();
-		if (list.size() > INTERACTIONS_PAGE_SIZE)
-			interactionsPrivate2.addAll(list.subList(INTERACTIONS_PAGE_SIZE, list.size()));
+		interactionsAll = copyInteractions(list);
 	}
-	
+
+	@JsonIgnore
+	public List<LegislatorBillInteraction> getInteractionsAll()
+	{
+		return interactionsAll;
+	}
+
+	public void setInteractionsAll(List<LegislatorBillInteraction> list)
+	{
+		interactionsAll = copyInteractions(list);
+	}
+
+	@JsonIgnore
+	public List<LegislatorBillInteraction> getInteractionsFirstPage()
+	{
+		return interactionsFirstPage;
+	}
+
+	public void setInteractionsFirstPage(List<LegislatorBillInteraction> list)
+	{
+		interactionsFirstPage = copyInteractions(list);
+	}
+
 	public void clearInteractions() {
-		interactionsPrivate1.clear();
-		interactionsPrivate2.clear();
+		interactionsAll.clear();
+		interactionsFirstPage.clear();
 	}
 	
 	public void addBillInteraction(LegislatorBillInteraction incoming)
 	{
-		var interactions = interactionsPrivate1;
-		if (interactions.size() >= INTERACTIONS_PAGE_SIZE)
-		{
-			interactions = interactionsPrivate2;
-		}
+		interactionsAll.removeIf(existing -> incoming.supercedes(existing));
 		
-		interactions.removeIf(existing -> incoming.supercedes(existing));
-		
-		if (!interactions.contains(incoming)) {
-			interactions.add(incoming);
+		if (!interactionsAll.contains(incoming)) {
+			interactionsAll.add(incoming);
 		}
+	}
+
+	private List<LegislatorBillInteraction> copyInteractions(List<LegislatorBillInteraction> list) {
+		return list == null ? new ArrayList<LegislatorBillInteraction>() : new ArrayList<LegislatorBillInteraction>(list);
 	}
 	
 	@JsonIgnore
-	@DynamoDbIgnore
 	public Party getParty()
 	{
 		return this.terms.last().getParty();
@@ -197,9 +227,36 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	{
 		return impactMap.getOrDefault(issue, 0l);
 	}
+
+	@JsonIgnore
+	@Column(name = "storage_bucket")
+	private String storageBucketValue = ID_CLASS_PREFIX;
+
+	@JsonIgnore
+	@Column(name = "date_value")
+	private String dateValue;
+
+	@JsonIgnore
+	@Column(name = "rating_value")
+	private Long ratingValue;
+
+	@JsonIgnore
+	@Column(name = "rating_abs_value")
+	private Long ratingAbsValue;
+
+	@JsonIgnore
+	@Column(name = "location_value")
+	private String locationValue;
+
+	@JsonIgnore
+	@Column(name = "impact_value")
+	private Long impactValue;
+
+	@JsonIgnore
+	@Column(name = "impact_abs_value")
+	private Long impactAbsValue;
 	
 	@Data
-	@DynamoDbBean
 	@NoArgsConstructor
 	@AllArgsConstructor
 	public static class LegislatorName {
@@ -213,7 +270,6 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	}
 	
 	@Data
-	@DynamoDbBean
 	@AllArgsConstructor
 	@NoArgsConstructor
 	@EqualsAndHashCode
@@ -243,18 +299,21 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 		
 	}
 	
-	@DynamoDbBean(converterProviders = LegislatorBillInteractionSetConverterProvider.class)
-	public static class LegislatorBillInteractionList extends ArrayList<LegislatorBillInteraction> {}
-	
-	@DynamoDbBean(converterProviders = LegislatorBillInteractionSetConverterProvider.class)
-	public static class LegislatorBillInteractionSet extends TreeSet<LegislatorBillInteraction> {}
-	
-	@DynamoDbBean
-	public static class LegislatorLegislativeTermSortedSet extends TreeSet<LegislativeTerm> {}
-
 	@Override
 	public int compareTo(Legislator o) {
 		return Integer.valueOf(Objects.requireNonNullElse(this.getRating(),-1)).compareTo(Objects.requireNonNullElse(o.getRating(),-1));
+	}
+
+	@Override
+	protected void synchronizeJpaState()
+	{
+		storageBucketValue = getStorageBucket();
+		dateValue = getDate() == null ? null : getDate().toString();
+		ratingValue = getRating() == null ? null : Long.valueOf(getRating());
+		ratingAbsValue = getRatingAbs() == null ? null : Long.valueOf(getRatingAbs());
+		locationValue = terms == null || terms.isEmpty() ? null : getLocation();
+		impactValue = getImpact();
+		impactAbsValue = impactValue == null ? null : Math.abs(impactValue);
 	}
 	
 }

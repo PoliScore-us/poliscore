@@ -37,7 +37,9 @@ public class LocalCachedS3Service extends S3PersistenceService implements Applic
 		
 		if (local.exists(id, clazz))
 		{
-			return local.get(id, clazz);
+			var result = local.get(id, clazz);
+			memory.put(result.get());
+			return result;
 		}
 		
 		Optional<T> result = super.get(id, clazz);

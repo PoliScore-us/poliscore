@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
+import java.util.TreeSet;
 
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.legiscan.view.LegiscanState;
@@ -84,7 +85,7 @@ public final class LegislatorMockDataGenerator {
         String district = makeDistrict(chamber);
 
         // Terms: create 1–2 terms that cover roughly the last 6–10 years
-        var terms = new Legislator.LegislatorLegislativeTermSortedSet();
+        var terms = new TreeSet<Legislator.LegislativeTerm>();
         int numTerms = 1 + rnd.nextInt(2);
         LocalDate start = LocalDate.now().minusYears(6 + rnd.nextInt(5)).withMonth(1).withDayOfMonth(1);
         for (int t = 0; t < numTerms; t++) {
@@ -202,4 +203,3 @@ public final class LegislatorMockDataGenerator {
         }
     }
 }
-

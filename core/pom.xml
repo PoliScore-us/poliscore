@@ -144,14 +144,24 @@
       <version>2.17.1</version>
     </dependency>
     <dependency>
-      <groupId>io.quarkiverse.amazonservices</groupId>
-      <artifactId>quarkus-amazon-dynamodb-enhanced</artifactId>
-      <version>2.16.0</version>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jackson</artifactId>
+	</dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-hibernate-orm</artifactId>
+      <optional>true</optional>
     </dependency>
     <dependency>
-	  <groupId>io.quarkus</groupId>
-	  <artifactId>quarkus-jackson</artifactId>
-	</dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jdbc-postgresql</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-agroal</artifactId>
+      <optional>true</optional>
+    </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-junit5</artifactId>

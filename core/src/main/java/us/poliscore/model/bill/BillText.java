@@ -57,17 +57,20 @@ public class BillText extends SessionPersistable
 	
 	protected BillTextFormat format;
 	
-	public static BillText factory(String billId, String text, LocalDate lastUpdated, BillTextFormat format) {
-		return factory(billId, text, lastUpdated, (String)null, format);
+	protected Integer legiscanId;
+	
+	public static BillText factory(String billId, Integer legiscanId, String text, LocalDate lastUpdated, BillTextFormat format) {
+		return factory(billId, legiscanId, text, lastUpdated, (String)null, format);
 	}
 	
-	public static BillText factory(String billId, String text, LocalDate lastUpdated, BillTextPublishVersion version, BillTextFormat format) {
-		return factory(billId, text, lastUpdated, version != null ? version.name() : null, format);
+	public static BillText factory(String billId, Integer legiscanId, String text, LocalDate lastUpdated, BillTextPublishVersion version, BillTextFormat format) {
+		return factory(billId, legiscanId, text, lastUpdated, version != null ? version.name() : null, format);
 	}
 	
-	public static BillText factory(String billId, String text, LocalDate lastUpdated, String version, BillTextFormat format) {
+	public static BillText factory(String billId, Integer legiscanId, String text, LocalDate lastUpdated, String version, BillTextFormat format) {
 		val txt = new BillText();
 		txt.billId = billId;
+		txt.legiscanId = legiscanId;
 		txt.text = text;
 		txt.setLastUpdate(lastUpdated != null ? lastUpdated.atStartOfDay() : null);
 		txt.version = version;
