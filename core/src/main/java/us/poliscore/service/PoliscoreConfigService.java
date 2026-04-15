@@ -10,6 +10,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.val;
 import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.model.LegislativeNamespace;
@@ -72,6 +73,7 @@ public class PoliscoreConfigService {
   /**
    * Internal DTO matching build_datasets.json exactly
    */
+  @RegisterForReflection
   private record RawDatasetConfig(
       String namespace,
       Integer year,

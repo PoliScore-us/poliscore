@@ -43,6 +43,9 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 @ApplicationScoped
 public class LegislatorInterpretationService
 {
+	// We don't consider a legislator valid for interpretation unless they have at least this many interactions
+	public static final int LEG_INTERP_MIN_INTERACTIONS = 30;
+	
 	// Ensure that the x most recent bills are interpreted
 	public static final int LIMIT_BILLS = 999999;
 	
@@ -211,7 +214,7 @@ Your written response for this research section should consist of only a compact
 	 */
 	public boolean meetsInterpretationPrereqs(Legislator leg)
 	{
-		return getInteractionsForInterpretation(leg).size() >= 30;
+		return getInteractionsForInterpretation(leg).size() >= LEG_INTERP_MIN_INTERACTIONS;
 	}
 	
 //	protected void interpretMostRecentInteractions(Legislator leg)
@@ -520,8 +523,8 @@ Your written response for this research section should consist of only a compact
 			
 			interp.setHash(calculateInterpHashCode(leg));
 			
-			// We don't even calculate the stats unless there's at least 100. We have some integrity around here.
-			if (interactions.size() >= 100) {
+			// We don't even calculate the stats unless there's at least LEG_INTERP_MIN_INTERACTIONS. We have some integrity around here.
+			if (interactions.size() >= LEG_INTERP_MIN_INTERACTIONS) {
 				DoubleIssueStats stats = calculateAgregateInteractionStats(leg);
 				interp.setIssueStats(stats.toIssueStats());
 			} else {

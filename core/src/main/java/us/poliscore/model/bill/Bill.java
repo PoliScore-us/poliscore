@@ -287,6 +287,7 @@ public class Bill extends SessionPersistable {
 	/*
 	 * A percentage of how much of the chamber has cosponsored the bill.
 	 */
+	@JsonIgnore
 	public float getCosponsorPercent()
 	{
 		if (getOriginatingChamber() == null) throw new UnsupportedOperationException("Originating chamber is null for " + getId());

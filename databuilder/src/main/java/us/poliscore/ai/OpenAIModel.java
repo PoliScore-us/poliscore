@@ -24,7 +24,7 @@ public enum OpenAIModel {
 	O3("o3", 190_000, 95_000, false, true, true, new RateLimit(30_000_000, 10_000), 0, 0),
 	O3_DEEP_RESEARCH("o3-deep-research", 190_000, 95_000, false, true, true, new RateLimit(30_000_000, 10_000), 0, 0);
 
-	public static final OpenAIModel DEFAULT_MODEL = GPT51;
+	public static final OpenAIModel DEFAULT_MODEL = GPT54;
 
 	public static final OpenAIModel DEFAULT_MODEL_MINI = GPT5mini;
 	

@@ -563,6 +563,8 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	@Override
 	@SneakyThrows
 	public void syncS3BillText(PoliscoreDatasetIF dataset) {
+		if (dataset.getCode().equals("118")) return;
+		
 		dataset.optimizeExists(s3, BillText.class);
 		
 		int uploadCount = 0;
