@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeSet;
 
+import org.apache.commons.lang3.StringUtils;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -70,6 +71,14 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	public static String generateId(LegislativeNamespace ns, String regularSessionCode, String legislatorCode)
 	{
 		return SessionPersistable.generateId(ID_CLASS_PREFIX, ns, regularSessionCode, legislatorCode);
+	}
+
+	@Override
+	public void validate() {
+		super.validate();
+		
+		if (StringUtils.isBlank(getCode()) || "null".equalsIgnoreCase(getCode()))
+			throw new IllegalArgumentException("Legislator code cannot be blank.");
 	}
 	
 	@NonNull

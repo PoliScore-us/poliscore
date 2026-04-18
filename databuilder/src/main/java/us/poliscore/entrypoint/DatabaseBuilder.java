@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
@@ -14,6 +15,9 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 import us.poliscore.Environment;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.bill.InterpretationRequest;
@@ -38,18 +42,28 @@ import us.poliscore.service.storage.PostgresSyncService;
  * Run this to keep a deployed server up-to-date.
  */
 @QuarkusMain(name="DatabaseBuilder")
-public class DatabaseBuilder implements QuarkusApplication
+@Command(name = "DatabaseBuilder", mixinStandardHelpOptions = true, description = "Keeps the deployed server up to date.")
+public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 {
-	public static boolean INTERPRET_PRESS_BILLS = false;
+	// Default values for these parameters are set in the DatabaseBuilderRuntimeConfig class
 	
-	public static boolean INTERPRET_NEW_BILLS = true;
-	
-	public static boolean REINTERPRET_LEGISLATORS = true;
-	
-	public static boolean REINTERPRET_PARTIES = false;
-	
-	// Enables the agent to use web searches, but disables batch processing (which doesn't currently support web searches)
-	public static boolean AGENTIC_WEB_SEARCH = true;
+	@Option(names = "--interpret-press-bills", negatable = true, description = "Whether to interpret press bills.")
+	Boolean interpretPressBills;
+
+	@Option(names = "--interpret-new-bills", negatable = true, description = "Whether to interpret new bills.")
+	Boolean interpretNewBills;
+
+	@Option(names = "--reinterpret-legislators", negatable = true, description = "Whether to reinterpret legislators.")
+	Boolean reinterpretLegislators;
+
+	@Option(names = "--reinterpret-parties", negatable = true, description = "Whether to reinterpret parties.")
+	Boolean reinterpretParties;
+
+	@Option(names = "--flex-requests", negatable = true, description = "Whether DatabaseBuilder requests should use the flex tier.")
+	Boolean flexRequests;
+
+	@Option(names = "--agentic-web-search", negatable = true, description = "Whether bill interpretation should use agentic web search.")
+	Boolean agenticWebSearch;
 	
 	@Inject
 	private BatchBillRequestGenerator billRequestGenerator;
@@ -80,6 +94,9 @@ public class DatabaseBuilder implements QuarkusApplication
 
 	@Inject
 	private PostgresSyncService postgresSync;
+
+	@Inject
+	private DatabaseBuilderRuntimeConfig runtimeConfig;
 	
 	protected BuildReport report = new BuildReport();
 	
@@ -93,7 +110,7 @@ public class DatabaseBuilder implements QuarkusApplication
 		
 		initialDataSetup(buildDatasets);
 		
-		if (!AGENTIC_WEB_SEARCH)
+		if (!runtimeConfig.isAgenticWebSearch())
 			interpretBillPressArticles(buildDatasets);
 		
 		interpretBills(buildDatasets);
@@ -112,7 +129,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	protected void initialDataSetup(List<PoliscoreDatasetIF> buildDatasets) {
 		for (val dataset : buildDatasets) {
-			if (INTERPRET_NEW_BILLS) {
+			if (runtimeConfig.isInterpretNewBills()) {
 				data.syncS3LegislatorImages(dataset); // TODO : Doesn't really belong in this if switch but it works for my current usecases
 				data.syncS3BillText(dataset);
 			}
@@ -124,8 +141,9 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	@SneakyThrows
 	private void interpretBillPressArticles(List<PoliscoreDatasetIF> buildDatasets) {
-		if (INTERPRET_PRESS_BILLS) {
+		if (runtimeConfig.isInterpretPressBills()) {
 			List<InterpretationRequest> requests = pressBillInterpGenerator.process(buildDatasets);
+			markFlex(requests, runtimeConfig.isFlexRequests());
 			
 			if (requests.size() > 0) {
 				List<File> responses = openAi.processBatch(report, requests);
@@ -141,13 +159,14 @@ public class DatabaseBuilder implements QuarkusApplication
 	@SneakyThrows private void interpretBills(List<PoliscoreDatasetIF> buildDatasets, boolean isRecursive) {
 		if (report.hasFatal()) return;
 		
-		if (INTERPRET_NEW_BILLS) {
-			List<InterpretationRequest> requests = billRequestGenerator.process(buildDatasets, report, AGENTIC_WEB_SEARCH, isRecursive);
+		if (runtimeConfig.isInterpretNewBills()) {
+			List<InterpretationRequest> requests = billRequestGenerator.process(buildDatasets, report, runtimeConfig.isAgenticWebSearch(), isRecursive);
+			markFlex(requests, runtimeConfig.isFlexRequests());
 			
 			if (requests.size() > 0) {
 				List<File> responses;
 				
-				if (AGENTIC_WEB_SEARCH)
+				if (runtimeConfig.isAgenticWebSearch())
 					responses = openAi.processBatchImmediately(report, requests);
 				else
 					responses = openAi.processBatch(report, requests);
@@ -170,13 +189,14 @@ public class DatabaseBuilder implements QuarkusApplication
 		// The interpreter will utilize data generated in this process (i.e. aggregate stats)
 		legInterp.recalculateAllLegislators();
 		
-		if (!report.hasFatal() && REINTERPRET_LEGISLATORS) {
+		if (!report.hasFatal() && runtimeConfig.isReinterpretLegislators()) {
 			List<InterpretationRequest> requests = legislatorRequestGenerator.process(buildDatasets, report);
+			markFlex(requests, runtimeConfig.isFlexRequests());
 		
 			if (requests.size() > 0) {
 				List<File> responses;
 				
-				if (AGENTIC_WEB_SEARCH)
+				if (runtimeConfig.isAgenticWebSearch())
 					responses = openAi.processBatchImmediately(report, requests);
 				else
 					responses = openAi.processBatch(report, requests);
@@ -193,13 +213,14 @@ public class DatabaseBuilder implements QuarkusApplication
 	
 	@SneakyThrows
 	private void interpretPartyStats(List<PoliscoreDatasetIF> buildDatasets) {
-		if (!report.hasFatal() && REINTERPRET_PARTIES) {
+		if (!report.hasFatal() && runtimeConfig.isReinterpretParties()) {
 			List<InterpretationRequest> requests = partyInterpreter.interpret(buildDatasets);
+			markFlex(requests, runtimeConfig.isFlexRequests());
 			
 			if (requests.size() > 0) {
 				List<File> responses;
 				
-				if (AGENTIC_WEB_SEARCH)
+				if (runtimeConfig.isAgenticWebSearch())
 					responses = openAi.processBatchImmediately(report, requests);
 				else
 					responses = openAi.processBatch(report, requests);
@@ -216,6 +237,10 @@ public class DatabaseBuilder implements QuarkusApplication
 		}
 	}
 
+	private void markFlex(List<InterpretationRequest> requests, boolean flex) {
+		requests.forEach(request -> request.setFlex(flex));
+	}
+
 	protected void syncPostgres(List<PoliscoreDatasetIF> buildDatasets)
 	{
 		if (!postgresSync.isEnabled()) {
@@ -230,10 +255,7 @@ public class DatabaseBuilder implements QuarkusApplication
 	@Override
     public int run(String... args) throws Exception {
 		try {
-	        process();
-	        
-	        Quarkus.waitForExit();
-	        return 0;
+			return new CommandLine(this).execute(args);
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);
@@ -241,6 +263,46 @@ public class DatabaseBuilder implements QuarkusApplication
 		
 		return 1;
     }
+
+	@Override
+	public Integer call() throws Exception {
+		applyCliConfiguration();
+		logConfiguration();
+		process();
+		Quarkus.waitForExit();
+		return 0;
+	}
+
+	private void applyCliConfiguration() {
+		if (interpretPressBills != null) {
+			runtimeConfig.setInterpretPressBills(interpretPressBills);
+		}
+		if (interpretNewBills != null) {
+			runtimeConfig.setInterpretNewBills(interpretNewBills);
+		}
+		if (reinterpretLegislators != null) {
+			runtimeConfig.setReinterpretLegislators(reinterpretLegislators);
+		}
+		if (reinterpretParties != null) {
+			runtimeConfig.setReinterpretParties(reinterpretParties);
+		}
+		if (flexRequests != null) {
+			runtimeConfig.setFlexRequests(flexRequests);
+		}
+		if (agenticWebSearch != null) {
+			runtimeConfig.setAgenticWebSearch(agenticWebSearch);
+		}
+	}
+
+	private void logConfiguration() {
+		System.out.println("DatabaseBuilder configuration:");
+		System.out.println("  interpret-press-bills=" + runtimeConfig.isInterpretPressBills());
+		System.out.println("  interpret-new-bills=" + runtimeConfig.isInterpretNewBills());
+		System.out.println("  reinterpret-legislators=" + runtimeConfig.isReinterpretLegislators());
+		System.out.println("  reinterpret-parties=" + runtimeConfig.isReinterpretParties());
+		System.out.println("  flex-requests=" + runtimeConfig.isFlexRequests());
+		System.out.println("  agentic-web-search=" + runtimeConfig.isAgenticWebSearch());
+	}
 	
 	public static void main(String[] args) {
 		Quarkus.run(DatabaseBuilder.class, args);

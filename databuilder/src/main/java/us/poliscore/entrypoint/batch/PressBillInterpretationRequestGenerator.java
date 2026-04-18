@@ -35,7 +35,7 @@ import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
 import us.poliscore.ai.OpenAIModel;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
-import us.poliscore.entrypoint.DatabaseBuilder;
+import us.poliscore.entrypoint.DatabaseBuilderRuntimeConfig;
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.InterpretationOrigin;
 import us.poliscore.model.LegislativeNamespace;
@@ -252,6 +252,9 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	private Set<Bill> dirtyBills = new HashSet<Bill>();
 	
 	private Set<Bill> queriedBills = new HashSet<Bill>();
+
+	@Inject
+	DatabaseBuilderRuntimeConfig runtimeConfig;
 	
 	// If you need to reprocess a particular bill for whatever reason, add it here. When we run, we will always process any bills in this list, so be careful
 	// not to commit this list with anything in it.
@@ -261,9 +264,9 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	
 	public static final boolean FORCE_REINTERPRET = specificFetch.length > 0;
 	
-	public static AIInterpretationMetadata metadata()
+	public AIInterpretationMetadata metadata()
 	{
-		return AIInterpretationMetadata.construct(OpenAIService.PROVIDER, interpModel.getId(), 0, DatabaseBuilder.AGENTIC_WEB_SEARCH);
+		return AIInterpretationMetadata.construct(OpenAIService.PROVIDER, interpModel.getId(), 0, runtimeConfig.isAgenticWebSearch());
 	}
 	
 	@SneakyThrows

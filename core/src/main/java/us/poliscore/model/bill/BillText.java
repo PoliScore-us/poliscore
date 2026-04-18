@@ -115,6 +115,20 @@ public class BillText extends SessionPersistable
 	public String getDocument() {
 		return text;
 	}
+
+	@JsonIgnore
+	@DynamoDbIgnore
+	public BillText metadataOnly() {
+		val copy = new BillText();
+		copy.setId(getId());
+		copy.setBillId(getBillId());
+		copy.setVersion(getVersion());
+		copy.setFormat(getFormat());
+		copy.setLegiscanId(getLegiscanId());
+		copy.setLastUpdate(getLastUpdate());
+		copy.setStorageBucket(getStorageBucket());
+		return copy;
+	}
 	
 	@JsonIgnore
 	@DynamoDbIgnore

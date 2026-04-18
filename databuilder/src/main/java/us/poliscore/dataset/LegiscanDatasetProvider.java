@@ -55,6 +55,7 @@ import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Party;
+import us.poliscore.model.Persistable;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.Bill.BillSponsor;
 import us.poliscore.model.bill.BillStatus;
@@ -142,7 +143,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    }
 
 	    for (var bill : cached.getBills().values()) {
-	        importBill(bill, dataset, regularDataset);
+    		importBill(bill, dataset, regularDataset);
 	    }
 
 	    for (var vote : cached.getVotes().values()) {
@@ -231,11 +232,14 @@ public class LegiscanDatasetProvider implements DatasetProvider {
     	bill.setStatus(buildStatus(view, regularDataset.getSession()));
     	bill.setIntroducedDate(introducedDate.get());
     	bill.setSponsor(convertSponsor(view.getSponsors().getFirst(), regularDataset));
+    	if (bill.getSponsor() == null)
+    		throw new IllegalStateException("Primary sponsor is required for bill " + view.getBillId() + " but legislator with people id " + view.getSponsors().getFirst().getPeopleId() + " could not be resolved.");
     	if (view.getSponsors().size() > 1)
-    		bill.setCosponsors(view.getSponsors().subList(1, view.getSponsors().size()).stream().map(s -> convertSponsor(s, regularDataset)).collect(Collectors.toList()));
-    	bill.setLastActionDate(lastActionDate.get());
-    	bill.setLegiscanId(view.getBillId());
-    	bill.setOfficialUrl(view.getStateLink());
+    		bill.setCosponsors(view.getSponsors().subList(1, view.getSponsors().size()).stream().map(s -> convertSponsor(s, regularDataset)).filter(Objects::nonNull).collect(Collectors.toList()));
+	    	bill.setLastActionDate(lastActionDate.get());
+	    	bill.setLegiscanId(view.getBillId());
+	    	bill.setOfficialUrl(view.getStateLink());
+	    	bill.setTexts(buildBillTextMetadata(bill.getId(), view));
     	
     	
     	
@@ -396,7 +400,8 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	private BillSponsor convertSponsor(LegiscanSponsorView view, PoliscoreDataset regularDataset) {
 		Legislator leg = legiscanIdToLegislator.get(view.getPeopleId());
 		if (leg == null) {
-			throw new NoSuchElementException("Could not find legislator with people id " + view.getPeopleId());
+			logger.warn("Skipping sponsor import because we could not find legislator with people id {}", view.getPeopleId());
+			return null;
 		}
 		
 		var sponsor = new BillSponsor(leg.getId(), leg.getName());
@@ -498,12 +503,10 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    
 	    String legId;
 		if (regularDataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
-			if (view.getBioguideId() == null) throw new NullPointerException();
 			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), view.getBioguideId());
 		} else
 			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), String.valueOf(view.getPeopleId()));
 		
-		if (legId.contains("null")) throw new NullPointerException();
 		leg.setId(legId);
 		
 		if (view.getBio() != null && view.getBio().getLinks() != null && view.getBio().getLinks().getOfficial() != null)
@@ -534,20 +537,32 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    
 	    term.setChamber(LegislativeChamber.fromLegiscanRole(view.getRole()));
 	    leg.getTerms().add(term);
-	    
-		val existing = regularDataset.get(legId, Legislator.class);
-		if (existing.isPresent()) {
-			val existingLeg = existing.get();
+
+		try {
+			Persistable.validate(leg);
 			
-			if (StringUtils.isBlank(existingLeg.getOfficialUrl()))
-				existingLeg.setOfficialUrl(leg.getOfficialUrl());
+			val existing = regularDataset.get(legId, Legislator.class);
+			if (existing.isPresent()) {
+				val existingLeg = existing.get();
+				
+				if (StringUtils.isBlank(existingLeg.getOfficialUrl()))
+					existingLeg.setOfficialUrl(leg.getOfficialUrl());
+				
+				existingLeg.getTerms().addAll(leg.getTerms());
+				return;
+			}
 			
-			existingLeg.getTerms().addAll(leg.getTerms());
-			return;
+			legiscanIdToLegislator.put(leg.getLegiscanId(), leg);
+			regularDataset.put(leg);
+		} catch (IllegalArgumentException e) {
+			logger.error(
+				"Skipping legislator import because validation failed. peopleId={}, bioguideId={}, name={}",
+				view.getPeopleId(),
+				view.getBioguideId(),
+				view.getName(),
+				e
+			);
 		}
-		
-		legiscanIdToLegislator.put(leg.getLegiscanId(), leg);
-		regularDataset.put(leg);
 	}
 
 
@@ -570,9 +585,11 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		int uploadCount = 0;
 		int migratedCount = 0;
 		
-		for (val bill : dataset.query(Bill.class)) {
-			val legiBill = legiscan.getBill(bill.getLegiscanId());
-			if (legiBill.getTexts().isEmpty()) continue;
+			for (val bill : dataset.query(Bill.class)) {
+				val legiBill = legiscan.getBill(bill.getLegiscanId());
+				bill.setTexts(buildBillTextMetadata(bill.getId(), legiBill));
+				dataset.put(bill);
+				if (legiBill.getTexts().isEmpty()) continue;
 			
 			val latestMetadata = legiBill.getTexts().stream().max(Comparator.comparing(LegiscanTextMetadataView::getDate, Comparator.nullsFirst(Comparator.naturalOrder())));
 			if (latestMetadata.isEmpty()) continue;
@@ -602,6 +619,23 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		dataset.clearExistsOptimize(s3, BillText.class);
 		
 		Log.info("Uploaded " + uploadCount + " latest bill texts to s3 from Legiscan provider and migrated " + migratedCount + " legacy bill texts.");
+	}
+
+	protected List<BillText> buildBillTextMetadata(String billId, LegiscanBillView view) {
+		if (view == null || view.getTexts() == null || view.getTexts().isEmpty()) {
+			return List.of();
+		}
+
+		return view.getTexts().stream()
+				.map(metadata -> BillText.factory(
+						billId,
+						metadata.getDocId(),
+						null,
+						metadata.getDate(),
+						buildBillTextVersion(metadata),
+						null))
+				.sorted(Comparator.comparing(BillText::getLastUpdate, Comparator.nullsLast(Comparator.naturalOrder())))
+				.toList();
 	}
 	
 	protected boolean migrateCongressLegiscanBillTextCompatibility(Bill bill, LegiscanTextMetadataView metadata) {

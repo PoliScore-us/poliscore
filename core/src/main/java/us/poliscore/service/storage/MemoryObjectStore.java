@@ -19,6 +19,8 @@ public class MemoryObjectStore implements ObjectStorageServiceIF {
 	
 	public void put(Persistable obj)
 	{
+		Persistable.validate(obj);
+		
 		if (obj instanceof Bill) { ((Bill)obj).setText(null); }
 		
 		memoryStore.put(obj.getId(), obj);

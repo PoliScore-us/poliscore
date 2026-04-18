@@ -62,7 +62,7 @@ public class S3DataPatcher implements QuarkusApplication {
 				}
 				
 				for (var interp : getBillInterpretations(bill)) {
-					if (interp.getSourceBillTextDate() != null && interp.getSourceBillTextVersion() != null) {
+					if (interp.getSourceBillTextVersion() != null) {
 						skipped++;
 						continue;
 					}
@@ -73,7 +73,6 @@ public class S3DataPatcher implements QuarkusApplication {
 						continue;
 					}
 					
-					interp.setSourceBillTextDate(matchedText.getLastUpdated());
 					interp.setSourceBillTextVersion(matchedText.getVersion());
 					s3.put(interp);
 					count++;

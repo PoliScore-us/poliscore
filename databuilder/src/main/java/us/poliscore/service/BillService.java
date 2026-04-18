@@ -67,6 +67,7 @@ public class BillService {
 		var billLastAction = b.getLastActionDate() == null || interp.getLastUpdate().isAfter(b.getLastActionDate().atStartOfDay()) ? interp.getLastUpdate() : b.getLastActionDate().atStartOfDay();
 		b.setLastUpdate(billLastAction);
 		
+		b.setTexts(getBillTexts(b));
 		populatePressInterps(interp);
 		b.setInterpretation(interp);
 	}

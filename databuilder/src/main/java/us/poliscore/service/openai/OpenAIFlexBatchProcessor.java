@@ -5,7 +5,6 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -48,6 +47,12 @@ public class OpenAIFlexBatchProcessor {
 	// Rate limiter here is a secondary "absolute max". Actual rate limiting is done in OpenAIService.waitForRateLimit
 	private static final int MAX_REQUESTS_PER_MINUTE = Integer.getInteger("poliscore.openai.flex.rpm", 100);
 
+	private static final Duration RATE_LIMIT_REQUEUE_DELAY = Duration
+			.ofSeconds(Integer.getInteger("poliscore.openai.flex.rateLimitRequeueDelaySeconds", 30));
+
+	private static final int IMPORT_PROGRESS_LOG_INTERVAL = Integer
+			.getInteger("poliscore.openai.flex.importProgressLogInterval", 8);
+
 	// If you want to fail-fast on first fatal error:
 	private static final boolean FAIL_FAST = Boolean
 			.parseBoolean(System.getProperty("poliscore.openai.flex.failFast", "true"));
@@ -78,6 +83,7 @@ public class OpenAIFlexBatchProcessor {
 
 		// Single-writer queue (4):
 		final BlockingQueue<String> linesToWrite = new LinkedBlockingQueue<>(Math.max(THREADS * 4, 64));
+		final BlockingQueue<String> linesToImport = new LinkedBlockingQueue<>(Math.max(THREADS * 4, 64));
 
 		// Totals (money/tokens) — thread-safe without contention:
 		final LongAdder promptTokens = new LongAdder();
@@ -89,6 +95,8 @@ public class OpenAIFlexBatchProcessor {
 
 		// Progress / control:
 		final AtomicInteger writtenRequests = new AtomicInteger(0);
+		final AtomicInteger handledImports = new AtomicInteger(0);
+		final AtomicInteger successfulImports = new AtomicInteger(0);
 		final AtomicReference<Throwable> fatal = new AtomicReference<>(null);
 		final AtomicBoolean stop = new AtomicBoolean(false);
 
@@ -119,6 +127,28 @@ public class OpenAIFlexBatchProcessor {
 			}
 		}, "openai-flex-jsonl-writer");
 		writerThread.start();
+		
+		responseImporter.beginImport();
+
+			final Thread importerThread = new Thread(() -> {
+				try {
+					while (true) {
+						String line = linesToImport.take();
+						if (GlobalWriterSignals.POISON_PILL.equals(line))
+							break;
+
+						boolean imported = responseImporter.processLine(report, line);
+						int handled = handledImports.incrementAndGet();
+						if (imported) {
+							successfulImports.incrementAndGet();
+						}
+						logImportProgress(requests.size(), handled, successfulImports.get());
+					}
+				} catch (Throwable t) {
+					fatal.compareAndSet(null, t);
+			}
+		}, "openai-flex-importer");
+		importerThread.start();
 
 		ExecutorService pool = Executors.newFixedThreadPool(THREADS, r -> {
 			Thread t = new Thread(r);
@@ -141,9 +171,11 @@ public class OpenAIFlexBatchProcessor {
 
 			    // Tell writer to stop (don’t block forever here)
 			    try { linesToWrite.offer(GlobalWriterSignals.POISON_PILL, 250, TimeUnit.MILLISECONDS); } catch (Throwable ignored) {}
+			    try { linesToImport.offer(GlobalWriterSignals.POISON_PILL, 250, TimeUnit.MILLISECONDS); } catch (Throwable ignored) {}
 
-			    // Give writer a moment to flush/close
+			    // Give writer/importer a moment to flush/close
 			    try { writerThread.join(3_000); } catch (Throwable ignored) {}
+			    try { importerThread.join(3_000); } catch (Throwable ignored) {}
 			  } catch (Throwable t) {
 			    // Never throw from shutdown hooks
 			    Log.error("Error in shutdown hook.", t);
@@ -192,11 +224,21 @@ public class OpenAIFlexBatchProcessor {
 									}
 									totalUsd.add(chat.costUsd());
 
-									// Build your existing JSONL “batch envelope” line
-									String line = toBatchEnvelopeLine(req, chat);
-									linesToWrite.put(line);
+										// Build your existing JSONL “batch envelope” line
+										String line = toBatchEnvelopeLine(req, chat);
+										linesToWrite.put(line);
+										linesToImport.put(line);
 
-								} catch (Throwable t) {
+									} catch (Throwable t) {
+									if (openAIChatService.isRateLimitFailure(t)) {
+										Log.warn("OpenAI rate limit persisted after retries for "
+												+ req.getData().getOid()
+												+ ". Requeueing request instead of halting the flex batch.", t);
+										work.offer(req);
+										LockSupport.parkNanos(RATE_LIMIT_REQUEUE_DELAY.toNanos());
+										continue;
+									}
+
 									Log.error("Fatal error in OpenAI worker. Halting flex batch.", t);
 									fatal.compareAndSet(null, t);
 									report.fatal(t);
@@ -230,6 +272,9 @@ public class OpenAIFlexBatchProcessor {
 			// Stop writer:
 			linesToWrite.put(GlobalWriterSignals.POISON_PILL);
 			writerThread.join();
+			
+			linesToImport.put(GlobalWriterSignals.POISON_PILL);
+			importerThread.join();
 		}
 
 		// Set totals on BuildReport
@@ -237,14 +282,26 @@ public class OpenAIFlexBatchProcessor {
 		report.setFlexRequests((int) flexRequests.sum());
 		report.setFlexRequests((int) normalRequests.sum());
 
-		// If fatal happened mid-way, import what we have
-		if (fatal.get() != null) {
-			if (writtenRequests.get() > 0) {
-				responseImporter.process(report, outputFile);
-			}
+			responseImporter.finishImport(report);
+			logImportProgress(requests.size(), handledImports.get(), successfulImports.get());
+
+		return List.of();
+	}
+
+	private void logImportProgress(int totalRequests, int handledImports, int successfulImports) {
+		if (totalRequests <= 0) {
+			return;
 		}
 
-		return Arrays.asList(outputFile);
+		if (handledImports != totalRequests
+				&& handledImports % Math.max(1, IMPORT_PROGRESS_LOG_INTERVAL) != 0) {
+			return;
+		}
+
+		int remaining = Math.max(0, totalRequests - handledImports);
+		int failed = Math.max(0, handledImports - successfulImports);
+		Log.infof("Imported %d/%d responses (%d failed, %d remaining).",
+				successfulImports, totalRequests, failed, remaining);
 	}
 
 	private String toBatchEnvelopeLine(InterpretationRequest request, ChatResult chat) {

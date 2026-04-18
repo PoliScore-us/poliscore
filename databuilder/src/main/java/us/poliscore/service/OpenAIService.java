@@ -23,6 +23,7 @@ import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.errors.BadRequestException;
 import com.openai.errors.InternalServerException;
 import com.openai.errors.OpenAIInvalidDataException;
+import com.openai.errors.RateLimitException;
 import com.openai.models.Reasoning;
 import com.openai.models.ReasoningEffort;
 import com.openai.models.batches.Batch;
@@ -51,7 +52,7 @@ import us.poliscore.ai.MinuteRateLimiter;
 import us.poliscore.ai.OpenAIModel;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.bill.OpenAIBatchJsonlSerializer;
-import us.poliscore.entrypoint.DatabaseBuilder;
+import us.poliscore.entrypoint.DatabaseBuilderRuntimeConfig;
 import us.poliscore.entrypoint.batch.BatchOpenAIResponseImporter;
 import us.poliscore.model.AIAggregateInterpretationMetadata;
 import us.poliscore.model.AIInterpretationMetadata;
@@ -84,6 +85,9 @@ public class OpenAIService {
 	@Inject OpenAIFlexBatchProcessor flexBatchProcessor;
 	
 	@Inject TokenEstimatorService tokenEstimatorService;
+
+	@Inject
+	DatabaseBuilderRuntimeConfig runtimeConfig;
 	
 	protected LocalDateTime nextCallTime = null;
 	
@@ -97,19 +101,19 @@ public class OpenAIService {
 
 	public record ChatResult(String content, Usage usage, double costUsd) {}
 	
-	public static AIInterpretationMetadata metadata()
+	public AIInterpretationMetadata metadata()
 	{
-		return AIInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.AGENTIC_WEB_SEARCH);
+		return AIInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, runtimeConfig.isAgenticWebSearch());
 	}
 	
-	public static AIAggregateInterpretationMetadata metadata(List<BillSlice> slices)
+	public AIAggregateInterpretationMetadata metadata(List<BillSlice> slices)
 	{
-		return AIAggregateInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.AGENTIC_WEB_SEARCH, slices);
+		return AIAggregateInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, runtimeConfig.isAgenticWebSearch(), slices);
 	}
 	
-	public static AIInterpretationMetadata metadata(BillSlice slice)
+	public AIInterpretationMetadata metadata(BillSlice slice)
 	{
-		return AISliceInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, DatabaseBuilder.AGENTIC_WEB_SEARCH, slice);
+		return AISliceInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, runtimeConfig.isAgenticWebSearch(), slice);
 	}
 	
 	private MinuteRateLimiter limiterFor(OpenAIModel model) {
@@ -152,6 +156,7 @@ public class OpenAIService {
 		waitForRateLimit(model, estimatedTokens);
 		
 		OpenAIModel _model = ObjectUtils.defaultIfNull(model, OpenAIModel.DEFAULT_MODEL);
+		boolean useFlex = Objects.requireNonNullElse(request.getFlex(), false);
 		
 		val paramBuilder = ResponseCreateParams.builder()
 				.instructions(systemMsg)
@@ -164,7 +169,7 @@ public class OpenAIService {
 			        Tool.ofWebSearch(WebSearchTool.builder().type(Type.WEB_SEARCH_PREVIEW).build())
 			        ));
 		
-		if (_model != OpenAIModel.GPT41)
+		if (useFlex)
 			paramBuilder.serviceTier(ResponseCreateParams.ServiceTier.FLEX);
 		
 		if (_model.isSupportsTemperature())
@@ -181,13 +186,17 @@ public class OpenAIService {
 		Log.info("Intepreting " + request.getData().getOid() + " using model " + model.getId() + " with reasoning effort " + effort.asString() + " and message size " + userMsg.length());
 		RetryPolicy<Response> retryPolicy = RetryPolicy.<Response>builder()
 			    .handle(SocketTimeoutException.class, InternalServerException.class,
-			    		OpenAIInvalidDataException.class // Even though this runs counter to their documentation, this exception is actually thrown wrapping a "SocketException: connection reset", so we definitely want to retry it.
+			    		OpenAIInvalidDataException.class, // Even though this runs counter to their documentation, this exception is actually thrown wrapping a "SocketException: connection reset", so we definitely want to retry it.
+			    		RateLimitException.class
 			    		)
 			    .handleIf((failure) -> {
+			    	if (isRateLimitFailure(failure)) {
+			    		return true;
+			    	}
 			        String msg = failure.getMessage() == null ? null : failure.getMessage().toLowerCase();
 			        if (msg == null) return false;
 			        if (failure instanceof BadRequestException) { return !msg.contains("exceeds the context window"); }
-			        return msg != null && msg.toLowerCase().contains("rate limit");
+			        return false;
 			    })
 //			    .handleResultIf(r -> r == null || !r.status().isPresent() || r.status().get() != ResponseStatus.COMPLETED)
 			    .withBackoff(2, 900, ChronoUnit.SECONDS)
@@ -230,6 +239,31 @@ public class OpenAIService {
 
     	return new ChatResult(responseBody, usage, costUsd);
     }
+
+	public boolean isRateLimitFailure(Throwable failure) {
+		Throwable current = failure;
+
+		while (current != null) {
+			if (current instanceof RateLimitException) {
+				return true;
+			}
+
+			String msg = current.getMessage();
+			if (msg != null) {
+				String lower = msg.toLowerCase();
+				if (lower.contains("rate limit")
+						|| lower.contains("processing too many requests")
+						|| lower.startsWith("429:")
+						|| lower.contains(" 429")) {
+					return true;
+				}
+			}
+
+			current = current.getCause();
+		}
+
+		return false;
+	}
 	
 	/**
 	 * Submits a batch of files, awaits their processing, and then downloads the results.

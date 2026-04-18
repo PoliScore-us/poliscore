@@ -106,7 +106,7 @@ Your output should be ONLY a machine-readable JSON array (with no wrapper-text o
 		interp = new BillInterpretation();
 		interp.setId(BillInterpretation.generateId(bill.getId(), null));
 		interp.setBill(bill);
-		interp.setMetadata(OpenAIService.metadata(slices));
+		interp.setMetadata(ai.metadata(slices));
 		s3.put(interp);
 		
 		return slices;

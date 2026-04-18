@@ -39,7 +39,7 @@ import us.poliscore.util.ParsingUtil;
 
 @Data
 @EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
-@JsonIgnoreProperties(value = { "sliceInterpretations" })
+@JsonIgnoreProperties(value = { "sliceInterpretations" }, ignoreUnknown = true)
 @DynamoDbBean
 @RegisterForReflection
 @NoArgsConstructor
@@ -111,14 +111,6 @@ public class BillInterpretation extends SessionPersistable
 	protected String laymansReport;
 
 	protected String sourceBillTextVersion;
-
-	protected LocalDate sourceBillTextDate;
-
-	protected Boolean billTextOutOfDate;
-
-	protected String latestBillTextVersion;
-
-	protected LocalDate latestBillTextDate;
 	
 	@NonNull
 	protected String billId;

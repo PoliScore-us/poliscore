@@ -2,7 +2,6 @@ package us.poliscore.bill;
 
 import com.openai.models.ReasoningEffort;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,7 +10,6 @@ import us.poliscore.ai.OpenAIModel;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Builder
 public class InterpretationRequest {
 
@@ -24,5 +22,26 @@ public class InterpretationRequest {
   private OpenAIModel requestedModel;
   
   private ReasoningEffort reasoningEffort;
+
+  /**
+   * Optional override for OpenAI FLEX service tier usage.
+   * Null means "use the service default decision logic."
+   */
+  private Boolean flex;
+
+  public InterpretationRequest(CustomData data, String systemMsg, String userMsg, OpenAIModel requestedModel,
+      ReasoningEffort reasoningEffort) {
+    this(data, systemMsg, userMsg, requestedModel, reasoningEffort, null);
+  }
+
+  public InterpretationRequest(CustomData data, String systemMsg, String userMsg, OpenAIModel requestedModel,
+      ReasoningEffort reasoningEffort, Boolean flex) {
+    this.data = data;
+    this.systemMsg = systemMsg;
+    this.userMsg = userMsg;
+    this.requestedModel = requestedModel;
+    this.reasoningEffort = reasoningEffort;
+    this.flex = flex;
+  }
   
 }

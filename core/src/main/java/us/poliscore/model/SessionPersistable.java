@@ -1,6 +1,7 @@
 package us.poliscore.model;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -21,6 +22,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.val;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
@@ -94,6 +96,16 @@ abstract public class SessionPersistable implements Persistable {
 	public static String generateId(String idClassPrefix, LegislativeNamespace ns, String sessionCode, String objectCode)
 	{
 		return idClassPrefix + "/" + ns.getNamespace() + "/" + sessionCode + "/" + objectCode;
+	}
+
+	@Override
+	public void validate() {
+		if (getId() == null)
+			throw new IllegalArgumentException("Persistable's id field is required.");
+		
+		val expectedPrefix = Persistable.getIdClassPrefix(getClass());
+		if (!Objects.equals(expectedPrefix, getId().split("/")[0]))
+			throw new IllegalArgumentException("Object's id class prefix does not match expected value. Exepected prefix [" + expectedPrefix + "] on id [" + getId() + "]");
 	}
 
 	@PrePersist

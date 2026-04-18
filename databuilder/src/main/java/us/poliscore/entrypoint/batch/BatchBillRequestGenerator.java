@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -19,6 +19,7 @@ import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
+import lombok.Data;
 import lombok.val;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
@@ -26,7 +27,6 @@ import us.poliscore.bill.BillInterpretationRouter;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.BuildReport;
-import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillPrompt;
@@ -42,34 +42,84 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 
 @QuarkusMain(name = "BatchBillRequestGenerator")
 public class BatchBillRequestGenerator implements QuarkusApplication {
-	public static final boolean REPROCESS_INVALID_BILLS = false;
-
-	public static final int MAX_BILL_PROCESS = 5000; // -1 for infinite
-
-	public static final List<String> specificFetch = null;
-//	public static final List<String> specificFetch = Arrays.asList(
-//	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "s", 1383)
-//	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 7148),
-//	Bill.generateId(LegislativeNamespace.US_CONGRESS, "119", "hr", 7567)
-//);
-//public static final List<String> specificFetch = Arrays.asList(Bill.generateId(LegislativeNamespace.US_COLORADO, "2173", "sb", 317));
-
-//public static final List<String> specificFetch = Arrays.asList(
-//  "BIL/us/co/2173/hb/1054","BIL/us/co/2173/hb/1062","BIL/us/co/2173/sb/303",
-//  "BIL/us/co/2173/hb/1272","BIL/us/co/2173/hb/1069","BIL/us/co/2173/sb/132",
-//  "BIL/us/co/2173/sb/201","BIL/us/co/2173/hb/1312","BIL/us/co/2173/hb/1208",
-//  "BIL/us/co/2173/sb/11","BIL/us/co/2173/sb/77","BIL/us/co/2173/sb/160"
-//);
-
-	public static final List<String> billSkipList = Arrays.asList(
-	);
 	
-	public static final boolean CHECK_S3_EXISTS = specificFetch == null;
+	@Data
+	public static class BillGenerationCriteria {
+		private final List<BiFunction<BatchBillRequestGenerator, Stream<Bill>, Stream<Bill>>> refinements = new ArrayList<>();
+		
+		public boolean enableWebSearch = true;
+		
+		public boolean REPROCESS_INVALID_BILLS = false;
+	
+		public int MAX_BILL_PROCESS = 5000; // -1 for infinite
+		
+		public List<String> billSkipList = Arrays.asList(
+		);
+		
+		public boolean CHECK_S3_EXISTS = true;
+	
+		/** Default requested model for these interpretation requests. */
+		public OpenAIModel billProcessModel = OpenAIModel.DEFAULT_MODEL;
+	
+		public ReasoningEffort minEffort = ReasoningEffort.LOW;
+		
+		public static BillGenerationCriteria defaultCriteria() {
+			return new BillGenerationCriteria()
+					.billIsIntroducedAfter(LocalDate.of(2026, 3, 1));
+		}
 
-	/** Default requested model for these interpretation requests. */
-	public static final OpenAIModel billProcessModel = OpenAIModel.DEFAULT_MODEL;
+		public Stream<Bill> refine(Stream<Bill> stream, BatchBillRequestGenerator generator, boolean includePressDirtyBills) {
+			stream = stream
+					.filter(generator.billService::hasBillText);
 
-	public static final ReasoningEffort minEffort = ReasoningEffort.LOW;
+			stream = generator.andNotInList(stream, billSkipList);
+			stream = generator.andNotAlreadyInterpretedOrInvalid(this, stream, includePressDirtyBills);
+
+			for (val refinement : refinements) {
+				stream = refinement.apply(generator, stream);
+			}
+
+			return stream;
+		}
+
+		public BillGenerationCriteria ifInterpretedThenByModel(String model) {
+			refinements.add((generator, stream) -> stream.filter(b -> !generator.billInterpreter.isInterpreted(b.getId())
+					|| StringUtils.equalsIgnoreCase(
+							generator.requireInterpretation(b).getMetadata().getModel(),
+							model)));
+			return this;
+		}
+
+		public BillGenerationCriteria ifInterpretedThenAboveStatusProgress(float progress) {
+			refinements.add((generator, stream) -> stream.filter(b -> !generator.billInterpreter.isInterpreted(b.getId())
+					|| b.getStatus().getProgress() > progress));
+			return this;
+		}
+
+		public BillGenerationCriteria ifInterpretedThenBeforeDate(LocalDate beforeDate) {
+			refinements.add((generator, stream) -> stream.filter(b -> !generator.billInterpreter.isInterpreted(b.getId())
+					|| beforeDate.isAfter(generator.requireInterpretation(b).getDate())));
+			return this;
+		}
+
+		public BillGenerationCriteria billIsIntroducedAfter(LocalDate afterDate) {
+			refinements.add((generator, stream) -> stream.filter(b -> b.getIntroducedDate().isAfter(afterDate)));
+			return this;
+		}
+
+		public BillGenerationCriteria ifInterpretedThenHasZeroSearchReferences() {
+			refinements.add((generator, stream) -> stream.filter(b -> !generator.billInterpreter.isInterpreted(b.getId())
+					|| generator.requireInterpretation(b).getPressInterps().size() == 0));
+			return this;
+		}
+
+		public BillGenerationCriteria ifInterpretedThenInSession(String sessionCode) {
+			refinements.add((generator, stream) -> stream.filter(b -> !generator.billInterpreter.isInterpreted(b.getId())
+					|| b.getSessionCode().equals(sessionCode)));
+			return this;
+		}
+		
+	}
 
 	@Inject
 	private LocalCachedS3Service s3;
@@ -107,10 +157,27 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 	public List<InterpretationRequest> process() throws IOException {
 		data.importAllDatasets();
-		return process(data.getBuildDatasets(), new BuildReport(), true, false);
+		return processDatasets(BillGenerationCriteria.defaultCriteria(), data.getBuildDatasets(), new BuildReport(), false);
 	}
 
 	public List<InterpretationRequest> process(List<PoliscoreDatasetIF> buildDatasets, BuildReport report, boolean enableWebSearch, boolean isSecondFetch) throws IOException {
+		val criteria = BillGenerationCriteria.defaultCriteria();
+		criteria.enableWebSearch = enableWebSearch;
+		return processDatasets(criteria, buildDatasets, report, isSecondFetch);
+	}
+	
+
+	/**
+	 * Processes all bills in a dataset
+	 * 
+	 * @param buildDatasets
+	 * @param report
+	 * @param enableWebSearch
+	 * @param isSecondFetch
+	 * @return
+	 * @throws IOException
+	 */
+	public List<InterpretationRequest> processDatasets(BillGenerationCriteria criteria, List<PoliscoreDatasetIF> buildDatasets, BuildReport report, boolean isSecondFetch) throws IOException {
 		this.report = report;
 		totalRequests = 0;
 		requests.clear();
@@ -125,199 +192,228 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 		}
 
 		for (val dataset : buildDatasets) {
-			processDataset(dataset, enableWebSearch, isSecondFetch);
+			processDataset(criteria, dataset, isSecondFetch);
 		}
 
 		Log.info("Bill interpretation request generation complete. Generated " + totalRequests + " requests.");
 
 		return new ArrayList<>(requests);
 	}
+	
+	/**
+	 * Processes a list of bills.
+	 * 
+	 * @param billId
+	 * @param report
+	 * @param enableWebSearch
+	 * @param isSecondFetch
+	 * @return
+	 * @throws IOException
+	 */
+	public List<InterpretationRequest> processBills(BillGenerationCriteria criteria, List<String> billIds, BuildReport report, boolean isSecondFetch) throws IOException {
+		data.importAllDatasets();
+		totalRequests = 0;
+		requests.clear();
+		this.report = report;
 
-	private void processDataset(PoliscoreDatasetIF dataset, boolean enableWebSearch, boolean isSecondFetch) throws IOException {
-		if (MAX_BILL_PROCESS != -1 && isSecondFetch)
-			return;
-		if (specificFetch != null && isSecondFetch)
+		processBillIds(criteria, billIds, isSecondFetch);
+		
+		return new ArrayList<>(requests);
+	}
+
+	private void processBillIds(BillGenerationCriteria criteria, List<String> billIds, boolean isSecondFetch) {
+		for(String billId : billIds) {
+			val dataset = data.getDataset(billId);
+			dataset.optimizeExists(s3, BillInterpretation.class);
+			dataset.optimizeExists(s3, BillText.class);
+	
+			val bill = dataset.get(billId, Bill.class)
+					.orElseThrow(() -> new IllegalArgumentException("Bill not found for refresh: " + billId));
+	
+			if (!billService.hasBillText(bill)) {
+				Log.info("Skipping refresh request generation for " + billId + " because bill text is unavailable.");
+				continue;
+			}
+	
+			val latestBillText = billService.getBillText(bill)
+					.orElseThrow(() -> new IllegalStateException("Latest bill text not found for " + billId));
+	
+			processBill(criteria, bill, latestBillText, !isSecondFetch, true);
+		}
+	}
+
+	private void processDataset(BillGenerationCriteria criteria, PoliscoreDatasetIF dataset, boolean isSecondFetch) throws IOException {
+		if (criteria.MAX_BILL_PROCESS != -1 && isSecondFetch)
 			return;
 
 		boolean includePressDirtyBills = !isSecondFetch;
 
-		var stream = dataset.query(Bill.class).stream()
-				.filter(b -> specificFetch == null || specificFetch.contains(b.getId()))
-				.filter(b -> billService.hasBillText(b));
-
-		if (specificFetch == null) {
-			stream = andNotInList(stream, billSkipList);
-			stream = andNotAlreadyInterpretedOrInvalid(stream, includePressDirtyBills);
-			
-			// Texas has a gigantic number of bills. We don't want to do all of them just yet.
-			stream = billIsIntroducedAfter(stream, LocalDate.of(2026, 3, 1));
-
-			// stream = ifInterpretedThenInSession(stream, "119");
-			// stream = ifInterpretedThenByModel(stream, "gpt-4.1");
-			// stream = ifInterpretedThenAboveStatusProgress(stream, 0.1f);
-			// stream = ifInterpretedThenBeforeDate(stream, LocalDate.of(2025, 12, 11));
-		}
-
-		var requestBills = stream.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed()).toList();
+		var requestBills = criteria.refine(dataset.query(Bill.class).stream(), this, includePressDirtyBills)
+				.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed()).toList();
 
 		long total = requestBills.size();
 
-		if (MAX_BILL_PROCESS != -1) {
-			requestBills = requestBills.stream().limit(MAX_BILL_PROCESS).toList();
+		if (criteria.MAX_BILL_PROCESS != -1) {
+			requestBills = requestBills.stream().limit(criteria.MAX_BILL_PROCESS).toList();
 		}
 
-		String outOf = (MAX_BILL_PROCESS != -1 && total > MAX_BILL_PROCESS) ? " out of " + total : "";
+		String outOf = (criteria.MAX_BILL_PROCESS != -1 && total > criteria.MAX_BILL_PROCESS) ? " out of " + total : "";
 		Log.info("Processing " + requestBills.size() + " bills" + outOf + " for request generation on dataset "
 				+ dataset.getDescription());
 
-		for (Bill b : requestBills) {
+		processBillIds(criteria, requestBills.stream().map(Bill::getId).toList(), isSecondFetch);
+	}
 
-			// The press interpreter may have said this bill was dirty, but after the press
-			// interps came back,
-			// they came back as NO_INTERP. At this point, it's not actually dirty and
-			// doesn't need to be interpreted.
-			if (CHECK_S3_EXISTS && billInterpreter.isInterpreted(b.getId()) && includePressDirtyBills
-					&& pressBillInterpGenerator.getDirtyBills().contains(b)) {
-				val interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class)
-						.orElseThrow();
+	private void processBill(BillGenerationCriteria criteria, Bill bill, BillText latestBillText, boolean includePressDirtyBills, boolean requireFreshOutputs) {
+		// The press interpreter may have said this bill was dirty, but after the press
+		// interps came back,
+		// they came back as NO_INTERP. At this point, it's not actually dirty and
+		// doesn't need to be interpreted.
+		if (!requireFreshOutputs && criteria.CHECK_S3_EXISTS && billInterpreter.isInterpreted(bill.getId()) && includePressDirtyBills
+				&& pressBillInterpGenerator.getDirtyBills().contains(bill)) {
+			val interp = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class)
+					.orElseThrow();
 
-				var s3PressInterps = billService.getPressInterps(interp.getBillId());
+			var s3PressInterps = billService.getPressInterps(interp.getBillId());
 
-				if (!s3PressInterps.stream().anyMatch(s3pi -> !interp.getPressInterps().contains(s3pi)))
-					continue;
-			}
+			if (!s3PressInterps.stream().anyMatch(s3pi -> !interp.getPressInterps().contains(s3pi)))
+				return;
+		}
 
-			val billText = billService.getBillText(b).orElse(null);
-			b.setText(billText);
-			
-			String sBillText = b.getText().getDocument();
-			if (StringUtils.isBlank(sBillText)) throw new UnsupportedOperationException("Bill text is empty for " + b.getId());
+		bill.setText(latestBillText);
 
-			String systemMsg = BillPrompt.getPromptForBill(false, enableWebSearch);
-			val userMsg = billInterpreter.getUserMsgForBill(b, sBillText, billProcessModel);
+		String sBillText = latestBillText.getDocument();
+		if (StringUtils.isBlank(sBillText)) {
+			throw new UnsupportedOperationException("Bill text is empty for " + bill.getId());
+		}
 
-			
-			if (tokenEstimatorService.estimateTokenCount(systemMsg + "\n" + userMsg) > billProcessModel.getContextWindowTokens()) {
+		String systemMsg = BillPrompt.getPromptForBill(false, criteria.enableWebSearch);
+		val userMsg = billInterpreter.getUserMsgForBill(bill, sBillText, criteria.billProcessModel);
 
-				List<BillSlice> slices = billSlicer.slice(b, b.getText(), billProcessModel);
+		if (tokenEstimatorService.estimateTokenCount(systemMsg + "\n" + userMsg) > criteria.billProcessModel.getContextWindowTokens()) {
 
-				if (slices.isEmpty())
-					throw new UnsupportedOperationException("Slicer returned zero slices?");
-				
-				// The XMLBillSlicer returns the document text without the xml nodes, which usually results in bill text about half the size. For this reason, it's possible that the splitter could return a slice of size 1.
-				if (slices.size() == 1) {
-					if (!StringUtils.isBlank(slices.get(0).getText()))
-						sBillText = slices.get(0).getText();
+			List<BillSlice> slices = billSlicer.slice(bill, bill.getText(), criteria.billProcessModel);
 
-					createRequest(BillInterpretation.generateId(b.getId(), null), b, null,
+			if (slices.isEmpty())
+				throw new UnsupportedOperationException("Slicer returned zero slices?");
+
+			// The XMLBillSlicer returns the document text without the xml nodes, which usually results in bill text about half the size. For this reason, it's possible that the splitter could return a slice of size 1.
+			if (slices.size() == 1) {
+				if (!StringUtils.isBlank(slices.get(0).getText()))
+					sBillText = slices.get(0).getText();
+
+				val existingAggregate = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class)
+						.orElse(null);
+				if (shouldCreateFreshRequest(existingAggregate, latestBillText)) {
+					createRequest(criteria, BillInterpretation.generateId(bill.getId(), null), bill, null,
 							systemMsg,
-							billInterpreter.getUserMsgForBill(b, sBillText, billProcessModel),
+							billInterpreter.getUserMsgForBill(bill, sBillText, criteria.billProcessModel),
 							sBillText);
-				} else {
-					val sliceInterps = new ArrayList<BillInterpretation>();
-
-					for (int i = 0; i < slices.size(); ++i) {
-						BillSlice slice = slices.get(i);
-
-						Optional<BillInterpretation> sliceInterp = s3.get(BillInterpretation.generateId(b.getId(), i),
-								BillInterpretation.class);
-
-						if (sliceInterp.isEmpty()) {
-							val oid = BillInterpretation.generateId(b.getId(), slice.getSliceIndex());
-
-							if (s3.exists(oid, BillInterpretation.class))
-								continue;
-							
-							// TODO : Does the slicer take the slice prompt size into account?
-							createRequest(oid, b, slice.getSliceIndex(), BillPrompt.slicePrompt,
-									slice.getText(), slice.getText());
-						} else {
-							sliceInterps.add(sliceInterp.get());
-						}
-					}
-
-					if (sliceInterps.size() == slices.size()) {
-						systemMsg = BillPrompt.getPromptForBill(true, enableWebSearch);
-						List<String> summaries = new ArrayList<>();
-
-						for (int i = 0; i < slices.size(); ++i) {
-							summaries.add(sliceInterps.get(i).getLongExplain());
-						}
-
-						val oid = BillInterpretation.generateId(b.getId(), null);
-
-						if (CHECK_S3_EXISTS && billInterpreter.isInterpreted(oid))
-							continue;
-
-						if (tokenEstimatorService.estimateTokenCount(systemMsg, billInterpreter.getUserMsgForBill(b, String.join("\n", summaries), billProcessModel)) > billProcessModel.getContextWindowTokens()) {
-							summaries = new ArrayList<>();
-							for (int i = 0; i < slices.size(); ++i) {
-								val split = sliceInterps.get(i).getLongExplain().split("\n");
-								for (int j = 0; j < Math.min(3, split.length); ++j) {
-									summaries.add(split[j]);
-								}
-							}
-						}
-
-						String sliceTexts = String.join("\n", summaries);
-						createRequest(oid, b, null, systemMsg,
-								billInterpreter.getUserMsgForBill(b, sliceTexts, billProcessModel),
-								sliceTexts);
-					}
 				}
 			} else {
-				createRequest(BillInterpretation.generateId(b.getId(), null), b, null, systemMsg, userMsg, sBillText);
+				val sliceInterps = new ArrayList<BillInterpretation>();
+
+				for (int i = 0; i < slices.size(); ++i) {
+					BillSlice slice = slices.get(i);
+					val existingSlice = s3.get(BillInterpretation.generateId(bill.getId(), slice.getSliceIndex()), BillInterpretation.class)
+							.orElse(null);
+
+					if (shouldCreateFreshRequest(existingSlice, latestBillText)) {
+						val oid = BillInterpretation.generateId(bill.getId(), slice.getSliceIndex());
+						createRequest(criteria, oid, bill, slice.getSliceIndex(), BillPrompt.slicePrompt,
+								slice.getText(), slice.getText());
+					} else if (existingSlice != null) {
+						sliceInterps.add(existingSlice);
+					}
+				}
+
+				if (sliceInterps.size() == slices.size()) {
+					systemMsg = BillPrompt.getPromptForBill(true, criteria.enableWebSearch);
+					List<String> summaries = new ArrayList<>();
+
+					for (int i = 0; i < slices.size(); ++i) {
+						summaries.add(sliceInterps.get(i).getLongExplain());
+					}
+
+					val oid = BillInterpretation.generateId(bill.getId(), null);
+					val existingAggregate = s3.get(oid, BillInterpretation.class).orElse(null);
+					if (!shouldCreateFreshRequest(existingAggregate, latestBillText)) {
+						return;
+					}
+
+					if (tokenEstimatorService.estimateTokenCount(systemMsg, billInterpreter.getUserMsgForBill(bill, String.join("\n", summaries), criteria.billProcessModel)) > criteria.billProcessModel.getContextWindowTokens()) {
+						summaries = new ArrayList<>();
+						for (int i = 0; i < slices.size(); ++i) {
+							val split = sliceInterps.get(i).getLongExplain().split("\n");
+							for (int j = 0; j < Math.min(3, split.length); ++j) {
+								summaries.add(split[j]);
+							}
+						}
+					}
+
+					String sliceTexts = String.join("\n", summaries);
+					createRequest(criteria, oid, bill, null, systemMsg,
+							billInterpreter.getUserMsgForBill(bill, sliceTexts, criteria.billProcessModel),
+							sliceTexts);
+				}
+			}
+		} else {
+			val existingAggregate = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class)
+					.orElse(null);
+			if (shouldCreateFreshRequest(existingAggregate, latestBillText)) {
+				createRequest(criteria, BillInterpretation.generateId(bill.getId(), null), bill, null, systemMsg, userMsg, sBillText);
 			}
 		}
+	}
+
+	private boolean shouldCreateFreshRequest(BillInterpretation existing, BillText latestBillText) {
+		if (existing == null) {
+			return true;
+		}
+
+		return !matchesBillText(existing, latestBillText);
+	}
+
+	private boolean matchesBillText(BillInterpretation existing, BillText latestBillText) {
+		if (latestBillText == null || existing == null) {
+			return false;
+		}
+
+		return StringUtils.equalsIgnoreCase(
+				StringUtils.defaultString(latestBillText.getVersion()),
+				StringUtils.defaultString(existing.getSourceBillTextVersion()));
 	}
 
 	private Stream<Bill> andNotInList(Stream<Bill> stream, List<String> billExcludeList) {
 		return stream.filter(b -> !billExcludeList.contains(b.getId()));
 	}
 	
-	private Stream<Bill> andNotAlreadyInterpretedOrInvalid(Stream<Bill> stream, boolean includePressDirtyBills) {
-		return stream.filter(b -> (!CHECK_S3_EXISTS || !interpretedAndValid(b)
+	private Stream<Bill> andNotAlreadyInterpretedOrInvalid(BillGenerationCriteria criteria, Stream<Bill> stream, boolean includePressDirtyBills) {
+		return stream.filter(b -> (!criteria.CHECK_S3_EXISTS || !interpretedAndValid(criteria, b)
 				|| (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))));
 	}
 
-	private boolean interpretedAndValid(Bill b) {
-		var interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).orElse(null);
+	private boolean interpretedAndValid(BillGenerationCriteria criteria, Bill b) {
+		var interp = getExistingInterpretation(b);
 
-		if (REPROCESS_INVALID_BILLS)
+		if (criteria.REPROCESS_INVALID_BILLS)
 			return interp != null && interp.isValid();
 		return interp != null;
 	}
 
-	private Stream<Bill> ifInterpretedThenByModel(Stream<Bill> stream, String model) {
-		return stream.filter(b -> !billInterpreter.isInterpreted(b.getId())
-				|| (s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getMetadata()
-						.getModel().toLowerCase().equals(model)));
+	private BillInterpretation getExistingInterpretation(Bill bill) {
+		return s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class).orElse(null);
 	}
 
-	private Stream<Bill> ifInterpretedThenAboveStatusProgress(Stream<Bill> stream, float progress) {
-		return stream.filter(b -> !billInterpreter.isInterpreted(b.getId()) || b.getStatus().getProgress() > progress);
+	private BillInterpretation requireInterpretation(Bill bill) {
+		val interp = getExistingInterpretation(bill);
+		if (interp == null) {
+			throw new IllegalStateException("Expected bill interpretation for " + bill.getId());
+		}
+		return interp;
 	}
 
-	private Stream<Bill> ifInterpretedThenBeforeDate(Stream<Bill> stream, LocalDate beforeDate) {
-		return stream.filter(b -> beforeDate.isAfter(
-				s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get().getDate()));
-	}
-	
-	private Stream<Bill> billIsIntroducedAfter(Stream<Bill> stream, LocalDate beforeDate) {
-		return stream.filter(b -> b.getIntroducedDate().isAfter(beforeDate));
-	}
-
-	private Stream<Bill> ifInterpretedThenHasZeroSearchReferences(Stream<Bill> stream) {
-		return stream.filter(b -> s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).get()
-				.getPressInterps().size() == 0);
-	}
-
-	private Stream<Bill> ifInterpretedThenInSession(Stream<Bill> stream, String sessionCode) {
-		return stream
-				.filter(b -> !billInterpreter.isInterpreted(b.getId()) || (b.getSessionCode().equals(sessionCode)));
-	}
-
-	private void createRequest(String oid, Bill bill, Integer sliceIndex, String systemMsg, String userMsg, String billText) {
+	private void createRequest(BillGenerationCriteria criteria, String oid, Bill bill, Integer sliceIndex, String systemMsg, String userMsg, String billText) {
 		if (StringUtils.isBlank(billText)) throw new UnsupportedOperationException("Bill text is empty for " + bill.getId() + (sliceIndex != null ? " slice " + sliceIndex : ""));
 		
 		// Since checking this is now expensive, we will comment it out. We already do these checks before we invoke createRequest so this is redundant anyway.
@@ -326,9 +422,9 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 //		}
 
 		val req = InterpretationRequest.builder().data(new CustomData(oid)).systemMsg(systemMsg).userMsg(userMsg)
-				.requestedModel(billProcessModel).build();
+				.requestedModel(criteria.billProcessModel).build();
 		
-		new BillInterpretationRouter().route(req, billProcessModel, OpenAIModel.DEFAULT_MODEL_MINI, bill, billText);
+		new BillInterpretationRouter().route(req, criteria.billProcessModel, OpenAIModel.DEFAULT_MODEL_MINI, bill, billText);
 
 		requests.add(req);
 		totalRequests++;

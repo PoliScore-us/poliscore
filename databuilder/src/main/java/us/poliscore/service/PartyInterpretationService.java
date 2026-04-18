@@ -112,6 +112,9 @@ Before printing the final line, internally verify the output is a JSON array of 
 	
 	@Inject
 	private GovernmentDataService data;
+
+	@Inject
+	private OpenAIService openAiService;
 	
 	@Inject
     ObjectMapper mapper;
@@ -322,7 +325,7 @@ Before printing the final line, internally verify the output is a JSON array of 
 		if (hasIndependent)
 			sessionStats.setIndependent(partyStats.get(Party.INDEPENDENT));
 		
-		sessionStats.setMetadata(OpenAIService.metadata());
+		sessionStats.setMetadata(openAiService.metadata());
 		
 //		val op = s3.get(sessionStats.getId(), SessionInterpretation.class);
 //		if (op.isPresent()) {

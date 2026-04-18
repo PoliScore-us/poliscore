@@ -70,6 +70,42 @@ PoliScore and PoliBench are intended for:
 
 ---
 
+## 🛠️ Running DatabaseBuilder
+
+`DatabaseBuilder` is the Quarkus CLI entrypoint that refreshes datasets, generates interpretations, imports OpenAI responses, and syncs downstream storage.
+
+From the `poliscore` directory, you can run it in Quarkus dev mode with:
+
+```bash
+mvn -f databuilder/pom.xml quarkus:dev -Dquarkus.args="--help"
+```
+
+And then with actual options, for example:
+
+```bash
+mvn -f databuilder/pom.xml quarkus:dev -Dquarkus.args="--no-agentic-web-search --reinterpret-parties"
+```
+
+If you want to package first and run the built app directly:
+
+```bash
+mvn -f databuilder/pom.xml -DskipTests package
+java -jar databuilder/target/quarkus-app/quarkus-run.jar --help
+```
+
+Current CLI flags:
+
+- `--interpret-press-bills` / `--no-interpret-press-bills`
+- `--interpret-new-bills` / `--no-interpret-new-bills`
+- `--reinterpret-legislators` / `--no-reinterpret-legislators`
+- `--reinterpret-parties` / `--no-reinterpret-parties`
+- `--flex-requests` / `--no-flex-requests`
+- `--agentic-web-search` / `--no-agentic-web-search`
+
+Running without flags uses the current built-in defaults.
+
+---
+
 ## 📚 Citation
 
 If you use PoliScore or PoliBench in academic work, please cite the project. A simple placeholder BibTeX entry (update details as appropriate):

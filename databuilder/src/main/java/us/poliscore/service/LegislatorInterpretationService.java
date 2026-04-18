@@ -124,6 +124,9 @@ Your written response for this research section should consist of only a compact
 	
 	@Inject
 	private GovernmentDataService data;
+
+	@Inject
+	private OpenAIService openAiService;
 	
 //	public LegislatorInterpretation getOrCreate(String legislatorId)
 //	{
@@ -472,7 +475,7 @@ Your written response for this research section should consist of only a compact
 		{
 			updateInteractionsInterp(leg);
 			
-			LegislatorInterpretation interp = new LegislatorInterpretation(dataset.getNamespace(), dataset.getRegularSession().getCode(), leg.getCode(), OpenAIService.metadata(), null);
+			LegislatorInterpretation interp = new LegislatorInterpretation(dataset.getNamespace(), dataset.getRegularSession().getCode(), leg.getCode(), openAiService.metadata(), null);
 			val interpOp = s3.get(LegislatorInterpretation.generateId(dataset.getNamespace(), dataset.getRegularSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
 			
 			if (interpOp.isPresent()) { interp = interpOp.get(); }

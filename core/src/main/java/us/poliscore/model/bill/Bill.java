@@ -3,9 +3,13 @@ package us.poliscore.model.bill;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -61,6 +65,8 @@ public class Bill extends SessionPersistable {
 	
 	public static final String ID_CLASS_PREFIX = "BIL";
 	
+	public static final Comparator<BillText> BILL_TEXT_ORDER = Comparator.comparing(BillText::getLastUpdate, Comparator.nullsFirst(Comparator.naturalOrder()));
+	
 	public static String generateId(LegislativeNamespace ns, String sessionCode, String typeCode, int number)
 	{
 		return SessionPersistable.generateId(ID_CLASS_PREFIX, ns, sessionCode, typeCode.toLowerCase() + "/" + number);
@@ -72,6 +78,10 @@ public class Bill extends SessionPersistable {
 	@JsonIgnore
 	@Transient
 	protected transient BillText text;
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(columnDefinition = "jsonb")
+	protected NavigableSet<BillText> texts = new TreeSet<>(BILL_TEXT_ORDER);
 	
 	// Type here is sort of overloaded at this point. If it's congressional data, then it will align with CongressionalBillType.name()
 	// Otherwise if it's a state bill it should align with LegiscanBillType.getCode()
@@ -170,6 +180,17 @@ public class Bill extends SessionPersistable {
 	public BillText getText()
 	{
 		return text;
+	}
+
+	public void setTexts(Collection<BillText> texts) {
+		NavigableSet<BillText> orderedTexts = new TreeSet<>(BILL_TEXT_ORDER);
+		if (texts != null) {
+			texts.stream()
+					.filter(java.util.Objects::nonNull)
+					.map(BillText::metadataOnly)
+					.forEach(orderedTexts::add);
+		}
+		this.texts = orderedTexts;
 	}
 	
 //	@JsonIgnore

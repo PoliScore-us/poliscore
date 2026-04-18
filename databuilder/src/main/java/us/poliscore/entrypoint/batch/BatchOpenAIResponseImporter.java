@@ -28,7 +28,7 @@ import lombok.val;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
 import us.poliscore.ai.BatchOpenAIResponse;
-import us.poliscore.entrypoint.DatabaseBuilder;
+import us.poliscore.entrypoint.DatabaseBuilderRuntimeConfig;
 import us.poliscore.model.AIAggregateInterpretationMetadata;
 import us.poliscore.model.AISliceInterpretationMetadata;
 import us.poliscore.model.BuildReport;
@@ -97,6 +97,12 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	
 	@Inject
 	protected PressBillInterpretationRequestGenerator pressBillInterpGenerator;
+
+	@Inject
+	private OpenAIService openAiService;
+
+	@Inject
+	private DatabaseBuilderRuntimeConfig runtimeConfig;
 	
 	private Set<String> importedBills = new HashSet<String>();
 	
@@ -107,46 +113,48 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	private boolean hasRecalcedLegislators = false;
 	
 	@SneakyThrows
-	public void process(BuildReport report, File input)
+	public synchronized void process(BuildReport report, File input)
 	{
-		data.importAllDatasets();
+		beginImport();
 		
 		Log.info("Importing " + input.getAbsolutePath());
 		
 		@Cleanup BufferedReader reader = new BufferedReader(new FileReader(input));
 		String line = reader.readLine();
-		
-		val erroredLines = new ArrayList<String>();
 
 		while (line != null) {
-			try {
-				val resp = PoliscoreUtil.getObjectMapper().readValue(line, BatchOpenAIResponse.class);
-				
-				if (resp.getError() != null || resp.getResponse().getStatus_code() >= 400) {
-					String err = "[" + resp.getResponse().getStatus_code() + "] " + resp.getError();
-					throw new RuntimeException(err);
-				}
-				
-				if (resp.getCustomData().getOid().startsWith(BillInterpretation.ID_CLASS_PREFIX)) {
-					importBill(resp);
-				} else if (resp.getCustomData().getOid().startsWith(LegislatorInterpretation.ID_CLASS_PREFIX)) {
-					importLegislator(resp);
-				} else if (resp.getCustomData().getOid().startsWith(PressInterpretation.ID_CLASS_PREFIX)) {
-					importPressInterp(resp);
-				} else if (resp.getCustomData().getOid().startsWith(SessionInterpretation.ID_CLASS_PREFIX)) {
-					importParty(resp);
-				} else {
-					throw new UnsupportedOperationException("Unexpected object type " + resp.getCustom_id());
-				}
-				
-				line = reader.readLine();
-			} catch (Throwable t) {
-				t.printStackTrace();
-				erroredLines.add(line);
-				line = reader.readLine();
-			}
+			processLine(report, line);
+			line = reader.readLine();
 		}
 		
+		finishImport(report);
+		
+		Log.info("Successfully imported " + input.getAbsolutePath());
+	}
+	
+	public synchronized void beginImport() {
+		data.importAllDatasets();
+		importedBills.clear();
+		interpretedBillsWithErrors.clear();
+		sessionInterpMap.clear();
+		hasRecalcedLegislators = false;
+	}
+	
+	@SneakyThrows
+	public synchronized boolean processLine(BuildReport report, String line) {
+		try {
+			val resp = PoliscoreUtil.getObjectMapper().readValue(line, BatchOpenAIResponse.class);
+			processResponse(report, resp);
+			return true;
+		} catch (Throwable t) {
+			t.printStackTrace();
+			recordErroredLine(report, line);
+			return false;
+		}
+	}
+	
+	@SneakyThrows
+	public synchronized void finishImport(BuildReport report) {
 		for (var sessionInterp : sessionInterpMap.values()) {
 			val dataset = data.getDataset(sessionInterp.getId());
 			if (sessionInterp.isComplete(dataset.hasIndependentPartyMembers())) {
@@ -155,7 +163,11 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			}
 		}
 		
-		if (erroredLines.size() > 0) {
+		if (interpretedBillsWithErrors.size() > 0) {
+			// no-op, list already accumulated for report assignment below
+		}
+		
+		if (!erroredLines.isEmpty()) {
 			File f = new File(System.getProperty("user.home"), "/appdata/poliscore/build/unprocessed.jsonl");
 			FileUtils.write(f, String.join("\n", erroredLines), "UTF-8");
 			
@@ -166,8 +178,35 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			else
 				report.interpretedBillsWithErrors = interpretedBillsWithErrors;
 		}
+		erroredLines.clear();
+	}
+
+	private final List<String> erroredLines = new ArrayList<String>();
+
+	private void recordErroredLine(BuildReport report, String line) {
+		erroredLines.add(line);
+		if (report != null) {
+			report.interpretedBillsWithErrors = interpretedBillsWithErrors;
+		}
+	}
+
+	private void processResponse(BuildReport report, BatchOpenAIResponse resp) {
+		if (resp.getError() != null || resp.getResponse().getStatus_code() >= 400) {
+			String err = "[" + resp.getResponse().getStatus_code() + "] " + resp.getError();
+			throw new RuntimeException(err);
+		}
 		
-		Log.info("Successfully imported " + input.getAbsolutePath());
+		if (resp.getCustomData().getOid().startsWith(BillInterpretation.ID_CLASS_PREFIX)) {
+			importBill(resp);
+		} else if (resp.getCustomData().getOid().startsWith(LegislatorInterpretation.ID_CLASS_PREFIX)) {
+			importLegislator(resp);
+		} else if (resp.getCustomData().getOid().startsWith(PressInterpretation.ID_CLASS_PREFIX)) {
+			importPressInterp(resp);
+		} else if (resp.getCustomData().getOid().startsWith(SessionInterpretation.ID_CLASS_PREFIX)) {
+			importParty(resp);
+		} else {
+			throw new UnsupportedOperationException("Unexpected object type " + resp.getCustom_id());
+		}
 	}
 	
 	private void importLegislator(final BatchOpenAIResponse resp) {
@@ -184,7 +223,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		if (interp == null)
 			throw new UnsupportedOperationException(leg.getId() + " interpretation was null!");
 		
-		interp.setMetadata(OpenAIService.metadata());
+		interp.setMetadata(openAiService.metadata());
 		interp.setHash(legInterp.calculateInterpHashCode(leg));
 		
 		val interpText = resp.getResponse().getBody().getChoices().get(0).getMessage().getContent();
@@ -229,7 +268,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		val interpText = resp.getResponse().getBody().getChoices().get(0).getMessage().getContent();
 		new PartyInterpretationParser(partyInterp).parse(interpText);
 		
-		sessionInterp.setMetadata(OpenAIService.metadata());
+		sessionInterp.setMetadata(openAiService.metadata());
 		
 		sessionInterpMap.put(sessionKey, sessionInterp);
 	}
@@ -271,23 +310,22 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 							slices.add(new BillSlice(bill, null, sliceInterp.getSliceIndex(), sliceInterp.getGenBillTitle(), sliceInterp.getShortExplain(), sliceMetadata.getStart(), sliceMetadata.getEnd()));
 						}
 					}
-					bi.setMetadata(OpenAIService.metadata(slices));
+					bi.setMetadata(openAiService.metadata(slices));
 				} else
-					bi.setMetadata(OpenAIService.metadata());
+					bi.setMetadata(openAiService.metadata());
 			}
 			else
 			{
 				sourceBillText = billService.getBillText(bill).orElseThrow();
 				bill.setText(sourceBillText);
 				
-				List<BillSlice> slices = billSlicer.slice(bill, sourceBillText, BatchBillRequestGenerator.billProcessModel);
+					List<BillSlice> slices = billSlicer.slice(bill, sourceBillText, BatchBillRequestGenerator.BillGenerationCriteria.defaultCriteria().getBillProcessModel());
 				
-				bi.setMetadata(OpenAIService.metadata(slices.get(sliceIndex)));
+				bi.setMetadata(openAiService.metadata(slices.get(sliceIndex)));
 				bi.setId(BillInterpretation.generateId(billId, bi.getOrigin(), sliceIndex));
 			}
 
-			bi.setSourceBillTextVersion(sourceBillText.getVersion());
-			bi.setSourceBillTextDate(sourceBillText.getLastUpdated());
+				bi.setSourceBillTextVersion(sourceBillText.getVersion());
 			
 			var msg = resp.getResponse().getBody().getChoices().get(0).getMessage();
 			var interpText = msg.getContent();
@@ -297,7 +335,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 				return;
 			}
 			
-			if (DatabaseBuilder.AGENTIC_WEB_SEARCH)
+			if (runtimeConfig.isAgenticWebSearch())
 				billService.wipeAllPressInterps(bill);
 			
 			new BillInterpretationParser(bill, bi, s3).parse(interpText, null);
@@ -326,7 +364,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 				throw new RuntimeException("Interpretation missing proper stats or explain." + billId);
 			}
 			
-			if (DatabaseBuilder.AGENTIC_WEB_SEARCH || pressBillInterpGenerator.getQueriedBills().contains(bill)) {
+			if (runtimeConfig.isAgenticWebSearch() || pressBillInterpGenerator.getQueriedBills().contains(bill)) {
 				bi.setLastPressQuery(LocalDate.now());
 			}
 			
@@ -357,7 +395,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		PressInterpretation bi = new PressInterpretation();
 		bi.setBillId(billId);
 		bi.setOrigin(((CustomOriginData) resp.getCustomData()).getOrigin());
-		bi.setMetadata(PressBillInterpretationRequestGenerator.metadata());
+		bi.setMetadata(pressBillInterpGenerator.metadata());
 		bi.setId(PressInterpretation.generateId(billId, bi.getOrigin()));
 		
 		var interpText = resp.getResponse().getBody().getChoices().get(0).getMessage().getContent();

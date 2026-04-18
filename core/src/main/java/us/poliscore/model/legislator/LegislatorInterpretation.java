@@ -67,6 +67,9 @@ public class LegislatorInterpretation extends SessionPersistable
 	
 	public void validate()
 	{
+		if (this.getLastUpdate().isBefore(LocalDate.of(2026, 04, 01).atStartOfDay()))
+			return;
+		
 		ParsingUtil.strValidate(getLongExplain(), "long explain", 15_000);
 		ParsingUtil.strValidate(getCasualExplain(), "casual report", 6000);
 		ParsingUtil.strValidate(getShortExplain(), "short explain", 3000);
