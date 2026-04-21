@@ -30,6 +30,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
+import us.poliscore.PoliscoreUtil;
 import us.poliscore.ai.BatchOpenAIRequest;
 import us.poliscore.ai.OpenAIModel;
 import us.poliscore.bill.InterpretationRequest;
@@ -39,23 +40,23 @@ import us.poliscore.service.OpenAIService;
 import us.poliscore.service.OpenAIService.ChatResult;
 
 @ApplicationScoped
-public class OpenAIFlexBatchProcessor {
+public class OpenAIBatchProcessor {
 
 	// Configurable thread count as a static final:
-	private static final int THREADS = Integer.getInteger("poliscore.openai.flex.threads", 8);
+	private static final int THREADS = Integer.getInteger("poliscore.openai.batch.threads", 8);
 
 	// Rate limiter here is a secondary "absolute max". Actual rate limiting is done in OpenAIService.waitForRateLimit
-	private static final int MAX_REQUESTS_PER_MINUTE = Integer.getInteger("poliscore.openai.flex.rpm", 100);
+	private static final int MAX_REQUESTS_PER_MINUTE = Integer.getInteger("poliscore.openai.batch.rpm", 100);
 
 	private static final Duration RATE_LIMIT_REQUEUE_DELAY = Duration
-			.ofSeconds(Integer.getInteger("poliscore.openai.flex.rateLimitRequeueDelaySeconds", 30));
+			.ofSeconds(Integer.getInteger("poliscore.openai.batch.rateLimitRequeueDelaySeconds", 30));
 
 	private static final int IMPORT_PROGRESS_LOG_INTERVAL = Integer
-			.getInteger("poliscore.openai.flex.importProgressLogInterval", 8);
+			.getInteger("poliscore.openai.batch.importProgressLogInterval", 8);
 
 	// If you want to fail-fast on first fatal error:
 	private static final boolean FAIL_FAST = Boolean
-			.parseBoolean(System.getProperty("poliscore.openai.flex.failFast", "true"));
+			.parseBoolean(System.getProperty("poliscore.openai.batch.failFast", "true"));
 
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -65,14 +66,14 @@ public class OpenAIFlexBatchProcessor {
 	OpenAIService openAIChatService;
 
 	/**
-	 * Multi-threaded flex processing that writes a JSONL file in "batch envelope"
+	 * Multi-threaded batch processing that writes a JSONL file in "batch envelope"
 	 * format.
 	 */
 	@SneakyThrows
 	public List<File> processBatchImmediately(BuildReport report, List<InterpretationRequest> requests) {
 		Log.infof("Performing %d requests to OpenAI (threads=%d).", requests.size(), THREADS);
 
-		var buildTemp = new File(System.getProperty("user.home") + "/appdata/poliscore/build");
+		var buildTemp = PoliscoreUtil.cacheFile("build");
 		buildTemp.mkdirs();
 
 		File outputFile = new File(buildTemp, "openapi-bills.out.jsonl");
@@ -125,7 +126,7 @@ public class OpenAIFlexBatchProcessor {
 				// If writer dies, that’s fatal.
 				fatal.compareAndSet(null, t);
 			}
-		}, "openai-flex-jsonl-writer");
+		}, "openai-batch-jsonl-writer");
 		writerThread.start();
 		
 		responseImporter.beginImport();
@@ -147,19 +148,19 @@ public class OpenAIFlexBatchProcessor {
 				} catch (Throwable t) {
 					fatal.compareAndSet(null, t);
 			}
-		}, "openai-flex-importer");
+		}, "openai-batch-importer");
 		importerThread.start();
 
 		ExecutorService pool = Executors.newFixedThreadPool(THREADS, r -> {
 			Thread t = new Thread(r);
-			t.setName("openai-flex-worker-" + t.getId());
+			t.setName("openai-batch-worker-" + t.getId());
 			t.setDaemon(false);
 			return t;
 		});
 		
 		final Thread shutdownHook = new Thread(() -> {
 			  try {
-			    Log.warn("SIGINT received (Ctrl+C). Stopping OpenAI flex batch gracefully...");
+			    Log.warn("SIGINT received (Ctrl+C). Stopping OpenAI batch gracefully...");
 
 			    stop.set(true);
 
@@ -180,7 +181,7 @@ public class OpenAIFlexBatchProcessor {
 			    // Never throw from shutdown hooks
 			    Log.error("Error in shutdown hook.", t);
 			  }
-			}, "openai-flex-shutdown-hook");
+			}, "openai-batch-shutdown-hook");
 
 			Runtime.getRuntime().addShutdownHook(shutdownHook);
 
@@ -233,13 +234,13 @@ public class OpenAIFlexBatchProcessor {
 									if (openAIChatService.isRateLimitFailure(t)) {
 										Log.warn("OpenAI rate limit persisted after retries for "
 												+ req.getData().getOid()
-												+ ". Requeueing request instead of halting the flex batch.", t);
+												+ ". Requeueing request instead of halting the batch.", t);
 										work.offer(req);
 										LockSupport.parkNanos(RATE_LIMIT_REQUEUE_DELAY.toNanos());
 										continue;
 									}
 
-									Log.error("Fatal error in OpenAI worker. Halting flex batch.", t);
+									Log.error("Fatal error in OpenAI worker. Halting batch.", t);
 									fatal.compareAndSet(null, t);
 									report.fatal(t);
 

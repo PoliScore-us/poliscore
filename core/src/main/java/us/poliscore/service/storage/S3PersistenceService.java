@@ -23,6 +23,7 @@ import lombok.SneakyThrows;
 import lombok.val;
 import lombok.experimental.Accessors;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
@@ -65,6 +66,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 		if (client == null)
 		{
 			client = S3Client.builder()
+					.httpClientBuilder(UrlConnectionHttpClient.builder())
 	                .build();
 		}
 		

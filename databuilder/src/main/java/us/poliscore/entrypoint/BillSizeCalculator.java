@@ -23,7 +23,7 @@ public class BillSizeCalculator implements QuarkusApplication
 	{
 		long size = 0;
 		
-		for (File file : PoliscoreUtil.allFilesWhere(new File(PoliscoreUtil.APP_DATA, "bill-text/118"),
+		for (File file : PoliscoreUtil.allFilesWhere(PoliscoreUtil.cacheDir("bill-text/118"),
 				f -> f.getName().endsWith(".xml") && !CongressionalBillType.getIgnoredBillTypes().stream().map(bt -> f.getName().toLowerCase().contains(bt.getName().toLowerCase())).reduce(false, (a,b) -> a || b)))
 		{
 			size += FileUtils.readFileToString(file, "UTF-8").length();

@@ -75,6 +75,10 @@ public class USCDatasetProvider implements DatasetProvider {
 	@Inject
 	private GPOBulkBillTextFetcher billTextFetcher;
 	
+	public boolean isEnabled() {
+		return uscDataDir.isPresent();
+	}
+	
 	@Override
 	public PoliscoreDatasetIF importDataset(DeploymentConfig ref) {
 		val cses = CongressionalSession.fromYear(ref.getYear());

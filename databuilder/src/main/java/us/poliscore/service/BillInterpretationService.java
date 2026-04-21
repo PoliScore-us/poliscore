@@ -9,8 +9,8 @@ import jakarta.inject.Inject;
 import lombok.NonNull;
 import lombok.val;
 import us.poliscore.ai.OpenAIModel;
-import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.InterpretationOrigin;
+import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.service.storage.LocalCachedS3Service;
@@ -66,10 +66,11 @@ public class BillInterpretationService {
 //		
 //		return userMsg;
 		
-		PoliscoreDatasetIF dataset = data.getDataset(bill.getId());
+		// Dataset won't exist in deployed envs
+		LegislativeSession session = SessionInfoService.sessionForId(bill.getId());
 		
 		String userMsg = "Today's Date: " + LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) + "\n";
-		userMsg += "Legislature: " + dataset.getDescription() + "\n";
+		userMsg += "Legislature: " + session.getDescription() + "\n";
 		userMsg += "Bill: " + bill.getDescription() + "\n";
 		userMsg += "Sponsor: " + bill.getSponsor().getName().getOfficial_full() + "\n";
 		final String billTextMsg = "Official Bill Text:\n" + billText;

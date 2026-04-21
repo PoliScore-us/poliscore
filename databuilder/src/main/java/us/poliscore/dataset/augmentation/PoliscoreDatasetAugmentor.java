@@ -74,6 +74,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	
 	public void augmentLegislators(PoliscoreDataset dataset) {
 		if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS) && dataset.getCode().equals("118")) return;
+		if (!usc.isEnabled()) return;
 		
 		dataset.optimizeExists(s3, PoliscoreScrapedLegislatorData.class);
 		

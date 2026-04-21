@@ -70,6 +70,7 @@ import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSpo
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
 import us.poliscore.service.BillService;
 import us.poliscore.service.LegislatorService;
+import us.poliscore.service.SessionInfoService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 @ApplicationScoped
@@ -87,7 +88,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	@Inject
 	protected BillService billService;
 	
-	@Inject protected PoliscoreDatasetAugmentor psLegScraper;
+	@Inject protected PoliscoreDatasetAugmentor augmentor;
 	@Inject protected StateLegislatorImageFetcher stateImageFetcher;
 	@Inject protected CongressionalLegislatorImageFetcher congressionalImageFetcher;
 	
@@ -139,7 +140,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    }
 
 	    if (regularDataset == dataset) {
-	        psLegScraper.augmentLegislators(dataset);
+	        augmentor.augmentLegislators(dataset);
 	    }
 
 	    for (var bill : cached.getBills().values()) {
@@ -193,7 +194,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 //		return null;
 //	}
 	
-	protected String getChamberCode(LegislativeChamber chamber) {
+	protected static String getChamberCode(LegislativeChamber chamber) {
 		if (chamber.equals(LegislativeChamber.UPPER)) {
 			return "S";
 		} else if (chamber.equals(LegislativeChamber.LOWER)) {
@@ -208,39 +209,16 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	protected void importBill(LegiscanBillView view, PoliscoreDataset dataset, PoliscoreDataset regularDataset) {
 		val bill = new Bill();
 		
-		bill.setNumber(Integer.parseInt(view.getBillNumber().replaceAll("[^\\d]", "")));
-		
-		val originatingChamber = resolveOriginatingChamber(view);
-		val introducedDate = resolveIntroducedDate(view);
-		val lastActionDate = resolveLastActionDate(view);
-		
-		if (originatingChamber.isEmpty() || introducedDate.isEmpty() || lastActionDate.isEmpty()) {
+		if (!populate(bill, view, regularDataset.getSession())) {
 			logger.warn("Legiscan bill " + view.getBillId() + " did not have any history and thus cannot be imported.");
 			return;
 		}
-			
-		bill.setOriginatingChamber(originatingChamber.get());
 		
-		if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
-    		bill.setType(toCongressionalBillType(view).name());
-    	else
-    		bill.setType(getChamberCode(bill.getOriginatingChamber()) + view.getBillType().getCode());
-		
-		bill.setId(Bill.generateId(dataset.getNamespace(), dataset.getSession().getCode(), bill.getType(), bill.getNumber()));
-		
-		bill.setName(view.getTitle());
-    	bill.setStatus(buildStatus(view, regularDataset.getSession()));
-    	bill.setIntroducedDate(introducedDate.get());
     	bill.setSponsor(convertSponsor(view.getSponsors().getFirst(), regularDataset));
     	if (bill.getSponsor() == null)
     		throw new IllegalStateException("Primary sponsor is required for bill " + view.getBillId() + " but legislator with people id " + view.getSponsors().getFirst().getPeopleId() + " could not be resolved.");
     	if (view.getSponsors().size() > 1)
     		bill.setCosponsors(view.getSponsors().subList(1, view.getSponsors().size()).stream().map(s -> convertSponsor(s, regularDataset)).filter(Objects::nonNull).collect(Collectors.toList()));
-	    	bill.setLastActionDate(lastActionDate.get());
-	    	bill.setLegiscanId(view.getBillId());
-	    	bill.setOfficialUrl(view.getStateLink());
-	    	bill.setTexts(buildBillTextMetadata(bill.getId(), view));
-    	
     	
     	
     	if (bill.getSponsor() != null)
@@ -277,8 +255,43 @@ public class LegiscanDatasetProvider implements DatasetProvider {
     	legiscanIdToBill.put(bill.getLegiscanId(), bill);
     	dataset.put(bill);
 	}
+	
+	public static boolean populate(Bill bill, LegiscanBillView view, LegislativeSession regularSession) {
+		val originatingChamber = resolveOriginatingChamber(view);
+		val introducedDate = resolveIntroducedDate(view);
+		val lastActionDate = resolveLastActionDate(view);
+		
+		if (originatingChamber.isEmpty() || introducedDate.isEmpty() || lastActionDate.isEmpty()) {
+			logger.warn("Legiscan bill " + view.getBillId() + " did not have any history and thus cannot be imported.");
+			return false;
+		}
+		
+		if (regularSession == null) {
+			regularSession = SessionInfoService.lookupRegularSession(bill.getNamespace(), bill.getSessionCode());
+		} else {
+			bill.setNumber(Integer.parseInt(view.getBillNumber().replaceAll("[^\\d]", "")));
+			bill.setOriginatingChamber(originatingChamber.get());
+	
+			if (regularSession.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+	    		bill.setType(toCongressionalBillType(view).name());
+	    	else
+	    		bill.setType(getChamberCode(bill.getOriginatingChamber()) + view.getBillType().getCode());
+			
+			bill.setId(Bill.generateId(regularSession.getNamespace(), regularSession.getCode(), bill.getType(), bill.getNumber()));
+		}
+		
+		bill.setName(view.getTitle());
+		bill.setStatus(buildStatus(view, regularSession));
+    	bill.setIntroducedDate(introducedDate.get());
+    	bill.setLastActionDate(lastActionDate.get());
+    	bill.setLegiscanId(view.getBillId());
+    	bill.setOfficialUrl(view.getStateLink());
+    	bill.setTexts(buildBillTextMetadata(bill.getId(), view));
+    	
+    	return true;
+	}
 
-	protected Optional<LegislativeChamber> resolveOriginatingChamber(LegiscanBillView view) {
+	protected static Optional<LegislativeChamber> resolveOriginatingChamber(LegiscanBillView view) {
 		if (StringUtils.isNotBlank(view.getBillNumber()) && Character.toUpperCase(view.getBillNumber().charAt(0)) == 'J') {
 			return Optional.of(LegislativeChamber.JOINT);
 		}
@@ -323,7 +336,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		return Optional.empty();
 	}
 
-	protected Optional<LocalDate> resolveIntroducedDate(LegiscanBillView view) {
+	protected static Optional<LocalDate> resolveIntroducedDate(LegiscanBillView view) {
 		if (view.getHistory() != null && !view.getHistory().isEmpty() && view.getHistory().getFirst().getDate() != null) {
 			return Optional.of(view.getHistory().getFirst().getDate());
 		}
@@ -331,7 +344,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		return collectBillDates(view).stream().min(LocalDate::compareTo);
 	}
 
-	protected Optional<LocalDate> resolveLastActionDate(LegiscanBillView view) {
+	protected static Optional<LocalDate> resolveLastActionDate(LegiscanBillView view) {
 		if (view.getHistory() != null && !view.getHistory().isEmpty() && view.getHistory().getLast().getDate() != null) {
 			return Optional.of(view.getHistory().getLast().getDate());
 		}
@@ -339,7 +352,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		return collectBillDates(view).stream().max(LocalDate::compareTo);
 	}
 
-	protected List<LocalDate> collectBillDates(LegiscanBillView view) {
+	protected static List<LocalDate> collectBillDates(LegiscanBillView view) {
 		List<LocalDate> dates = new ArrayList<>();
 
 		if (view.getStatusDate() != null) {
@@ -409,7 +422,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		return sponsor;
 	}
 
-	protected BillStatus buildStatus(LegiscanBillView view, LegislativeSession session) {
+	protected static BillStatus buildStatus(LegiscanBillView view, LegislativeSession session) {
 	    BillStatus status = new BillStatus();
 	    status.setSourceStatus(view.getStatus().getCode());
 
@@ -621,7 +634,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		Log.info("Uploaded " + uploadCount + " latest bill texts to s3 from Legiscan provider and migrated " + migratedCount + " legacy bill texts.");
 	}
 
-	protected List<BillText> buildBillTextMetadata(String billId, LegiscanBillView view) {
+	protected static List<BillText> buildBillTextMetadata(String billId, LegiscanBillView view) {
 		if (view == null || view.getTexts() == null || view.getTexts().isEmpty()) {
 			return List.of();
 		}
@@ -754,7 +767,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		return BillTextFormat.TEXT;
 	}
 	
-	protected String buildBillTextVersion(LegiscanTextMetadataView metadata) {
+	protected static String buildBillTextVersion(LegiscanTextMetadataView metadata) {
 		LegiscanTextType type = null;
 		if (metadata.getTypeId() != null) {
 			try {

@@ -106,6 +106,17 @@ public class SessionInfoService {
     	val session = lookupSession(namespace, sessionCode);
         return lookupRegularSession(namespace, session.getEndDate().getYear());
     }
+
+    public static LegislativeSession sessionForId(String id) {
+        String[] segments = id.split("/");
+        if (segments.length < 4) {
+            throw new IllegalArgumentException("Expected session-scoped id, got: " + id);
+        }
+
+        LegislativeNamespace namespace = LegislativeNamespace.of(segments[1] + "/" + segments[2]);
+        String sessionCode = segments[3];
+        return lookupSession(namespace, sessionCode);
+    }
     
     public static LegislativeSession lookupSession(LegislativeNamespace namespace, String sessionCode) {
         return getSessions().stream()
@@ -136,4 +147,3 @@ public class SessionInfoService {
         private MapperFallbackFactory() {}
     }
 }
-

@@ -32,6 +32,7 @@ import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.val;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
@@ -233,6 +234,7 @@ private static final String BUCKET_NAME = "poliscore-prod-public";
 		if (client == null)
 		{
 			client = S3Client.builder()
+					.httpClientBuilder(UrlConnectionHttpClient.builder())
 	                .build();
 		}
 		

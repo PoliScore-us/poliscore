@@ -12,7 +12,6 @@ import com.knuddels.jtokkit.api.EncodingType;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
-import us.poliscore.ai.OpenAIModel;
 import us.poliscore.model.bill.BillPrompt;
 
 @ApplicationScoped
@@ -20,8 +19,7 @@ public class TokenEstimatorService {
 
 	private static final int RESERVED_TOKENS = 500;
 
-	private final Encoding encoding =
-			Encodings.newDefaultEncodingRegistry().getEncoding(EncodingType.CL100K_BASE);
+	private volatile Encoding encoding;
 
 	/**
 	 * Cache exact full merged prompts too, since some of those may repeat.
@@ -35,6 +33,13 @@ public class TokenEstimatorService {
 
 	@PostConstruct
 	void init() {
+		try {
+			encoding = Encodings.newDefaultEncodingRegistry().getEncoding(EncodingType.CL100K_BASE);
+		} catch (RuntimeException e) {
+			throw new IllegalStateException("Failed to initialize jtokkit encoding registry. "
+					+ "For native builds, ensure com/knuddels/jtokkit/*.tiktoken resources are included.", e);
+		}
+
 		// Replace these with however you currently store/access your 3 system prompts.
 		String[] knownSystemPrompts = new String[] {
 				BillPrompt.getPromptForBill(false, true),
@@ -45,7 +50,7 @@ public class TokenEstimatorService {
 		cachedSystemPrompts = Arrays.stream(knownSystemPrompts)
 				.filter(Objects::nonNull)
 				.distinct()
-				.map(prompt -> new CachedSystemPrompt(prompt, encoding.countTokens(prompt)))
+				.map(prompt -> new CachedSystemPrompt(prompt, encoding().countTokens(prompt)))
 				.sorted(Comparator.comparingInt((CachedSystemPrompt p) -> p.prompt.length()).reversed())
 				.toArray(CachedSystemPrompt[]::new);
 	}
@@ -74,7 +79,7 @@ public class TokenEstimatorService {
 	 */
 	public int estimateTokenCount(String systemPrompt, String userPrompt) {
 		int systemTokens = getSystemPromptTokenCount(systemPrompt);
-		int userTokens = encoding.countTokens(userPrompt == null ? "" : userPrompt);
+		int userTokens = encoding().countTokens(userPrompt == null ? "" : userPrompt);
 		return systemTokens + userTokens + RESERVED_TOKENS;
 	}
 
@@ -82,11 +87,11 @@ public class TokenEstimatorService {
 		for (CachedSystemPrompt cached : cachedSystemPrompts) {
 			if (allPrompts.startsWith(cached.prompt)) {
 				String remainder = allPrompts.substring(cached.prompt.length());
-				return cached.tokenCount + encoding.countTokens(remainder);
+				return cached.tokenCount + encoding().countTokens(remainder);
 			}
 		}
 
-		return encoding.countTokens(allPrompts);
+		return encoding().countTokens(allPrompts);
 	}
 
 	private int getSystemPromptTokenCount(String systemPrompt) {
@@ -98,11 +103,19 @@ public class TokenEstimatorService {
 				return cached.tokenCount;
 		}
 
-		return encoding.countTokens(systemPrompt);
+		return encoding().countTokens(systemPrompt);
 	}
 
 	public void clearPromptCache() {
 		fullPromptCache.clear();
+	}
+
+	private Encoding encoding() {
+		Encoding current = encoding;
+		if (current == null) {
+			throw new IllegalStateException("TokenEstimatorService encoding not initialized.");
+		}
+		return current;
 	}
 
 	private static final class CachedSystemPrompt {

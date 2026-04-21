@@ -48,6 +48,7 @@ import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.Environment;
+import us.poliscore.PoliscoreUtil;
 import us.poliscore.ai.MinuteRateLimiter;
 import us.poliscore.ai.OpenAIModel;
 import us.poliscore.bill.InterpretationRequest;
@@ -59,7 +60,7 @@ import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.AISliceInterpretationMetadata;
 import us.poliscore.model.BuildReport;
 import us.poliscore.model.bill.BillSlice;
-import us.poliscore.service.openai.OpenAIFlexBatchProcessor;
+import us.poliscore.service.openai.OpenAIBatchProcessor;
 
 @ApplicationScoped
 public class OpenAIService {
@@ -82,7 +83,7 @@ public class OpenAIService {
 	@Inject
 	private BatchOpenAIResponseImporter responseImporter;
 	
-	@Inject OpenAIFlexBatchProcessor flexBatchProcessor;
+	@Inject OpenAIBatchProcessor flexBatchProcessor;
 	
 	@Inject TokenEstimatorService tokenEstimatorService;
 
@@ -285,7 +286,7 @@ public class OpenAIService {
 	            .build();
 
 	    // 1) Serializer writes chunked batch input files (handles OpenAI file size limit)
-	    var buildTemp = new File(System.getProperty("user.home") + "/appdata/poliscore/build");
+	    var buildTemp = PoliscoreUtil.cacheFile("build");
 	    buildTemp.mkdirs();
 
 	    OpenAIBatchJsonlSerializer serializer = new OpenAIBatchJsonlSerializer();

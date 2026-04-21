@@ -21,6 +21,7 @@ import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.PoliscoreDataset;
+import us.poliscore.PoliscoreUtil;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.images.AbstractLegislatorImageFetcher;
 import us.poliscore.model.legislator.Legislator;
@@ -37,7 +38,7 @@ import us.poliscore.model.legislator.Legislator;
 public class OpenStatesDatasetAugmentor extends AbstractLegislatorImageFetcher implements QuarkusApplication {
 
 	protected final FileSystemCache<List<OpenStatesLegislatorData>> cache = new FileSystemCache<List<OpenStatesLegislatorData>>(
-            new java.io.File(System.getProperty("user.home") + "/appdata/poliscore/openstates"),
+            PoliscoreUtil.cacheFile("openstates"),
             JsonMapper.builder().findAndAddModules().build(),
             86400 // default TTL 24h
     );

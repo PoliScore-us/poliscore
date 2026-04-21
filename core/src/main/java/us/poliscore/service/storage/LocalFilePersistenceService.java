@@ -21,7 +21,7 @@ public class LocalFilePersistenceService implements ObjectStorageServiceIF
 	{
 //		return new File(Environment.getDeployedPath(), "../store");
 		
-		return new File(PoliscoreUtil.APP_DATA, "store");
+		return new File(PoliscoreUtil.appData(), "store");
 	}
 	
 	protected File getStore(String idClassPrefix)
@@ -42,18 +42,21 @@ public class LocalFilePersistenceService implements ObjectStorageServiceIF
 	}
 	
 	protected File fileFor(String id) {
-		File f = new File(getLocalStorage(), id + ".json");
-		
-		if (!f.getParentFile().exists()) {
-			f.getParentFile().mkdirs();
+		return new File(getLocalStorage(), id + ".json");
+	}
+
+	private File writableFileFor(String id) {
+		File file = fileFor(id);
+		File parent = file.getParentFile();
+		if (parent != null && !parent.exists()) {
+			parent.mkdirs();
 		}
-		
-		return f;
+		return file;
 	}
 	
 	@SneakyThrows
 	public void put(Persistable obj) {
-		File f = fileFor(obj.getId());
+		File f = writableFileFor(obj.getId());
 		
 		var mapper = PoliscoreUtil.getObjectMapper();
 		mapper.writerWithDefaultPrettyPrinter().writeValue(f, obj);

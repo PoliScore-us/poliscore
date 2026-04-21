@@ -1,7 +1,7 @@
 package us.poliscore.dataset;
 
 import us.poliscore.PoliscoreDataset.DeploymentConfig;
-import us.poliscore.model.LegislativeSession;
+import us.poliscore.model.bill.Bill;
 
 public interface DatasetProvider {
 	

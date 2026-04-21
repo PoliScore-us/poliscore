@@ -210,33 +210,25 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 	 * @return
 	 * @throws IOException
 	 */
-	public List<InterpretationRequest> processBills(BillGenerationCriteria criteria, List<String> billIds, BuildReport report, boolean isSecondFetch) throws IOException {
-		data.importAllDatasets();
+	public List<InterpretationRequest> processBills(BillGenerationCriteria criteria, List<Bill> bills, BuildReport report, boolean isSecondFetch) throws IOException {
 		totalRequests = 0;
 		requests.clear();
 		this.report = report;
 
-		processBillIds(criteria, billIds, isSecondFetch);
+		processBills(criteria, bills, isSecondFetch);
 		
 		return new ArrayList<>(requests);
 	}
 
-	private void processBillIds(BillGenerationCriteria criteria, List<String> billIds, boolean isSecondFetch) {
-		for(String billId : billIds) {
-			val dataset = data.getDataset(billId);
-			dataset.optimizeExists(s3, BillInterpretation.class);
-			dataset.optimizeExists(s3, BillText.class);
-	
-			val bill = dataset.get(billId, Bill.class)
-					.orElseThrow(() -> new IllegalArgumentException("Bill not found for refresh: " + billId));
-	
+	private void processBills(BillGenerationCriteria criteria, List<Bill> bills, boolean isSecondFetch) {
+		for(Bill bill : bills) {
 			if (!billService.hasBillText(bill)) {
-				Log.info("Skipping refresh request generation for " + billId + " because bill text is unavailable.");
+				Log.info("Skipping refresh request generation for " + bill.getId() + " because bill text is unavailable.");
 				continue;
 			}
 	
 			val latestBillText = billService.getBillText(bill)
-					.orElseThrow(() -> new IllegalStateException("Latest bill text not found for " + billId));
+					.orElseThrow(() -> new IllegalStateException("Latest bill text not found for " + bill.getId()));
 	
 			processBill(criteria, bill, latestBillText, !isSecondFetch, true);
 		}
@@ -247,6 +239,9 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 			return;
 
 		boolean includePressDirtyBills = !isSecondFetch;
+		
+		dataset.optimizeExists(s3, BillInterpretation.class);
+		dataset.optimizeExists(s3, BillText.class);
 
 		var requestBills = criteria.refine(dataset.query(Bill.class).stream(), this, includePressDirtyBills)
 				.sorted(Comparator.comparing(Bill::getIntroducedDate).reversed()).toList();
@@ -261,7 +256,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 		Log.info("Processing " + requestBills.size() + " bills" + outOf + " for request generation on dataset "
 				+ dataset.getDescription());
 
-		processBillIds(criteria, requestBills.stream().map(Bill::getId).toList(), isSecondFetch);
+		processBills(criteria, requestBills, isSecondFetch);
 	}
 
 	private void processBill(BillGenerationCriteria criteria, Bill bill, BillText latestBillText, boolean includePressDirtyBills, boolean requireFreshOutputs) {

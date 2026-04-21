@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
@@ -21,14 +22,18 @@ import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.val;
 import us.poliscore.PoliscoreUtil;
+import us.poliscore.WebappDatabase;
 import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
 import us.poliscore.ai.BatchOpenAIResponse;
+import us.poliscore.dataset.LegiscanDatasetProvider;
 import us.poliscore.entrypoint.DatabaseBuilderRuntimeConfig;
+import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.model.AIAggregateInterpretationMetadata;
 import us.poliscore.model.AISliceInterpretationMetadata;
 import us.poliscore.model.BuildReport;
@@ -57,6 +62,7 @@ import us.poliscore.service.LegislatorService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
 import us.poliscore.service.storage.LocalCachedS3Service;
+import us.poliscore.service.storage.ObjectStorageServiceIF;
 
 /**
  * This bulk importer is designed to import a response from the open ai api.
@@ -67,7 +73,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 //	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/unprocessed.jsonl").getAbsolutePath();
 	
 //	Canceled half-way through a batch (bills)
-	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/openapi-bills.out.jsonl").getAbsolutePath();
+	public static final String INPUT = PoliscoreUtil.cacheFile("build/openapi-bills.out.jsonl").getAbsolutePath();
 	
 	// TODO : If we need to reimport
 //	public static final String INPUT = new File(System.getProperty("user.home") + "/appdata/poliscore/build/openapi-legislators-feball.out.jsonl").getAbsolutePath();
@@ -103,6 +109,13 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 
 	@Inject
 	private DatabaseBuilderRuntimeConfig runtimeConfig;
+
+	@Inject
+	@WebappDatabase
+	Instance<ObjectStorageServiceIF> webappStorage;
+
+	@Inject
+	CachedLegiscanService legiscan;
 	
 	private Set<String> importedBills = new HashSet<String>();
 	
@@ -133,7 +146,6 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	}
 	
 	public synchronized void beginImport() {
-		data.importAllDatasets();
 		importedBills.clear();
 		interpretedBillsWithErrors.clear();
 		sessionInterpMap.clear();
@@ -168,7 +180,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		}
 		
 		if (!erroredLines.isEmpty()) {
-			File f = new File(System.getProperty("user.home"), "/appdata/poliscore/build/unprocessed.jsonl");
+			File f = PoliscoreUtil.cacheFile("build/unprocessed.jsonl");
 			FileUtils.write(f, String.join("\n", erroredLines), "UTF-8");
 			
 			String msg = "Encountered errors on " + erroredLines.size() + " lines. Printed them to " + f.getAbsolutePath();
@@ -286,10 +298,12 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			billId = dashSplit[0];
 		}
 		
-		val dataset = data.getDataset(billId);
-		val bill = dataset.get(billId, Bill.class).orElseThrow();
-		
-		try {
+			val bill = resolveBillForImport(billId);
+			if (bill == null) {
+				throw new IllegalStateException("Could not resolve bill for import: " + billId);
+			}
+			
+			try {
 			BillInterpretation bi = new BillInterpretation();
 			bi.setBill(bill);
 			BillText sourceBillText = null;
@@ -381,6 +395,31 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			interpretedBillsWithErrors.add(bill);
 			throw t;
 		}
+	}
+
+	private Bill resolveBillForImport(String billId) {
+		try {
+			val dataset = data.getDataset(billId);
+			val bill = dataset.get(billId, Bill.class).orElse(null);
+			if (bill != null) {
+				return bill;
+			}
+		} catch (NoSuchElementException ignored) {
+			// Deployed webapp environments do not always have imported datasets.
+		}
+
+		if (webappStorage.isResolvable()) {
+			val bill = webappStorage.get().get(billId, Bill.class).orElse(null);
+			if (bill == null) {
+				return null;
+			}
+
+			val legiscanBill = legiscan.getBill(bill.getLegiscanId());
+			LegiscanDatasetProvider.populate(bill, legiscanBill, null);
+			return bill;
+		}
+
+		return null;
 	}
 	
 	@SneakyThrows

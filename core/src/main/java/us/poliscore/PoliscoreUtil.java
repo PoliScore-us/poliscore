@@ -2,22 +2,57 @@ package us.poliscore;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Predicate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 
-import us.poliscore.PoliscoreDataset.DeploymentConfig;
-import us.poliscore.model.LegislativeNamespace;
+import io.quarkus.arc.Arc;
 import us.poliscore.service.SessionInfoService;
+import us.poliscore.service.PoliscoreCacheConfig;
 
 public class PoliscoreUtil {
-	
-	public static File APP_DATA = new File(System.getProperty("user.home") + "/appdata/poliscore");
-	{
-		APP_DATA.mkdirs();
+	private static String defaultCachePath() {
+		return System.getProperty("user.home") + "/appdata/poliscore";
+	}
+
+	private static String configuredCachePath() {
+		try {
+			var handle = Arc.container().instance(PoliscoreCacheConfig.class);
+			if (handle.isAvailable()) {
+				return handle.get().cachePath();
+			}
+		} catch (Throwable ignored) {
+			// Arc might not be running yet (for example in plain unit tests).
+		}
+
+		return defaultCachePath();
+	}
+
+	private static File resolveAppData() {
+		String configuredPath = configuredCachePath();
+		File appData = new File(configuredPath).getAbsoluteFile();
+		appData.mkdirs();
+		return appData;
+	}
+
+	public static File appData() {
+		return resolveAppData();
+	}
+
+	public static File cacheFile(String childPath) {
+		File file = new File(appData(), childPath);
+		File parent = file.getParentFile();
+		if (parent != null) {
+			parent.mkdirs();
+		}
+		return file;
+	}
+
+	public static File cacheDir(String childPath) {
+		File directory = new File(appData(), childPath);
+		directory.mkdirs();
+		return directory;
 	}
 	
 	public static List<File> allFilesWhere(File parent, Predicate<File> criteria)

@@ -7,6 +7,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.SneakyThrows;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
@@ -47,16 +48,18 @@ public class SecretService {
 		}
 
 		// Fetch from AWS if not cached
-		SecretsManagerClient client = SecretsManagerClient.builder()
+		String secret;
+		try (SecretsManagerClient client = SecretsManagerClient.builder()
+				.httpClientBuilder(UrlConnectionHttpClient.builder())
 				.region(region)
-				.build();
+				.build()) {
+			GetSecretValueRequest request = GetSecretValueRequest.builder()
+					.secretId(secretName)
+					.build();
 
-		GetSecretValueRequest request = GetSecretValueRequest.builder()
-				.secretId(secretName)
-				.build();
-
-		GetSecretValueResponse response = client.getSecretValue(request);
-		String secret = response.secretString();
+			GetSecretValueResponse response = client.getSecretValue(request);
+			secret = response.secretString();
+		}
 
 		secretCache.put(secretName, secret);
 		return secret;

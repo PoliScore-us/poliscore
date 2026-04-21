@@ -63,7 +63,7 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	@SneakyThrows
 	public void process(PoliscoreDatasetIF dataset)
 	{
-		val store = new File(PoliscoreUtil.APP_DATA, "bill-text");
+		val store = PoliscoreUtil.cacheDir("bill-text");
 //		FileUtils.deleteQuietly(store);
 		store.mkdirs();
 		
@@ -169,7 +169,7 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	@SneakyThrows
 	public Optional<String> getBillText(Bill bill)
 	{
-		val parent = new File(PoliscoreUtil.APP_DATA, "bill-text/" + bill.getSessionCode() + "/" + bill.getType());
+		val parent = PoliscoreUtil.cacheDir("bill-text/" + bill.getSessionCode() + "/" + bill.getType());
 		File[] childFiles = parent.listFiles();
 		if (childFiles == null) {
 			return Optional.empty();
