@@ -2,11 +2,13 @@ package us.poliscore.model.bill;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.commons.lang3.StringUtils;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -49,13 +51,23 @@ public class BillInterpretation extends SessionPersistable
 	public static Logger logger = LoggerFactory.getLogger(BillInterpretation.class);
 	
 	public static final String ID_CLASS_PREFIX = "BIT";
-	
-	public static String generateId(String billId, Integer sliceIndex)
+
+	public static String generateId(String billId, String billTextVersion, Integer sliceIndex)
 	{
-		return generateId(billId, InterpretationOrigin.POLISCORE, sliceIndex);
+		if (billId.contains("us/congress/118") || StringUtils.isBlank(billTextVersion)) {
+			return generateLegacyId(billId, InterpretationOrigin.POLISCORE, sliceIndex);
+		}
+
+		var id = billId.replace(Bill.ID_CLASS_PREFIX, ID_CLASS_PREFIX) + "/" + billTextVersion;
+
+		if (sliceIndex != null) {
+			id += "/" + sliceIndex;
+		}
+
+		return id;
 	}
 	
-	public static String generateId(String billId, InterpretationOrigin origin, Integer sliceIndex)
+	private static String generateLegacyId(String billId, InterpretationOrigin origin, Integer sliceIndex)
 	{
 		var id = billId.replace(Bill.ID_CLASS_PREFIX, ID_CLASS_PREFIX);
 		
@@ -72,6 +84,39 @@ public class BillInterpretation extends SessionPersistable
 		
 		return id;
 	}
+
+	public static ParsedId parseId(String id)
+	{
+		if (!id.startsWith(ID_CLASS_PREFIX + "/")) {
+			throw new IllegalArgumentException("Not a BillInterpretation id: " + id);
+		}
+
+		String billLikeId = Bill.ID_CLASS_PREFIX + id.substring(ID_CLASS_PREFIX.length());
+		String[] parts = billLikeId.split("/");
+
+		if (parts.length < 6) {
+			throw new IllegalArgumentException("Invalid BillInterpretation id: " + id);
+		}
+
+		if (parts.length > 6) {
+			String billId = String.join("/", Arrays.copyOfRange(parts, 0, 6));
+			String billTextVersion = parts[6];
+			Integer sliceIndex = parts.length > 7 ? Integer.valueOf(parts[7]) : null;
+			return new ParsedId(billId, billTextVersion, sliceIndex);
+		}
+
+		String[] legacyTail = parts[5].split("-");
+		String billId = String.join("/", Arrays.copyOfRange(parts, 0, 5)) + "/" + legacyTail[0];
+		Integer sliceIndex = null;
+
+		if (legacyTail.length > 1 && StringUtils.isNumeric(legacyTail[legacyTail.length - 1])) {
+			sliceIndex = Integer.valueOf(legacyTail[legacyTail.length - 1]);
+		}
+
+		return new ParsedId(billId, null, sliceIndex);
+	}
+
+	public record ParsedId(String billId, String sourceBillTextVersion, Integer sliceIndex) { }
 	
 	@JsonIgnore
 	@Getter(onMethod_ = {@DynamoDbIgnore})

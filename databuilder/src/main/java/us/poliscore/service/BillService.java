@@ -1,10 +1,14 @@
 package us.poliscore.service;
 
 import java.net.URI;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -68,8 +72,71 @@ public class BillService {
 		b.setLastUpdate(billLastAction);
 		
 		b.setTexts(getBillTexts(b));
+		var billInterpretations = getBillInterpretations(b).stream()
+				.filter(existingInterp -> Objects.equals(existingInterp.getSliceIndex(), null))
+				.toList();
+		billInterpretations.forEach(this::populatePressInterps);
+		b.setInterpretations(billInterpretations);
 		populatePressInterps(interp);
 		b.setInterpretation(interp);
+	}
+
+	public String getBillInterpretationId(Bill bill) {
+		return getBillInterpretationId(bill, null);
+	}
+
+	public String getBillInterpretationId(Bill bill, Integer sliceIndex) {
+		String billTextVersion = getBillText(bill).map(BillText::getVersion).orElse(null);
+		return BillInterpretation.generateId(bill.getId(), billTextVersion, sliceIndex);
+	}
+
+	public SortedSet<BillInterpretation> getBillInterpretations(Bill bill) {
+		return getBillInterpretations(bill.getId());
+	}
+
+	/**
+	 * Returns all interpretations for the given bill, sorted by interpretation date
+	 * in ascending order. The newest interpretation will therefore be the last
+	 * element in the returned set.
+	 */
+	public SortedSet<BillInterpretation> getBillInterpretations(String billId) {
+		return s3.query(BillInterpretation.class, getSessionKey(billId), getBillInterpretationObjectKeyPrefix(billId)).stream()
+				.filter(interp -> billId.equals(interp.getBillId()))
+				.collect(Collectors.toCollection(() -> new TreeSet<>(getBillInterpretationComparator())));
+	}
+
+	public Optional<BillInterpretation> getInterpretation(Bill bill) {
+		return getInterpretation(bill, null);
+	}
+
+	public Optional<BillInterpretation> getInterpretation(Bill bill, Integer sliceIndex) {
+		BillInterpretation newestMatch = null;
+
+		// Interpretations are sorted in ascending date order, so the last matching
+		// interpretation is the newest available one.
+		for (BillInterpretation interp : getBillInterpretations(bill)) {
+			if (Objects.equals(sliceIndex, interp.getSliceIndex())) {
+				newestMatch = interp;
+			}
+		}
+
+		return Optional.ofNullable(newestMatch);
+	}
+
+	public Optional<BillInterpretation> getInterpretation(String billId) {
+		return getInterpretation(billId, null);
+	}
+
+	public Optional<BillInterpretation> getInterpretation(String billId, Integer sliceIndex) {
+		BillInterpretation newestMatch = null;
+
+		for (BillInterpretation interp : getBillInterpretations(billId)) {
+			if (Objects.equals(sliceIndex, interp.getSliceIndex())) {
+				newestMatch = interp;
+			}
+		}
+
+		return Optional.ofNullable(newestMatch);
 	}
 	
 	public List<PressInterpretation> getPressInterps(String billId) {
@@ -206,9 +273,30 @@ public class BillService {
                 .sorted(getBillTextComparator(bill))
                 .collect(Collectors.toList());
     }
+
+    private Comparator<BillInterpretation> getBillInterpretationComparator() {
+    	return Comparator.comparing(this::getBillInterpretationSortDate)
+    			.thenComparing(BillInterpretation::getId);
+    }
+
+    private LocalDateTime getBillInterpretationSortDate(BillInterpretation interpretation) {
+    	if (interpretation.getLastUpdate() != null) {
+    		return interpretation.getLastUpdate();
+    	}
+
+    	if (interpretation.getMetadata() != null && interpretation.getMetadata().getDate() != null) {
+    		return interpretation.getMetadata().getDate().atStartOfDay();
+    	}
+
+    	return LocalDateTime.MIN;
+    }
     
     protected String getSessionKey(String billId) {
     	return billId.substring(StringUtils.ordinalIndexOf(billId, "/", 1)+1, StringUtils.ordinalIndexOf(billId, "/", 4));
+    }
+
+    protected String getBillInterpretationObjectKeyPrefix(String billId) {
+    	return billId.substring(StringUtils.ordinalIndexOf(billId, "/", 4)+1);
     }
     
     protected String getVersionedObjectKeyPrefix(String billId) {

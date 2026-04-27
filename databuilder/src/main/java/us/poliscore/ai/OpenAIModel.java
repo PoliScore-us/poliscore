@@ -13,6 +13,7 @@ import us.poliscore.service.OpenAIService.Usage;
 @Getter
 @AllArgsConstructor
 public enum OpenAIModel {
+	GPT55("gpt-5.5", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 2.5, 15),
 	GPT54("gpt-5.4", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 1.25, 7.50),
 	GPT52("gpt-5.2", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.875, 7.00),
 	GPT51("gpt-5.1", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.625, 5.00),
@@ -24,7 +25,7 @@ public enum OpenAIModel {
 	O3("o3", 190_000, 95_000, false, true, true, new RateLimit(30_000_000, 10_000), 0, 0),
 	O3_DEEP_RESEARCH("o3-deep-research", 190_000, 95_000, false, true, true, new RateLimit(30_000_000, 10_000), 0, 0);
 
-	public static final OpenAIModel DEFAULT_MODEL = GPT54;
+	public static final OpenAIModel DEFAULT_MODEL = GPT55;
 
 	public static final OpenAIModel DEFAULT_MODEL_MINI = GPT5mini;
 	

@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -32,7 +33,7 @@ import us.poliscore.WebappDatabase;
 import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
 import us.poliscore.ai.BatchOpenAIResponse;
 import us.poliscore.dataset.LegiscanDatasetProvider;
-import us.poliscore.entrypoint.DatabaseBuilderRuntimeConfig;
+import us.poliscore.entrypoint.DatabaseBuilderConfig;
 import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.model.AIAggregateInterpretationMetadata;
 import us.poliscore.model.AISliceInterpretationMetadata;
@@ -108,7 +109,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	private OpenAIService openAiService;
 
 	@Inject
-	private DatabaseBuilderRuntimeConfig runtimeConfig;
+	private DatabaseBuilderConfig runtimeConfig;
 
 	@Inject
 	@WebappDatabase
@@ -287,56 +288,50 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 
 	@SneakyThrows
 	private void importBill(final BatchOpenAIResponse resp) {
-		String billId = resp.getCustomData().getOid().replace(BillInterpretation.ID_CLASS_PREFIX, Bill.ID_CLASS_PREFIX);
+		val parsedId = BillInterpretation.parseId(resp.getCustomData().getOid());
+		String billId = parsedId.billId();
+		Integer sliceIndex = parsedId.sliceIndex();
 		
-		Integer sliceIndex = null;
-		val dashSplit = billId.split("-");
-		if (dashSplit.length == 2) {
-			billId = dashSplit[0];
-		} else if (dashSplit.length == 3) {
-			sliceIndex = Integer.parseInt(dashSplit[2]);
-			billId = dashSplit[0];
+		val bill = resolveBillForImport(billId);
+		if (bill == null) {
+			throw new IllegalStateException("Could not resolve bill for import: " + billId);
 		}
 		
-			val bill = resolveBillForImport(billId);
-			if (bill == null) {
-				throw new IllegalStateException("Could not resolve bill for import: " + billId);
-			}
-			
-			try {
+		try {
 			BillInterpretation bi = new BillInterpretation();
 			bi.setBill(bill);
-			BillText sourceBillText = null;
+			BillText sourceBillText = resolveSourceBillText(bill, parsedId.sourceBillTextVersion());
 			
 			if (sliceIndex == null)
 			{
-				bi.setId(BillInterpretation.generateId(bill.getId(), bi.getOrigin(), null));
-				sourceBillText = billService.getBillText(bill).orElseThrow();
+				bi.setId(BillInterpretation.generateId(bill.getId(), sourceBillText.getVersion(), null));
 				
-				if (s3.exists(BillInterpretation.generateId(bill.getId(), bi.getOrigin(), 0), BillInterpretation.class)) {
+				if (s3.exists(BillInterpretation.generateId(bill.getId(), sourceBillText.getVersion(), 0), BillInterpretation.class)) {
 					String sessionKey = billId.substring(StringUtils.ordinalIndexOf(billId, "/", 1)+1, StringUtils.ordinalIndexOf(billId, "/", 4));
 					String objectKey = billId.substring(StringUtils.ordinalIndexOf(billId, "/", 4)+1);
 					
 					List<BillSlice> slices = new ArrayList<BillSlice>();
 					for (var sliceInterp : s3.query(BillInterpretation.class, sessionKey, objectKey)) {
-						if (sliceInterp.getBillId().equals(bill.getId()) && sliceInterp.getMetadata() instanceof AISliceInterpretationMetadata) {
+						if (sliceInterp.getBillId().equals(bill.getId())
+								&& sliceInterp.getMetadata() instanceof AISliceInterpretationMetadata
+								&& StringUtils.equalsIgnoreCase(StringUtils.defaultString(sourceBillText.getVersion()), StringUtils.defaultString(sliceInterp.getSourceBillTextVersion()))) {
 							var sliceMetadata = (AISliceInterpretationMetadata) sliceInterp.getMetadata();
 							slices.add(new BillSlice(bill, null, sliceInterp.getSliceIndex(), sliceInterp.getGenBillTitle(), sliceInterp.getShortExplain(), sliceMetadata.getStart(), sliceMetadata.getEnd()));
 						}
 					}
+					slices.sort(Comparator.comparing(BillSlice::getSliceIndex));
 					bi.setMetadata(openAiService.metadata(slices));
 				} else
 					bi.setMetadata(openAiService.metadata());
 			}
 			else
 			{
-				sourceBillText = billService.getBillText(bill).orElseThrow();
 				bill.setText(sourceBillText);
 				
 					List<BillSlice> slices = billSlicer.slice(bill, sourceBillText, BatchBillRequestGenerator.BillGenerationCriteria.defaultCriteria().getBillProcessModel());
 				
 				bi.setMetadata(openAiService.metadata(slices.get(sliceIndex)));
-				bi.setId(BillInterpretation.generateId(billId, bi.getOrigin(), sliceIndex));
+				bi.setId(BillInterpretation.generateId(billId, sourceBillText.getVersion(), sliceIndex));
 			}
 
 				bi.setSourceBillTextVersion(sourceBillText.getVersion());
@@ -365,7 +360,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 				List<BillInterpretation> sliceInterps = new ArrayList<BillInterpretation>();
 				
 				for (int i = 0; i < slices.size(); ++i) {
-					val sliceInterp = s3.get(BillInterpretation.generateId(billId, bi.getOrigin(), i), BillInterpretation.class).orElseThrow();
+					val sliceInterp = s3.get(BillInterpretation.generateId(billId, sourceBillText.getVersion(), i), BillInterpretation.class).orElseThrow();
 					
 					billStats = billStats.sum(sliceInterp.getIssueStats().toDoubleIssueStats());
 					sliceInterps.add(sliceInterp);
@@ -395,6 +390,17 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			interpretedBillsWithErrors.add(bill);
 			throw t;
 		}
+	}
+
+	private BillText resolveSourceBillText(Bill bill, String requestedVersion) {
+		if (StringUtils.isBlank(requestedVersion)) {
+			return billService.getBillText(bill).orElseThrow();
+		}
+
+		return billService.getBillTexts(bill).stream()
+				.filter(text -> StringUtils.equalsIgnoreCase(requestedVersion, text.getVersion()))
+				.findFirst()
+				.orElseThrow(() -> new IllegalStateException("Bill text version not found for " + bill.getId() + ": " + requestedVersion));
 	}
 
 	private Bill resolveBillForImport(String billId) {

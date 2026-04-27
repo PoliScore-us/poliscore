@@ -96,7 +96,7 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 	private PostgresSyncService postgresSync;
 
 	@Inject
-	private DatabaseBuilderRuntimeConfig runtimeConfig;
+	private DatabaseBuilderConfig runtimeConfig;
 	
 	protected BuildReport report = new BuildReport();
 	
@@ -108,7 +108,7 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 		
 		val buildDatasets = data.getBuildDatasets();
 		
-		initialDataSetup(buildDatasets);
+		initialDataSetup();
 		
 		if (!runtimeConfig.isAgenticWebSearch())
 			interpretBillPressArticles(buildDatasets);
@@ -127,15 +127,18 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 		return report;
 	}
 	
-	protected void initialDataSetup(List<PoliscoreDatasetIF> buildDatasets) {
-		for (val dataset : buildDatasets) {
+	protected void initialDataSetup() {
+		for (val dataset : data.getBuildDatasets()) {
 			if (runtimeConfig.isInterpretNewBills()) {
 				data.syncS3LegislatorImages(dataset); // TODO : Doesn't really belong in this if switch but it works for my current usecases
 				data.syncS3BillText(dataset);
 			}
 			
-			dataset.optimizeExists(s3, BillInterpretation.class);
 			dataset.optimizeExists(s3, LegislatorInterpretation.class);
+		}
+		
+		for (val dataset : data.getAllImportedDatasets()) {
+			dataset.optimizeExists(s3, BillInterpretation.class);
 		}
 	}
 	

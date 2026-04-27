@@ -19,6 +19,8 @@ import us.poliscore.legiscan.view.LegiscanBillTextView;
 import us.poliscore.legiscan.view.LegiscanBillView;
 import us.poliscore.legiscan.view.LegiscanTextMetadataView;
 import us.poliscore.legiscan.view.LegiscanTextType;
+import us.poliscore.model.InterpretationOrigin;
+import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillText;
@@ -44,43 +46,79 @@ public class S3DataPatcher implements QuarkusApplication {
 	
 	protected void process() throws IOException
 	{
-		long count = 0;
-		long skipped = 0;
+		long billTextVersionBackfills = 0;
+		long renamedInterpretations = 0;
+		long skipped118 = 0;
+		long skippedNoBillText = 0;
+		long skippedNonPoliscore = 0;
+		long skippedAlreadyMigrated = 0;
 		
 		data.importAllDatasets();
 		
-		for (var dataset : data.getBuildDatasets()) {
-			dataset.optimizeExists(s3, BillInterpretation.class);
+		for (var dataset : data.getAllImportedDatasets()) {
+			if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS) && dataset.getCode().equals("118")) continue;
 			
-			for (var bill : dataset.query(Bill.class)) {
-				if (!patchIntroducedBillTextDates(bill)) continue;
-				
-				List<BillText> billTexts = billService.getBillTexts(bill);
-				if (billTexts.isEmpty()) {
-					skipped++;
-					continue;
+			dataset.optimizeExists(s3, BillInterpretation.class);
+			dataset.optimizeExists(s3, BillText.class);
+
+			List<Bill> bills = dataset.query(Bill.class);
+			int processedBills = 0;
+			
+			for (var bill : bills) {
+				if (bill.getId().contains("us/congress/118")) {
+					skipped118 += billService.getBillInterpretations(bill).size();
+				} else {
+					List<BillText> billTexts = billService.getBillTexts(bill);
+					if (billTexts.isEmpty()) {
+						skippedNoBillText++;
+					} else {
+						for (var interp : billService.getBillInterpretations(bill)) {
+							if (!InterpretationOrigin.POLISCORE.equals(interp.getOrigin())) {
+								skippedNonPoliscore++;
+								continue;
+							}
+							
+							BillText matchedText = resolveBillTextForInterpretation(billTexts, interp);
+							if (matchedText == null) {
+								skippedNoBillText++;
+								continue;
+							}
+							
+							if (!StringUtils.equalsIgnoreCase(matchedText.getVersion(), interp.getSourceBillTextVersion())) {
+								interp.setSourceBillTextVersion(matchedText.getVersion());
+								billTextVersionBackfills++;
+							}
+
+							String targetId = BillInterpretation.generateId(bill.getId(), matchedText.getVersion(), interp.getSliceIndex());
+							if (targetId.equals(interp.getId())) {
+								skippedAlreadyMigrated++;
+								continue;
+							}
+
+							String oldId = interp.getId();
+							interp.setId(targetId);
+							s3.put(interp);
+							s3.delete(oldId, BillInterpretation.class);
+							renamedInterpretations++;
+						}
+					}
 				}
-				
-				for (var interp : getBillInterpretations(bill)) {
-					if (interp.getSourceBillTextVersion() != null) {
-						skipped++;
-						continue;
-					}
-					
-					BillText matchedText = findBillTextForInterpretation(billTexts, interp);
-					if (matchedText == null) {
-						skipped++;
-						continue;
-					}
-					
-					interp.setSourceBillTextVersion(matchedText.getVersion());
-					s3.put(interp);
-					count++;
+
+				processedBills++;
+				if (processedBills % 10 == 0) {
+					System.out.println("Patched " + processedBills + " bills in dataset " + dataset.getDescription()
+							+ "; " + (bills.size() - processedBills) + " bills left to process.");
 				}
 			}
 		}
 		
-		System.out.println("Program complete. Patched " + count + " interpretations and skipped " + skipped + ".");
+		System.out.println("Program complete.");
+		System.out.println("Bill text version backfills: " + billTextVersionBackfills);
+		System.out.println("Renamed interpretations: " + renamedInterpretations);
+		System.out.println("Skipped 118th congress interpretations: " + skipped118);
+		System.out.println("Skipped with no matching bill text: " + skippedNoBillText);
+		System.out.println("Skipped non-poliscore interpretations: " + skippedNonPoliscore);
+		System.out.println("Skipped already migrated: " + skippedAlreadyMigrated);
 	}
 
 	private boolean patchIntroducedBillTextDates(Bill bill) {
@@ -169,12 +207,6 @@ public class S3DataPatcher implements QuarkusApplication {
 		return null;
 	}
 
-	private List<BillInterpretation> getBillInterpretations(Bill bill) {
-		return s3.query(BillInterpretation.class, getSessionKey(bill.getId()), getObjectKeyPrefix(bill.getId())).stream()
-				.filter(interp -> bill.getId().equals(interp.getBillId()))
-				.toList();
-	}
-
 	private BillText findBillTextForInterpretation(List<BillText> billTexts, BillInterpretation interp) {
 		LocalDateTime interpretationTime = interp.getLastUpdate();
 		if (interpretationTime == null) {
@@ -185,6 +217,19 @@ public class S3DataPatcher implements QuarkusApplication {
 				.filter(text -> text.getLastUpdate() != null && !text.getLastUpdate().isAfter(interpretationTime))
 				.max(BILL_TEXT_PATCH_ORDER)
 				.orElse(null);
+	}
+
+	private BillText resolveBillTextForInterpretation(List<BillText> billTexts, BillInterpretation interp) {
+		if (StringUtils.isNotBlank(interp.getSourceBillTextVersion())) {
+			var exact = billTexts.stream()
+					.filter(text -> StringUtils.equalsIgnoreCase(interp.getSourceBillTextVersion(), text.getVersion()))
+					.findFirst();
+			if (exact.isPresent()) {
+				return exact.get();
+			}
+		}
+
+		return findBillTextForInterpretation(billTexts, interp);
 	}
 
 	private String getSessionKey(String billId) {

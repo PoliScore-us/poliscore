@@ -8,11 +8,11 @@ import lombok.Data;
  */
 @ApplicationScoped
 @Data
-public class DatabaseBuilderRuntimeConfig {
+public class DatabaseBuilderConfig {
 
 	// What do we want to interpret?
 	private boolean interpretNewBills = true;
-	private boolean reinterpretLegislators = true;
+	private boolean reinterpretLegislators = false;
 	private boolean reinterpretParties = false;
 	
 	// ai knobs

@@ -127,6 +127,9 @@ Your written response for this research section should consist of only a compact
 
 	@Inject
 	private OpenAIService openAiService;
+
+	@Inject
+	private BillService billService;
 	
 //	public LegislatorInterpretation getOrCreate(String legislatorId)
 //	{
@@ -256,7 +259,7 @@ Your written response for this research section should consist of only a compact
 	{
 		for (val i : getInteractionsForInterpretation(leg))
 		{
-			val interp = s3.get(BillInterpretation.generateId(i.getBillId(), null), BillInterpretation.class);
+			val interp = billService.getInterpretation(i.getBillId());
 			
 			if (interp.isPresent()) {
 				val bill = data.get(i.getBillId(), Bill.class).orElseThrow();
@@ -435,7 +438,7 @@ Your written response for this research section should consist of only a compact
 		double total = 0;
 		
 		for (LegislatorBillInteraction interact : leg.getInteractions()) {
-			val billInterp = s3.get(BillInterpretation.generateId(interact.getBillId(), null), BillInterpretation.class).orElse(null);
+			val billInterp = billService.getInterpretation(interact.getBillId()).orElse(null);
 			
 			if (interact.getIssueStats() != null) {
 				for (TrackedIssue issue : interact.getIssueStats().getStats().keySet()) {
@@ -509,7 +512,7 @@ Your written response for this research section should consist of only a compact
 						val prevInteracts = getInteractionsForInterpretation(prevLeg).iterator();
 						while (getInteractionsForInterpretation(leg).size() < 1000 && prevInteracts.hasNext()) {
 							val interact = prevInteracts.next();
-							val interactInterpOp = s3.get(BillInterpretation.generateId(interact.getBillId(), null), BillInterpretation.class);
+							val interactInterpOp = billService.getInterpretation(interact.getBillId());
 							
 							if (interactInterpOp.isPresent() && interactInterpOp.get().getIssueStats() != null) {
 								var issueStats = interactInterpOp.get().getIssueStats();

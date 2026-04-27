@@ -77,7 +77,7 @@ Your output should be ONLY a machine-readable JSON array (with no wrapper-text o
 		this.model = model;
 		
 		// If it's been sliced before, we have to return the slice as-is.
-		var interp = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class).orElse(null);
+		var interp = s3.get(BillInterpretation.generateId(bill.getId(), btx.getVersion(), null), BillInterpretation.class).orElse(null);
 		
 		if (interp != null && interp.getMetadata() != null && interp.getMetadata() instanceof AIAggregateInterpretationMetadata) {
 			var sliceMeta = ((AIAggregateInterpretationMetadata)interp.getMetadata());
@@ -104,9 +104,10 @@ Your output should be ONLY a machine-readable JSON array (with no wrapper-text o
 		
 		// Save the slices in a persistent way so that we can reconstruct them later
 		interp = new BillInterpretation();
-		interp.setId(BillInterpretation.generateId(bill.getId(), null));
+		interp.setId(BillInterpretation.generateId(bill.getId(), btx.getVersion(), null));
 		interp.setBill(bill);
 		interp.setMetadata(ai.metadata(slices));
+		interp.setSourceBillTextVersion(btx.getVersion());
 		s3.put(interp);
 		
 		return slices;

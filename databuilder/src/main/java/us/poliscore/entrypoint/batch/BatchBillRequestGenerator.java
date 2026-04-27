@@ -266,7 +266,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 		// doesn't need to be interpreted.
 		if (!requireFreshOutputs && criteria.CHECK_S3_EXISTS && billInterpreter.isInterpreted(bill.getId()) && includePressDirtyBills
 				&& pressBillInterpGenerator.getDirtyBills().contains(bill)) {
-			val interp = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class)
+			val interp = billService.getInterpretation(bill)
 					.orElseThrow();
 
 			var s3PressInterps = billService.getPressInterps(interp.getBillId());
@@ -297,10 +297,10 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 				if (!StringUtils.isBlank(slices.get(0).getText()))
 					sBillText = slices.get(0).getText();
 
-				val existingAggregate = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class)
+				val existingAggregate = billService.getInterpretation(bill)
 						.orElse(null);
 				if (shouldCreateFreshRequest(existingAggregate, latestBillText)) {
-					createRequest(criteria, BillInterpretation.generateId(bill.getId(), null), bill, null,
+					createRequest(criteria, BillInterpretation.generateId(bill.getId(), latestBillText.getVersion(), null), bill, null,
 							systemMsg,
 							billInterpreter.getUserMsgForBill(bill, sBillText, criteria.billProcessModel),
 							sBillText);
@@ -310,11 +310,11 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 				for (int i = 0; i < slices.size(); ++i) {
 					BillSlice slice = slices.get(i);
-					val existingSlice = s3.get(BillInterpretation.generateId(bill.getId(), slice.getSliceIndex()), BillInterpretation.class)
+					val existingSlice = billService.getInterpretation(bill, slice.getSliceIndex())
 							.orElse(null);
 
 					if (shouldCreateFreshRequest(existingSlice, latestBillText)) {
-						val oid = BillInterpretation.generateId(bill.getId(), slice.getSliceIndex());
+						val oid = BillInterpretation.generateId(bill.getId(), latestBillText.getVersion(), slice.getSliceIndex());
 						createRequest(criteria, oid, bill, slice.getSliceIndex(), BillPrompt.slicePrompt,
 								slice.getText(), slice.getText());
 					} else if (existingSlice != null) {
@@ -330,8 +330,8 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 						summaries.add(sliceInterps.get(i).getLongExplain());
 					}
 
-					val oid = BillInterpretation.generateId(bill.getId(), null);
-					val existingAggregate = s3.get(oid, BillInterpretation.class).orElse(null);
+					val oid = BillInterpretation.generateId(bill.getId(), latestBillText.getVersion(), null);
+					val existingAggregate = billService.getInterpretation(bill).orElse(null);
 					if (!shouldCreateFreshRequest(existingAggregate, latestBillText)) {
 						return;
 					}
@@ -353,10 +353,10 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 				}
 			}
 		} else {
-			val existingAggregate = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class)
+			val existingAggregate = billService.getInterpretation(bill)
 					.orElse(null);
 			if (shouldCreateFreshRequest(existingAggregate, latestBillText)) {
-				createRequest(criteria, BillInterpretation.generateId(bill.getId(), null), bill, null, systemMsg, userMsg, sBillText);
+				createRequest(criteria, BillInterpretation.generateId(bill.getId(), latestBillText.getVersion(), null), bill, null, systemMsg, userMsg, sBillText);
 			}
 		}
 	}
@@ -397,7 +397,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 	}
 
 	private BillInterpretation getExistingInterpretation(Bill bill) {
-		return s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class).orElse(null);
+		return billService.getInterpretation(bill).orElse(null);
 	}
 
 	private BillInterpretation requireInterpretation(Bill bill) {

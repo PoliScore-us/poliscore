@@ -66,6 +66,9 @@ public class Bill extends SessionPersistable {
 	public static final String ID_CLASS_PREFIX = "BIL";
 	
 	public static final Comparator<BillText> BILL_TEXT_ORDER = Comparator.comparing(BillText::getLastUpdate, Comparator.nullsFirst(Comparator.naturalOrder()));
+	public static final Comparator<BillInterpretation> BILL_INTERPRETATION_ORDER =
+			Comparator.comparing(Bill::getBillInterpretationSortValue, Comparator.nullsFirst(Comparator.naturalOrder())).reversed()
+					.thenComparing(BillInterpretation::getId);
 	
 	public static String generateId(LegislativeNamespace ns, String sessionCode, String typeCode, int number)
 	{
@@ -126,6 +129,9 @@ public class Bill extends SessionPersistable {
 	@Column(columnDefinition = "jsonb")
 	protected BillInterpretation interpretation;
 
+	@Transient
+	protected NavigableSet<BillInterpretation> interpretations = new TreeSet<>(BILL_INTERPRETATION_ORDER);
+
 	@JsonIgnore
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(name = "issue_impact_map", columnDefinition = "jsonb")
@@ -170,9 +176,51 @@ public class Bill extends SessionPersistable {
 	
 	public void setInterpretation(BillInterpretation interp) {
 		this.interpretation = interp;
+
+		if ((interpretations == null || interpretations.isEmpty()) && interp != null) {
+			interpretations = new TreeSet<>(BILL_INTERPRETATION_ORDER);
+			interpretations.add(interp);
+		}
 		
-		if (getName() != null && getName().contains(String.valueOf(getNumber())) && !StringUtils.isBlank(interp.getGenBillTitle())) {
+		if (interp != null && getName() != null && getName().contains(String.valueOf(getNumber())) && !StringUtils.isBlank(interp.getGenBillTitle())) {
 			setName(interp.getGenBillTitle());
+		}
+	}
+
+	public BillInterpretation getInterpretation() {
+		return getInterpretations().isEmpty() ? interpretation : getInterpretations().first();
+	}
+
+	/**
+	 * Returns this bill's interpretations ordered newest-first. Callers should
+	 * assume that the first interpretation is the latest one.
+	 */
+	public NavigableSet<BillInterpretation> getInterpretations() {
+		if ((interpretations == null || interpretations.isEmpty()) && interpretation != null) {
+			interpretations = new TreeSet<>(BILL_INTERPRETATION_ORDER);
+			interpretations.add(interpretation);
+		}
+
+		if (interpretations == null) {
+			interpretations = new TreeSet<>(BILL_INTERPRETATION_ORDER);
+		}
+
+		return interpretations;
+	}
+
+	public void setInterpretations(Collection<BillInterpretation> interpretations) {
+		NavigableSet<BillInterpretation> orderedInterpretations = new TreeSet<>(BILL_INTERPRETATION_ORDER);
+		if (interpretations != null) {
+			interpretations.stream()
+					.filter(java.util.Objects::nonNull)
+					.forEach(orderedInterpretations::add);
+		}
+		this.interpretations = orderedInterpretations;
+		this.interpretation = orderedInterpretations.isEmpty() ? null : orderedInterpretations.first();
+
+		if (this.interpretation != null && getName() != null && getName().contains(String.valueOf(getNumber()))
+				&& !StringUtils.isBlank(this.interpretation.getGenBillTitle())) {
+			setName(this.interpretation.getGenBillTitle());
 		}
 	}
 	
@@ -203,8 +251,8 @@ public class Bill extends SessionPersistable {
 	{
 		if (StringUtils.isNotBlank(name) && name.length() < 100) {
 			return name;
-		} else if (interpretation != null && StringUtils.isNotBlank(interpretation.getGenBillTitle())) {
-			return interpretation.getGenBillTitle();
+		} else if (getInterpretation() != null && StringUtils.isNotBlank(getInterpretation().getGenBillTitle())) {
+			return getInterpretation().getGenBillTitle();
 		}
 		
 		return name;
@@ -250,11 +298,11 @@ public class Bill extends SessionPersistable {
 	}
 	@JsonIgnore public void setDate(LocalDate date) { introducedDate = date; }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return interpretation.getRating(); }
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return getInterpretation().getRating(); }
 	@JsonIgnore public void setRating(int rating) { }
-	@JsonIgnore public int getRating(TrackedIssue issue) { return interpretation.getRating(issue); }
+	@JsonIgnore public int getRating(TrackedIssue issue) { return getInterpretation().getRating(issue); }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_ABS_INDEX }) public int getRatingAbs() { return Math.abs(interpretation.getRating()); }
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_ABS_INDEX }) public int getRatingAbs() { return Math.abs(getInterpretation().getRating()); }
 	@JsonIgnore public void setRatingAbs(int rating) { }
 
 	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_IMPACT_INDEX })
@@ -274,7 +322,7 @@ public class Bill extends SessionPersistable {
 	
 	@JsonIgnore public int getImpact(TrackedIssue issue, double lawWeight)
 	{
-		return calculateImpact(interpretation.getIssueStats().getStat(issue), status.getProgress(), getCosponsorPercent(), lawWeight);
+		return calculateImpact(getInterpretation().getIssueStats().getStat(issue), status.getProgress(), getCosponsorPercent(), lawWeight);
 	}
 
 	public static int calculateImpact(int interpImpact, float statusProgress, float cosponsorPercent)
@@ -294,6 +342,22 @@ public class Bill extends SessionPersistable {
 		int sign = rating < 0 ? -1 : 1;
 		
 		return (int) Math.round(statusTerm + ratingTerm + cosponsorTerm ) * sign;
+	}
+
+	private static java.time.LocalDateTime getBillInterpretationSortValue(BillInterpretation interpretation) {
+		if (interpretation == null) {
+			return null;
+		}
+
+		if (interpretation.getLastUpdate() != null) {
+			return interpretation.getLastUpdate();
+		}
+
+		if (interpretation.getMetadata() != null && interpretation.getMetadata().getDate() != null) {
+			return interpretation.getMetadata().getDate().atStartOfDay();
+		}
+
+		return java.time.LocalDateTime.MIN;
 	}
 	
 	public LegislativeChamber getOriginatingChamber()
@@ -383,6 +447,7 @@ public class Bill extends SessionPersistable {
 	@Override
 	protected void synchronizeJpaState()
 	{
+		interpretation = getInterpretation();
 		storageBucketValue = getStorageBucket();
 		dateValue = getDate() == null ? null : getDate().toString();
 		refreshIssueImpactMap();
@@ -395,7 +460,7 @@ public class Bill extends SessionPersistable {
 
 	private boolean canCalculateDerivedMetrics()
 	{
-		return interpretation != null && status != null && getLastActionDate() != null;
+		return getInterpretation() != null && status != null && getLastActionDate() != null;
 	}
 
 	private void refreshIssueImpactMap()
@@ -406,7 +471,7 @@ public class Bill extends SessionPersistable {
 			issueImpactMap.clear();
 		}
 
-		if (!canCalculateDerivedMetrics() || interpretation.getIssueStats() == null) {
+		if (!canCalculateDerivedMetrics() || getInterpretation().getIssueStats() == null) {
 			return;
 		}
 

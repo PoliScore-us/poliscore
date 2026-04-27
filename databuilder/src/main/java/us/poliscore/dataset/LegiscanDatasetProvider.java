@@ -136,7 +136,11 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    }
 
 	    for (var person : cached.getPeople().values()) {
-	        importLegislator(person, regularDataset);
+	    	try {
+	    		importLegislator(person, regularDataset);
+	    	} catch (RuntimeException e) {
+				logger.error("Error occurred while importing legislator. session={}, peopleId={}, bioguideId={}, name={}", session.getDescription(), person.getPeopleId(), person.getBioguideId(), person.getName(), e);
+	    	}
 	    }
 
 	    if (regularDataset == dataset) {
@@ -144,11 +148,19 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    }
 
 	    for (var bill : cached.getBills().values()) {
-    		importBill(bill, dataset, regularDataset);
+	    	try {
+	    		importBill(bill, dataset, regularDataset);
+	    	} catch (RuntimeException e) {
+	    		logger.error("Error occurred while importing bill. session={}, legiscanId={}, billType={}, billNumber={}", session.getDescription(), bill.getBillId(), bill.getBillType(), bill.getBillNumber(), e);
+	    	}
 	    }
 
 	    for (var vote : cached.getVotes().values()) {
-	        importRollCall(vote, dataset, regularDataset);
+	    	try {
+	    		importRollCall(vote, dataset, regularDataset);
+	    	} catch (RuntimeException e) {
+	    		logger.error("Error occurred while importing roll call. session={}, legiscanId={}", session.getDescription(), vote.getRollCallId(), e);
+	    	}
 	    }
 
 	    return dataset;
@@ -551,31 +563,21 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    term.setChamber(LegislativeChamber.fromLegiscanRole(view.getRole()));
 	    leg.getTerms().add(term);
 
-		try {
-			Persistable.validate(leg);
+		Persistable.validate(leg);
+		
+		val existing = regularDataset.get(legId, Legislator.class);
+		if (existing.isPresent()) {
+			val existingLeg = existing.get();
 			
-			val existing = regularDataset.get(legId, Legislator.class);
-			if (existing.isPresent()) {
-				val existingLeg = existing.get();
-				
-				if (StringUtils.isBlank(existingLeg.getOfficialUrl()))
-					existingLeg.setOfficialUrl(leg.getOfficialUrl());
-				
-				existingLeg.getTerms().addAll(leg.getTerms());
-				return;
-			}
+			if (StringUtils.isBlank(existingLeg.getOfficialUrl()))
+				existingLeg.setOfficialUrl(leg.getOfficialUrl());
 			
-			legiscanIdToLegislator.put(leg.getLegiscanId(), leg);
-			regularDataset.put(leg);
-		} catch (IllegalArgumentException e) {
-			logger.error(
-				"Skipping legislator import because validation failed. peopleId={}, bioguideId={}, name={}",
-				view.getPeopleId(),
-				view.getBioguideId(),
-				view.getName(),
-				e
-			);
+			existingLeg.getTerms().addAll(leg.getTerms());
+			return;
 		}
+		
+		legiscanIdToLegislator.put(leg.getLegiscanId(), leg);
+		regularDataset.put(leg);
 	}
 
 

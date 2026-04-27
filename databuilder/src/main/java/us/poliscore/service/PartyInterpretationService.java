@@ -109,6 +109,9 @@ Before printing the final line, internally verify the output is a JSON array of 
 	
 	@Inject
 	private LocalCachedS3Service s3;
+
+	@Inject
+	private BillService billService;
 	
 	@Inject
 	private GovernmentDataService data;
@@ -243,7 +246,7 @@ Before printing the final line, internally verify the output is a JSON array of 
 		
 		// Calculate Stats //
 		for (val b : dataset.query(Bill.class)) {
-			val op = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class);
+			val op = billService.getInterpretation(b);
 			
 			if (op.isPresent()) {
 				val interp = op.get();

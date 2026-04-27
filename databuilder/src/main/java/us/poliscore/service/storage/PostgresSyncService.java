@@ -77,7 +77,7 @@ public class PostgresSyncService {
 		var billsToUpsert = new ArrayList<Bill>();
 		int syncedBillCount = 0;
 		for (Bill bill : dataset.query(Bill.class)) {
-			val interp = s3.get(BillInterpretation.generateId(bill.getId(), null), BillInterpretation.class);
+			val interp = billService.getInterpretation(bill);
 			if (interp.isEmpty()) {
 				continue;
 			}

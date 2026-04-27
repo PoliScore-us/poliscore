@@ -53,7 +53,7 @@ import us.poliscore.ai.MinuteRateLimiter;
 import us.poliscore.ai.OpenAIModel;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.bill.OpenAIBatchJsonlSerializer;
-import us.poliscore.entrypoint.DatabaseBuilderRuntimeConfig;
+import us.poliscore.entrypoint.DatabaseBuilderConfig;
 import us.poliscore.entrypoint.batch.BatchOpenAIResponseImporter;
 import us.poliscore.model.AIAggregateInterpretationMetadata;
 import us.poliscore.model.AIInterpretationMetadata;
@@ -88,7 +88,7 @@ public class OpenAIService {
 	@Inject TokenEstimatorService tokenEstimatorService;
 
 	@Inject
-	DatabaseBuilderRuntimeConfig runtimeConfig;
+	DatabaseBuilderConfig runtimeConfig;
 	
 	protected LocalDateTime nextCallTime = null;
 	

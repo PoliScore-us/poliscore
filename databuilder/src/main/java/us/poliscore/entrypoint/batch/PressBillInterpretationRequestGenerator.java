@@ -35,7 +35,7 @@ import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
 import us.poliscore.ai.OpenAIModel;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
-import us.poliscore.entrypoint.DatabaseBuilderRuntimeConfig;
+import us.poliscore.entrypoint.DatabaseBuilderConfig;
 import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.InterpretationOrigin;
 import us.poliscore.model.LegislativeNamespace;
@@ -254,7 +254,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	private Set<Bill> queriedBills = new HashSet<Bill>();
 
 	@Inject
-	DatabaseBuilderRuntimeConfig runtimeConfig;
+	DatabaseBuilderConfig runtimeConfig;
 	
 	// If you need to reprocess a particular bill for whatever reason, add it here. When we run, we will always process any bills in this list, so be careful
 	// not to commit this list with anything in it.
@@ -360,7 +360,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	
 	@SneakyThrows
 	private void processBill(Bill b) {
-		var interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).orElse(null);
+		var interp = billService.getInterpretation(b).orElse(null);
 		
 		if (interp != null && LocalDate.now().isAfter(b.getIntroducedDate().plus(19, ChronoUnit.DAYS)) && interp.getLastPressQuery().isAfter(LocalDate.now().minus(30, ChronoUnit.DAYS)) && !Arrays.asList(specificFetch).contains(b.getId())) return; // Skip if it was interpreted in the last x days
 		if (interp != null && LocalDate.now().isBefore(b.getIntroducedDate().plus(19, ChronoUnit.DAYS)) && interp.getLastPressQuery().isAfter(LocalDate.now().minus(10, ChronoUnit.DAYS)) && !Arrays.asList(specificFetch).contains(b.getId())) return;
@@ -403,7 +403,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 		Log.info("Updating LastPressQuery for interpreted bills");
 		
 		for (var b : queriedBills) {
-			val interp = s3.get(BillInterpretation.generateId(b.getId(), null), BillInterpretation.class).orElse(null);
+			val interp = billService.getInterpretation(b).orElse(null);
 			
 			if (interp != null) {
 				interp.setLastPressQuery(LocalDate.now());

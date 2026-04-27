@@ -45,16 +45,6 @@ public class BillInterpretationService {
 	@Inject
 	private GovernmentDataService data;
 	
-	public Optional<BillInterpretation> getByBillId(String billId)
-	{
-		return getByBillId(billId, InterpretationOrigin.POLISCORE);
-	}
-	
-	public Optional<BillInterpretation> getByBillId(String billId, InterpretationOrigin origin)
-	{
-		return s3.get(BillInterpretation.generateId(billId, origin, null), BillInterpretation.class);
-	}
-	
 	public String getUserMsgForBill(Bill bill, String billText, OpenAIModel model) {
 //		var userMsg = "Bill Text:\n" + billText;
 //		
@@ -234,10 +224,7 @@ public class BillInterpretationService {
     }
 
 	public boolean isInterpreted(@NonNull String billId) {
-		val id = BillInterpretation.generateId(billId, InterpretationOrigin.POLISCORE, null);
-		val exists = s3.exists(id, BillInterpretation.class);
-		
-		return exists;
+		return billService.getInterpretation(billId).isPresent();
 		
 //		if (!exists) return false;
 //		
@@ -247,7 +234,6 @@ public class BillInterpretationService {
 	}
 	
 	public boolean isInterpreted(@NonNull String billId, int sliceIndex) {
-		val id = BillInterpretation.generateId(billId, InterpretationOrigin.POLISCORE, sliceIndex);
-		return s3.exists(id, BillInterpretation.class);
+		return billService.getInterpretation(billId, sliceIndex).isPresent();
 	}
 }
