@@ -221,7 +221,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	protected void importBill(LegiscanBillView view, PoliscoreDataset dataset, PoliscoreDataset regularDataset) {
 		val bill = new Bill();
 		
-		if (!populate(bill, view, regularDataset.getSession())) {
+		if (!populate(bill, view, dataset.getSession())) {
 			logger.warn("Legiscan bill " + view.getBillId() + " did not have any history and thus cannot be imported.");
 			return;
 		}
@@ -268,7 +268,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
     	dataset.put(bill);
 	}
 	
-	public static boolean populate(Bill bill, LegiscanBillView view, LegislativeSession regularSession) {
+	public static boolean populate(Bill bill, LegiscanBillView view, LegislativeSession session) {
 		val originatingChamber = resolveOriginatingChamber(view);
 		val introducedDate = resolveIntroducedDate(view);
 		val lastActionDate = resolveLastActionDate(view);
@@ -278,22 +278,22 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 			return false;
 		}
 		
-		if (regularSession == null) {
-			regularSession = SessionInfoService.lookupRegularSession(bill.getNamespace(), bill.getSessionCode());
+		if (session == null) {
+			session = SessionInfoService.lookupSession(bill.getNamespace(), bill.getSessionCode());
 		} else {
 			bill.setNumber(Integer.parseInt(view.getBillNumber().replaceAll("[^\\d]", "")));
 			bill.setOriginatingChamber(originatingChamber.get());
 	
-			if (regularSession.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
+			if (session.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
 	    		bill.setType(toCongressionalBillType(view).name());
 	    	else
 	    		bill.setType(getChamberCode(bill.getOriginatingChamber()) + view.getBillType().getCode());
 			
-			bill.setId(Bill.generateId(regularSession.getNamespace(), regularSession.getCode(), bill.getType(), bill.getNumber()));
+			bill.setId(Bill.generateId(session.getNamespace(), session.getCode(), bill.getType(), bill.getNumber()));
 		}
 		
 		bill.setName(view.getTitle());
-		bill.setStatus(buildStatus(view, regularSession));
+		bill.setStatus(buildStatus(view, session));
     	bill.setIntroducedDate(introducedDate.get());
     	bill.setLastActionDate(lastActionDate.get());
     	bill.setLegiscanId(view.getBillId());
