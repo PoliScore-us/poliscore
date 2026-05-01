@@ -157,7 +157,7 @@ public class OpenAIService {
 		waitForRateLimit(model, estimatedTokens);
 		
 		OpenAIModel _model = ObjectUtils.defaultIfNull(model, OpenAIModel.DEFAULT_MODEL);
-		boolean useFlex = Objects.requireNonNullElse(request.getFlex(), false);
+		boolean useFlex = request.getFlex();
 		
 		val paramBuilder = ResponseCreateParams.builder()
 				.instructions(systemMsg)
@@ -236,7 +236,7 @@ public class OpenAIService {
 	      .map(u -> new Usage(u.inputTokens(), u.outputTokens(), response.serviceTier().map(t -> t.asString()).orElse(null))) // <-- rename to what your SDK exposes
 	      .orElse(new Usage(0, 0, null));
 
-    	double costUsd = _model.estimateCostUsd(usage);
+    	double costUsd = _model.estimateCostUsd(usage, useFlex);
 
     	return new ChatResult(responseBody, usage, costUsd);
     }
@@ -268,17 +268,30 @@ public class OpenAIService {
 	
 	/**
 	 * Submits a batch of files, awaits their processing, and then downloads the results.
+	 * 
+	 * By default, very small batches are processed immediately because submitting to
+	 * OpenAI's Batch API is slower for tiny jobs. Immediate processing also imports
+	 * responses through the standard BatchOpenAIResponseImporter by default. Set
+	 * importImmediateResponses to false when callers need the immediate JSONL response
+	 * file for custom import logic.
 	 */
 	@SneakyThrows
 	public List<File> processBatch(BuildReport report, List<InterpretationRequest> requests) {
+		return processBatch(report, requests, true);
+	}
+
+	@SneakyThrows
+	public List<File> processBatch(BuildReport report, List<InterpretationRequest> requests, boolean importImmediateResponses) {
 
 	    if (requests == null || requests.isEmpty()) {
 	        return List.of();
 	    }
+	    
+	    logEstimatedBatchCost(requests);
 
 	    // If small enough, don't use Batch API (too slow / flaky for tiny jobs)
 	    if (requests.size() <= IMMEDIATE_PROCESS_THRESHOLD) {
-	        return processBatchImmediately(report, requests);
+	        return processBatchImmediately(report, requests, importImmediateResponses);
 	    }
 
 	    OpenAIClient client = OpenAIOkHttpClient.builder()
@@ -364,10 +377,32 @@ public class OpenAIService {
 
 	    return responseFiles;
 	}
+
+	private void logEstimatedBatchCost(List<InterpretationRequest> requests) {
+		double estimatedInputCostUsd = 0.0d;
+		boolean batchApi = requests.size() > IMMEDIATE_PROCESS_THRESHOLD;
+
+		for (InterpretationRequest request : requests) {
+			OpenAIModel model = Objects.requireNonNullElse(request.getRequestedModel(), OpenAIModel.DEFAULT_MODEL);
+			long cachedTokens = tokenEstimatorService.estimateTokenCount(request.getSystemMsg());
+			long uncachedTokens = tokenEstimatorService.estimateTokenCount(request.getUserMsg());
+			boolean discounted = batchApi || request.getFlex();
+			
+			estimatedInputCostUsd += (cachedTokens / 10d / 1_000_000d) + (uncachedTokens / 1_000_000d) * model.getInputUsdPer1M() * (discounted ? 0.5d : 1.0d);
+		}
+
+		Log.infof("Estimated cost of INPUT TOKENS ONLY, assuming cached prompts: $%.4f for %d requests. Real cost will be higher.",
+				estimatedInputCostUsd, requests.size());
+	}
 	
 	@SneakyThrows
 	public List<File> processBatchImmediately(BuildReport report, List<InterpretationRequest> requests) {
 		return flexBatchProcessor.processBatchImmediately(report, requests);
+	}
+
+	@SneakyThrows
+	public List<File> processBatchImmediately(BuildReport report, List<InterpretationRequest> requests, boolean importResponses) {
+		return flexBatchProcessor.processBatchImmediately(report, requests, importResponses);
 	}
 	
 //	/**

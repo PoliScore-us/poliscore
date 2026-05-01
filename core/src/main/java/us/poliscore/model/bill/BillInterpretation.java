@@ -157,6 +157,10 @@ public class BillInterpretation extends SessionPersistable
 
 	protected String sourceBillTextVersion;
 	
+	protected List<String> topics;
+	
+	protected List<String> otherNames;
+	
 	@NonNull
 	protected String billId;
 	

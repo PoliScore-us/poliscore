@@ -13,12 +13,15 @@ import us.poliscore.service.OpenAIService.Usage;
 @Getter
 @AllArgsConstructor
 public enum OpenAIModel {
-	GPT55("gpt-5.5", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 2.5, 15),
-	GPT54("gpt-5.4", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 1.25, 7.50),
-	GPT52("gpt-5.2", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.875, 7.00),
-	GPT51("gpt-5.1", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.625, 5.00),
-	GPT5("gpt-5", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.625, 5.00),
-	GPT5mini("gpt-5-mini", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.125, 1.00),
+	GPT55("gpt-5.5", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 5.0, 30),
+	GPT54mini("gpt-5.4-mini", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.75, 4.5),
+	GPT54nano("gpt-5.4-nano", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.2, 1.25),
+	GPT54("gpt-5.4", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 2.5, 15),
+	GPT52("gpt-5.2", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 1.7, 14),
+	GPT51("gpt-5.1", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 1.3, 10),
+	GPT5("gpt-5", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 1.3, 10),
+	GPT5mini("gpt-5-mini", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.25, 2.00),
+	GPT5nano("gpt-5-nano", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.05, 0.4),
 	GPT41("gpt-4.1", 1_047_576, 32_768, true, true, false, new RateLimit(30_000_000, 10_000), 0, 0),
 	GPT41mini("gpt-4.1-mini", GPT41.contextWindowTokens, GPT41.maxOutputTokens, true, false, false, new RateLimit(150_000_000, 30_000), 0, 0),
 	GPT4o("gpt-4o", 122_500, 14_000, true, true, false, new RateLimit(30_000_000, 10_000), 0, 0),
@@ -58,7 +61,7 @@ public enum OpenAIModel {
 		return id;
 	}
 
-	public double estimateCostUsd(Usage usage) {
+	public double estimateCostUsd(Usage usage, boolean batchOrFlex) {
 		if (usage == null)
 			return 0.0d;
 		
@@ -66,8 +69,13 @@ public enum OpenAIModel {
 		double inputPrice = "normal".equals(usage.actualServiceTier()) ? 2*inputUsdPer1M : inputUsdPer1M;
 		double outputPrice = "normal".equals(usage.actualServiceTier()) ? 2*outputUsdPer1M : outputUsdPer1M;
 		
-		return (usage.promptTokens() / 1_000_000d) * inputPrice
+		double cost = (usage.promptTokens() / 1_000_000d) * inputPrice
 				+ (usage.completionTokens() / 1_000_000d) * outputPrice;
+		
+		if (batchOrFlex)
+			return cost / 2;
+		else
+			return cost;
 	}
 
 	// ---- Lookup by id ----

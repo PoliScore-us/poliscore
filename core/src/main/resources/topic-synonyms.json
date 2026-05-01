@@ -1,0 +1,337 @@
+{
+  "ranked-choice voting": [
+    "rcv",
+    "ranked choice voting",
+    "instant runoff voting",
+    "instant-runoff voting",
+    "ranked ballots",
+    "ranked ballot voting",
+    "preferential voting",
+    "ballot design for ranked choice voting",
+    "ranked-choice voting ban",
+    "ranked-choice voting prohibition"
+  ],
+  "election administration": [
+    "elections administration",
+    "election management",
+    "voting administration",
+    "election operations"
+  ],
+  "voter registration": [
+    "automatic voter registration",
+    "same-day voter registration",
+    "online voter registration",
+    "voter rolls",
+    "voter roll maintenance"
+  ],
+  "voting rights": [
+    "voter rights",
+    "right to vote",
+    "ballot access",
+    "access to voting"
+  ],
+  "mail-in voting": [
+    "mail voting",
+    "vote by mail",
+    "vote-by-mail",
+    "absentee voting",
+    "postal voting"
+  ],
+  "campaign finance": [
+    "campaign financing",
+    "political donations",
+    "political contributions",
+    "election spending"
+  ],
+  "government ethics": [
+    "public ethics",
+    "ethics rules",
+    "ethics reform",
+    "conflict of interest",
+    "conflicts of interest"
+  ],
+  "public records": [
+    "open records",
+    "freedom of information",
+    "foia",
+    "government records",
+    "records requests"
+  ],
+  "data privacy": [
+    "privacy rights",
+    "consumer privacy",
+    "personal data protection",
+    "data protection"
+  ],
+  "cybersecurity": [
+    "cyber security",
+    "information security",
+    "network security"
+  ],
+  "artificial intelligence": [
+    "ai",
+    "machine learning",
+    "automated decision-making",
+    "algorithmic decision-making"
+  ],
+  "broadband internet": [
+    "broadband",
+    "high-speed internet",
+    "internet access",
+    "rural broadband"
+  ],
+  "affordable housing": [
+    "housing affordability",
+    "low-income housing",
+    "workforce housing"
+  ],
+  "homelessness": [
+    "homeless services",
+    "homeless assistance",
+    "unsheltered homelessness"
+  ],
+  "tenant protections": [
+    "renters rights",
+    "tenant rights",
+    "eviction protections",
+    "rent control"
+  ],
+  "health insurance": [
+    "health coverage",
+    "medical insurance",
+    "insurance coverage"
+  ],
+  "medicaid": [
+    "medical assistance",
+    "medicaid coverage",
+    "medicaid expansion"
+  ],
+  "medicare": [
+    "medicare coverage",
+    "medicare benefits"
+  ],
+  "prescription drug pricing": [
+    "drug pricing",
+    "prescription costs",
+    "pharmaceutical pricing",
+    "medication costs"
+  ],
+  "mental health care": [
+    "mental health services",
+    "behavioral health",
+    "behavioral healthcare",
+    "psychiatric care"
+  ],
+  "substance use treatment": [
+    "addiction treatment",
+    "substance abuse treatment",
+    "opioid treatment",
+    "drug treatment"
+  ],
+  "reproductive health care": [
+    "reproductive healthcare",
+    "abortion access",
+    "maternal health care",
+    "family planning"
+  ],
+  "gun violence": [
+    "firearm violence",
+    "gun safety",
+    "firearm safety"
+  ],
+  "firearm regulation": [
+    "gun regulation",
+    "gun control",
+    "firearms regulation",
+    "weapons regulation"
+  ],
+  "criminal justice reform": [
+    "justice reform",
+    "sentencing reform",
+    "prison reform",
+    "corrections reform"
+  ],
+  "law enforcement accountability": [
+    "police accountability",
+    "police oversight",
+    "law enforcement oversight"
+  ],
+  "immigration enforcement": [
+    "border enforcement",
+    "immigration detention",
+    "deportation"
+  ],
+  "asylum policy": [
+    "asylum",
+    "refugee asylum",
+    "asylum seekers"
+  ],
+  "renewable energy": [
+    "clean energy",
+    "green energy",
+    "solar energy",
+    "wind energy"
+  ],
+  "fossil fuels": [
+    "oil and gas",
+    "coal",
+    "natural gas",
+    "petroleum"
+  ],
+  "climate change": [
+    "global warming",
+    "greenhouse gas emissions",
+    "carbon emissions",
+    "climate policy"
+  ],
+  "electric vehicles": [
+    "evs",
+    "ev charging",
+    "electric vehicle charging",
+    "zero-emission vehicles"
+  ],
+  "public transportation": [
+    "public transit",
+    "mass transit",
+    "transit service",
+    "bus service",
+    "rail transit"
+  ],
+  "road infrastructure": [
+    "highway infrastructure",
+    "bridge repair",
+    "road repair",
+    "transportation infrastructure"
+  ],
+  "traffic safety": [
+    "road safety",
+    "highway safety",
+    "vehicle safety"
+  ],
+  "student loans": [
+    "student debt",
+    "student loan debt",
+    "student loan forgiveness",
+    "education debt"
+  ],
+  "school choice": [
+    "education choice",
+    "vouchers",
+    "school vouchers",
+    "charter schools"
+  ],
+  "special education": [
+    "students with disabilities",
+    "idea",
+    "individualized education programs",
+    "iep"
+  ],
+  "child care": [
+    "childcare",
+    "day care",
+    "early childhood care",
+    "early childhood education"
+  ],
+  "paid family leave": [
+    "family leave",
+    "paid leave",
+    "parental leave",
+    "medical leave"
+  ],
+  "minimum wage": [
+    "wage floor",
+    "hourly minimum wage",
+    "minimum pay"
+  ],
+  "worker classification": [
+    "employee classification",
+    "independent contractors",
+    "gig workers",
+    "misclassification"
+  ],
+  "unemployment insurance": [
+    "unemployment benefits",
+    "jobless benefits",
+    "ui benefits"
+  ],
+  "small business assistance": [
+    "small business support",
+    "small business grants",
+    "small business loans"
+  ],
+  "tax credits": [
+    "tax credit",
+    "tax incentives",
+    "tax breaks"
+  ],
+  "property taxes": [
+    "property tax",
+    "real estate taxes",
+    "real property taxes"
+  ],
+  "sales taxes": [
+    "sales tax",
+    "retail sales tax",
+    "use tax"
+  ],
+  "agricultural subsidies": [
+    "farm subsidies",
+    "farm support",
+    "agriculture subsidies"
+  ],
+  "food assistance": [
+    "snap",
+    "food stamps",
+    "nutrition assistance",
+    "school meals"
+  ],
+  "veterans benefits": [
+    "veterans affairs",
+    "veterans services",
+    "va benefits"
+  ],
+  "disability benefits": [
+    "disability assistance",
+    "ssi",
+    "social security disability",
+    "ssdi"
+  ],
+  "social security": [
+    "social security benefits",
+    "retirement benefits",
+    "old-age benefits"
+  ],
+  "disaster relief": [
+    "emergency relief",
+    "fema assistance",
+    "natural disaster assistance",
+    "disaster recovery"
+  ],
+  "water quality": [
+    "clean water",
+    "drinking water",
+    "water pollution",
+    "water contamination"
+  ],
+  "air quality": [
+    "clean air",
+    "air pollution",
+    "emissions standards"
+  ],
+  "public lands": [
+    "federal lands",
+    "state lands",
+    "land management",
+    "public land management"
+  ],
+  "wildfire prevention": [
+    "wildfire mitigation",
+    "forest fire prevention",
+    "fire prevention"
+  ],
+  "animal welfare": [
+    "animal protection",
+    "animal cruelty",
+    "humane treatment"
+  ]
+}

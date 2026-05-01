@@ -191,6 +191,8 @@ public class LegiscanVoteConverter {
 	    }
 	    
 	    for (String regex : new String[] {
+	    	"(?i)^motion test$",
+	    	"(?i)^(house|senate)\\s+[a-z&\\s]+:\\s*l\\.\\d+$",
 	    	"(?i)\\b[FS]A\\d+\\b", // Contains SA1 (Senate Amendment #1) or FA1 (Floor Amendment #1)
 	    	"(?i)\\bamd\\b", // Contains the word 'amd' (not inside another word)
 	    	"(?i)\\bmisc\\b" // Contains the word 'misc' (not inside another word)

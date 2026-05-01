@@ -29,6 +29,10 @@ public class InterpretationRequest {
    */
   private Boolean flex;
 
+  public Boolean getFlex() {
+    return Boolean.TRUE.equals(flex);
+  }
+
   public InterpretationRequest(CustomData data, String systemMsg, String userMsg, OpenAIModel requestedModel,
       ReasoningEffort reasoningEffort) {
     this(data, systemMsg, userMsg, requestedModel, reasoningEffort, null);

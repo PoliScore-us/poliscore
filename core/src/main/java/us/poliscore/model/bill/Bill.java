@@ -306,7 +306,8 @@ public class Bill extends SessionPersistable {
 	@JsonIgnore public void setRatingAbs(int rating) { }
 
 	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_IMPACT_INDEX })
-	public int getImpact() { return (int)(getImpact(TrackedIssue.OverallBenefitToSociety, status.getDescription().toLowerCase().trim().equals("law") ? DEFAULT_IMPACT_LAW_WEIGHT : 0.0d) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getLastActionDate(), LocalDate.now()))); }
+//	public int getImpact() { return (int)(getImpact(TrackedIssue.OverallBenefitToSociety, status.getDescription().toLowerCase().trim().equals("law") ? DEFAULT_IMPACT_LAW_WEIGHT : 0.0d) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getLastActionDate(), LocalDate.now()))); }
+	public int getImpact() { return (int)(getImpact(TrackedIssue.OverallBenefitToSociety) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getLastActionDate(), LocalDate.now()))); }
 	public void setImpact(int impact) { }
 	
 	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_IMPACT_ABS_INDEX })

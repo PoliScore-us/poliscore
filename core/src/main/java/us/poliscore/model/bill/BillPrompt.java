@@ -17,6 +17,12 @@ public class BillPrompt {
 			Bill Title:
 			Write the bill's title, derived entirely from the bill text. If the bill text does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very concise title for the bill based on its content. If the bill has a title, but it is confusing, vague, too long, or would otherwise be poorly understood by the general public, please make up a very concise title for the bill based on its content.
 
+			Other Names:
+			Write a single-line JSON array of alternate names this bill might actually be searched by. Include official short titles, popular/common names, widely used acronyms, and distinct shorthand references. Do not include the bill number, sponsor names, generic descriptions, the generated Bill Title above, or speculative names. Use exact human-readable strings, remove duplicates, and output [] if there are no real alternate names.
+			
+			Topics:
+			Write a single-line JSON array of concise searchable topic phrases this bill substantively covers. Use lower-case noun phrases, prefer common public search language, and include both specific concepts and important plain-language synonyms when useful (for example "gun violence" and "firearm regulation"). Include both broad umbrella topics (such as 'transportation') as well as more targeted or specific topics (such as 'nonprofit transportation'). Remove duplicates and output [] if no meaningful topic applies.
+
 			Structural Analysis:
 			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either exactly "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.
 			
@@ -233,6 +239,12 @@ public class BillPrompt {
 			
 			Bill Title:
 			Write the bill's title, derived entirely from the bill text. If the bill text does not have a title and is only referred to by its bill number (such as HR 4141), please make up a very concise title for the bill based on its content. If the bill has a title, but it is confusing, vague, too long, or would otherwise be poorly understood by the general public, please make up a very concise title for the bill based on its content.
+			
+			Other Names:
+			Write a single-line JSON array of alternate names this bill might actually be searched by. Include official short titles, popular/common names, widely used acronyms, and distinct shorthand references. Do not include the bill number, sponsor names, generic descriptions, the generated Bill Title above, or speculative names. Use exact human-readable strings, remove duplicates, and output [] if there are no real alternate names.
+			
+			Topics:
+			Write a single-line JSON array of concise searchable topic phrases this bill substantively covers. Use lower-case noun phrases, prefer common public search language, and include both specific concepts and important plain-language synonyms when useful (for example "gun violence" and "firearm regulation"). Include both broad umbrella topics (such as 'transportation') as well as more targeted or specific topics (such as 'nonprofit transportation'). Remove duplicates and output [] if no meaningful topic applies.
 			
 			Structural Analysis:
 			Your goal in this section is to evaluate the bill across seven core pillars. You are to fill out each step in your response, thinking carefully at each step. Begin your response with the pillar number, name and a colon, exactly as written here, followed by your analysis. Conclude each pillar analysis by writing either exactly "<PASS>", or "<FAIL>", denoting that the bill has either passed or failed that pillar of the structural analysis.

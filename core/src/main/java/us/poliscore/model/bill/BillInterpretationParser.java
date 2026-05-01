@@ -3,10 +3,12 @@ package us.poliscore.model.bill;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -46,8 +48,12 @@ public class BillInterpretationParser {
 	private BillInterpretation interp;
 
 	private S3PersistenceService s3;
-	
+		
 	private int searchReferenceCount = 0;
+
+	private State pendingJsonArrayState;
+
+	private StringBuilder pendingJsonArray;
 
 	public static enum State {
 		REASONING("(?i)Reasoning Steps:"), STRUCTURAL("(?i)Structural Analysis:"),
@@ -55,7 +61,9 @@ public class BillInterpretationParser {
 		SEARCH_REFERENCES("(?i)Search References:"), IMPACT_ANALYSIS("(?i)Impact Analysis:"), IMPACT("(?i)Impact Stats:"), RATING("(?i)Rating:"),
 		AUTHOR("(?i)Author:"), TITLE("(?i)Title:", "(?i)Bill Title:"), RIDERS("(?i)Riders:"),
 		SHORT_REPORT("(?i)Short Report:"), LONG_REPORT("(?i)Long Report:"), LAYMANS_REPORT("(?i)Casual Report:"),
-		CONFIDENCE("(?i)Confidence:");
+		CONFIDENCE("(?i)Confidence:"),
+		OTHER_NAMES("(?i)Other Names:"),
+		TOPICS("(?i)Topics:");
 
 		private List<String> regex;
 
@@ -87,6 +95,8 @@ public class BillInterpretationParser {
 		interp.setIssueStats(new IssueStats());
 		interp.setConfidence(-1);
 		interp.setLaymansReport("");
+		interp.setTopics(new ArrayList<String>());
+		interp.setOtherNames(new ArrayList<String>());
 		
 		if (StringUtils.isNotEmpty(reasoning))
 			interp.setReasoning(reasoning);
@@ -102,6 +112,10 @@ public class BillInterpretationParser {
 
 				processContent(line);
 			}
+		}
+
+		if (pendingJsonArray != null) {
+			throw new RuntimeException("Unable to parse " + pendingJsonArrayState + " as a complete JSON string array before end of response");
 		}
 
 		cleanIssueStats(interp.getIssueStats());
@@ -179,6 +193,10 @@ public class BillInterpretationParser {
 			processLaymansReport(line);
 		} else if (State.IMPACT_ANALYSIS.equals(state)) {
 			processImpactAnalysis(line);
+		} else if (State.OTHER_NAMES.equals(state)) {
+			processOtherNames(line);
+		} else if (State.TOPICS.equals(state)) {
+			processTopics(line);
 		}
 	}
 
@@ -245,8 +263,7 @@ public class BillInterpretationParser {
 		line = line.replace("\\\"", "");
 
 		try {
-			String[][] references = new ObjectMapper().readValue(line, new TypeReference<String[][]>() {
-			});
+			String[][] references = new ObjectMapper().readValue(line, new TypeReference<String[][]>() {});
 
 			for (val values : references) {
 				try {
@@ -371,6 +388,85 @@ public class BillInterpretationParser {
 	private void processTitle(String line) {
 		interp.setGenBillTitle(line);
 	}
+	
+	@SneakyThrows
+	private void processOtherNames(String line) {
+		processJsonStringList(line, interp.getOtherNames(), State.OTHER_NAMES);
+	}
+		
+	@SneakyThrows
+	private void processTopics(String line) {
+		processJsonStringList(line, interp.getTopics(), State.TOPICS);
+		interp.setTopics(TopicCanonicalizer.canonicalizeTopics(interp.getTopics()));
+	}
+
+	private void processJsonStringList(String line, List<String> target, State jsonState) {
+		String cleanedLine = stripJsonFenceMarkers(line);
+		if (StringUtils.isBlank(cleanedLine)) {
+			return;
+		}
+
+		if (pendingJsonArray != null && pendingJsonArrayState != jsonState) {
+			throw new RuntimeException("Unable to parse " + pendingJsonArrayState + " JSON before starting " + jsonState);
+		}
+
+		String candidate;
+		if (pendingJsonArray == null) {
+			candidate = cleanedLine;
+		} else {
+			pendingJsonArray.append("\n").append(cleanedLine);
+			candidate = pendingJsonArray.toString();
+		}
+
+		try {
+			String[] values = new ObjectMapper().readValue(extractJsonArray(candidate), new TypeReference<String[]>() {});
+			addUniqueNonBlankValues(target, values);
+			pendingJsonArray = null;
+			pendingJsonArrayState = null;
+		} catch (JsonProcessingException e) {
+			if (looksLikePartialJsonArray(candidate)) {
+				pendingJsonArrayState = jsonState;
+				pendingJsonArray = new StringBuilder(candidate);
+				return;
+			}
+
+			throw new RuntimeException("Unable to parse " + jsonState + " as a JSON string array: " + line, e);
+		}
+	}
+
+	private String stripJsonFenceMarkers(String line) {
+		String stripped = line == null ? "" : line.strip();
+		if (stripped.matches("(?i)^```(?:json)?\\s*$") || stripped.equals("```")) {
+			return "";
+		}
+
+		return stripped.replace("```json", "").replace("```JSON", "").replace("```", "").strip();
+	}
+
+	private String extractJsonArray(String raw) {
+		int start = raw.indexOf('[');
+		int end = raw.lastIndexOf(']');
+		if (start >= 0 && end >= start) {
+			return raw.substring(start, end + 1);
+		}
+
+		return raw;
+	}
+
+	private boolean looksLikePartialJsonArray(String raw) {
+		String stripped = raw.strip();
+		return stripped.startsWith("[") || stripped.startsWith("```");
+	}
+
+	private void addUniqueNonBlankValues(List<String> target, String[] values) {
+		Set<String> existing = new LinkedHashSet<>(target);
+		for (String value : values) {
+			String cleaned = StringUtils.trimToNull(value);
+			if (cleaned != null && existing.add(cleaned)) {
+				target.add(cleaned);
+			}
+		}
+	}
 
 	private void processRider(String line) {
 		if (line.matches("^ ?- ?.+$")) {
@@ -405,6 +501,10 @@ public class BillInterpretationParser {
 		for (State s : State.values()) {
 			for (String regex : s.regex) {
 				if (line.matches(regex + ".*")) {
+					if (pendingJsonArray != null) {
+						throw new RuntimeException("Unable to parse " + pendingJsonArrayState + " as a complete JSON string array before section " + s);
+					}
+
 					state = s;
 
 					// Handle inline content (e.g., "Title: This is a title")

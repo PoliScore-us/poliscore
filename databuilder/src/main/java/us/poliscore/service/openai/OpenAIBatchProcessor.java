@@ -71,6 +71,11 @@ public class OpenAIBatchProcessor {
 	 */
 	@SneakyThrows
 	public List<File> processBatchImmediately(BuildReport report, List<InterpretationRequest> requests) {
+		return processBatchImmediately(report, requests, true);
+	}
+
+	@SneakyThrows
+	public List<File> processBatchImmediately(BuildReport report, List<InterpretationRequest> requests, boolean importResponses) {
 		Log.infof("Performing %d requests to OpenAI (threads=%d).", requests.size(), THREADS);
 
 		var buildTemp = PoliscoreUtil.cacheFile("build");
@@ -129,9 +134,11 @@ public class OpenAIBatchProcessor {
 		}, "openai-batch-jsonl-writer");
 		writerThread.start();
 		
-		responseImporter.beginImport();
+		if (importResponses) {
+			responseImporter.beginImport();
+		}
 
-			final Thread importerThread = new Thread(() -> {
+		final Thread importerThread = !importResponses ? null : new Thread(() -> {
 				try {
 					while (true) {
 						String line = linesToImport.take();
@@ -149,7 +156,9 @@ public class OpenAIBatchProcessor {
 					fatal.compareAndSet(null, t);
 			}
 		}, "openai-batch-importer");
-		importerThread.start();
+		if (importerThread != null) {
+			importerThread.start();
+		}
 
 		ExecutorService pool = Executors.newFixedThreadPool(THREADS, r -> {
 			Thread t = new Thread(r);
@@ -172,11 +181,15 @@ public class OpenAIBatchProcessor {
 
 			    // Tell writer to stop (don’t block forever here)
 			    try { linesToWrite.offer(GlobalWriterSignals.POISON_PILL, 250, TimeUnit.MILLISECONDS); } catch (Throwable ignored) {}
-			    try { linesToImport.offer(GlobalWriterSignals.POISON_PILL, 250, TimeUnit.MILLISECONDS); } catch (Throwable ignored) {}
+			    if (importResponses) {
+			    	try { linesToImport.offer(GlobalWriterSignals.POISON_PILL, 250, TimeUnit.MILLISECONDS); } catch (Throwable ignored) {}
+			    }
 
 			    // Give writer/importer a moment to flush/close
 			    try { writerThread.join(3_000); } catch (Throwable ignored) {}
-			    try { importerThread.join(3_000); } catch (Throwable ignored) {}
+			    if (importerThread != null) {
+			    	try { importerThread.join(3_000); } catch (Throwable ignored) {}
+			    }
 			  } catch (Throwable t) {
 			    // Never throw from shutdown hooks
 			    Log.error("Error in shutdown hook.", t);
@@ -228,7 +241,9 @@ public class OpenAIBatchProcessor {
 										// Build your existing JSONL “batch envelope” line
 										String line = toBatchEnvelopeLine(req, chat);
 										linesToWrite.put(line);
-										linesToImport.put(line);
+										if (importResponses) {
+											linesToImport.put(line);
+										}
 
 									} catch (Throwable t) {
 									if (openAIChatService.isRateLimitFailure(t)) {
@@ -274,8 +289,10 @@ public class OpenAIBatchProcessor {
 			linesToWrite.put(GlobalWriterSignals.POISON_PILL);
 			writerThread.join();
 			
-			linesToImport.put(GlobalWriterSignals.POISON_PILL);
-			importerThread.join();
+			if (importResponses) {
+				linesToImport.put(GlobalWriterSignals.POISON_PILL);
+				importerThread.join();
+			}
 		}
 
 		// Set totals on BuildReport
@@ -283,10 +300,12 @@ public class OpenAIBatchProcessor {
 		report.setFlexRequests((int) flexRequests.sum());
 		report.setFlexRequests((int) normalRequests.sum());
 
+		if (importResponses) {
 			responseImporter.finishImport(report);
 			logImportProgress(requests.size(), handledImports.get(), successfulImports.get());
+		}
 
-		return List.of();
+		return importResponses ? List.of() : List.of(outputFile);
 	}
 
 	private void logImportProgress(int totalRequests, int handledImports, int successfulImports) {
