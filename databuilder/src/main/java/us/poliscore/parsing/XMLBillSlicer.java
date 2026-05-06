@@ -93,9 +93,14 @@ public class XMLBillSlicer implements BillSlicer {
 			StringBuilder cur = new StringBuilder();
 			String start = sections.get(i).getStart();
 			
-			while (i < sections.size() && exceedsLength(cur + "\n" + sections.get(i).getText(), model)) {
+			while (i < sections.size() && !exceedsLength(cur + "\n" + sections.get(i).getText(), model)) {
 				if (cur.length() > 0) { cur.append("\n"); }
 				
+				cur.append(sections.get(i).getText());
+				i++;
+			}
+
+			if (cur.length() == 0 && i < sections.size()) {
 				cur.append(sections.get(i).getText());
 				i++;
 			}

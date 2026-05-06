@@ -11,7 +11,7 @@ import lombok.Data;
 public class DatabaseBuilderConfig {
 
 	// What do we want to interpret?
-	private boolean interpretNewBills = false;
+	private boolean interpretNewBills = true;
 	private boolean reinterpretLegislators = false;
 	private boolean reinterpretParties = false;
 	

@@ -84,7 +84,7 @@ public class Bill extends SessionPersistable {
 
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(columnDefinition = "jsonb")
-	protected NavigableSet<BillText> texts = new TreeSet<>(BILL_TEXT_ORDER);
+	protected List<BillText> texts = new ArrayList<>();
 	
 	// Type here is sort of overloaded at this point. If it's congressional data, then it will align with CongressionalBillType.name()
 	// Otherwise if it's a state bill it should align with LegiscanBillType.getCode()
@@ -129,8 +129,9 @@ public class Bill extends SessionPersistable {
 	@Column(columnDefinition = "jsonb")
 	protected BillInterpretation interpretation;
 
-	@Transient
-	protected NavigableSet<BillInterpretation> interpretations = new TreeSet<>(BILL_INTERPRETATION_ORDER);
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(columnDefinition = "jsonb")
+	protected List<BillInterpretation> interpretations = new ArrayList<>();
 
 	@JsonIgnore
 	@JdbcTypeCode(SqlTypes.JSON)
@@ -178,7 +179,7 @@ public class Bill extends SessionPersistable {
 		this.interpretation = interp;
 
 		if ((interpretations == null || interpretations.isEmpty()) && interp != null) {
-			interpretations = new TreeSet<>(BILL_INTERPRETATION_ORDER);
+			interpretations = new ArrayList<>();
 			interpretations.add(interp);
 		}
 		
@@ -191,31 +192,42 @@ public class Bill extends SessionPersistable {
 		return getInterpretations().isEmpty() ? interpretation : getInterpretations().first();
 	}
 
+	public NavigableSet<BillText> getTexts() {
+		NavigableSet<BillText> orderedTexts = new TreeSet<>(BILL_TEXT_ORDER);
+		if (texts != null) {
+			texts.stream()
+					.filter(java.util.Objects::nonNull)
+					.map(BillText::metadataOnly)
+					.forEach(orderedTexts::add);
+		}
+		return orderedTexts;
+	}
+
 	/**
 	 * Returns this bill's interpretations ordered newest-first. Callers should
 	 * assume that the first interpretation is the latest one.
 	 */
 	public NavigableSet<BillInterpretation> getInterpretations() {
-		if ((interpretations == null || interpretations.isEmpty()) && interpretation != null) {
-			interpretations = new TreeSet<>(BILL_INTERPRETATION_ORDER);
-			interpretations.add(interpretation);
-		}
-
-		if (interpretations == null) {
-			interpretations = new TreeSet<>(BILL_INTERPRETATION_ORDER);
-		}
-
-		return interpretations;
-	}
-
-	public void setInterpretations(Collection<BillInterpretation> interpretations) {
 		NavigableSet<BillInterpretation> orderedInterpretations = new TreeSet<>(BILL_INTERPRETATION_ORDER);
 		if (interpretations != null) {
 			interpretations.stream()
 					.filter(java.util.Objects::nonNull)
 					.forEach(orderedInterpretations::add);
 		}
-		this.interpretations = orderedInterpretations;
+		if (orderedInterpretations.isEmpty() && interpretation != null) {
+			orderedInterpretations.add(interpretation);
+		}
+		return orderedInterpretations;
+	}
+
+	public void setInterpretations(Collection<BillInterpretation> interpretations) {
+		NavigableSet<BillInterpretation> orderedInterpretations = new TreeSet<>(BILL_INTERPRETATION_ORDER);
+		if (interpretations != null) {
+			interpretations.stream()
+						.filter(java.util.Objects::nonNull)
+						.forEach(orderedInterpretations::add);
+		}
+		this.interpretations = new ArrayList<>(orderedInterpretations);
 		this.interpretation = orderedInterpretations.isEmpty() ? null : orderedInterpretations.first();
 
 		if (this.interpretation != null && getName() != null && getName().contains(String.valueOf(getNumber()))
@@ -230,16 +242,16 @@ public class Bill extends SessionPersistable {
 		return text;
 	}
 
-	public void setTexts(Collection<BillText> texts) {
-		NavigableSet<BillText> orderedTexts = new TreeSet<>(BILL_TEXT_ORDER);
-		if (texts != null) {
-			texts.stream()
-					.filter(java.util.Objects::nonNull)
-					.map(BillText::metadataOnly)
-					.forEach(orderedTexts::add);
+		public void setTexts(Collection<BillText> texts) {
+			NavigableSet<BillText> orderedTexts = new TreeSet<>(BILL_TEXT_ORDER);
+			if (texts != null) {
+				texts.stream()
+						.filter(java.util.Objects::nonNull)
+						.map(BillText::metadataOnly)
+						.forEach(orderedTexts::add);
+			}
+			this.texts = new ArrayList<>(orderedTexts);
 		}
-		this.texts = orderedTexts;
-	}
 	
 //	@JsonIgnore
 //	public String getUSCId()

@@ -73,7 +73,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 					.filter(generator.billService::hasBillText);
 
 			stream = generator.andNotInList(stream, billSkipList);
-			stream = generator.andNotAlreadyInterpretedOrInvalid(this, stream, includePressDirtyBills);
+			stream = generator.andNotAlreadyInterpreted(this, stream, includePressDirtyBills);
 
 			for (val refinement : refinements) {
 				stream = refinement.apply(generator, stream);
@@ -381,6 +381,11 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 	private Stream<Bill> andNotInList(Stream<Bill> stream, List<String> billExcludeList) {
 		return stream.filter(b -> !billExcludeList.contains(b.getId()));
+	}
+	
+	private Stream<Bill> andNotAlreadyInterpreted(BillGenerationCriteria criteria, Stream<Bill> stream, boolean includePressDirtyBills) {
+		return stream.filter(b -> (!criteria.CHECK_S3_EXISTS || getExistingInterpretation(b) == null
+				|| (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))));
 	}
 	
 	private Stream<Bill> andNotAlreadyInterpretedOrInvalid(BillGenerationCriteria criteria, Stream<Bill> stream, boolean includePressDirtyBills) {

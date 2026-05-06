@@ -120,7 +120,9 @@ public class BillRepository extends AbstractPostgresEntityRepository<Bill> {
 		setJson(stmt, i++, bill.getCosponsors());
 		stmt.setObject(i++, bill.getIntroducedDate());
 		stmt.setObject(i++, bill.getLastActionDate());
+		setJson(stmt, i++, bill.getTexts());
 		setJson(stmt, i++, bill.getInterpretation());
+		setJson(stmt, i++, bill.getInterpretations());
 		setJson(stmt, i++, bill.getIssueImpactMap());
 		setJson(stmt, i++, bill.getCboAnalysis());
 		stmt.setString(i++, bill.getStorageBucket());
@@ -140,12 +142,12 @@ public class BillRepository extends AbstractPostgresEntityRepository<Bill> {
 		return """
 				INSERT INTO %s (
 					id, last_update_value, type, number, originatingchamber, status, name, legiscanid,
-					officialurl, sponsor, cosponsors, introduceddate, lastactiondate, interpretation, issue_impact_map,
-					cboanalysis, storage_bucket, date_value, rating_value, rating_abs_value, impact_value,
+					officialurl, sponsor, cosponsors, introduceddate, lastactiondate, texts, interpretation,
+					interpretations, issue_impact_map, cboanalysis, storage_bucket, date_value, rating_value, rating_abs_value, impact_value,
 					impact_abs_value, hot_value
 				) VALUES (
 					?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?, CAST(? AS jsonb), CAST(? AS jsonb), ?, ?, CAST(? AS jsonb), CAST(? AS jsonb),
-					CAST(? AS jsonb), ?, ?, ?, ?, ?, ?, ?
+					CAST(? AS jsonb), CAST(? AS jsonb), CAST(? AS jsonb), ?, ?, ?, ?, ?, ?, ?
 				)
 				ON CONFLICT (id) DO UPDATE SET
 					last_update_value = EXCLUDED.last_update_value,
@@ -160,7 +162,9 @@ public class BillRepository extends AbstractPostgresEntityRepository<Bill> {
 					cosponsors = EXCLUDED.cosponsors,
 					introduceddate = EXCLUDED.introduceddate,
 					lastactiondate = EXCLUDED.lastactiondate,
+					texts = EXCLUDED.texts,
 					interpretation = EXCLUDED.interpretation,
+					interpretations = EXCLUDED.interpretations,
 					issue_impact_map = EXCLUDED.issue_impact_map,
 					cboanalysis = EXCLUDED.cboanalysis,
 					storage_bucket = EXCLUDED.storage_bucket,
