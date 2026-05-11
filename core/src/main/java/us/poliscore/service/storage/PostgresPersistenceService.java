@@ -16,6 +16,7 @@ import us.poliscore.model.legislator.LegislatorIssueStat;
 import us.poliscore.model.session.SessionInterpretation;
 import us.poliscore.service.storage.repository.BillRepository;
 import us.poliscore.service.storage.repository.LegislatorRepository;
+import us.poliscore.service.storage.repository.PostgresPersistableRepository;
 import us.poliscore.service.storage.repository.SessionInterpretationRepository;
 
 @ApplicationScoped
@@ -32,9 +33,23 @@ public class PostgresPersistenceService implements ObjectStorageServiceIF {
 
 	@Inject
 	SessionInterpretationRepository sessionInterpretationRepository;
+	
+	@Inject
+	Instance<PostgresPersistableRepository<? extends Persistable>> extensionRepositories;
 
 	public boolean isEnabled() {
 		return dataSourceInstance.isResolvable();
+	}
+	
+	@SuppressWarnings("unchecked")
+	private <T extends Persistable> Optional<PostgresPersistableRepository<T>> extensionRepository(Class<T> clazz) {
+		for (PostgresPersistableRepository<? extends Persistable> repository : extensionRepositories) {
+			if (repository.getPersistableClass().equals(clazz)) {
+				return Optional.of((PostgresPersistableRepository<T>) repository);
+			}
+		}
+
+		return Optional.empty();
 	}
 
 	@Override
@@ -52,7 +67,12 @@ public class PostgresPersistenceService implements ObjectStorageServiceIF {
 			return;
 		}
 
-		throw unsupported(obj.getClass());
+		@SuppressWarnings("unchecked")
+		Class<T> clazz = (Class<T>) obj.getClass();
+
+		extensionRepository(clazz).ifPresentOrElse(
+				repository -> repository.put(obj),
+				() -> { throw unsupported(obj.getClass()); });
 	}
 
 	@Override
@@ -72,7 +92,7 @@ public class PostgresPersistenceService implements ObjectStorageServiceIF {
 
 		throw unsupported(obj.getClass());
 	}
-
+	
 	@Override
 	public <T extends Persistable> Optional<T> get(String id, Class<T> clazz) {
 		if (Bill.class.equals(clazz)) {
@@ -85,7 +105,9 @@ public class PostgresPersistenceService implements ObjectStorageServiceIF {
 			return cast(sessionInterpretationRepository.get(id));
 		}
 
-		throw unsupported(clazz);
+		return extensionRepository(clazz)
+				.map(repository -> repository.get(id))
+				.orElseThrow(() -> unsupported(clazz));
 	}
 
 	@Override

@@ -1,8 +1,10 @@
 package us.poliscore.dataset;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -69,6 +71,7 @@ import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillCos
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillSponsor;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
 import us.poliscore.service.BillService;
+import us.poliscore.service.CongressionalBillTextXmlService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.SessionInfoService;
 import us.poliscore.service.storage.LocalCachedS3Service;
@@ -87,6 +90,8 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	protected LegislatorService lService;
 	@Inject
 	protected BillService billService;
+	@Inject
+	protected CongressionalBillTextXmlService congressionalXml;
 	
 	@Inject protected PoliscoreDatasetAugmentor augmentor;
 	@Inject protected StateLegislatorImageFetcher stateImageFetcher;
@@ -602,7 +607,12 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		
 			for (val bill : dataset.query(Bill.class)) {
 				val legiBill = legiscan.getBill(bill.getLegiscanId());
-				bill.setTexts(buildBillTextMetadata(bill.getId(), legiBill));
+				val existingTextMetadata = billTextMetadataSignature(bill.getTexts());
+				val refreshedTextMetadata = buildBillTextMetadata(bill.getId(), legiBill);
+				if (!Objects.equals(existingTextMetadata, billTextMetadataSignature(refreshedTextMetadata))) {
+					bill.setLastUpdate(LocalDateTime.now());
+				}
+				bill.setTexts(refreshedTextMetadata);
 				dataset.put(bill);
 				if (legiBill.getTexts().isEmpty()) continue;
 			
@@ -648,8 +658,25 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 						null,
 						metadata.getDate(),
 						buildBillTextVersion(metadata),
-						null))
+						getBillTextFormat(metadata.getMime())))
 				.sorted(Comparator.comparing(BillText::getLastUpdate, Comparator.nullsLast(Comparator.naturalOrder())))
+				.toList();
+	}
+
+	private static List<String> billTextMetadataSignature(Collection<BillText> texts) {
+		if (texts == null || texts.isEmpty()) {
+			return List.of();
+		}
+
+		return texts.stream()
+				.filter(Objects::nonNull)
+				.sorted(Comparator.comparing(BillText::getId, Comparator.nullsLast(Comparator.naturalOrder())))
+				.map(text -> String.join("|",
+						Objects.toString(text.getId(), ""),
+						Objects.toString(text.getVersion(), ""),
+						Objects.toString(text.getLastUpdate(), ""),
+						Objects.toString(text.getFormat(), ""),
+						Objects.toString(text.getLegiscanId(), "")))
 				.toList();
 	}
 	
@@ -698,6 +725,13 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	
 	@SneakyThrows
 	protected BillText fetchBillTextVersion(Bill bill, LegiscanTextMetadataView metadata) {
+		if (bill.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
+			val xmlText = congressionalXml.fetchXmlBillText(bill, metadata);
+			if (xmlText.isPresent()) {
+				return xmlText.get();
+			}
+		}
+
 		val doc = legiscan.getBillText(metadata.getDocId());
 		String text = extractBillText(doc);
 		
@@ -717,7 +751,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 			throw new NullPointerException();
 		}
 		
-		return BillText.factory(bill.getId(), doc.getDocId(), text, date, buildBillTextVersion(metadata), getBillTextFormat(doc));
+		return BillText.factory(bill.getId(), doc.getDocId(), text, date, buildBillTextVersion(metadata), getBillTextFormat(doc.getMime()));
 	}
 
 	protected boolean isIntroducedBillText(LegiscanTextMetadataView metadata, LegiscanBillTextView doc) {
@@ -757,19 +791,19 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		throw new UnsupportedOperationException("Unsupported bill text MIME type [" + doc.getMime().name() + "]");
 	}
 	
-	protected BillTextFormat getBillTextFormat(LegiscanBillTextView doc) {
-		if (doc.getMime().equals(LegiscanMimeType.HTML)) {
+	public static BillTextFormat getBillTextFormat(LegiscanMimeType mime) {
+		if (mime.equals(LegiscanMimeType.HTML)) {
 			return BillTextFormat.HTML;
 		}
 		
-		if (doc.getMime().equals(LegiscanMimeType.RICH_TEXT_FORMAT)) {
+		if (mime.equals(LegiscanMimeType.RICH_TEXT_FORMAT)) {
 			return BillTextFormat.RTF;
 		}
 		
 		return BillTextFormat.TEXT;
 	}
 	
-	protected static String buildBillTextVersion(LegiscanTextMetadataView metadata) {
+	public static String buildBillTextVersion(LegiscanTextMetadataView metadata) {
 		LegiscanTextType type = null;
 		if (metadata.getTypeId() != null) {
 			try {

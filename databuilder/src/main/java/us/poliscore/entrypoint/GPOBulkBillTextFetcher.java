@@ -239,7 +239,7 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	@SneakyThrows
 	protected BillText buildBillText(String billId, File file) {
 		BillTextPublishVersion version = BillTextPublishVersion.parseFromBillTextName(file.getName());
-		return BillText.factory(billId, null, FileUtils.readFileToString(file, "UTF-8"), parseDate(FileUtils.readFileToString(file, StandardCharsets.UTF_8)), version, us.poliscore.model.bill.BillTextFormat.XML);
+		return BillText.factory(billId, null, FileUtils.readFileToString(file, "UTF-8"), parseDate(FileUtils.readFileToString(file, StandardCharsets.UTF_8)), version, us.poliscore.model.bill.BillTextFormat.CONGRESS_BILL_XML);
 	}
 	
 	protected void upsertVersionedBillText(BillText candidate) {

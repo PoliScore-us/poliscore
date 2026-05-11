@@ -69,7 +69,8 @@ public class BillService {
 	public void applyInterpretation(Bill b, BillInterpretation interp)
 	{
 		var billLastAction = b.getLastActionDate() == null || interp.getLastUpdate().isAfter(b.getLastActionDate().atStartOfDay()) ? interp.getLastUpdate() : b.getLastActionDate().atStartOfDay();
-		b.setLastUpdate(billLastAction);
+		var existingBillLastUpdate = b.getLastUpdate();
+		b.setLastUpdate(existingBillLastUpdate != null && existingBillLastUpdate.isAfter(billLastAction) ? existingBillLastUpdate : billLastAction);
 		
 		b.setTexts(getBillTexts(b));
 		var billInterpretations = getBillInterpretations(b).stream()

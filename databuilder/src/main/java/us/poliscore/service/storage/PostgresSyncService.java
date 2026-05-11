@@ -28,6 +28,8 @@ import us.poliscore.service.storage.repository.SessionInterpretationRepository;
 @ApplicationScoped
 public class PostgresSyncService {
 
+	private static final boolean FORCE_REFRESH_ALL = true;
+	
 	private static final int HOT_REFRESH_LIMIT = 1000;
 	private static final int BILL_UPSERT_CHUNK_SIZE = 1000;
 	private static final int LEGISLATOR_UPSERT_CHUNK_SIZE = 100;
@@ -95,11 +97,12 @@ public class PostgresSyncService {
 			
 			var existingLastUpdate = lastUpdateMap.get(bill.getId());
 			var billLastAction = bill.getLastActionDate() == null || interp.get().getLastUpdate().isAfter(bill.getLastActionDate().atStartOfDay()) ? interp.get().getLastUpdate() : bill.getLastActionDate().atStartOfDay();
-			if (!Objects.equals(billLastAction, existingLastUpdate)) {
+			var existingBillLastUpdate = bill.getLastUpdate();
+			var billLastUpdate = existingBillLastUpdate != null && existingBillLastUpdate.isAfter(billLastAction) ? existingBillLastUpdate : billLastAction;
+			if (FORCE_REFRESH_ALL || !Objects.equals(billLastUpdate, existingLastUpdate)) {
 				billService.applyInterpretation(bill, interp.get());
-				
 				billsToUpsert.add(bill);
-				lastUpdateMap.put(bill.getId(), billLastAction);
+				lastUpdateMap.put(bill.getId(), bill.getLastUpdate());
 				updatedSet.add(bill.getId());
 
 				if (billsToUpsert.size() >= BILL_UPSERT_CHUNK_SIZE) {

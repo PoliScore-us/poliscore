@@ -16,10 +16,6 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.val;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
-import us.poliscore.model.Persistable;
 import us.poliscore.model.SessionPersistable;
 
 @Data
@@ -111,13 +107,11 @@ public class BillText extends SessionPersistable
     }
 	
 	@JsonIgnore
-	@DynamoDbIgnore
 	public String getDocument() {
 		return text;
 	}
 
 	@JsonIgnore
-	@DynamoDbIgnore
 	public BillText metadataOnly() {
 		val copy = new BillText();
 		copy.setId(getId());
@@ -131,7 +125,6 @@ public class BillText extends SessionPersistable
 	}
 	
 	@JsonIgnore
-	@DynamoDbIgnore
 	public BillTextFormat getEffectiveFormat() {
 		if (format != null) {
 			return format;
@@ -142,13 +135,12 @@ public class BillText extends SessionPersistable
 	
 	@Deprecated
 	@JsonIgnore
-	@DynamoDbIgnore
 	public String getXml() {
-		return BillTextFormat.XML.equals(getEffectiveFormat()) ? text : null;
+		BillTextFormat effectiveFormat = getEffectiveFormat();
+		return BillTextFormat.XML.equals(effectiveFormat) || BillTextFormat.CONGRESS_BILL_XML.equals(effectiveFormat) ? text : null;
 	}
 
 	@JsonIgnore
-	@DynamoDbIgnore
 	public LocalDate getLastUpdated() {
 		return getLastUpdate() != null ? getLastUpdate().toLocalDate() : null;
 	}
@@ -175,19 +167,19 @@ public class BillText extends SessionPersistable
 		return derivedDateTime;
 	}
 	
-	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public String getStorageBucket() { return super.getStorageBucket(); }
+	@Override @JsonIgnore public String getStorageBucket() { return super.getStorageBucket(); }
 	@Override @JsonIgnore public void setStorageBucket(String prefix) { }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX }) public LocalDate getDate() { return getLastUpdated(); }
+	@JsonIgnore public LocalDate getDate() { return getLastUpdated(); }
 	@JsonIgnore public void setDate(LocalDate date) { super.setLastUpdate(date != null ? date.atStartOfDay() : null); }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return 0; }
+	@JsonIgnore public int getRating() { return 0; }
 	@JsonIgnore public void setRating(int rating) { }
 
 	@JsonIgnore
-	@DynamoDbIgnore
 	protected LocalDate deriveDateFromDocument() {
-		if (StringUtils.isBlank(text) || !BillTextFormat.XML.equals(getEffectiveFormat())) {
+		BillTextFormat effectiveFormat = getEffectiveFormat();
+		if (StringUtils.isBlank(text) || !(BillTextFormat.XML.equals(effectiveFormat) || BillTextFormat.CONGRESS_BILL_XML.equals(effectiveFormat))) {
 			return null;
 		}
 		

@@ -24,7 +24,8 @@ public class BillSlicerService {
 	
 	public List<BillSlice> slice(Bill bill, BillText btx, OpenAIModel model)
 	{
-		if (BillTextFormat.XML.equals(btx.getEffectiveFormat())) {
+		BillTextFormat format = btx.getEffectiveFormat();
+		if (BillTextFormat.XML.equals(format) || BillTextFormat.CONGRESS_BILL_XML.equals(format)) {
 			return xmlSlicer.slice(bill, btx, model);
 //			return aiSlicer.slice(bill, btx, maxSectionLength);
 		} else {

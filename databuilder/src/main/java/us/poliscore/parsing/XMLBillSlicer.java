@@ -13,6 +13,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import com.amazonaws.util.CollectionUtils;
 
@@ -45,9 +46,9 @@ public class XMLBillSlicer implements BillSlicer {
 		Node doc = (Node) toDoc(btx.getText());
 		
 		title = getTitle(doc);
-		val body = $(doc).find("legis-body");
-		if (StringUtils.isNotBlank(title) && body.isNotEmpty()) {
-			doc = body.get().get(0);
+		Node body = findFirstDescendant(doc, "legis-body");
+		if (StringUtils.isNotBlank(title) && body != null) {
+			doc = body;
 		}
 		
 		val slices = divideAndConquer(bill, model, doc);
@@ -64,13 +65,58 @@ public class XMLBillSlicer implements BillSlicer {
 	}
 	
 	protected String getTitle(Node doc) {
-		val title = $(doc).find("metadata title");
+		Node title = findFirstDescendantPath(doc, "metadata", "title");
 		
-		if (title.isEmpty()) {
+		if (title == null) {
 			return "";
 		}
 		
-		return "Bill title: " + title.text() + "\nSection content:\n";
+		return "Bill title: " + title.getTextContent() + "\nSection content:\n";
+	}
+
+	private static Node findFirstDescendantPath(Node node, String... path) {
+		Node current = node;
+		for (String elementName : path) {
+			current = findFirstDescendant(current, elementName);
+			if (current == null) {
+				return null;
+			}
+		}
+		return current;
+	}
+
+	private static Node findFirstDescendant(Node node, String elementName) {
+		if (node == null) {
+			return null;
+		}
+
+		NodeList children = node.getChildNodes();
+		for (int i = 0; i < children.getLength(); i++) {
+			Node child = children.item(i);
+			if (elementNameMatches(child, elementName)) {
+				return child;
+			}
+
+			Node descendant = findFirstDescendant(child, elementName);
+			if (descendant != null) {
+				return descendant;
+			}
+		}
+		return null;
+	}
+
+	private static boolean elementNameMatches(Node node, String elementName) {
+		if (node.getNodeType() != Node.ELEMENT_NODE) {
+			return false;
+		}
+
+		String localName = node.getLocalName();
+		if (elementName.equals(localName)) {
+			return true;
+		}
+
+		String nodeName = node.getNodeName();
+		return elementName.equals(nodeName) || nodeName.endsWith(":" + elementName);
 	}
 	
 	protected List<BillSlice> divideAndConquer(Bill bill, OpenAIModel model, Node node) {
