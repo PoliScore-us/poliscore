@@ -64,6 +64,7 @@ import us.poliscore.model.bill.BillStatus;
 import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.BillTextFormat;
 import us.poliscore.model.bill.BillTextPublishVersion;
+import us.poliscore.parsing.PDFToText;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.Legislator.LegislativeTerm;
@@ -92,6 +93,8 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	protected BillService billService;
 	@Inject
 	protected CongressionalBillTextXmlService congressionalXml;
+
+	private final PDFToText pdfToText = new PDFToText();
 	
 	@Inject protected PoliscoreDatasetAugmentor augmentor;
 	@Inject protected StateLegislatorImageFetcher stateImageFetcher;
@@ -776,11 +779,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	protected String extractBillText(LegiscanBillTextView doc) {
 		if (doc.getMime().equals(LegiscanMimeType.PDF)) {
 			byte[] pdfBytes = Base64.getDecoder().decode(doc.getDoc());
-			
-			try (PDDocument document = Loader.loadPDF(pdfBytes)) {
-	            PDFTextStripper stripper = new PDFTextStripper();
-	            return stripper.getText(document);
-	        }
+			return pdfToText.extract(pdfBytes);
 		}
 		
 		if (doc.getMime().equals(LegiscanMimeType.RICH_TEXT_FORMAT) || doc.getMime().equals(LegiscanMimeType.HTML)) {

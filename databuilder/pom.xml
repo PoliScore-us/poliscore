@@ -132,6 +132,16 @@
       <version>3.0.5</version>
     </dependency>
     <dependency>
+      <groupId>org.apache.tika</groupId>
+      <artifactId>tika-core</artifactId>
+      <version>3.2.3</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tika</groupId>
+      <artifactId>tika-parser-pdf-module</artifactId>
+      <version>3.2.3</version>
+    </dependency>
+    <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>url-connection-client</artifactId>
     </dependency>
