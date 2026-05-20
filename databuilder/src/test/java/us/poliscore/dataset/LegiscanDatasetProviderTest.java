@@ -2,6 +2,7 @@ package us.poliscore.dataset;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.Charset;
@@ -60,6 +61,52 @@ class LegiscanDatasetProviderTest {
 		doc.setDoc(Base64.getEncoder().encodeToString(rtf.getBytes(Charset.forName("windows-1252"))));
 
 		assertEquals(rtf, new LegiscanDatasetProvider().extractBillText(doc));
+	}
+
+	@Test
+	void extractBillTextRejectsFormatUnavailablePlaceholderNotice() {
+		String html = """
+				<html>
+				<body>
+				  <p>The HTML and Word versions of this bill are not available. Please
+				  	see the PDF for the content of this bill.</p>
+				  <p>For additional information, consult the Legislative Budget Board's
+				  	website.</p>
+				</body>
+				</html>
+				""";
+		LegiscanBillTextView doc = new LegiscanBillTextView();
+		doc.setMimeId(LegiscanMimeType.HTML.getValue());
+		doc.setDoc(Base64.getEncoder().encodeToString(html.getBytes(Charset.forName("windows-1252"))));
+
+		assertNull(new LegiscanDatasetProvider().extractBillText(doc));
+	}
+
+	@Test
+	void placeholderDetectorRejectsEquivalentRedirectNotices() {
+		LegiscanDatasetProvider provider = new LegiscanDatasetProvider();
+
+		assertTrue(provider.isUnsupportedBillTextPlaceholder("""
+				Text document unavailable.
+				Please view the PDF document for the full text.
+				"""));
+		assertTrue(provider.isUnsupportedBillTextPlaceholder("""
+				<div>The Word version cannot be displayed. Download the PDF for bill content.</div>
+				"""));
+	}
+
+	@Test
+	void placeholderDetectorKeepsShortSubstantiveBillText() {
+		LegiscanDatasetProvider provider = new LegiscanDatasetProvider();
+
+		assertFalse(provider.isUnsupportedBillTextPlaceholder("""
+				BE IT ENACTED BY THE LEGISLATURE OF THE STATE OF TEXAS:
+				SECTION 1. This Act may be cited as the Example Act.
+				"""));
+		assertFalse(provider.isUnsupportedBillTextPlaceholder("""
+				WHEREAS, the House of Representatives honors the public service of Texans; now, therefore, be it
+				RESOLVED, That the House congratulate the honoree.
+				"""));
 	}
 
 	@Test
