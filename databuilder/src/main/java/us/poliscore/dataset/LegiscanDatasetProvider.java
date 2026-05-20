@@ -1,5 +1,7 @@
 package us.poliscore.dataset;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -12,6 +14,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.pdfbox.Loader;
@@ -81,8 +85,11 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 @Named("legiscan")
 @DefaultBean
 public class LegiscanDatasetProvider implements DatasetProvider {
-	
+
 	private static final Logger logger = LoggerFactory.getLogger(LegiscanDatasetProvider.class);
+	private static final Charset WINDOWS_1252 = Charset.forName("windows-1252");
+	private static final Pattern HTML_CHARSET = Pattern.compile("(?is)<meta\\b[^>]*charset\\s*=\\s*[\"']?([^\\s\"'>;]+)");
+	private static final Pattern RTF_ANSI_CODE_PAGE = Pattern.compile("\\\\ansicpg(\\d+)");
 	
 //	@Inject
 //	private SecretService secret;
@@ -782,12 +789,41 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 			return pdfToText.extract(pdfBytes);
 		}
 		
-		if (doc.getMime().equals(LegiscanMimeType.RICH_TEXT_FORMAT) || doc.getMime().equals(LegiscanMimeType.HTML)) {
+		if (doc.getMime().equals(LegiscanMimeType.HTML)) {
 			byte[] textBytes = Base64.getDecoder().decode(doc.getDoc());
-			return new String(textBytes);
+			return decodeHtmlBillText(textBytes);
+		}
+
+		if (doc.getMime().equals(LegiscanMimeType.RICH_TEXT_FORMAT)) {
+			byte[] textBytes = Base64.getDecoder().decode(doc.getDoc());
+			return decodeRtfBillText(textBytes);
 		}
 		
 		throw new UnsupportedOperationException("Unsupported bill text MIME type [" + doc.getMime().name() + "]");
+	}
+
+	private String decodeHtmlBillText(byte[] textBytes) {
+		String headerText = new String(textBytes, StandardCharsets.ISO_8859_1);
+		Matcher matcher = HTML_CHARSET.matcher(headerText);
+		if (matcher.find()) {
+			try {
+				return new String(textBytes, Charset.forName(matcher.group(1).trim()));
+			} catch (Exception ignored) { }
+		}
+
+		return new String(textBytes, WINDOWS_1252);
+	}
+
+	private String decodeRtfBillText(byte[] textBytes) {
+		String headerText = new String(textBytes, StandardCharsets.ISO_8859_1);
+		Matcher matcher = RTF_ANSI_CODE_PAGE.matcher(headerText);
+		if (matcher.find()) {
+			try {
+				return new String(textBytes, Charset.forName("windows-" + matcher.group(1)));
+			} catch (Exception ignored) { }
+		}
+
+		return new String(textBytes, WINDOWS_1252);
 	}
 	
 	public static BillTextFormat getBillTextFormat(LegiscanMimeType mime) {

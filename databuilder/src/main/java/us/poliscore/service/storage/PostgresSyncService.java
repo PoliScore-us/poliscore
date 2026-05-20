@@ -28,11 +28,11 @@ import us.poliscore.service.storage.repository.SessionInterpretationRepository;
 @ApplicationScoped
 public class PostgresSyncService {
 
-	private static final boolean FORCE_REFRESH_ALL = true;
+	private static final boolean FORCE_REFRESH_ALL = false;
 	
 	private static final int HOT_REFRESH_LIMIT = 1000;
 	private static final int BILL_UPSERT_CHUNK_SIZE = 1000;
-	private static final int LEGISLATOR_UPSERT_CHUNK_SIZE = 100;
+	private static final int LEGISLATOR_UPSERT_CHUNK_SIZE = 500;
 
 	@Inject
 	private PostgresPersistenceService postgres;

@@ -4,14 +4,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.charset.Charset;
 import java.time.LocalDate;
+import java.util.Base64;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
 import us.poliscore.legiscan.view.LegiscanAmendmentView;
+import us.poliscore.legiscan.view.LegiscanBillTextView;
 import us.poliscore.legiscan.view.LegiscanBillType;
 import us.poliscore.legiscan.view.LegiscanBillView;
+import us.poliscore.legiscan.view.LegiscanMimeType;
 import us.poliscore.legiscan.view.LegiscanProgressView;
 import us.poliscore.legiscan.view.LegiscanStatus;
 import us.poliscore.legiscan.view.LegiscanTextMetadataView;
@@ -31,6 +35,31 @@ class LegiscanDatasetProviderTest {
 		metadata.setTypeId(LegiscanTextType.AMENDED.getValue());
 		
 		assertEquals("AMENDED-12345", new LegiscanDatasetProvider().buildBillTextVersion(metadata));
+	}
+
+	@Test
+	void extractBillTextDecodesHtmlUsingDeclaredCharset() {
+		String html = """
+				<html>
+				<head><meta http-equiv=Content-Type content="text/html; charset=windows-1252"></head>
+				<body><p>FTE positions\u00A0\u00A0\u00A027.0</p></body>
+				</html>
+				""";
+		LegiscanBillTextView doc = new LegiscanBillTextView();
+		doc.setMimeId(LegiscanMimeType.HTML.getValue());
+		doc.setDoc(Base64.getEncoder().encodeToString(html.getBytes(Charset.forName("windows-1252"))));
+
+		assertEquals(html, new LegiscanDatasetProvider().extractBillText(doc));
+	}
+
+	@Test
+	void extractBillTextDecodesRtfUsingDeclaredCodePage() {
+		String rtf = "{\\rtf1\\ansi\\ansicpg1252 Amount \\u8212? \\u8220?quoted\\u8221?\\par}";
+		LegiscanBillTextView doc = new LegiscanBillTextView();
+		doc.setMimeId(LegiscanMimeType.RICH_TEXT_FORMAT.getValue());
+		doc.setDoc(Base64.getEncoder().encodeToString(rtf.getBytes(Charset.forName("windows-1252"))));
+
+		assertEquals(rtf, new LegiscanDatasetProvider().extractBillText(doc));
 	}
 
 	@Test
