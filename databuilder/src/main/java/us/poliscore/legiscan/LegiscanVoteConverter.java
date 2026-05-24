@@ -1,5 +1,7 @@
 package us.poliscore.legiscan;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 import io.quarkus.logging.Log;
@@ -12,11 +14,15 @@ import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
 
 public class LegiscanVoteConverter {
+	private static final Set<String> REPORTED_UNCLASSIFIED_ROLL_CALL_DESCRIPTIONS = ConcurrentHashMap.newKeySet();
+	
 	public static LegislatorBillVote convert(LegiscanRollCallView rollCall, LegiscanVoteDetailView vote, Legislator leg, Bill bill) {
 		if (isProcedural(rollCall.getDescription())) return null;
 		
 		if (!isBillVote(rollCall.getDescription())) {
-			Log.error("[" + rollCall.getDescription() + "] is not a whitelisted roll call description. Please verify that this description is not procedural and either whitelist or (procedural) blacklist it.");
+			if (REPORTED_UNCLASSIFIED_ROLL_CALL_DESCRIPTIONS.add(rollCall.getDescription())) {
+				Log.error("[" + rollCall.getDescription() + "] is not a whitelisted roll call description. Please verify that this description is not procedural and either whitelist or (procedural) blacklist it.");
+			}
 			return null;
 		}
 		
@@ -153,6 +159,7 @@ public class LegiscanVoteConverter {
 	            "motion to commit",
 	            "motion to recommit",
 	            "point of order",
+	            "comm report",
 	            "agreeing to the rule",
 	            "on ordering the previous question",
 	            "on consideration of",
@@ -192,7 +199,7 @@ public class LegiscanVoteConverter {
 	    
 	    for (String regex : new String[] {
 	    	"(?i)^motion test$",
-	    	"(?i)^(house|senate)\\s+[a-z&\\s]+:\\s*l\\.\\d+$",
+	    	"(?i)^(house|senate)\\s+[a-z&\\s]+:\\s*[a-z]\\.\\d+$",
 	    	"(?i)\\b[FS]A\\d+\\b", // Contains SA1 (Senate Amendment #1) or FA1 (Floor Amendment #1)
 	    	"(?i)\\bamd\\b", // Contains the word 'amd' (not inside another word)
 	    	"(?i)\\bmisc\\b" // Contains the word 'misc' (not inside another word)

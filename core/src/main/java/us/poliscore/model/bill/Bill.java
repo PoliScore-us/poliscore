@@ -174,6 +174,9 @@ public class Bill extends SessionPersistable {
 	@JsonIgnore
 	@Column(name = "hot_value")
 	private Long hotValue;
+
+	@Transient
+	private boolean refreshing;
 	
 	public void setInterpretation(BillInterpretation interp) {
 		this.interpretation = interp;

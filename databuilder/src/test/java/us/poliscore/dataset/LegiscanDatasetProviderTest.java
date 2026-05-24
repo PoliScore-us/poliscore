@@ -12,20 +12,27 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import us.poliscore.PoliscoreDataset;
+import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.legiscan.view.LegiscanAmendmentView;
 import us.poliscore.legiscan.view.LegiscanBillTextView;
 import us.poliscore.legiscan.view.LegiscanBillType;
 import us.poliscore.legiscan.view.LegiscanBillView;
 import us.poliscore.legiscan.view.LegiscanMimeType;
+import us.poliscore.legiscan.view.LegiscanParty;
+import us.poliscore.legiscan.view.LegiscanPeopleView;
 import us.poliscore.legiscan.view.LegiscanProgressView;
+import us.poliscore.legiscan.view.LegiscanRole;
 import us.poliscore.legiscan.view.LegiscanStatus;
 import us.poliscore.legiscan.view.LegiscanTextMetadataView;
 import us.poliscore.legiscan.view.LegiscanTextType;
 import us.poliscore.legiscan.view.LegiscanVoteView;
+import us.poliscore.model.CongressionalSession;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.bill.BillStatus;
+import us.poliscore.model.legislator.Legislator;
 
 class LegiscanDatasetProviderTest {
 
@@ -153,6 +160,29 @@ class LegiscanDatasetProviderTest {
 
 		assertEquals("Introduced in the House", status.getDescription());
 		assertEquals(0.0f, status.getProgress());
+	}
+
+	@Test
+	void importCongressionalLegislatorResolvesMissingBioguideFromUscData() {
+		CongressionalSession congressionalSession = CongressionalSession.S119;
+		LegislativeSession session = new LegislativeSession(true, congressionalSession.getStartDate(), congressionalSession.getEndDate(), "119", LegislativeNamespace.US_CONGRESS);
+		PoliscoreDataset dataset = new PoliscoreDataset(session, new DeploymentConfig(LegislativeNamespace.US_CONGRESS, 2026));
+
+		LegiscanPeopleView view = new LegiscanPeopleView();
+		view.setPeopleId(26658);
+		view.setName("Clay Fuller");
+		view.setFirstName("Clay");
+		view.setLastName("Fuller");
+		view.setBioguideId("");
+		view.setDistrict("US-GA-14");
+		view.setPartyId(LegiscanParty.REPUBLICAN.getValue());
+		view.setRoleId(LegiscanRole.REPRESENTATIVE.getValue());
+
+		new LegiscanDatasetProvider().importLegislator(view, dataset);
+
+		Legislator leg = dataset.get("LEG/us/congress/119/F000485", Legislator.class).orElseThrow();
+		assertEquals(Integer.valueOf(26658), leg.getLegiscanId());
+		assertEquals("Clay Fuller", leg.getName().getOfficial_full());
 	}
 
 	private LegiscanTextMetadataView textMetadata(LocalDate date) {

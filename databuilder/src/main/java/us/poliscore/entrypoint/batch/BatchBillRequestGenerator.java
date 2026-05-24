@@ -57,6 +57,8 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 		);
 		
 		public boolean CHECK_S3_EXISTS = true;
+
+		public boolean FORCE_REFRESH = false;
 	
 		/** Default requested model for these interpretation requests. */
 		public OpenAIModel billProcessModel = OpenAIModel.DEFAULT_MODEL;
@@ -299,7 +301,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 				val existingAggregate = billService.getInterpretation(bill)
 						.orElse(null);
-				if (shouldCreateFreshRequest(existingAggregate, latestBillText)) {
+				if (shouldCreateFreshRequest(criteria, existingAggregate, latestBillText)) {
 					createRequest(criteria, BillInterpretation.generateId(bill.getId(), latestBillText.getVersion(), null), bill, null,
 							systemMsg,
 							billInterpreter.getUserMsgForBill(bill, sBillText, criteria.billProcessModel),
@@ -313,7 +315,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 					val existingSlice = billService.getInterpretation(bill, slice.getSliceIndex())
 							.orElse(null);
 
-					if (shouldCreateFreshRequest(existingSlice, latestBillText)) {
+					if (shouldCreateFreshRequest(criteria, existingSlice, latestBillText)) {
 						val oid = BillInterpretation.generateId(bill.getId(), latestBillText.getVersion(), slice.getSliceIndex());
 						createRequest(criteria, oid, bill, slice.getSliceIndex(), BillPrompt.slicePrompt,
 								slice.getText(), slice.getText());
@@ -332,7 +334,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 					val oid = BillInterpretation.generateId(bill.getId(), latestBillText.getVersion(), null);
 					val existingAggregate = billService.getInterpretation(bill).orElse(null);
-					if (!shouldCreateFreshRequest(existingAggregate, latestBillText)) {
+					if (!shouldCreateFreshRequest(criteria, existingAggregate, latestBillText)) {
 						return;
 					}
 
@@ -355,13 +357,17 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 		} else {
 			val existingAggregate = billService.getInterpretation(bill)
 					.orElse(null);
-			if (shouldCreateFreshRequest(existingAggregate, latestBillText)) {
+			if (shouldCreateFreshRequest(criteria, existingAggregate, latestBillText)) {
 				createRequest(criteria, BillInterpretation.generateId(bill.getId(), latestBillText.getVersion(), null), bill, null, systemMsg, userMsg, sBillText);
 			}
 		}
 	}
 
-	private boolean shouldCreateFreshRequest(BillInterpretation existing, BillText latestBillText) {
+	private boolean shouldCreateFreshRequest(BillGenerationCriteria criteria, BillInterpretation existing, BillText latestBillText) {
+		if (criteria.FORCE_REFRESH) {
+			return true;
+		}
+
 		if (existing == null) {
 			return true;
 		}

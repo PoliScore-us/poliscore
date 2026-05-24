@@ -19,6 +19,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -37,6 +39,7 @@ import software.amazon.awssdk.utils.StringUtils;
 import us.poliscore.PoliscoreCompositeDataset;
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.PoliscoreDataset.DeploymentConfig;
+import us.poliscore.PoliscoreUtil;
 import us.poliscore.dataset.augmentation.PoliscoreDatasetAugmentor;
 import us.poliscore.entrypoint.GPOBulkBillTextFetcher;
 import us.poliscore.images.CongressionalLegislatorImageFetcher;
@@ -82,6 +85,7 @@ import us.poliscore.service.CongressionalBillTextXmlService;
 import us.poliscore.service.LegislatorService;
 import us.poliscore.service.SessionInfoService;
 import us.poliscore.service.storage.LocalCachedS3Service;
+import us.poliscore.view.USCLegislatorView;
 
 @ApplicationScoped
 @Named("legiscan")
@@ -119,6 +123,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	
 	private Map<Integer, Bill> legiscanIdToBill = new HashMap<Integer, Bill>();
 	private Map<Integer, Legislator> legiscanIdToLegislator = new HashMap<Integer, Legislator>();
+	private List<USCLegislatorView> congressionalLegislatorLookup;
 	
 	@Override
 	public PoliscoreDatasetIF importDataset(DeploymentConfig ref) {
@@ -548,7 +553,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    
 	    String legId;
 		if (regularDataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
-			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), view.getBioguideId());
+			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), resolveCongressionalBioguideId(view, regularDataset.getRegularSession()));
 		} else
 			legId = Legislator.generateId(regularDataset.getNamespace(), regularDataset.getRegularSession().getCode(), String.valueOf(view.getPeopleId()));
 		
@@ -598,6 +603,72 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		
 		legiscanIdToLegislator.put(leg.getLegiscanId(), leg);
 		regularDataset.put(leg);
+	}
+
+	protected String resolveCongressionalBioguideId(LegiscanPeopleView view, LegislativeSession session) {
+		if (StringUtils.isNotBlank(view.getBioguideId())) return view.getBioguideId();
+
+		val matches = congressionalLegislators().stream()
+				.filter(usc -> congressionalLegislatorMatches(view, session, usc))
+				.collect(Collectors.toList());
+
+		if (matches.size() == 1) {
+			logger.info("Resolved missing congressional bioguide id for LegiScan people id {} ({}) as {}", view.getPeopleId(), view.getName(), matches.getFirst().getId().getBioguide());
+			return matches.getFirst().getId().getBioguide();
+		}
+
+		if (matches.size() > 1) {
+			throw new IllegalArgumentException("Could not resolve congressional bioguide id for LegiScan people id " + view.getPeopleId() + " (" + view.getName() + "): multiple USC legislators matched.");
+		}
+
+		throw new IllegalArgumentException("Could not resolve congressional bioguide id for LegiScan people id " + view.getPeopleId() + " (" + view.getName() + ").");
+	}
+
+	private boolean congressionalLegislatorMatches(LegiscanPeopleView legiscan, LegislativeSession session, USCLegislatorView usc) {
+		if (usc.getId() == null || StringUtils.isBlank(usc.getId().getBioguide())) return false;
+		if (usc.getName() == null || !equalsIgnoreCase(usc.getName().convert().getOfficial_full(), legiscan.getName())) return false;
+
+		val chamber = LegislativeChamber.fromLegiscanRole(legiscan.getRole());
+		val districtParts = legiscan.getDistrict() == null ? new String[0] : legiscan.getDistrict().split("-");
+		val legiscanState = districtParts.length > 1 ? districtParts[1] : null;
+		val legiscanDistrict = districtParts.length > 2 ? districtParts[2] : null;
+
+		return usc.getTerms() != null && usc.getTerms().stream().anyMatch(term -> {
+			if (!term.getStart().isBefore(session.getEndDate()) || !term.getEnd().isAfter(session.getStartDate())) return false;
+			if (!equalsIgnoreCase(term.getState(), legiscanState)) return false;
+			if (chamber == LegislativeChamber.LOWER && !equalsIgnoreCase("rep", term.getType())) return false;
+			if (chamber == LegislativeChamber.UPPER && !equalsIgnoreCase("sen", term.getType())) return false;
+			if (chamber == LegislativeChamber.LOWER) {
+				return StringUtils.equals(String.valueOf(term.getDistrict()), legiscanDistrict);
+			}
+			return true;
+		});
+	}
+
+	private boolean equalsIgnoreCase(String a, String b) {
+		if (a == null || b == null) return a == b;
+		return a.equalsIgnoreCase(b);
+	}
+
+	@SneakyThrows
+	private List<USCLegislatorView> congressionalLegislators() {
+		if (congressionalLegislatorLookup != null) return congressionalLegislatorLookup;
+
+		List<USCLegislatorView> views = new ArrayList<>();
+		ObjectMapper mapper = PoliscoreUtil.getObjectMapper();
+		for (String file : List.of("/legislators-current.json", "/legislators-historical.json")) {
+			JsonNode root = mapper.readTree(LegislatorService.class.getResourceAsStream(file));
+			root.elements().forEachRemaining(node -> {
+				try {
+					views.add(mapper.treeToValue(node, USCLegislatorView.class));
+				} catch (Exception e) {
+					throw new RuntimeException(e);
+				}
+			});
+		}
+
+		congressionalLegislatorLookup = views;
+		return congressionalLegislatorLookup;
 	}
 
 
