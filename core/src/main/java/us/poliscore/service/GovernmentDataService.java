@@ -27,7 +27,7 @@ public class GovernmentDataService {
 	
 	private static boolean didImportDatasets = false;
 	
-	public List<PoliscoreDatasetIF> importAllDatasets() {
+	public synchronized List<PoliscoreDatasetIF> importAllDatasets() {
 		if (didImportDatasets) return importedDatasets;
 		
 		for (val cfg : config.getSupportedDeployments()) {
@@ -39,6 +39,11 @@ public class GovernmentDataService {
 		SessionInfoService.buildSessions(importedDatasets);
 		
 		return importedDatasets;
+	}
+
+	public synchronized void resetImports() {
+		importedDatasets = new ArrayList<PoliscoreDatasetIF>();
+		didImportDatasets = false;
 	}
 	
 	public PoliscoreDatasetIF importDataset(LegislativeNamespace namespace, int year) {

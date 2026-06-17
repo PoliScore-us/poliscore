@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 
+import jakarta.enterprise.context.ApplicationScoped;
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
@@ -36,11 +37,11 @@ import us.poliscore.service.LegislatorInterpretationService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
 import us.poliscore.service.storage.LocalCachedS3Service;
-import us.poliscore.service.storage.PostgresSyncService;
 
 /**
  * Run this to keep a deployed server up-to-date.
  */
+@ApplicationScoped
 @QuarkusMain(name="DatabaseBuilder")
 @Command(name = "DatabaseBuilder", mixinStandardHelpOptions = true, description = "Keeps the deployed server up to date.")
 public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
@@ -93,9 +94,6 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 	private LegislatorInterpretationService legInterp;
 
 	@Inject
-	private PostgresSyncService postgresSync;
-
-	@Inject
 	private DatabaseBuilderConfig runtimeConfig;
 	
 	protected BuildReport report = new BuildReport();
@@ -104,6 +102,8 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 	
 	public BuildReport process() throws IOException
 	{
+		report = new BuildReport();
+
 		data.importAllDatasets();
 		
 		val buildDatasets = data.getBuildDatasets();
@@ -118,9 +118,7 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 		
 		interpretLegislators(buildDatasets);
 		interpretPartyStats(buildDatasets);
-		
-		syncPostgres(buildDatasets);
-		
+
 		System.out.println(report.toString());
 		FileUtils.write(new File(Environment.getDeployedPath(), "../buildreport.txt"), report.toString(), "UTF-8");
 		
@@ -244,17 +242,6 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 		requests.forEach(request -> request.setFlex(flex));
 	}
 
-	protected void syncPostgres(List<PoliscoreDatasetIF> buildDatasets)
-	{
-		if (!postgresSync.isEnabled()) {
-			return;
-		}
-
-		for (val dataset : buildDatasets) {
-			postgresSync.syncPostgresWithS3(dataset);
-		}
-	}
-	
 	@Override
     public int run(String... args) throws Exception {
 		try {

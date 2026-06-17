@@ -2,6 +2,8 @@ package us.poliscore.images;
 
 import java.io.InputStream;
 import java.security.KeyStore;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import javax.net.ssl.SSLContext;
@@ -13,6 +15,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContexts;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Element;
 
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
@@ -72,7 +75,23 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 //		var existingJpg = fetchExistingJpgImage(leg, dataset);
 //		if (existingJpg.isPresent()) return existingJpg;
 		
-	    String url = scrapeImageUrlFromMemberPage(leg);
+	    for (String url : primaryImageUrlCandidates(leg)) {
+	    	Optional<byte[]> image = fetchImageFromUrl(leg, url);
+	    	if (image.isPresent()) return image;
+	    }
+	    
+	    Optional<byte[]> scrapedImage = fetchImageFromUrl(leg, scrapeImageUrlFromMemberPage(leg));
+	    if (scrapedImage.isPresent()) return scrapedImage;
+	    
+	    Optional<byte[]> fallbackImage = fetchImageFromUrl(leg, congressMemberImageFallback(leg));
+	    if (fallbackImage.isPresent()) return fallbackImage;
+	    
+	    return Optional.empty();
+	}
+	
+	@SneakyThrows
+	private Optional<byte[]> fetchImageFromUrl(Legislator leg, String url) {
+		if (url == null || url.isBlank()) return Optional.empty();
 
 	    final int MAX_RETRIES = 5;
 	    int attempt = 0;
@@ -94,7 +113,7 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 	        @Cleanup InputStream is = resp.getEntity().getContent();
 
 	        if (status == 429 || status == 403) {
-	            Log.warn("[" + leg.getCode() + "] Received " + status + " (rate limit). Waiting " + backoffMs + "ms...");
+	            Log.warn("[" + leg.getCode() + "] Received " + status + " fetching image url [" + url + "]. Waiting " + backoffMs + "ms...");
 	            Thread.sleep(backoffMs);
 	            backoffMs = Math.min(backoffMs * 2, 60000); // max 1 minute
 	            continue;
@@ -102,13 +121,13 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 
 	        if (status >= 400) {
 	            val body = IOUtils.toString(is, "UTF-8");
-	            Log.warn("[" + leg.getCode() + "] HTTP " + status + ": " + body.substring(0, Math.min(body.length(), 300)));
-	            return Optional.empty(); // don't retry 404s, 500s, etc.
+	            Log.warn("[" + leg.getCode() + "] HTTP " + status + " fetching image url [" + url + "]: " + body.substring(0, Math.min(body.length(), 300)));
+	            return Optional.empty(); // don't retry this URL; the caller may try another source.
 	        }
 
 	        byte[] image = IOUtils.toByteArray(is);
 	        if (!isValidImage(image)) {
-	            Log.warn("[" + leg.getCode() + "] Invalid image data. Waiting " + backoffMs + "ms...");
+	            Log.warn("[" + leg.getCode() + "] Invalid image data from url [" + url + "]. Waiting " + backoffMs + "ms...");
 	            Thread.sleep(backoffMs);
 	            backoffMs = Math.min(backoffMs * 2, 60000);
 	            continue;
@@ -121,6 +140,19 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 
 	    Log.warn("[" + leg.getCode() + "] Exceeded retry limit.");
 	    return Optional.empty();
+	}
+	
+	static List<String> primaryImageUrlCandidates(Legislator leg) {
+		val urls = new ArrayList<String>();
+		
+		urls.add("https://raw.githubusercontent.com/unitedstates/images/gh-pages/congress/450x550/" + leg.getCode() + ".jpg");
+		urls.add("https://raw.githubusercontent.com/unitedstates/images/gh-pages/congress/original/" + leg.getCode() + ".jpg");
+		
+		return urls.stream().distinct().toList();
+	}
+	
+	static String congressMemberImageFallback(Legislator leg) {
+		return "https://www.congress.gov/img/member/" + leg.getCode().toLowerCase() + "_200.jpg";
 	}
 	
 	/**
@@ -137,9 +169,7 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 	 * @return
 	 */
 	@SneakyThrows
-	private String scrapeImageUrlFromMemberPage(Legislator leg) {
-	    val fallback = "https://www.congress.gov/img/member/" + leg.getCode().toLowerCase() + "_200.jpg";
-
+	static String scrapeImageUrlFromMemberPage(Legislator leg) {
 	    val memberUrl = "https://www.congress.gov/member/"
 	        + leg.getName().getFirst().toLowerCase().replace(" ", "-")
 	        + "-"
@@ -169,17 +199,25 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 
 	    if (status >= 400) {
 	        Log.warn("[" + leg.getCode() + "] Failed to fetch member page: HTTP " + status);
-	        return fallback;
+	        return null;
 	    }
 
 	    val html = IOUtils.toString(is, "UTF-8");
-	    val img = Jsoup.parse(html).selectFirst(".overview-member-column-picture > img");
+	    val doc = Jsoup.parse(html, memberUrl);
+	    val photo = doc.selectFirst("a[href*='bioguide.congress.gov/photo/'], img[src*='bioguide.congress.gov/photo/'], .overview-member-column-picture img");
 
-	    if (img == null) {
-	        return fallback;
-	    } else {
-	        return "https://www.congress.gov" + img.attr("src");
-	    }
+	    return imageUrlFromElement(photo);
+	}
+	
+	static String imageUrlFromElement(Element el) {
+		if (el == null) return null;
+		
+		val attr = el.hasAttr("href") ? "href" : "src";
+		val url = el.absUrl(attr);
+		
+		if (url == null || url.isBlank()) return null;
+		
+		return url;
 	}
 	
 	public static void main(String[] args) {

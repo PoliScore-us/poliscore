@@ -21,7 +21,9 @@ public class CDIConfig {
 	@Produces
     @Singleton
     public CachedLegiscanService produceLegiscanService() {
-        return CachedLegiscanService.builder(secret.getLegiscanSecret()).build();
+        return CachedLegiscanService.builder(secret.getLegiscanSecret())
+        		.withCacheDirectory(PoliscoreUtil.cacheDir("legiscan"))
+        		.build();
     }
 	
 }

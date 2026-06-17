@@ -80,27 +80,36 @@ public class PostgresSyncService {
 		int syncedBillCount = 0;
 		for (Bill bill : dataset.query(Bill.class)) {
 			val interp = billService.getInterpretation(bill);
-			if (interp.isEmpty()) {
-				continue;
+			LocalDateTime billLastUpdate;
+			if (interp.isPresent()) {
+				if (interp.get().getLastUpdate() == null) {
+					if (interp.get().getLastPressQuery() == null) {
+						interp.get().setLastUpdate(LocalDateTime.now());
+					} else {
+						interp.get().setLastUpdate(interp.get().getLastPressQuery().atStartOfDay());
+					}
+					s3.put(interp.get());
+				}
+
+				var billLastAction = bill.getLastActionDate() == null || interp.get().getLastUpdate().isAfter(bill.getLastActionDate().atStartOfDay()) ? interp.get().getLastUpdate() : bill.getLastActionDate().atStartOfDay();
+				var existingBillLastUpdate = bill.getLastUpdate();
+				billLastUpdate = existingBillLastUpdate != null && existingBillLastUpdate.isAfter(billLastAction) ? existingBillLastUpdate : billLastAction;
+			} else {
+				bill.setInterpretation(null);
+				bill.setInterpretations(null);
+				bill.setTexts(billService.getBillTexts(bill));
+				billLastUpdate = getBillStatusLastUpdate(bill);
+				if (bill.getLastUpdate() == null || (billLastUpdate != null && billLastUpdate.isAfter(bill.getLastUpdate()))) {
+					bill.setLastUpdate(billLastUpdate);
+				}
 			}
 
-			if (interp.get().getLastUpdate() == null) {
-				if (interp.get().getLastPressQuery() == null) {
-					interp.get().setLastUpdate(LocalDateTime.now());
-				} else {
-					interp.get().setLastUpdate(interp.get().getLastPressQuery().atStartOfDay());
-				}
-				s3.put(interp.get());
-			}
-			
-			bill.setInterpretation(interp.get());
-			
+			var billExistsInPostgres = lastUpdateMap.containsKey(bill.getId());
 			var existingLastUpdate = lastUpdateMap.get(bill.getId());
-			var billLastAction = bill.getLastActionDate() == null || interp.get().getLastUpdate().isAfter(bill.getLastActionDate().atStartOfDay()) ? interp.get().getLastUpdate() : bill.getLastActionDate().atStartOfDay();
-			var existingBillLastUpdate = bill.getLastUpdate();
-			var billLastUpdate = existingBillLastUpdate != null && existingBillLastUpdate.isAfter(billLastAction) ? existingBillLastUpdate : billLastAction;
-			if (FORCE_REFRESH_ALL || !Objects.equals(billLastUpdate, existingLastUpdate)) {
-				billService.applyInterpretation(bill, interp.get());
+			if (FORCE_REFRESH_ALL || !billExistsInPostgres || !Objects.equals(billLastUpdate, existingLastUpdate)) {
+				if (interp.isPresent()) {
+					billService.applyInterpretation(bill, interp.get());
+				}
 				billsToUpsert.add(bill);
 				lastUpdateMap.put(bill.getId(), bill.getLastUpdate());
 				updatedSet.add(bill.getId());
@@ -115,6 +124,19 @@ public class PostgresSyncService {
 		}
 		Log.info("Synced " + syncedBillCount + " changed bills to postgres");
 		return updatedSet;
+	}
+
+	private LocalDateTime getBillStatusLastUpdate(Bill bill) {
+		if (bill.getLastUpdate() != null) {
+			return bill.getLastUpdate();
+		}
+		if (bill.getLastActionDate() != null) {
+			return bill.getLastActionDate().atStartOfDay();
+		}
+		if (bill.getIntroducedDate() != null) {
+			return bill.getIntroducedDate().atStartOfDay();
+		}
+		return null;
 	}
 
 	private void refreshHotBills(PoliscoreDatasetIF dataset, Set<String> updatedSet) {

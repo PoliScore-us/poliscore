@@ -313,31 +313,37 @@ public class Bill extends SessionPersistable {
 	}
 	@JsonIgnore public void setDate(LocalDate date) { introducedDate = date; }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return getInterpretation().getRating(); }
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_INDEX }) public int getRating() { return getInterpretation() == null || getInterpretation().getRating() == null ? 0 : getInterpretation().getRating(); }
 	@JsonIgnore public void setRating(int rating) { }
-	@JsonIgnore public int getRating(TrackedIssue issue) { return getInterpretation().getRating(issue); }
+	@JsonIgnore public int getRating(TrackedIssue issue) {
+		Integer rating = getInterpretation() == null ? null : getInterpretation().getRating(issue);
+		return rating == null ? 0 : rating;
+	}
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_ABS_INDEX }) public int getRatingAbs() { return Math.abs(getInterpretation().getRating()); }
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_RATING_ABS_INDEX }) public int getRatingAbs() { return Math.abs(getRating()); }
 	@JsonIgnore public void setRatingAbs(int rating) { }
 
 	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_IMPACT_INDEX })
 //	public int getImpact() { return (int)(getImpact(TrackedIssue.OverallBenefitToSociety, status.getDescription().toLowerCase().trim().equals("law") ? DEFAULT_IMPACT_LAW_WEIGHT : 0.0d) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getLastActionDate(), LocalDate.now()))); }
-	public int getImpact() { return (int)(getImpact(TrackedIssue.OverallBenefitToSociety) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getLastActionDate(), LocalDate.now()))); }
+	public int getImpact() { return !canCalculateDerivedMetrics() ? 0 : (int)(getImpact(TrackedIssue.OverallBenefitToSociety) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getLastActionDate(), LocalDate.now()))); }
 	public void setImpact(int impact) { }
 	
 	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_IMPACT_ABS_INDEX })
-	public int getImpactAbs() { return (int)(Math.abs(getImpact()) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getLastActionDate(), LocalDate.now()))); }
-	@JsonIgnore public int getImpactAbs(TrackedIssue issue, double lawWeight) { return Math.abs(getImpact(issue, lawWeight)); }
+	public int getImpactAbs() { return !canCalculateDerivedMetrics() ? 0 : (int)(Math.abs(getImpact()) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getLastActionDate(), LocalDate.now()))); }
+	@JsonIgnore public int getImpactAbs(TrackedIssue issue, double lawWeight) { return !canCalculateDerivedMetrics() ? 0 : Math.abs(getImpact(issue, lawWeight)); }
 	public void setImpactAbs(int impact) { }
 	
 	// TODO : Maybe don't completely hide "final" statuses here, but make them decay super fast
-	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_HOT_INDEX }) public int getHot() { if (status.getDescription().toLowerCase().startsWith("vetoed")) return 0; else return (int) (getImpactAbs(TrackedIssue.OverallBenefitToSociety, 0.0d) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getLastActionDate(), LocalDate.now()))); }
+	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_HOT_INDEX }) public int getHot() { if (!canCalculateDerivedMetrics() || status.getDescription().toLowerCase().startsWith("vetoed")) return 0; else return (int) (getImpactAbs(TrackedIssue.OverallBenefitToSociety, 0.0d) * Math.exp(-0.015 * ChronoUnit.DAYS.between(getLastActionDate(), LocalDate.now()))); }
 	public void setHot(int hot) { }
 	
 	@JsonIgnore public int getImpact(TrackedIssue issue) { return getImpact(issue, DEFAULT_IMPACT_LAW_WEIGHT); };
 	
 	@JsonIgnore public int getImpact(TrackedIssue issue, double lawWeight)
 	{
+		if (!canCalculateDerivedMetrics()) {
+			return 0;
+		}
 		return calculateImpact(getInterpretation().getIssueStats().getStat(issue), status.getProgress(), getCosponsorPercent(), lawWeight);
 	}
 
@@ -476,7 +482,7 @@ public class Bill extends SessionPersistable {
 
 	private boolean canCalculateDerivedMetrics()
 	{
-		return getInterpretation() != null && status != null && getLastActionDate() != null;
+		return getInterpretation() != null && getInterpretation().getIssueStats() != null && status != null && getLastActionDate() != null;
 	}
 
 	private void refreshIssueImpactMap()
