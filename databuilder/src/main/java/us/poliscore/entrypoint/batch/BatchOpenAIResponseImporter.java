@@ -377,7 +377,8 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 				bi.setLastPressQuery(LocalDate.now());
 			}
 			
-			bi.setLastUpdate(LocalDateTime.now());
+			LocalDateTime generatedAt = LocalDateTime.now();
+			bi.recordGeneration(generatedAt, s3.get(bi.getId(), BillInterpretation.class).orElse(null));
 			
 			if (bi.getOrigin().equals(InterpretationOrigin.POLISCORE) && sliceIndex == null) {
 				billService.applyInterpretation(bill, bi);

@@ -39,6 +39,7 @@ import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.VoteStatus;
 import us.poliscore.model.bill.Bill;
+import us.poliscore.model.bill.Bill.BillAction;
 import us.poliscore.model.bill.BillStatus;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
@@ -459,6 +460,16 @@ public class USCDatasetProvider implements DatasetProvider {
     	}
     	
     	bill.setCosponsors(view.getCosponsors().stream().map(s -> s.convert(dataset)).collect(Collectors.toList()));
+    	if (view.getActions() != null) {
+    		bill.setActions(view.getActions().stream()
+    				.filter(action -> action != null && action.getActedAt() != null)
+    				.map(action -> new BillAction(
+    						action.getActedAt().toLocalDate(),
+    						action.getText(),
+    						null,
+    						action.getType()))
+    				.collect(Collectors.toList()));
+    	}
     	bill.setLastActionDate(view.getUpdatedAt() ==  null ? view.getLastActionDate() : view.getUpdatedAt());
     	bill.setOfficialUrl("https://www.congress.gov/bill/" + dataset.getSession().getCode() + "th-congress/" + getCongressGovBillType(bill) + "/" + bill.getNumber());
     	

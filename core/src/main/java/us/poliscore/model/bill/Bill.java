@@ -85,6 +85,10 @@ public class Bill extends SessionPersistable {
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(columnDefinition = "jsonb")
 	protected List<BillText> texts = new ArrayList<>();
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(columnDefinition = "jsonb")
+	protected List<BillAction> actions = new ArrayList<>();
 	
 	// Type here is sort of overloaded at this point. If it's congressional data, then it will align with CongressionalBillType.name()
 	// Otherwise if it's a state bill it should align with LegiscanBillType.getCode()
@@ -177,6 +181,17 @@ public class Bill extends SessionPersistable {
 
 	@Transient
 	private boolean refreshing;
+
+	@Data
+	@NoArgsConstructor
+	@AllArgsConstructor
+	@RegisterForReflection
+	public static class BillAction {
+		private LocalDate date;
+		private String description;
+		private String chamber;
+		private String type;
+	}
 	
 	public void setInterpretation(BillInterpretation interp) {
 		this.interpretation = interp;
@@ -237,6 +252,27 @@ public class Bill extends SessionPersistable {
 				&& !StringUtils.isBlank(this.interpretation.getGenBillTitle())) {
 			setName(this.interpretation.getGenBillTitle());
 		}
+	}
+
+	/**
+	 * Returns the first time any version of this bill was interpreted. Existing
+	 * interpretation objects written before firstGeneratedAt was introduced fall
+	 * back to lastUpdate.
+	 */
+	@JsonIgnore
+	public java.time.LocalDateTime getFirstInterpretationGeneratedAt() {
+		return getInterpretations().stream()
+				.map(Bill::getFirstGeneratedAt)
+				.filter(java.util.Objects::nonNull)
+				.min(java.time.LocalDateTime::compareTo)
+				.orElse(null);
+	}
+
+	private static java.time.LocalDateTime getFirstGeneratedAt(BillInterpretation interpretation) {
+		if (interpretation.getFirstGeneratedAt() != null) {
+			return interpretation.getFirstGeneratedAt();
+		}
+		return interpretation.getLastUpdate();
 	}
 	
 	@JsonIgnore

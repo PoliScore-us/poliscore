@@ -2,6 +2,7 @@ package us.poliscore.service;
 
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -73,13 +74,14 @@ public class BillService {
 		b.setLastUpdate(existingBillLastUpdate != null && existingBillLastUpdate.isAfter(billLastAction) ? existingBillLastUpdate : billLastAction);
 		
 		b.setTexts(getBillTexts(b));
-		var billInterpretations = getBillInterpretations(b).stream()
+		var billInterpretations = new ArrayList<>(getBillInterpretations(b).stream()
 				.filter(existingInterp -> Objects.equals(existingInterp.getSliceIndex(), null))
-				.toList();
+				.filter(existingInterp -> !Objects.equals(existingInterp.getId(), interp.getId()))
+				.toList());
 		billInterpretations.forEach(this::populatePressInterps);
-		b.setInterpretations(billInterpretations);
 		populatePressInterps(interp);
-		b.setInterpretation(interp);
+		billInterpretations.add(interp);
+		b.setInterpretations(billInterpretations);
 	}
 
 	public String getBillInterpretationId(Bill bill) {

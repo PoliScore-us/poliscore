@@ -68,6 +68,7 @@ import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Party;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.bill.Bill;
+import us.poliscore.model.bill.Bill.BillAction;
 import us.poliscore.model.bill.Bill.BillSponsor;
 import us.poliscore.model.bill.BillStatus;
 import us.poliscore.model.bill.BillText;
@@ -324,6 +325,16 @@ public class LegiscanDatasetProvider implements DatasetProvider {
     	bill.setLegiscanId(view.getBillId());
     	bill.setOfficialUrl(view.getStateLink());
     	bill.setTexts(buildBillTextMetadata(bill.getId(), view));
+    	if (view.getHistory() != null) {
+    		bill.setActions(view.getHistory().stream()
+    				.filter(action -> action != null && action.getDate() != null)
+    				.map(action -> new BillAction(
+    						action.getDate(),
+    						action.getAction(),
+    						action.getChamber() == null ? null : action.getChamber().name(),
+    						null))
+    				.collect(Collectors.toList()));
+    	}
     	
     	return true;
 	}

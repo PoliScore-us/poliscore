@@ -1,6 +1,7 @@
 package us.poliscore.model.bill;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -156,6 +157,25 @@ public class BillInterpretation extends SessionPersistable
 	protected String laymansReport;
 
 	protected String sourceBillTextVersion;
+
+	/**
+	 * The first time this bill-text version was interpreted. Unlike lastUpdate,
+	 * this value is preserved when the deterministic interpretation object is
+	 * regenerated.
+	 */
+	protected LocalDateTime firstGeneratedAt;
+
+	public void recordGeneration(LocalDateTime generatedAt, BillInterpretation existingInterpretation) {
+		LocalDateTime existingFirstGeneratedAt = existingInterpretation == null
+				? null
+				: existingInterpretation.getFirstGeneratedAt();
+		if (existingFirstGeneratedAt == null && existingInterpretation != null) {
+			existingFirstGeneratedAt = existingInterpretation.getLastUpdate();
+		}
+
+		setFirstGeneratedAt(existingFirstGeneratedAt == null ? generatedAt : existingFirstGeneratedAt);
+		setLastUpdate(generatedAt);
+	}
 	
 	protected List<String> topics;
 	
