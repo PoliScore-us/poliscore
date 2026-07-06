@@ -5,18 +5,24 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.val;
 import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.dataset.DatasetProvider;
 import us.poliscore.dataset.PoliscoreDatasetIF;
+import us.poliscore.model.BuildReport;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
 import us.poliscore.model.Persistable;
 
 @ApplicationScoped
 public class GovernmentDataService {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(GovernmentDataService.class);
 	
 	@Inject
 	private DatasetProvider provider;
@@ -28,10 +34,23 @@ public class GovernmentDataService {
 	private static boolean didImportDatasets = false;
 	
 	public synchronized List<PoliscoreDatasetIF> importAllDatasets() {
+		return importAllDatasets(null);
+	}
+	
+	public synchronized List<PoliscoreDatasetIF> importAllDatasets(BuildReport report) {
 		if (didImportDatasets) return importedDatasets;
 		
 		for (val cfg : config.getSupportedDeployments()) {
-			importDataset(cfg);
+			try {
+				importDataset(cfg);
+			} catch (Throwable t) {
+				LOGGER.error("Failed to import dataset for namespace={} year={}", cfg.getNamespace(), cfg.getYear(), t);
+				if (report != null && BuildReport.isLegiscanQuotaExceeded(t)) {
+					report.fatal(t);
+					continue;
+				}
+				rethrow(t);
+			}
 		}
 		
 		didImportDatasets = true;
@@ -39,6 +58,16 @@ public class GovernmentDataService {
 		SessionInfoService.buildSessions(importedDatasets);
 		
 		return importedDatasets;
+	}
+	
+	private static void rethrow(Throwable t) {
+		if (t instanceof RuntimeException runtimeException) {
+			throw runtimeException;
+		}
+		if (t instanceof Error error) {
+			throw error;
+		}
+		throw new RuntimeException(t);
 	}
 
 	public synchronized void resetImports() {

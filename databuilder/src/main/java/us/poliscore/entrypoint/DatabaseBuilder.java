@@ -104,7 +104,7 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 	{
 		report = new BuildReport();
 
-		data.importAllDatasets();
+		data.importAllDatasets(report);
 		
 		val buildDatasets = data.getBuildDatasets();
 		
@@ -158,7 +158,7 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 	
 	private void interpretBills(List<PoliscoreDatasetIF> buildDatasets) { interpretBills(buildDatasets, false); }
 	@SneakyThrows private void interpretBills(List<PoliscoreDatasetIF> buildDatasets, boolean isRecursive) {
-		if (report.hasFatal()) return;
+		if (report.hasBlockingFatal()) return;
 		
 		if (runtimeConfig.isInterpretNewBills()) {
 			List<InterpretationRequest> requests = billRequestGenerator.process(buildDatasets, report, runtimeConfig.isAgenticWebSearch(), isRecursive);
@@ -172,7 +172,7 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 				else
 					responses = openAi.processBatch(report, requests);
 				
-				if (report.hasFatal()) return;
+				if (report.hasBlockingFatal()) return;
 				
 				for (File f : responses) {
 					responseImporter.process(report, f);
@@ -190,7 +190,7 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 		// The interpreter will utilize data generated in this process (i.e. aggregate stats)
 		legInterp.recalculateAllLegislators();
 		
-		if (!report.hasFatal() && runtimeConfig.isReinterpretLegislators()) {
+		if (!report.hasBlockingFatal() && runtimeConfig.isReinterpretLegislators()) {
 			List<InterpretationRequest> requests = legislatorRequestGenerator.process(buildDatasets, report);
 			markFlex(requests, runtimeConfig.isFlexRequests());
 		
@@ -202,7 +202,7 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 				else
 					responses = openAi.processBatch(report, requests);
 				
-				if (!report.hasFatal()) {
+				if (!report.hasBlockingFatal()) {
 					for (File f : responses) {
 						responseImporter.process(report, f);
 					}
@@ -214,7 +214,7 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 	
 	@SneakyThrows
 	private void interpretPartyStats(List<PoliscoreDatasetIF> buildDatasets) {
-		if (!report.hasFatal() && runtimeConfig.isReinterpretParties()) {
+		if (!report.hasBlockingFatal() && runtimeConfig.isReinterpretParties()) {
 			List<InterpretationRequest> requests = partyInterpreter.interpret(buildDatasets);
 			markFlex(requests, runtimeConfig.isFlexRequests());
 			
@@ -226,7 +226,7 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 				else
 					responses = openAi.processBatch(report, requests);
 				
-				if (!report.hasFatal()) {
+				if (!report.hasBlockingFatal()) {
 					for (File f : responses) {
 						responseImporter.process(report, f);
 					}

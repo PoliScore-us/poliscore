@@ -7,6 +7,7 @@ import java.util.List;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.Data;
+import us.poliscore.legiscan.exception.QuotaExceededException;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.legislator.Legislator;
 
@@ -31,6 +32,14 @@ public class BuildReport {
 	public void fatal(Throwable t) { fatalErrors.add(t); }
 	
 	public boolean hasFatal() { return !fatalErrors.isEmpty(); }
+	
+	public boolean hasBlockingFatal() {
+		return fatalErrors.stream().anyMatch(t -> !isLegiscanQuotaExceeded(t));
+	}
+	
+	public static boolean isLegiscanQuotaExceeded(Throwable t) {
+		return t instanceof QuotaExceededException;
+	}
 	
 	@Override
 	public String toString() {
