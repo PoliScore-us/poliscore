@@ -41,16 +41,7 @@ public class GovernmentDataService {
 		if (didImportDatasets) return importedDatasets;
 		
 		for (val cfg : config.getSupportedDeployments()) {
-			try {
-				importDataset(cfg);
-			} catch (Throwable t) {
-				LOGGER.error("Failed to import dataset for namespace={} year={}", cfg.getNamespace(), cfg.getYear(), t);
-				if (report != null && BuildReport.isLegiscanQuotaExceeded(t)) {
-					report.fatal(t);
-					continue;
-				}
-				rethrow(t);
-			}
+			importDataset(cfg);
 		}
 		
 		didImportDatasets = true;
