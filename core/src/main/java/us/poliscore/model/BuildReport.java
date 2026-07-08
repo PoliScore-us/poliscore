@@ -21,6 +21,8 @@ public class BuildReport {
 	public List<Legislator> interpretedLegislators = new ArrayList<Legislator>();
 	
 	public List<Throwable> fatalErrors = new ArrayList<Throwable>();
+
+	public List<Throwable> recoveredErrors = new ArrayList<Throwable>();
 	
 	double totalProcessingCost = 0;
 	
@@ -29,8 +31,14 @@ public class BuildReport {
 	int flexRequests = 0;
 	
 	public void fatal(Throwable t) { fatalErrors.add(t); }
+
+	public void recovered(Throwable t) { recoveredErrors.add(t); }
 	
 	public boolean hasFatal() { return !fatalErrors.isEmpty(); }
+
+	public boolean hasRecovered() { return !recoveredErrors.isEmpty(); }
+
+	public boolean hasBlockingFatal() { return hasFatal(); }
 	
 	@Override
 	public String toString() {
@@ -52,6 +60,14 @@ public class BuildReport {
 		    t.printStackTrace(new PrintWriter(sw));
 
 		    result += "\n\n=== FATAL ERROR ===\n";
+		    result += sw.toString();
+		}
+
+		for (Throwable t : recoveredErrors) {
+		    StringWriter sw = new StringWriter();
+		    t.printStackTrace(new PrintWriter(sw));
+
+		    result += "\n\n=== RECOVERED ERROR ===\n";
 		    result += sw.toString();
 		}
 		

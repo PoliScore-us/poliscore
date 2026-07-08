@@ -62,6 +62,7 @@ import us.poliscore.legiscan.view.LegiscanTextMetadataView;
 import us.poliscore.legiscan.view.LegiscanTextType;
 import us.poliscore.legiscan.view.LegiscanVoteDetailView;
 import us.poliscore.model.CongressionalSession;
+import us.poliscore.model.BuildReport;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
@@ -73,7 +74,7 @@ import us.poliscore.model.bill.Bill.BillSponsor;
 import us.poliscore.model.bill.BillStatus;
 import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.BillTextFormat;
-import us.poliscore.model.bill.BillTextPublishVersion;
+import us.poliscore.model.bill.BillTextIdentity;
 import us.poliscore.parsing.PDFToText;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
@@ -128,23 +129,28 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	
 	@Override
 	public PoliscoreDatasetIF importDataset(DeploymentConfig ref) {
+		return importDataset(ref, null);
+	}
+
+	@Override
+	public PoliscoreDatasetIF importDataset(DeploymentConfig ref, BuildReport report) {
 		var state = namespaceToState(ref.getNamespace());
 		val views = legiscan.getDatasetList(state, ref.getYear());
 		
 		PoliscoreDatasetIF dataset;
 		
 		if (views.size() == 1) {
-			dataset = importDataset(views.get(0), ref, null);
+			dataset = importDataset(views.get(0), ref, null, report);
 		} else {
 			dataset = new PoliscoreCompositeDataset(ref);
 			 
 			val regularView = views.stream().filter(v -> !v.isSpecial()).findFirst().get();
-			val regularDataset = importDataset(regularView, ref, null);
+			val regularDataset = importDataset(regularView, ref, null, report);
 			((PoliscoreCompositeDataset)dataset).addDataset(regularDataset);
 			
 			for (val view : views) {
 				if (view != regularView)
-					((PoliscoreCompositeDataset)dataset).addDataset(importDataset(view, ref, regularDataset));
+					((PoliscoreCompositeDataset)dataset).addDataset(importDataset(view, ref, regularDataset, report));
 			}
 		}
 		
@@ -152,7 +158,14 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	}
 	
 	protected PoliscoreDataset importDataset(LegiscanDatasetView view, DeploymentConfig ref, PoliscoreDataset regularDataset) {
+		return importDataset(view, ref, regularDataset, null);
+	}
+
+	protected PoliscoreDataset importDataset(LegiscanDatasetView view, DeploymentConfig ref, PoliscoreDataset regularDataset, BuildReport report) {
 	    CachedLegiscanDatasetResult cached = legiscan.cacheDataset(view);
+	    if (report != null) {
+	    	cached.getRefreshFailures().forEach(report::recovered);
+	    }
 
 	    var session = buildSession(!view.isSpecial(), cached.getDataset().getSessionId(), cached.getDataset().getState(), cached.getDataset().getYearStart(), cached.getDataset().getYearEnd());
 
@@ -719,12 +732,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 			// Was already fetched using GPO fetcher
 			if (latestMetadata.get().getDate() != null && latestMetadata.get().getDate().isBefore(LocalDate.of(2026, 3, 10))) continue;
 			
-			if (s3.exists(BillText.generateId(bill.getId(), buildBillTextVersion(latestMetadata.get())), BillText.class)) { continue; }
-			
-			// Migrate bill text from older GPO format over to the newer legiscan format. Can be removed once migrated.
-			if (bill.getNamespace().equals(LegislativeNamespace.US_CONGRESS) && migrateCongressLegiscanBillTextCompatibility(bill, latestMetadata.get())) {
-				continue;
-			}
+			if (s3.exists(BillText.generateId(bill.getId(), buildBillTextVersion(bill, latestMetadata.get())), BillText.class)) { continue; }
 			
 			val latestBillText = fetchBillTextVersion(bill, latestMetadata.get());
 			if (latestBillText == null) continue;
@@ -754,7 +762,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 						metadata.getDocId(),
 						null,
 						metadata.getDate(),
-						buildBillTextVersion(metadata),
+						buildBillTextVersion(billId, metadata),
 						getBillTextFormat(metadata.getMime())))
 				.sorted(Comparator.comparing(BillText::getLastUpdate, Comparator.nullsLast(Comparator.naturalOrder())))
 				.toList();
@@ -777,49 +785,6 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 				.toList();
 	}
 	
-	protected boolean migrateCongressLegiscanBillTextCompatibility(Bill bill, LegiscanTextMetadataView metadata) {
-		if (bill == null || metadata == null || StringUtils.isBlank(metadata.getStateLink())) {
-			return false;
-		}
-
-		if (!bill.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
-			return false;
-		}
-
-		String legiscanVersion = buildBillTextVersion(metadata);
-
-		try {
-			String stateLink = metadata.getStateLink();
-			String fileName = stateLink.substring(stateLink.lastIndexOf('/') + 1);
-
-			if (StringUtils.isBlank(fileName) || !fileName.startsWith("BILLS-")) {
-				return false;
-			}
-
-			BillTextPublishVersion gpoVersion = BillTextPublishVersion.parseFromBillTextName(fileName);
-			String gpoBillTextId = BillText.generateId(bill.getId(), gpoVersion);
-
-			BillText existing = s3.get(gpoBillTextId, BillText.class).orElse(null);
-			if (existing == null) {
-				return false;
-			}
-
-			BillText migrated = BillText.factory(
-					bill.getId(),
-					metadata.getDocId(),
-					existing.getText(),
-					existing.getLastUpdated(),
-					legiscanVersion,
-					existing.getEffectiveFormat()
-			);
-
-			s3.put(migrated);
-			return true;
-		} catch (Exception ex) {
-			return false;
-		}
-	}
-	
 	@SneakyThrows
 	protected BillText fetchBillTextVersion(Bill bill, LegiscanTextMetadataView metadata) {
 		if (bill.getNamespace().equals(LegislativeNamespace.US_CONGRESS)) {
@@ -833,7 +798,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		String text = extractBillText(doc);
 		
 		if (StringUtils.isBlank(text)) {
-			logger.error("Bill text was blank for " + bill.getId() + " version " + buildBillTextVersion(metadata) + ". Skipping s3 upload to allow further processing, but you might want to look into this when you get a chance.");
+			logger.error("Bill text was blank for " + bill.getId() + " version " + buildBillTextVersion(bill, metadata) + ". Skipping s3 upload to allow further processing, but you might want to look into this when you get a chance.");
 			return null;
 		}
 		
@@ -848,7 +813,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 			throw new NullPointerException();
 		}
 		
-		return BillText.factory(bill.getId(), doc.getDocId(), text, date, buildBillTextVersion(metadata), getBillTextFormat(doc.getMime()));
+		return BillText.factory(bill.getId(), doc.getDocId(), text, date, buildBillTextVersion(bill, metadata), getBillTextFormat(doc.getMime()));
 	}
 
 	protected boolean isIntroducedBillText(LegiscanTextMetadataView metadata, LegiscanBillTextView doc) {
@@ -956,6 +921,29 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	}
 	
 	public static String buildBillTextVersion(LegiscanTextMetadataView metadata) {
+		return buildLegiscanBillTextVersion(metadata);
+	}
+
+	public static String buildBillTextVersion(Bill bill, LegiscanTextMetadataView metadata) {
+		return buildBillTextVersion(bill != null ? bill.getId() : null, metadata);
+	}
+
+	public static String buildBillTextVersion(String billId, LegiscanTextMetadataView metadata) {
+		if (isCongressBillId(billId)) {
+			val congressionalVersion = BillTextIdentity.congressVersionFromUrl(metadata.getStateLink());
+			if (congressionalVersion.isPresent()) {
+				return congressionalVersion.get();
+			}
+		}
+
+		return buildLegiscanBillTextVersion(metadata);
+	}
+
+	private static boolean isCongressBillId(String billId) {
+		return billId != null && billId.startsWith(Bill.ID_CLASS_PREFIX + "/" + LegislativeNamespace.US_CONGRESS + "/");
+	}
+
+	public static String buildLegiscanBillTextVersion(LegiscanTextMetadataView metadata) {
 		LegiscanTextType type = null;
 		if (metadata.getTypeId() != null) {
 			try {

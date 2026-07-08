@@ -37,7 +37,27 @@ import us.poliscore.model.legislator.Legislator;
 class LegiscanDatasetProviderTest {
 
 	@Test
-	void buildBillTextVersionUsesTypeAndDocId() {
+	void buildBillTextVersionUsesGpoIdentityWhenStateLinkProvidesOne() {
+		LegiscanTextMetadataView metadata = new LegiscanTextMetadataView();
+		metadata.setDocId(12345);
+		metadata.setTypeId(LegiscanTextType.AMENDED.getValue());
+		metadata.setStateLink("https://www.govinfo.gov/content/pkg/BILLS-119hr1234ih2/xml/BILLS-119hr1234ih2.xml");
+
+		assertEquals("IH2", new LegiscanDatasetProvider().buildBillTextVersion("BIL/us/congress/119/hr/1234", metadata));
+	}
+
+	@Test
+	void buildBillTextVersionIgnoresGpoShapedStateLinkForStateBills() {
+		LegiscanTextMetadataView metadata = new LegiscanTextMetadataView();
+		metadata.setDocId(12345);
+		metadata.setTypeId(LegiscanTextType.AMENDED.getValue());
+		metadata.setStateLink("https://example.test/BILLS-119hr1234ih2.xml");
+
+		assertEquals("AMENDED-12345", new LegiscanDatasetProvider().buildBillTextVersion("BIL/us/az/2026/hb/1234", metadata));
+	}
+
+	@Test
+	void buildBillTextVersionFallsBackToTypeAndDocId() {
 		LegiscanTextMetadataView metadata = new LegiscanTextMetadataView();
 		metadata.setDocId(12345);
 		metadata.setTypeId(LegiscanTextType.AMENDED.getValue());

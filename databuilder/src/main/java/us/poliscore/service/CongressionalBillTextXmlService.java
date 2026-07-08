@@ -61,7 +61,7 @@ public class CongressionalBillTextXmlService {
 							metadata.getDocId(),
 							xml,
 							date,
-							LegiscanDatasetProvider.buildBillTextVersion(metadata),
+							LegiscanDatasetProvider.buildBillTextVersion(bill, metadata),
 							format));
 				}
 			}

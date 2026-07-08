@@ -41,7 +41,7 @@ public class GovernmentDataService {
 		if (didImportDatasets) return importedDatasets;
 		
 		for (val cfg : config.getSupportedDeployments()) {
-			importDataset(cfg);
+			importDataset(cfg, report);
 		}
 		
 		didImportDatasets = true;
@@ -71,6 +71,10 @@ public class GovernmentDataService {
 	}
 	
 	public PoliscoreDatasetIF importDataset(DeploymentConfig ref) {
+		return importDataset(ref, null);
+	}
+
+	public PoliscoreDatasetIF importDataset(DeploymentConfig ref, BuildReport report) {
 		// If it's already been imported, just return it
 		for (val dataset : importedDatasets) {
 			if (dataset.getNamespace().equals(ref.getNamespace()) && ref.getYear().equals(dataset.getEndYear())) {
@@ -78,7 +82,7 @@ public class GovernmentDataService {
 			}
 		}
 		
-		var dataset = provider.importDataset(ref);
+		var dataset = provider.importDataset(ref, report);
 		
 		importedDatasets.add(dataset);
 		

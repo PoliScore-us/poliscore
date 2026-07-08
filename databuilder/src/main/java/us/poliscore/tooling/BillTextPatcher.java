@@ -151,7 +151,7 @@ public class BillTextPatcher implements QuarkusApplication {
 		String version = billText.getVersion();
 		if (StringUtils.isNotBlank(version)) {
 			for (LegiscanTextMetadataView candidate : metadata) {
-				if (StringUtils.equalsIgnoreCase(version, LegiscanDatasetProvider.buildBillTextVersion(candidate))) {
+				if (StringUtils.equalsIgnoreCase(version, LegiscanDatasetProvider.buildBillTextVersion(billText.getBillId(), candidate))) {
 					return candidate;
 				}
 			}

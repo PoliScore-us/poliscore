@@ -12,12 +12,15 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import dev.failsafe.Failsafe;
@@ -34,7 +37,9 @@ import net.lingala.zip4j.exception.ZipException;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.model.bill.Bill;
+import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillText;
+import us.poliscore.model.bill.BillTextIdentity;
 import us.poliscore.model.bill.BillTextPublishVersion;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.service.GovernmentDataService;
@@ -70,6 +75,7 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 		data.importAllDatasets();
 		
 		dataset.optimizeExists(s3, BillText.class);
+		dataset.optimizeExists(s3, BillInterpretation.class);
 		
 		val congressStore = new File(store, dataset.getCode());
 		congressStore.mkdir();
@@ -214,6 +220,7 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 			upsertVersionedBillText(billText);
 		}
 		
+		migrateProviderSpecificBillTextAliases(billId, billTexts);
 		migrateLegacyBillText(billId, billTexts);
 	}
 	
@@ -238,7 +245,8 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	
 	@SneakyThrows
 	protected BillText buildBillText(String billId, File file) {
-		BillTextPublishVersion version = BillTextPublishVersion.parseFromBillTextName(file.getName());
+		String version = BillTextIdentity.congressVersionFromFileName(file.getName())
+				.orElseGet(() -> BillTextPublishVersion.parseFromBillTextName(file.getName()).name());
 		return BillText.factory(billId, null, FileUtils.readFileToString(file, "UTF-8"), parseDate(FileUtils.readFileToString(file, StandardCharsets.UTF_8)), version, us.poliscore.model.bill.BillTextFormat.CONGRESS_BILL_XML);
 	}
 	
@@ -256,6 +264,132 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 		// The versioned GPO upload already happened above, so we only need to retire the legacy key.
 		s3.delete(legacyId, BillText.class);
 		Log.info("Migrated legacy bill text " + legacyId + " to versioned key.");
+	}
+
+	protected void migrateProviderSpecificBillTextAliases(String billId, List<BillText> canonicalBillTexts) {
+		String sessionKey = getSessionKey(billId);
+		String objectKey = getVersionedObjectKeyPrefix(billId);
+		Set<String> canonicalVersions = canonicalBillTexts.stream()
+				.map(BillText::getVersion)
+				.collect(Collectors.toCollection(HashSet::new));
+
+		for (var existing : s3.query(BillText.class, sessionKey, objectKey)) {
+			if (!billId.equals(existing.getBillId()) || StringUtils.isBlank(existing.getVersion()) || canonicalVersions.contains(existing.getVersion())) {
+			    continue;
+			}
+
+			val canonicalTarget = selectCanonicalMigrationTarget(existing, canonicalBillTexts);
+			if (canonicalTarget.isEmpty() || existing.getId().equals(canonicalTarget.get().getId())) {
+				continue;
+			}
+
+			migrateBillInterpretationVersionAliases(billId, existing.getVersion(), canonicalTarget.get().getVersion());
+			s3.delete(existing.getId(), BillText.class);
+			
+			Log.info("Migrated provider-specific bill text " + existing.getId() + " to canonical version " + canonicalTarget.get().getId() + ".");
+		}
+	}
+
+	protected Optional<BillText> selectCanonicalMigrationTarget(BillText existing, List<BillText> canonicalBillTexts) {
+		if (existing == null || canonicalBillTexts == null || canonicalBillTexts.isEmpty()) {
+			return Optional.empty();
+		}
+
+		val convertedVersion = BillTextIdentity.canonicalCongressVersionFromStoredVersion(existing.getVersion(), existing.getBillId());
+		if (convertedVersion.isPresent()) {
+			val matchingVersion = canonicalBillTexts.stream()
+					.filter(candidate -> StringUtils.equalsIgnoreCase(convertedVersion.get(), candidate.getVersion()))
+					.toList();
+			if (matchingVersion.size() == 1) {
+				return Optional.of(matchingVersion.getFirst());
+			}
+		}
+
+		val exactTextMatch = matchingCanonicalText(existing, canonicalBillTexts, false);
+		if (exactTextMatch.isPresent()) {
+			return exactTextMatch;
+		}
+
+		val normalizedTextMatch = matchingCanonicalText(existing, canonicalBillTexts, true);
+		if (normalizedTextMatch.isPresent()) {
+			return normalizedTextMatch;
+		}
+
+		if (existing.getLastUpdate() != null) {
+			val sameDate = canonicalBillTexts.stream()
+					.filter(candidate -> existing.getLastUpdate().equals(candidate.getLastUpdate()))
+					.toList();
+			if (sameDate.size() == 1) {
+				return Optional.of(sameDate.getFirst());
+			}
+		}
+
+		if (canonicalBillTexts.size() == 1) {
+			return Optional.of(canonicalBillTexts.getFirst());
+		}
+
+		return Optional.empty();
+	}
+
+	private Optional<BillText> matchingCanonicalText(BillText existing, List<BillText> canonicalBillTexts, boolean normalize) {
+		String existingText = normalize ? normalizeBillTextForMigration(existing.getText()) : existing.getText();
+		if (StringUtils.isBlank(existingText)) {
+			return Optional.empty();
+		}
+
+		val matches = canonicalBillTexts.stream()
+				.filter(candidate -> {
+					String candidateText = normalize ? normalizeBillTextForMigration(candidate.getText()) : candidate.getText();
+					return StringUtils.equals(existingText, candidateText);
+				})
+				.toList();
+
+		return matches.size() == 1 ? Optional.of(matches.getFirst()) : Optional.empty();
+	}
+
+	private String normalizeBillTextForMigration(String text) {
+		if (StringUtils.isBlank(text)) {
+			return "";
+		}
+
+		return text
+				.replace('\u00A0', ' ')
+				.replaceAll("\\s+", " ")
+				.trim();
+	}
+
+	protected void migrateBillInterpretationVersionAliases(String billId, String sourceVersion, String targetVersion) {
+		if (StringUtils.isBlank(sourceVersion) || StringUtils.isBlank(targetVersion) || StringUtils.equals(sourceVersion, targetVersion)) {
+			return;
+		}
+
+		String sessionKey = getSessionKey(billId);
+		String objectKey = getVersionedObjectKeyPrefix(billId);
+		for (var interp : s3.query(BillInterpretation.class, sessionKey, objectKey)) {
+			if (!billId.equals(interp.getBillId()) || !StringUtils.equals(sourceVersion, interp.getSourceBillTextVersion())) {
+				continue;
+			}
+
+			String targetId = BillInterpretation.generateId(billId, targetVersion, interp.getSliceIndex());
+			if (s3.exists(targetId, BillInterpretation.class)) {
+				continue;
+			}
+
+			BillInterpretation alias = PoliscoreUtil.getObjectMapper().convertValue(interp, BillInterpretation.class);
+			alias.setId(targetId);
+			alias.setSourceBillTextVersion(targetVersion);
+			s3.put(alias);
+		}
+	}
+
+	private static String getSessionKey(String billId) {
+		String[] billIdParts = billId.split("/");
+		return billIdParts[1] + "/" + billIdParts[2] + "/" + billIdParts[3];
+	}
+
+	private static String getVersionedObjectKeyPrefix(String billId) {
+		String[] billIdParts = billId.split("/");
+		return billIdParts[4] + "/" + billIdParts[5] + "/";
 	}
 	
 }
