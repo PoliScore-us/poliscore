@@ -13,6 +13,9 @@ import us.poliscore.service.OpenAIService.Usage;
 @Getter
 @AllArgsConstructor
 public enum OpenAIModel {
+	GPT56sol("gpt-5.6-sol", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 5.0, 30),
+	GPT56terra("gpt-5.6-terra", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 2.0, 12),
+	GPT56luna("gpt-5.6-luna", 1_050_000, 128_000, false, true, true, new RateLimit(180_000_000, 30_000), 0.2, 1.2),
 	GPT55("gpt-5.5", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 5.0, 30),
 	GPT54mini("gpt-5.4-mini", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.75, 4.5),
 	GPT54nano("gpt-5.4-nano", 400_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 0.2, 1.25),
@@ -28,7 +31,11 @@ public enum OpenAIModel {
 	O3("o3", 190_000, 95_000, false, true, true, new RateLimit(30_000_000, 10_000), 0, 0),
 	O3_DEEP_RESEARCH("o3-deep-research", 190_000, 95_000, false, true, true, new RateLimit(30_000_000, 10_000), 0, 0);
 
-	public static final OpenAIModel DEFAULT_MODEL = GPT55;
+	public static final OpenAIModel DEFAULT_FREE_MODEL = GPT56luna;
+
+	public static final OpenAIModel DEFAULT_SUBSCRIBER_MODEL = GPT56sol;
+
+	public static final OpenAIModel DEFAULT_MODEL = DEFAULT_FREE_MODEL;
 
 	public static final OpenAIModel DEFAULT_MODEL_MINI = GPT54mini;
 	
@@ -86,6 +93,10 @@ public enum OpenAIModel {
 			}
 		}
 		throw new NoSuchElementException(id);
+	}
+
+	public static boolean isLowIntelligenceModel(String id) {
+		return id != null && id.toLowerCase().contains("-luna");
 	}
 
 	@Getter

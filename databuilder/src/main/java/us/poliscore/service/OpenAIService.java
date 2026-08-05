@@ -104,17 +104,32 @@ public class OpenAIService {
 	
 	public AIInterpretationMetadata metadata()
 	{
-		return AIInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, runtimeConfig.isAgenticWebSearch());
+		return metadata(OpenAIModel.DEFAULT_MODEL.getId());
+	}
+
+	public AIInterpretationMetadata metadata(String modelId)
+	{
+		return AIInterpretationMetadata.construct(PROVIDER, modelId, PROMPT_VERSION, runtimeConfig.isAgenticWebSearch());
 	}
 	
 	public AIAggregateInterpretationMetadata metadata(List<BillSlice> slices)
 	{
-		return AIAggregateInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, runtimeConfig.isAgenticWebSearch(), slices);
+		return metadata(OpenAIModel.DEFAULT_MODEL.getId(), slices);
+	}
+
+	public AIAggregateInterpretationMetadata metadata(String modelId, List<BillSlice> slices)
+	{
+		return AIAggregateInterpretationMetadata.construct(PROVIDER, modelId, PROMPT_VERSION, runtimeConfig.isAgenticWebSearch(), slices);
 	}
 	
 	public AIInterpretationMetadata metadata(BillSlice slice)
 	{
-		return AISliceInterpretationMetadata.construct(PROVIDER, OpenAIModel.DEFAULT_MODEL.getId(), PROMPT_VERSION, runtimeConfig.isAgenticWebSearch(), slice);
+		return metadata(OpenAIModel.DEFAULT_MODEL.getId(), slice);
+	}
+
+	public AIInterpretationMetadata metadata(String modelId, BillSlice slice)
+	{
+		return AISliceInterpretationMetadata.construct(PROVIDER, modelId, PROMPT_VERSION, runtimeConfig.isAgenticWebSearch(), slice);
 	}
 	
 	private MinuteRateLimiter limiterFor(OpenAIModel model) {

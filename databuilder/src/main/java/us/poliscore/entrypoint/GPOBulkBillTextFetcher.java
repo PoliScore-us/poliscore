@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import dev.failsafe.Failsafe;
@@ -59,6 +60,7 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	private static final Pattern DUBLIN_CORE_DATE_PATTERN = Pattern.compile("<(?:\\w+:)?date>([^<]+)</(?:\\w+:)?date>");
 	private static final Pattern ACTION_DATE_PATTERN = Pattern.compile("<action-date[^>]*date=\"(\\d{8})\"");
 	private static final Pattern ATTESTATION_DATE_PATTERN = Pattern.compile("<attestation-date[^>]*date=\"(\\d{8})\"");
+	private static final Pattern MODS_DATE_ISSUED_PATTERN = Pattern.compile("<(?:\\w+:)?dateIssued[^>]*>([^<]+)</(?:\\w+:)?dateIssued>");
 	
 	public static List<String> FETCH_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
@@ -220,8 +222,8 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 			upsertVersionedBillText(billText);
 		}
 		
-		migrateProviderSpecificBillTextAliases(billId, billTexts);
-		migrateLegacyBillText(billId, billTexts);
+//		migrateProviderSpecificBillTextAliases(billId, billTexts);
+//		migrateLegacyBillText(billId, billTexts);
 	}
 	
 	protected String buildBillId(PoliscoreDatasetIF dataset, String billType, File f) {
@@ -247,13 +249,45 @@ public class GPOBulkBillTextFetcher implements QuarkusApplication {
 	protected BillText buildBillText(String billId, File file) {
 		String version = BillTextIdentity.congressVersionFromFileName(file.getName())
 				.orElseGet(() -> BillTextPublishVersion.parseFromBillTextName(file.getName()).name());
-		return BillText.factory(billId, null, FileUtils.readFileToString(file, "UTF-8"), parseDate(FileUtils.readFileToString(file, StandardCharsets.UTF_8)), version, us.poliscore.model.bill.BillTextFormat.CONGRESS_BILL_XML);
+		String text = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+		LocalDate date = parseDate(text);
+		if (date == null) {
+			date = fetchGovInfoModsDate(file);
+		}
+		if (date == null) {
+			throw new IllegalStateException("Unable to resolve bill text date for " + billId + " from " + file.getName());
+		}
+		return BillText.factory(billId, null, text, date, version, us.poliscore.model.bill.BillTextFormat.CONGRESS_BILL_XML);
 	}
 	
 	protected void upsertVersionedBillText(BillText candidate) {
-		if (s3.exists(candidate.getId(), BillText.class)) return;
+		val existing = s3.get(candidate.getId(), BillText.class);
+		if (existing.isPresent()) {
+			if (existing.get().getLastUpdate() == null && candidate.getLastUpdate() != null) {
+				existing.get().setLastUpdate(candidate.getLastUpdate());
+				s3.put(existing.get());
+			}
+			return;
+		}
 		
 		s3.put(candidate);
+	}
+
+	protected LocalDate fetchGovInfoModsDate(File file) {
+		String packageId = FilenameUtils.getBaseName(file.getName());
+		String url = "https://www.govinfo.gov/metadata/pkg/" + packageId + "/mods.xml";
+
+		try {
+			String mods = IOUtils.toString(new URL(url).openStream(), StandardCharsets.UTF_8);
+			val match = MODS_DATE_ISSUED_PATTERN.matcher(mods);
+			if (match.find()) {
+				return LocalDate.parse(match.group(1).trim(), DateTimeFormatter.ISO_LOCAL_DATE);
+			}
+		} catch (Exception e) {
+			Log.warn("Unable to resolve govinfo MODS date for " + file.getName() + " from " + url + ": " + e.getMessage());
+		}
+
+		return null;
 	}
 	
 	protected void migrateLegacyBillText(String billId, List<BillText> versionedBillTexts) {

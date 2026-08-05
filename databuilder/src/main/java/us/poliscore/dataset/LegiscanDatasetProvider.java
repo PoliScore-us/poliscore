@@ -311,6 +311,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		val originatingChamber = resolveOriginatingChamber(view);
 		val introducedDate = resolveIntroducedDate(view);
 		val lastActionDate = resolveLastActionDate(view);
+		val lastUpdateDate = resolveLastUpdateDate(view);
 		
 		if (originatingChamber.isEmpty() || introducedDate.isEmpty() || lastActionDate.isEmpty()) {
 			logger.warn("Legiscan bill " + view.getBillId() + " did not have any history and thus cannot be imported.");
@@ -335,6 +336,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		bill.setStatus(buildStatus(view, session));
     	bill.setIntroducedDate(introducedDate.get());
     	bill.setLastActionDate(lastActionDate.get());
+    	bill.setLastUpdate(lastUpdateDate.map(LocalDate::atStartOfDay).orElse(null));
     	bill.setLegiscanId(view.getBillId());
     	bill.setOfficialUrl(view.getStateLink());
     	bill.setTexts(buildBillTextMetadata(bill.getId(), view));
@@ -410,7 +412,11 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 			return Optional.of(view.getHistory().getLast().getDate());
 		}
 
-		return collectBillDates(view).stream().max(LocalDate::compareTo);
+		return resolveLastUpdateDate(view);
+	}
+
+	protected static Optional<LocalDate> resolveLastUpdateDate(LegiscanBillView view) {
+		return Optional.ofNullable(view.getLastUpdateDate());
 	}
 
 	protected static List<LocalDate> collectBillDates(LegiscanBillView view) {
@@ -418,6 +424,10 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 
 		if (view.getStatusDate() != null) {
 			dates.add(view.getStatusDate());
+		}
+
+		if (view.getHistory() != null) {
+			dates.addAll(view.getHistory().stream().map(h -> h.getDate()).filter(Objects::nonNull).toList());
 		}
 
 		if (view.getTexts() != null) {

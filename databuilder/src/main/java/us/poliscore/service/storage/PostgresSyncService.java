@@ -91,9 +91,9 @@ public class PostgresSyncService {
 					s3.put(interp.get());
 				}
 
-				var billLastAction = bill.getLastActionDate() == null || interp.get().getLastUpdate().isAfter(bill.getLastActionDate().atStartOfDay()) ? interp.get().getLastUpdate() : bill.getLastActionDate().atStartOfDay();
-				var existingBillLastUpdate = bill.getLastUpdate();
-				billLastUpdate = existingBillLastUpdate != null && existingBillLastUpdate.isAfter(billLastAction) ? existingBillLastUpdate : billLastAction;
+				billLastUpdate = latest(
+						getBillStatusLastUpdate(bill),
+						interp.get().getLastUpdate());
 			} else {
 				bill.setInterpretation(null);
 				bill.setInterpretations(null);
@@ -126,6 +126,12 @@ public class PostgresSyncService {
 		return updatedSet;
 	}
 
+	private LocalDateTime latest(LocalDateTime first, LocalDateTime second) {
+		if (first == null) return second;
+		if (second == null) return first;
+		return first.isAfter(second) ? first : second;
+	}
+
 	private LocalDateTime getBillStatusLastUpdate(Bill bill) {
 		if (bill.getLastUpdate() != null) {
 			return bill.getLastUpdate();
@@ -153,9 +159,11 @@ public class PostgresSyncService {
 
 	private void syncLegislatorsToPostgres(PoliscoreDatasetIF dataset) {
 		Log.info("Pushing legislators to postgres");
+		Set<String> retainedLegislatorIds = new HashSet<>();
 		var legislatorsToUpsert = new ArrayList<Legislator>();
 		int syncedLegislatorCount = 0;
 		for (var leg : dataset.query(Legislator.class)) {
+			retainedLegislatorIds.add(leg.getId());
 			if (leg.getInterpretation() != null) {
 				legService.applyInterpretation(leg, leg.getInterpretation());
 				legislatorsToUpsert.add(leg);
@@ -168,7 +176,9 @@ public class PostgresSyncService {
 		if (!legislatorsToUpsert.isEmpty()) {
 			syncedLegislatorCount += flushLegislatorsToPostgres(legislatorsToUpsert);
 		}
-		Log.info("Pushed " + syncedLegislatorCount + " legislators to postgres");
+		String storageBucket = Persistable.getClassStorageBucket(Legislator.class, dataset.getKey());
+		int deletedLegislatorCount = legislatorRepository.deleteMissingFromStorageBucket(storageBucket, retainedLegislatorIds);
+		Log.info("Pushed " + syncedLegislatorCount + " legislators to postgres and pruned " + deletedLegislatorCount + " stale legislators");
 	}
 
 	private void syncSessionInterpretationsToPostgres(PoliscoreDatasetIF dataset) {

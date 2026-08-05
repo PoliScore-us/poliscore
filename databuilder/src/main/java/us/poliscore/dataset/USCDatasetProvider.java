@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -154,11 +155,27 @@ public class USCDatasetProvider implements DatasetProvider {
 					.map(t -> t.convert())
 					.collect(Collectors.toCollection(java.util.TreeSet::new)));
 			
-			if (leg.isMemberOfSession(dataset.getRegularSession()))
+			if (isMemberOfCongressionalSession(view, dataset.getRegularSession()))
 			{
 				dataset.put(leg);
 			}
 		}
+	}
+
+	static boolean isMemberOfCongressionalSession(USCLegislatorView view, LegislativeSession session) {
+		if (view == null || view.getTerms() == null || session == null) return false;
+		if (!LegislativeNamespace.US_CONGRESS.equals(session.getNamespace())) return false;
+		
+		int congressNumber = Integer.valueOf(session.getCode());
+		int startYear = 1789 + (2 * (congressNumber - 1));
+		LocalDate sessionStart = LocalDate.of(startYear, 1, 3);
+		LocalDate sessionEnd = LocalDate.of(startYear + 2, 1, 3);
+		
+		return view.getTerms().stream()
+				.anyMatch(term -> term.getStart() != null
+						&& term.getEnd() != null
+						&& term.getStart().isBefore(sessionEnd)
+						&& term.getEnd().isAfter(sessionStart));
 	}
 	
 	@SneakyThrows
@@ -301,10 +318,11 @@ public class USCDatasetProvider implements DatasetProvider {
 	
 	public BillStatus buildStatus(PoliscoreDataset dataset, USCBillView view) {
 	    BillStatus status = new BillStatus();
-	    status.setSourceStatus(view.getStatus());
+	    String sourceStatus = getCorrectedStatus(view);
+	    status.setSourceStatus(sourceStatus);
 	    
 	    final LegislativeChamber chamber = CongressionalBillType.getOriginatingChamber(CongressionalBillType.valueOf(view.getBill_type().toUpperCase()));
-	    final String stat = view.getStatus().toUpperCase();
+	    final String stat = sourceStatus.toUpperCase();
 	    final boolean sessionOver = CongressionalSession.of(Integer.parseInt(view.getCongress())).isOver();
 	    final LegislativeNamespace ns = dataset.getNamespace();
 	    
@@ -437,6 +455,15 @@ public class USCDatasetProvider implements DatasetProvider {
 
 	    return status;
 	}
+
+	private String getCorrectedStatus(USCBillView view) {
+		if ("s".equalsIgnoreCase(view.getBill_type()) && "1383".equals(view.getNumber())) {
+			// USC currently reports S. 1383 as sent to the President; it is pass-over.
+			return "PASS_OVER:SENATE";
+		}
+
+		return view.getStatus();
+	}
 	
 	@SneakyThrows
 	protected void importUscBill(PoliscoreDataset dataset, FileInputStream fos) {
@@ -470,7 +497,8 @@ public class USCDatasetProvider implements DatasetProvider {
     						action.getType()))
     				.collect(Collectors.toList()));
     	}
-    	bill.setLastActionDate(view.getUpdatedAt() ==  null ? view.getLastActionDate() : view.getUpdatedAt());
+    	bill.setLastUpdate(view.getUpdatedAt() == null ? null : view.getUpdatedAt().atStartOfDay());
+    	bill.setLastActionDate(view.getLastActionDate() == null ? view.getUpdatedAt() : view.getLastActionDate());
     	bill.setOfficialUrl("https://www.congress.gov/bill/" + dataset.getSession().getCode() + "th-congress/" + getCongressGovBillType(bill) + "/" + bill.getNumber());
     	
     	if (view.getSponsor() != null && !StringUtils.isBlank(view.getSponsor().getBioguide_id()))

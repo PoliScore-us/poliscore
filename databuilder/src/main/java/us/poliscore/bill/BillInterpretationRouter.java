@@ -156,7 +156,7 @@ public class BillInterpretationRouter {
     }
     
     public ReasoningEffort chooseEffort(InterpretationRequest req, Bill b, String billText) {
-    	if (req.getRequestedModel().getId().toLowerCase().contains("mini"))
+    	if (req.getRequestedModel().getId().toLowerCase().contains("mini") || req.getRequestedModel().getId().toLowerCase().contains("luna"))
     		return ReasoningEffort.MEDIUM;
     	
 		if (b.getStatus().getProgress() > progressOverrideThreshold || billText.length() > LONG_BILL_THRESHOLD)

@@ -3,6 +3,8 @@ package us.poliscore.service.storage.repository;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.Query;
@@ -60,6 +62,26 @@ public class LegislatorRepository extends AbstractPostgresEntityRepository<Legis
 
 	public void putAllIfLatest(List<Legislator> legislators) {
 		executeBatch(upsertIfLatestSql(), legislators, this::bindUpsert);
+	}
+
+	public int deleteMissingFromStorageBucket(String storageBucket, Set<String> retainedIds) {
+		if (retainedIds == null || retainedIds.isEmpty()) {
+			return 0;
+		}
+
+		List<String> ids = new ArrayList<>(retainedIds);
+		String placeholders = ids.stream().map(id -> "?").collect(Collectors.joining(", "));
+		Query query = requireEntityManager().createNativeQuery("""
+				DELETE FROM %s
+				WHERE storage_bucket = ?
+				  AND id NOT IN (%s)
+				""".formatted(qualifiedTableName(), placeholders));
+		query.setParameter(1, storageBucket);
+		for (int i = 0; i < ids.size(); i++) {
+			query.setParameter(i + 2, ids.get(i));
+		}
+
+		return query.executeUpdate();
 	}
 
 	public List<LegislatorIssueStat> queryIssueStats(int pageSize, String index, Boolean ascending, String startKey, String storageBucket) {

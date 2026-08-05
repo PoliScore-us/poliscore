@@ -61,7 +61,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 		public boolean FORCE_REFRESH = false;
 	
 		/** Default requested model for these interpretation requests. */
-		public OpenAIModel billProcessModel = OpenAIModel.DEFAULT_MODEL;
+		public OpenAIModel billProcessModel = OpenAIModel.DEFAULT_FREE_MODEL;
 	
 		public ReasoningEffort minEffort = ReasoningEffort.LOW;
 		
@@ -430,7 +430,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 		val req = InterpretationRequest.builder().data(new CustomData(oid)).systemMsg(systemMsg).userMsg(userMsg)
 				.requestedModel(criteria.billProcessModel).build();
 		
-		new BillInterpretationRouter().route(req, criteria.billProcessModel, OpenAIModel.DEFAULT_MODEL_MINI, bill, billText);
+		new BillInterpretationRouter().route(req, criteria.billProcessModel, criteria.billProcessModel, bill, billText);
 
 		requests.add(req);
 		totalRequests++;

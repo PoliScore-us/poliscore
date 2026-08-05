@@ -1,13 +1,18 @@
 package us.poliscore.entrypoint;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.BillTextFormat;
@@ -16,6 +21,9 @@ import us.poliscore.model.bill.BillTextIdentity;
 class GPOBulkBillTextFetcherTest {
 
 	private final GPOBulkBillTextFetcher fetcher = new GPOBulkBillTextFetcher();
+
+	@TempDir
+	Path tempDir;
 
 	@Test
 	void parseDateReadsBillDublinCoreDate() throws Exception {
@@ -98,6 +106,58 @@ class GPOBulkBillTextFetcherTest {
 				""";
 
 		assertEquals(LocalDate.of(2025, 9, 15), GPOBulkBillTextFetcher.parseDate(xml));
+	}
+
+	@Test
+	void buildBillTextFallsBackToGovInfoModsDateWhenXmlHasNoDate() throws Exception {
+		File file = tempDir.resolve("BILLS-119hr618enr.xml").toFile();
+		Files.writeString(file.toPath(), """
+				<?xml version="1.0"?>
+				<bill>
+				  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+				    <dublinCore>
+				      <dc:date></dc:date>
+				    </dublinCore>
+				  </metadata>
+				  <attestation><attestation-group><role>Speaker of the House of Representatives.</role></attestation-group></attestation>
+				</bill>
+				""");
+
+		GPOBulkBillTextFetcher fetcher = new GPOBulkBillTextFetcher() {
+			@Override
+			protected LocalDate fetchGovInfoModsDate(File file) {
+				return LocalDate.of(2025, 6, 24);
+			}
+		};
+
+		BillText billText = fetcher.buildBillText("BIL/us/congress/119/hr/618", file);
+
+		assertEquals("ENR", billText.getVersion());
+		assertEquals(LocalDate.of(2025, 6, 24), billText.getLastUpdated());
+	}
+
+	@Test
+	void buildBillTextRejectsUndatedBillText() throws Exception {
+		File file = tempDir.resolve("BILLS-119hr618enr.xml").toFile();
+		Files.writeString(file.toPath(), """
+				<?xml version="1.0"?>
+				<bill>
+				  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+				    <dublinCore>
+				      <dc:date></dc:date>
+				    </dublinCore>
+				  </metadata>
+				</bill>
+				""");
+
+		GPOBulkBillTextFetcher fetcher = new GPOBulkBillTextFetcher() {
+			@Override
+			protected LocalDate fetchGovInfoModsDate(File file) {
+				return null;
+			}
+		};
+
+		assertThrows(IllegalStateException.class, () -> fetcher.buildBillText("BIL/us/congress/119/hr/618", file));
 	}
 
 	@Test

@@ -42,7 +42,8 @@ public class PoliscoreDatasetProvider implements DatasetProvider {
 		if ("usc".equalsIgnoreCase(congressDataProvider)) return true;
 		if ("legiscan".equalsIgnoreCase(congressDataProvider)) return false;
 
-		return usc.isEnabled();
+//		return usc.isEnabled();
+		return false;
 	}
 	
 	@Override

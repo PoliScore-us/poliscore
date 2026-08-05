@@ -32,6 +32,7 @@ import us.poliscore.PoliscoreUtil;
 import us.poliscore.WebappDatabase;
 import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
 import us.poliscore.ai.BatchOpenAIResponse;
+import us.poliscore.ai.OpenAIModel;
 import us.poliscore.dataset.LegiscanDatasetProvider;
 import us.poliscore.entrypoint.DatabaseBuilderConfig;
 import us.poliscore.legiscan.service.CachedLegiscanService;
@@ -291,6 +292,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		val parsedId = BillInterpretation.parseId(resp.getCustomData().getOid());
 		String billId = parsedId.billId();
 		Integer sliceIndex = parsedId.sliceIndex();
+		String modelId = responseModel(resp);
 		
 		val bill = resolveBillForImport(billId);
 		if (bill == null) {
@@ -320,9 +322,9 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 						}
 					}
 					slices.sort(Comparator.comparing(BillSlice::getSliceIndex));
-					bi.setMetadata(openAiService.metadata(slices));
+					bi.setMetadata(openAiService.metadata(modelId, slices));
 				} else
-					bi.setMetadata(openAiService.metadata());
+					bi.setMetadata(openAiService.metadata(modelId));
 			}
 			else
 			{
@@ -330,7 +332,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 				
 					List<BillSlice> slices = billSlicer.slice(bill, sourceBillText, BatchBillRequestGenerator.BillGenerationCriteria.defaultCriteria().getBillProcessModel());
 				
-				bi.setMetadata(openAiService.metadata(slices.get(sliceIndex)));
+				bi.setMetadata(openAiService.metadata(modelId, slices.get(sliceIndex)));
 				bi.setId(BillInterpretation.generateId(billId, sourceBillText.getVersion(), sliceIndex));
 			}
 
@@ -391,6 +393,13 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			interpretedBillsWithErrors.add(bill);
 			throw t;
 		}
+	}
+
+	private String responseModel(BatchOpenAIResponse resp) {
+		String model = resp == null || resp.getResponse() == null || resp.getResponse().getBody() == null
+				? null
+				: resp.getResponse().getBody().getModel();
+		return StringUtils.defaultIfBlank(model, OpenAIModel.DEFAULT_MODEL.getId());
 	}
 
 	private BillText resolveSourceBillText(Bill bill, String requestedVersion) {
