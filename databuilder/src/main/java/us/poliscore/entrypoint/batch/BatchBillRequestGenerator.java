@@ -66,8 +66,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 		public ReasoningEffort minEffort = ReasoningEffort.LOW;
 		
 		public static BillGenerationCriteria defaultCriteria() {
-			return new BillGenerationCriteria()
-					.billIsIntroducedAfter(LocalDate.of(2026, 3, 1));
+			return new BillGenerationCriteria();
 		}
 
 		public Stream<Bill> refine(Stream<Bill> stream, BatchBillRequestGenerator generator, boolean includePressDirtyBills) {
