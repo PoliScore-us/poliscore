@@ -241,10 +241,12 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		interp.setHash(legInterp.calculateInterpHashCode(leg));
 		
 		val interpText = resp.getResponse().getBody().getChoices().get(0).getMessage().getContent();
-		new LegislatorInterpretationParser(interp).parse(interpText);
+		val parser = new LegislatorInterpretationParser(interp);
+		parser.parse(interpText);
 		
 		interp.setLastUpdate(LocalDateTime.now());
 		
+		legService.persistMediaReferences(parser.getMediaReferences());
 		s3.put(interp);
 		legService.applyInterpretation(leg, interp);
 	}

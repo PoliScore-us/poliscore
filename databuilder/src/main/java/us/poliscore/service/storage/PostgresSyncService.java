@@ -17,6 +17,7 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorInterpretation;
+import us.poliscore.model.legislator.LegislatorMediaReference;
 import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.model.session.SessionInterpretation;
 import us.poliscore.service.BillService;
@@ -63,6 +64,7 @@ public class PostgresSyncService {
 	public void syncPostgresWithS3(PoliscoreDatasetIF dataset) {
 		dataset.optimizeExists(s3, BillInterpretation.class);
 		dataset.optimizeExists(s3, LegislatorInterpretation.class);
+		dataset.optimizeExists(s3, LegislatorMediaReference.class);
 		dataset.optimizeExists(s3, PressInterpretation.class);
 		
 		

@@ -1,7 +1,6 @@
 package us.poliscore.model.legislator;
 
 import java.time.LocalDate;
-import java.util.Arrays;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -83,7 +82,7 @@ public class LegislatorInterpretation extends SessionPersistable
 	@DynamoDbIgnore
 	public String getLegislatorId()
 	{
-		return Legislator.ID_CLASS_PREFIX + "/" + Arrays.asList(this.id.split("/")).get(1) + "/" + Arrays.asList(this.id.split("/")).getLast();
+		return this.id.replaceFirst("^" + ID_CLASS_PREFIX, Legislator.ID_CLASS_PREFIX);
 	}
 	
 	@Override @JsonIgnore @DynamoDbSecondaryPartitionKey(indexNames = { Persistable.OBJECT_BY_DATE_INDEX, Persistable.OBJECT_BY_RATING_INDEX }) public String getStorageBucket() { return super.getStorageBucket(); }

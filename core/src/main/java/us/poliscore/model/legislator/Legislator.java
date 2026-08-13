@@ -96,6 +96,16 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(columnDefinition = "jsonb")
 	protected LegislatorInterpretation interpretation;
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "media_coverage", columnDefinition = "jsonb")
+	protected List<LegislatorMediaReference> mediaCoverage = new ArrayList<>();
+
+	public void setMediaCoverage(List<LegislatorMediaReference> mediaCoverage) {
+		this.mediaCoverage = mediaCoverage == null
+				? new ArrayList<LegislatorMediaReference>()
+				: new ArrayList<LegislatorMediaReference>(mediaCoverage);
+	}
 	
 	@Getter(onMethod = @__({ @JsonIgnore }))
 	protected Integer legiscanId;

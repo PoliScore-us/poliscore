@@ -1,5 +1,8 @@
 package us.poliscore.model.legislator;
 
+import java.net.URI;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
@@ -8,19 +11,25 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import us.poliscore.model.InterpretationOrigin;
+
 public class LegislatorInterpretationParser {
 
 	private static Logger logger = LoggerFactory.getLogger(LegislatorInterpretationParser.class);
 	
 	private State state = null;
 	private LegislatorInterpretation interp;
+	private final List<LegislatorMediaReference> mediaReferences = new ArrayList<>();
 
 	public static enum State {
 		REASONING("(?i)Reasoning Steps:"),
 		SHORT_REPORT("(?i)Short Report:"),
 		CASUAL_REPORT("(?i)Casual Report:"),
 		LONG_REPORT("(?i)Long Report:"),
-		REFERENCES("(?i)References:");
+		REFERENCES("(?i)References:", "(?i)Media References:");
 
 		private List<String> regex;
 
@@ -34,6 +43,8 @@ public class LegislatorInterpretationParser {
 	}
 
 	public void parse(String text) {
+		state = null;
+		mediaReferences.clear();
 		interp.setShortExplain("");
 		interp.setCasualExplain("");
 		interp.setLongExplain("");
@@ -54,8 +65,13 @@ public class LegislatorInterpretationParser {
 		interp.setShortExplain(stripMultiLines(interp.getShortExplain()));
 		interp.setCasualExplain(stripMultiLines(interp.getCasualExplain()));
 		interp.setLongExplain(stripMultiLines(interp.getLongExplain()));
+		parseMediaReferences();
 		
 		interp.validate();
+	}
+
+	public List<LegislatorMediaReference> getMediaReferences() {
+		return List.copyOf(mediaReferences);
 	}
 	
 	public static String stripMultiLines(String shortExplain) {
@@ -138,6 +154,73 @@ public class LegislatorInterpretationParser {
 		} catch (Throwable t) {
 			logger.error("Error encountered processing references", t);
 		}
+	}
+
+	private void parseMediaReferences() {
+		String raw = interp.getReferences();
+		if (StringUtils.isBlank(raw)) return;
+
+		int start = raw.indexOf('[');
+		int end = raw.lastIndexOf(']');
+		if (start < 0 || end < start) return;
+
+		try {
+			JsonNode root = new ObjectMapper().readTree(raw.substring(start, end + 1));
+			if (!root.isArray()) return;
+
+			for (JsonNode value : root) {
+				try {
+					String url = text(value, "url");
+					String organization = firstText(value, "mediaOrganization", "source");
+					if (StringUtils.isBlank(url) || StringUtils.isBlank(organization)) continue;
+
+					URI parsedUrl = URI.create(url);
+					if (!parsedUrl.isAbsolute() || parsedUrl.getHost() == null
+							|| !("http".equalsIgnoreCase(parsedUrl.getScheme()) || "https".equalsIgnoreCase(parsedUrl.getScheme()))) continue;
+
+					InterpretationOrigin origin = new InterpretationOrigin(url, organization);
+					LegislatorMediaReference reference = new LegislatorMediaReference();
+					reference.setLegislatorId(interp.getLegislatorId());
+					reference.setOrigin(origin);
+					reference.setId(LegislatorMediaReference.generateId(interp.getLegislatorId(), origin));
+					reference.setMetadata(interp.getMetadata());
+					reference.setGenArticleTitle(firstText(value, "articleTitle", "title"));
+					reference.setAuthor(text(value, "author"));
+					reference.setPublishedDate(firstText(value, "publishedDate", "date"));
+					reference.setType(text(value, "type"));
+					reference.setShortExplain(firstText(value, "quickSummary", "description"));
+					reference.setLongExplain(firstText(value, "longSummary", "description"));
+					reference.setSentiment(clamp(value.path("sentiment").asInt(0), -100, 100));
+					reference.setSentimentText(text(value, "sentimentText"));
+					reference.setTrustworthiness(clamp(value.path("trustworthiness").asInt(-1), -1, 100));
+					reference.setConfidence(clamp(value.path("confidence").asInt(-1), -1, 100));
+					reference.setNoInterp(false);
+					reference.setLastUpdate(LocalDateTime.now());
+					mediaReferences.add(reference);
+				} catch (RuntimeException invalidReference) {
+					logger.warn("Ignoring invalid legislator media reference", invalidReference);
+				}
+			}
+		} catch (Exception invalidJson) {
+			logger.error("Error parsing legislator media references", invalidJson);
+		}
+	}
+
+	private String firstText(JsonNode value, String... fields) {
+		for (String field : fields) {
+			String result = text(value, field);
+			if (!StringUtils.isBlank(result)) return result;
+		}
+		return "";
+	}
+
+	private String text(JsonNode value, String field) {
+		JsonNode fieldValue = value.get(field);
+		return fieldValue == null || fieldValue.isNull() ? "" : fieldValue.asText("").strip();
+	}
+
+	private int clamp(int value, int min, int max) {
+		return Math.max(min, Math.min(max, value));
 	}
 
 	private boolean setState(String line) {
