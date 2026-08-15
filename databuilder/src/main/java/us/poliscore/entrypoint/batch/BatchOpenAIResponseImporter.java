@@ -151,6 +151,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		importedBills.clear();
 		interpretedBillsWithErrors.clear();
 		sessionInterpMap.clear();
+		erroredLines.clear();
 		hasRecalcedLegislators = false;
 	}
 	

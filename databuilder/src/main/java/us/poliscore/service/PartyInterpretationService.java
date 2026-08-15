@@ -122,7 +122,7 @@ Before printing the final line, internally verify the output is a JSON array of 
 	@Inject
     ObjectMapper mapper;
 	
-	private List<InterpretationRequest> requests = new ArrayList<InterpretationRequest>();
+	private final List<InterpretationRequest> requests = new ArrayList<InterpretationRequest>();
 	
 	private HashMap<Party, Map<TrackedIssue, PriorityQueue<PartyBillInteraction>>> bestBillsByIssue;
 	
@@ -178,6 +178,8 @@ Before printing the final line, internally verify the output is a JSON array of 
 	
 	public List<InterpretationRequest> interpret(List<PoliscoreDatasetIF> buildDatasets) throws IOException
 	{
+		requests.clear();
+
 		for (val dataset : buildDatasets) {
 			val hasIndependent = dataset.hasIndependentPartyMembers();
 					
@@ -191,7 +193,7 @@ Before printing the final line, internally verify the output is a JSON array of 
 				createRequest(dataset, partyStats.getIndependent());
 		}
 		
-		return requests;
+		return new ArrayList<>(requests);
 	}
 	
 	public SessionInterpretation recalculateStats(PoliscoreDatasetIF dataset) {

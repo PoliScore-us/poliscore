@@ -75,7 +75,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	
 	private long skipped = 0;
 	
-	private List<InterpretationRequest> requests = new ArrayList<InterpretationRequest>();
+	private final List<InterpretationRequest> requests = new ArrayList<InterpretationRequest>();
 	
 	protected BuildReport report;
 	
@@ -85,6 +85,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	{
 		Log.info("Generating batch request to interpret legislators");
 		
+		resetRunState();
 		this.report = report;
 		
 		data.importAllDatasets();
@@ -99,7 +100,12 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		
 		Log.info("Batch legislator request generator complete. Generated " + requests.size() + " requests. Skipped " + skipped + " legislators.");
 		
-		return requests;
+		return new ArrayList<>(requests);
+	}
+
+	void resetRunState() {
+		skipped = 0;
+		requests.clear();
 	}
 	
 	private void processDataset(PoliscoreDatasetIF dataset, boolean enableWebSearch, int block) throws IOException {

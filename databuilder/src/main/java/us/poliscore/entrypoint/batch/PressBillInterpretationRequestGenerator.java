@@ -247,11 +247,11 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	
 	private int totalQueries = 0;
 	
-	private List<InterpretationRequest> requests = new ArrayList<InterpretationRequest>();
+	private final List<InterpretationRequest> requests = new ArrayList<InterpretationRequest>();
 	
-	private Set<Bill> dirtyBills = new HashSet<Bill>();
+	private final Set<Bill> dirtyBills = new HashSet<Bill>();
 	
-	private Set<Bill> queriedBills = new HashSet<Bill>();
+	private final Set<Bill> queriedBills = new HashSet<Bill>();
 
 	@Inject
 	DatabaseBuilderConfig runtimeConfig;
@@ -273,6 +273,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	public List<InterpretationRequest> process(List<PoliscoreDatasetIF> buildDatasets)
 	{
 		Log.info("Scraping press articles");
+		resetRunState();
 		
 		for (val dataset : buildDatasets) {
 			dataset.optimizeExists(s3, BillText.class);
@@ -280,16 +281,21 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 			dataset.optimizeExists(s3, BillInterpretation.class);
 		}
 		
-		totalRequests = 0;
-		requests = new ArrayList<InterpretationRequest>();
-		
 		for (val dataset : buildDatasets) {
 			processDataset(dataset);
 		}
 		
 		Log.info("Press scraper complete. Executed " + totalQueries + " Google search queries and generated " + totalRequests + " AI requests.");
 		
-		return requests;
+		return new ArrayList<>(requests);
+	}
+
+	void resetRunState() {
+		totalRequests = 0;
+		totalQueries = 0;
+		requests.clear();
+		dirtyBills.clear();
+		queriedBills.clear();
 	}
 
 	private void processDataset(PoliscoreDatasetIF dataset) throws IOException {
