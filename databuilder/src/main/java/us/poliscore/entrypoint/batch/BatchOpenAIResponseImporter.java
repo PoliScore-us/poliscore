@@ -237,14 +237,13 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		if (interp == null)
 			throw new UnsupportedOperationException(leg.getId() + " interpretation was null!");
 		
-		interp.setMetadata(openAiService.metadata());
+		interp.setMetadata(openAiService.metadata(responseModel(resp)));
 		interp.setHash(legInterp.calculateInterpHashCode(leg));
+		interp.setLastUpdate(LocalDateTime.now());
 		
 		val interpText = resp.getResponse().getBody().getChoices().get(0).getMessage().getContent();
 		val parser = new LegislatorInterpretationParser(interp);
 		parser.parse(interpText);
-		
-		interp.setLastUpdate(LocalDateTime.now());
 		
 		legService.persistMediaReferences(parser.getMediaReferences());
 		s3.put(interp);
@@ -284,7 +283,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		val interpText = resp.getResponse().getBody().getChoices().get(0).getMessage().getContent();
 		new PartyInterpretationParser(partyInterp).parse(interpText);
 		
-		sessionInterp.setMetadata(openAiService.metadata());
+		sessionInterp.setMetadata(openAiService.metadata(responseModel(resp)));
 		
 		sessionInterpMap.put(sessionKey, sessionInterp);
 	}

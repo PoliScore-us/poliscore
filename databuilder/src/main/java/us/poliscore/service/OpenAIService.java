@@ -257,6 +257,12 @@ public class OpenAIService {
     }
 
 	public boolean isRateLimitFailure(Throwable failure) {
+		// OpenAI also uses HTTP 429 for exhausted billing quota. Unlike a rate limit,
+		// that condition cannot recover with backoff and must fail immediately.
+		if (isPermanentQuotaFailure(failure)) {
+			return false;
+		}
+
 		Throwable current = failure;
 
 		while (current != null) {
@@ -271,6 +277,29 @@ public class OpenAIService {
 						|| lower.contains("processing too many requests")
 						|| lower.startsWith("429:")
 						|| lower.contains(" 429")) {
+					return true;
+				}
+			}
+
+			current = current.getCause();
+		}
+
+		return false;
+	}
+
+	private boolean isPermanentQuotaFailure(Throwable failure) {
+		Throwable current = failure;
+
+		while (current != null) {
+			String msg = current.getMessage();
+			if (msg != null) {
+				String lower = msg.toLowerCase();
+				if (lower.contains("no credits remaining")
+						|| lower.contains("add credits to continue")
+						|| lower.contains("insufficient_quota")
+						|| lower.contains("insufficient quota")
+						|| lower.contains("exceeded your current quota")
+						|| lower.contains("billing hard limit")) {
 					return true;
 				}
 			}

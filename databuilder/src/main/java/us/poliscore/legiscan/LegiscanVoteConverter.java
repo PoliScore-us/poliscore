@@ -44,6 +44,10 @@ public class LegiscanVoteConverter {
 	protected static boolean isBillVote(String rollCallDesc) {
 	    String d = rollCallDesc.toLowerCase().trim();
 
+	    if (isExplicitlySubstantive(d)) {
+	        return true;
+	    }
+
 	    if (containsAny(d,
 	    		// --- STRONG FINAL PASSAGE SIGNALS ---
 	            "passage",
@@ -110,6 +114,14 @@ public class LegiscanVoteConverter {
 
 	    String d = rollCallDesc.toLowerCase().trim();
 
+	    // These descriptions were explicitly reviewed as votes that advance or
+	    // finally reconcile the bill, even though some contain words such as
+	    // "amendment", "conference", "reading", or "suspend" that are otherwise
+	    // treated conservatively as procedural.
+	    if (isExplicitlySubstantive(d)) {
+	        return false;
+	    }
+
 	    // Strong procedural indicators (high confidence)
 	    if (containsAny(d,
 	            "recommit",
@@ -155,6 +167,13 @@ public class LegiscanVoteConverter {
 	            "motion to reconsider",
 	            "motion to refer",
 	            "motion to discharge",
+	            "motion to resolve debate",
+	            "motion to withdraw and commit",
+	            "motion to remove from the table",
+	            "immediately transmit",
+	            "motion to print",
+	            "motion to suspend senate rule",
+	            "remove from local cal",
 	            "appeal of the ruling",
 	            "motion to commit",
 	            "motion to recommit",
@@ -189,6 +208,11 @@ public class LegiscanVoteConverter {
 	        return true;
 	    }
 
+	    if (d.equals("table") || d.startsWith("table:")
+	            || d.equals("adjournment") || d.startsWith("adjournment:")) {
+	        return true;
+	    }
+
 	    // Weak procedural / context-dependent (still safer to exclude for now)
 	    if (containsAny(d,
 	            "suspend the rules",
@@ -202,12 +226,47 @@ public class LegiscanVoteConverter {
 	    	"(?i)^(house|senate)\\s+[a-z&\\s]+:\\s*[a-z]\\.\\d+$",
 	    	"(?i)\\b[FS]A\\d+\\b", // Contains SA1 (Senate Amendment #1) or FA1 (Floor Amendment #1)
 	    	"(?i)\\bamd\\b", // Contains the word 'amd' (not inside another word)
-	    	"(?i)\\bmisc\\b" // Contains the word 'misc' (not inside another word)
+	        "(?i)\\bmisc\\b", // Contains the word 'misc' (not inside another word)
+	        "(?i)^am\\s+\\d+\\s+\\d+", // Georgia amendment number, e.g. "Am 62 0077"
+	        "(?i)\\brecon\\b", // Georgia abbreviation for reconsideration
+	        "(?i)^move from .+ to .+(?::|$)" // Move a bill between Georgia calendars/committees
 	    }) {
 	    	if (Pattern.compile(regex).matcher(d).find()) return true;
 	    }
 
 	    return false;
+	}
+
+	private static boolean isExplicitlySubstantive(String description) {
+		if (containsAny(description,
+				// Georgia votes agreeing to the other chamber's substitute or
+				// amendment are final reconciliation actions on the bill.
+				"agree to house substitute",
+				"agree to senate substitute",
+				"agree to senate sub as am",
+				"agree to senate am as am",
+				"agree to sam to hsub",
+				"uncontested house resolutions",
+
+				// Existing reviewed descriptions that otherwise collide with broad
+				// procedural keywords below.
+				"conference report agreed to",
+				"agree to the conference report",
+				"agreed to conference report",
+				"concur in senate amendment",
+				"concur in the senate amendment",
+				"agree to senate amendment",
+				"agree to the senate amendment",
+				"agreed to senate amendment",
+				"read third time and passed")) {
+			return true;
+		}
+
+		return description.contains("suspend the rules") && containsAny(description,
+				"and pass",
+				"and pass the bill",
+				"and agree",
+				"and concur");
 	}
 	
 	protected static VoteStatus toVoteStatus(LegiscanVoteStatus legiscanVoteStatus) {

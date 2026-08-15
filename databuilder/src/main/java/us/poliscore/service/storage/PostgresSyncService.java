@@ -33,7 +33,7 @@ public class PostgresSyncService {
 	
 	private static final int HOT_REFRESH_LIMIT = 1000;
 	private static final int BILL_UPSERT_CHUNK_SIZE = 1000;
-	private static final int LEGISLATOR_UPSERT_CHUNK_SIZE = 500;
+	private static final int LEGISLATOR_UPSERT_CHUNK_SIZE = 100;
 
 	@Inject
 	private PostgresPersistenceService postgres;

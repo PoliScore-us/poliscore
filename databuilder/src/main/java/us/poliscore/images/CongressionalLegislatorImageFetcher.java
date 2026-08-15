@@ -145,6 +145,7 @@ public class CongressionalLegislatorImageFetcher extends AbstractLegislatorImage
 	static List<String> primaryImageUrlCandidates(Legislator leg) {
 		val urls = new ArrayList<String>();
 		
+		urls.add("https://clerk.house.gov/images/members/" + leg.getCode() + ".jpg");
 		urls.add("https://raw.githubusercontent.com/unitedstates/images/gh-pages/congress/450x550/" + leg.getCode() + ".jpg");
 		urls.add("https://raw.githubusercontent.com/unitedstates/images/gh-pages/congress/original/" + leg.getCode() + ".jpg");
 		

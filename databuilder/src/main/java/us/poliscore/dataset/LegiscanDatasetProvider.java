@@ -593,8 +593,16 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		
 		leg.setId(legId);
 		
-		if (view.getBio() != null && view.getBio().getLinks() != null && view.getBio().getLinks().getOfficial() != null)
-			leg.setOfficialUrl(view.getBio().getLinks().getOfficial().get("website"));
+		String officialUrl = null;
+		if (view.getBio() != null) {
+			if (view.getBio().getLinks() != null && view.getBio().getLinks().getOfficial() != null) {
+				officialUrl = StringUtils.trimToNull(view.getBio().getLinks().getOfficial().get("website"));
+			}
+			if (officialUrl == null && view.getBio().getSocial() != null) {
+				officialUrl = StringUtils.trimToNull(view.getBio().getSocial().get("biography"));
+			}
+		}
+		leg.setOfficialUrl(officialUrl);
 		
 	    // Build and set name
 	    val name = new Legislator.LegislatorName();
@@ -738,9 +746,14 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 			
 			val latestMetadata = legiBill.getTexts().stream().max(Comparator.comparing(LegiscanTextMetadataView::getDate, Comparator.nullsFirst(Comparator.naturalOrder())));
 			if (latestMetadata.isEmpty()) continue;
-			
-			// Was already fetched using GPO fetcher
-			if (latestMetadata.get().getDate() != null && latestMetadata.get().getDate().isBefore(LocalDate.of(2026, 3, 10))) continue;
+
+			// Convert old unversioned objects before any historical fetch shortcut can
+			// skip this bill. This reuses the stored document and therefore does not
+			// consume a bill-text API request when its metadata identifies one version.
+			boolean migratedLegacyText = migrateBillTextVersion(bill, legiBill.getTexts());
+			if (migratedLegacyText) {
+				migratedCount++;
+			}
 			
 			if (s3.exists(BillText.generateId(bill.getId(), buildBillTextVersion(bill, latestMetadata.get())), BillText.class)) { continue; }
 			
@@ -750,8 +763,9 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 			s3.put(latestBillText);
 			uploadCount++;
 			
-			// Bill text is now stored by version. Remove once migrated
-			if (migrateBillTextVersion(bill)) {
+			// If metadata could not identify the legacy version, the latest version is
+			// now safely stored and the legacy duplicate can be retired.
+			if (!migratedLegacyText && retireLegacyBillText(bill)) {
 				migratedCount++;
 			}
 		}
@@ -968,15 +982,73 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		return typeToken + "-" + metadata.getDocId();
 	}
 	
-	protected boolean migrateBillTextVersion(Bill bill) {
+	protected boolean migrateBillTextVersion(Bill bill, Collection<LegiscanTextMetadataView> metadata) {
 		val legacyId = BillText.generateId(bill.getId());
 		val legacy = s3.get(legacyId, BillText.class).orElse(null);
 		if (legacy == null) {
 			return false;
 		}
-		
+
+		val migrated = buildMigratedLegacyBillText(bill, legacy, metadata).orElse(null);
+		if (migrated == null) {
+			logger.warn("Could not identify a unique version for legacy bill text " + legacyId + ". Keeping the legacy object.");
+			return false;
+		}
+
+		if (!s3.exists(migrated.getId(), BillText.class)) {
+			s3.put(migrated);
+		}
+
+		if (!s3.exists(migrated.getId(), BillText.class)) {
+			logger.error("Versioned bill text was not found after upload for " + legacyId + ". Keeping the legacy object.");
+			return false;
+		}
+
 		s3.delete(legacyId, BillText.class);
-		Log.info("Migrated legacy state bill text " + legacyId + " to versioned key.");
+		Log.info("Migrated legacy state bill text " + legacyId + " to " + migrated.getId() + ".");
+		return true;
+	}
+
+	protected Optional<BillText> buildMigratedLegacyBillText(Bill bill, BillText legacy,
+			Collection<LegiscanTextMetadataView> metadata) {
+		if (bill == null || legacy == null || StringUtils.isBlank(legacy.getDocument()) || metadata == null) {
+			return Optional.empty();
+		}
+
+		List<LegiscanTextMetadataView> candidates = metadata.stream()
+				.filter(Objects::nonNull)
+				.filter(candidate -> legacy.getLegiscanId() != null
+						? Objects.equals(legacy.getLegiscanId(), candidate.getDocId())
+						: legacy.getLastUpdated() != null && Objects.equals(legacy.getLastUpdated(), candidate.getDate()))
+				.toList();
+
+		if (candidates.size() != 1) {
+			return Optional.empty();
+		}
+
+		val matchingMetadata = candidates.get(0);
+		val migratedDate = matchingMetadata.getDate() != null ? matchingMetadata.getDate() : legacy.getLastUpdated();
+		if (migratedDate == null) {
+			return Optional.empty();
+		}
+
+		return Optional.of(BillText.factory(
+				bill.getId(),
+				matchingMetadata.getDocId(),
+				legacy.getDocument(),
+				migratedDate,
+				buildBillTextVersion(bill, matchingMetadata),
+				getBillTextFormat(matchingMetadata.getMime())));
+	}
+
+	protected boolean retireLegacyBillText(Bill bill) {
+		val legacyId = BillText.generateId(bill.getId());
+		if (!s3.exists(legacyId, BillText.class)) {
+			return false;
+		}
+
+		s3.delete(legacyId, BillText.class);
+		Log.info("Retired legacy state bill text " + legacyId + " after storing a versioned replacement.");
 		return true;
 	}
 

@@ -25,17 +25,22 @@ public class LegislatorInterpretationParser {
 	private final List<LegislatorMediaReference> mediaReferences = new ArrayList<>();
 
 	public static enum State {
-		REASONING("(?i)Reasoning Steps:"),
-		SHORT_REPORT("(?i)Short Report:"),
-		CASUAL_REPORT("(?i)Casual Report:"),
-		LONG_REPORT("(?i)Long Report:"),
-		REFERENCES("(?i)References:", "(?i)Media References:");
+		REASONING(markdownHeader("Reasoning Steps")),
+		SHORT_REPORT(markdownHeader("Short Report")),
+		CASUAL_REPORT(markdownHeader("Casual Report")),
+		LONG_REPORT(markdownHeader("Long Report")),
+		REFERENCES(markdownHeader("References"), markdownHeader("Media References"));
 
 		private List<String> regex;
 
 		private State(String... regex) {
 			this.regex = Arrays.asList(regex);
 		}
+	}
+
+	private static String markdownHeader(String title) {
+		return "(?i)(?:#{1,6}\\s+)?(?:\\*\\*|__)?" + title
+				+ "(?:\\*\\*|__)?\\s*:(?:\\*\\*|__)?";
 	}
 
 	public LegislatorInterpretationParser(LegislatorInterpretation interp) {

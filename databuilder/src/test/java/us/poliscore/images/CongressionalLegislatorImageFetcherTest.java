@@ -10,15 +10,18 @@ import us.poliscore.model.legislator.Legislator;
 class CongressionalLegislatorImageFetcherTest {
 
 	@Test
-	void shouldPreferUnitedStatesImagesByBioguideCode() {
+	void shouldPreferOfficialHouseClerkImageByBioguideCode() {
 		var leg = ashleyMoody();
 		
 		assertEquals(
-				"https://raw.githubusercontent.com/unitedstates/images/gh-pages/congress/450x550/M001244.jpg",
+				"https://clerk.house.gov/images/members/M001244.jpg",
 				CongressionalLegislatorImageFetcher.primaryImageUrlCandidates(leg).get(0));
 		assertEquals(
-				"https://raw.githubusercontent.com/unitedstates/images/gh-pages/congress/original/M001244.jpg",
+				"https://raw.githubusercontent.com/unitedstates/images/gh-pages/congress/450x550/M001244.jpg",
 				CongressionalLegislatorImageFetcher.primaryImageUrlCandidates(leg).get(1));
+		assertEquals(
+				"https://raw.githubusercontent.com/unitedstates/images/gh-pages/congress/original/M001244.jpg",
+				CongressionalLegislatorImageFetcher.primaryImageUrlCandidates(leg).get(2));
 	}
 	
 	@Test

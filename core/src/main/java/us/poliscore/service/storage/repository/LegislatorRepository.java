@@ -37,7 +37,7 @@ public class LegislatorRepository extends AbstractPostgresEntityRepository<Legis
 	public java.util.Optional<Legislator> getFirstPage(String id) {
 		Query query = requireEntityManager().createNativeQuery("""
 				SELECT
-					id, last_update_value, name, officialurl, lisid, interpretation, legiscanid, birthday,
+					id, last_update_value, name, officialurl, lisid, interpretation, media_coverage, legiscanid, birthday,
 					impactmap, terms, CAST('[]' AS jsonb) AS interactions, interactions_first_page, storage_bucket,
 					date_value, rating_value, rating_abs_value, location_value, impact_value, impact_abs_value
 				FROM
@@ -142,7 +142,7 @@ public class LegislatorRepository extends AbstractPostgresEntityRepository<Legis
 
 		StringBuilder sql = new StringBuilder("""
 				SELECT
-					id, last_update_value, name, officialurl, lisid, interpretation, legiscanid, birthday,
+					id, last_update_value, name, officialurl, lisid, interpretation, CAST('[]' AS jsonb) AS media_coverage, legiscanid, birthday,
 					impactmap, terms, CAST('[]' AS jsonb) AS interactions, CAST('[]' AS jsonb) AS interactions_first_page, storage_bucket, date_value,
 					rating_value, rating_abs_value, location_value, impact_value, impact_abs_value
 				FROM
@@ -198,6 +198,7 @@ public class LegislatorRepository extends AbstractPostgresEntityRepository<Legis
 		stmt.setString(i++, legislator.getOfficialUrl());
 		stmt.setString(i++, legislator.getLisId());
 		setJson(stmt, i++, legislator.getInterpretation());
+		setJson(stmt, i++, legislator.getMediaCoverage());
 		stmt.setObject(i++, legislator.getLegiscanId(), Types.INTEGER);
 		stmt.setObject(i++, legislator.getBirthday());
 		setJson(stmt, i++, legislator.getImpactMap());
@@ -274,11 +275,11 @@ public class LegislatorRepository extends AbstractPostgresEntityRepository<Legis
 	private String upsertSql() {
 		return """
 				INSERT INTO %s (
-					id, last_update_value, name, officialurl, lisid, interpretation, legiscanid, birthday,
+					id, last_update_value, name, officialurl, lisid, interpretation, media_coverage, legiscanid, birthday,
 					impactmap, terms, interactions, interactions_first_page, storage_bucket, date_value,
 					rating_value, rating_abs_value, location_value, impact_value, impact_abs_value
 				) VALUES (
-					?, ?, CAST(? AS jsonb), ?, ?, CAST(? AS jsonb), ?, ?, CAST(? AS jsonb), CAST(? AS jsonb),
+					?, ?, CAST(? AS jsonb), ?, ?, CAST(? AS jsonb), CAST(? AS jsonb), ?, ?, CAST(? AS jsonb), CAST(? AS jsonb),
 					CAST(? AS jsonb), CAST(? AS jsonb), ?, ?, ?, ?, ?, ?, ?
 				)
 				ON CONFLICT (id) DO UPDATE SET
@@ -287,6 +288,7 @@ public class LegislatorRepository extends AbstractPostgresEntityRepository<Legis
 					officialurl = EXCLUDED.officialurl,
 					lisid = EXCLUDED.lisid,
 					interpretation = EXCLUDED.interpretation,
+					media_coverage = EXCLUDED.media_coverage,
 					legiscanid = EXCLUDED.legiscanid,
 					birthday = EXCLUDED.birthday,
 					impactmap = EXCLUDED.impactmap,

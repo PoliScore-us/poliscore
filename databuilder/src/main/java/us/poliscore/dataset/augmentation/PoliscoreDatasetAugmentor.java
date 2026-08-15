@@ -94,9 +94,10 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 		else
 		{
 			for (Legislator leg : dataset.query(Legislator.class)) {
-				if (!s3.exists(PoliscoreScrapedLegislatorData.generateId(leg.getId()), PoliscoreScrapedLegislatorData.class)) continue;
-				
-				val addendum = s3.get(PoliscoreScrapedLegislatorData.generateId(leg.getId()), PoliscoreScrapedLegislatorData.class);
+				val addendumId = PoliscoreScrapedLegislatorData.generateId(leg.getId());
+				val addendum = s3.exists(addendumId, PoliscoreScrapedLegislatorData.class)
+						? s3.get(addendumId, PoliscoreScrapedLegislatorData.class)
+						: java.util.Optional.<PoliscoreScrapedLegislatorData>empty();
 				
 				if (addendum.isPresent()) {
 					if (StringUtils.isNotBlank(addendum.get().getOfficialUrl()))
@@ -191,7 +192,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 		Log.info("Building list of legislators to fetch. This will take a minute...");
 		
 		val legs = dataset.query(Legislator.class).stream()
-				.filter(l -> l.getOfficialUrl() == null)
+				.filter(l -> StringUtils.isBlank(l.getOfficialUrl()))
 				.toList();
 		
 		if (legs.size() == 0) {
@@ -222,7 +223,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	
 	public boolean fetchOfficialUrl(Legislator leg, PoliscoreDatasetIF dataset) {
 		val existing = s3.get(PoliscoreScrapedLegislatorData.generateId(leg.getId()), PoliscoreScrapedLegislatorData.class);
-		if (existing.isPresent() && existing.get().getOfficialUrl() != null) return false;
+		if (existing.isPresent() && StringUtils.isNotBlank(existing.get().getOfficialUrl())) return false;
 		
 		val person = legiscan.getPerson(leg.getLegiscanId());
 		
@@ -243,6 +244,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 				scraped.setBirthday(existing.get().getBirthday());
 			}
 			
+			leg.setOfficialUrl(scraped.getOfficialUrl());
 			s3.put(scraped);
 		}
 		
@@ -399,7 +401,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	            ? "https://www.flsenate.gov/Senators/" + lastTerm.getDistrict()
 	            : "https://www.myfloridahouse.gov/Sections/Representatives/representatives.aspx";
 	    } else if (ns == LegislativeNamespace.US_GEORGIA) {
-	        return "https://www.legis.ga.gov/members/" + (lastTerm.getChamber() == LegislativeChamber.UPPER ? "senate" : "house") + "/" + id;
+	        return "https://www.legis.ga.gov/members/" + (lastTerm.getChamber() == LegislativeChamber.UPPER ? "senate" : "house");
 	    } else if (ns == LegislativeNamespace.US_HAWAII) {
 	        return "https://www.capitol.hawaii.gov/legislator.aspx?member=" + name.getLast();
 	    } else if (ns == LegislativeNamespace.US_IDAHO) {

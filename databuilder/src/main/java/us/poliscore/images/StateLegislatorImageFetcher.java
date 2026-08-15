@@ -21,10 +21,13 @@ import io.quarkus.logging.Log;
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
+import jakarta.inject.Inject;
 import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.val;
+import us.poliscore.dataset.augmentation.PoliscoreDatasetAugmentor;
 import us.poliscore.dataset.PoliscoreDatasetIF;
+import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.service.storage.S3PersistenceService;
 
@@ -41,15 +44,22 @@ import us.poliscore.service.storage.S3PersistenceService;
 public class StateLegislatorImageFetcher extends AbstractLegislatorImageFetcher implements QuarkusApplication {
 	
 	protected S3PersistenceService s3;
+
+	@Inject
+	protected CachedLegiscanService legiscan;
 	
 	@SneakyThrows
 	@Override
 	protected Optional<byte[]> fetchImage(Legislator leg, PoliscoreDatasetIF dataset) {
-//		val memberUrl = getOfficialUrl(leg, dataset);
-		val memberUrl = leg.getOfficialUrl();
-	    if (memberUrl == null) return null;
-	    
-	    String url = scrapeImageUrlFromMemberPage(memberUrl, leg, dataset);
+	    String url = getLegiscanImageUrl(leg);
+	    if (url == null) {
+	        String memberUrl = leg.getOfficialUrl();
+	        if (!isAbsoluteHttpUrl(memberUrl)) {
+	            memberUrl = PoliscoreDatasetAugmentor.guessOfficialUrl(leg, dataset, null);
+	        }
+	        if (!isAbsoluteHttpUrl(memberUrl)) return Optional.empty();
+	        url = scrapeImageUrlFromMemberPage(memberUrl, leg, dataset);
+	    }
 	    
 	    if (url == null) return Optional.empty();
 
@@ -101,6 +111,30 @@ public class StateLegislatorImageFetcher extends AbstractLegislatorImageFetcher 
 	    Log.warn("[" + leg.getCode() + "] Exceeded retry limit.");
 	    return Optional.empty();
 	}
+
+	private String getLegiscanImageUrl(Legislator leg) {
+		if (leg.getLegiscanId() == null) return null;
+		try {
+			val person = legiscan.getPerson(leg.getLegiscanId());
+			if (person.getBio() == null || person.getBio().getSocial() == null) return null;
+			String imageUrl = person.getBio().getSocial().get("image");
+			return isAbsoluteHttpUrl(imageUrl) ? imageUrl : null;
+		} catch (RuntimeException e) {
+			Log.debug("Unable to read LegiScan image URL for legislator " + leg.getCode(), e);
+			return null;
+		}
+	}
+
+	static boolean isAbsoluteHttpUrl(String value) {
+		if (value == null || value.isBlank()) return false;
+		try {
+			URI uri = new URI(value.trim());
+			return ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+					&& uri.getHost() != null;
+		} catch (URISyntaxException e) {
+			return false;
+		}
+	}
 	
 	/**
 	 * The legislator images on congress.gov do not follow a consistent pattern. The most consistent pattern seems to be something like: 
@@ -117,6 +151,8 @@ public class StateLegislatorImageFetcher extends AbstractLegislatorImageFetcher 
 	 */
 	@SneakyThrows
 	public String scrapeImageUrlFromMemberPage(String officialUrl, Legislator leg, PoliscoreDatasetIF dataset) {
+		if (!isAbsoluteHttpUrl(officialUrl)) return null;
+
 	    // Reuse the exact SSL setup as before
 	    KeyStore keyStore = KeyStore.getInstance("PKCS12");
 	    keyStore.load(StateLegislatorImageFetcher.class.getResourceAsStream("keystore"), "changeit".toCharArray());

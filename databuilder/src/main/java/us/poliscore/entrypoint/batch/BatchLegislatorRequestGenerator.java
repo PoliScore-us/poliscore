@@ -62,7 +62,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 //	public static final boolean CHECK_S3_EXISTS = false;
 	public static final boolean CHECK_S3_EXISTS = specificFetch == null && OLDER_THAN == null;
 	
-	public static final OpenAIModel interpModel = OpenAIModel.DEFAULT_MODEL;
+	public static final OpenAIModel interpModel = OpenAIModel.DEFAULT_SUBSCRIBER_MODEL;
 	
 	@Inject
 	private S3PersistenceService s3;

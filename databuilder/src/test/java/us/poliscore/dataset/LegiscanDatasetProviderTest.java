@@ -28,10 +28,13 @@ import us.poliscore.legiscan.view.LegiscanTextMetadataView;
 import us.poliscore.legiscan.view.LegiscanTextType;
 import us.poliscore.legiscan.view.LegiscanVoteView;
 import us.poliscore.model.CongressionalSession;
+import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.LegislativeSession;
-import us.poliscore.model.LegislativeChamber;
+import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillStatus;
+import us.poliscore.model.bill.BillText;
+import us.poliscore.model.bill.BillTextFormat;
 import us.poliscore.model.legislator.Legislator;
 
 class LegiscanDatasetProviderTest {
@@ -63,6 +66,48 @@ class LegiscanDatasetProviderTest {
 		metadata.setTypeId(LegiscanTextType.AMENDED.getValue());
 		
 		assertEquals("AMENDED-12345", new LegiscanDatasetProvider().buildBillTextVersion(metadata));
+	}
+
+	@Test
+	void buildsVersionedBillTextFromLegacyTextAndUniqueDateMetadata() {
+		Bill bill = new Bill();
+		bill.setId("BIL/us/ga/2167/hb/1383");
+
+		BillText legacy = BillText.factory(
+				bill.getId(), null, "BE IT ENACTED", LocalDate.of(2026, 2, 19), BillTextFormat.TEXT);
+
+		LegiscanTextMetadataView metadata = new LegiscanTextMetadataView();
+		metadata.setDocId(3389123);
+		metadata.setDate(LocalDate.of(2026, 2, 19));
+		metadata.setTypeId(LegiscanTextType.INTRODUCED.getValue());
+		metadata.setMimeId(LegiscanMimeType.PDF.getValue());
+
+		BillText migrated = new LegiscanDatasetProvider()
+				.buildMigratedLegacyBillText(bill, legacy, List.of(metadata))
+				.orElseThrow();
+
+		assertEquals("BTX/us/ga/2167/hb/1383/INTRODUCED-3389123", migrated.getId());
+		assertEquals(Integer.valueOf(3389123), migrated.getLegiscanId());
+		assertEquals("BE IT ENACTED", migrated.getDocument());
+		assertEquals(LocalDate.of(2026, 2, 19), migrated.getLastUpdated());
+		assertEquals(BillTextFormat.TEXT, migrated.getFormat());
+	}
+
+	@Test
+	void doesNotGuessLegacyVersionWhenDateMetadataIsAmbiguous() {
+		Bill bill = new Bill();
+		bill.setId("BIL/us/ga/2167/hb/1383");
+		BillText legacy = BillText.factory(
+				bill.getId(), null, "BE IT ENACTED", LocalDate.of(2026, 2, 19), BillTextFormat.TEXT);
+
+		LegiscanTextMetadataView first = textMetadata(LocalDate.of(2026, 2, 19));
+		first.setDocId(1);
+		LegiscanTextMetadataView second = textMetadata(LocalDate.of(2026, 2, 19));
+		second.setDocId(2);
+
+		assertTrue(new LegiscanDatasetProvider()
+				.buildMigratedLegacyBillText(bill, legacy, List.of(first, second))
+				.isEmpty());
 	}
 
 	@Test

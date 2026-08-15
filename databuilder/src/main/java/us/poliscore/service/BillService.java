@@ -239,12 +239,15 @@ public class BillService {
 //			return Optional.empty();
 //		}
     	
-    	val op = getBillTexts(bill).stream().max(getBillTextComparator(bill));
-    	
-    	if (op.isPresent())
-    		return op;
-    	
-    	return Optional.empty();
+		val op = getBillTexts(bill).stream().max(getBillTextComparator(bill));
+
+		if (op.isPresent())
+			return op;
+
+		// Legacy bill text objects were stored at the bill's unversioned key. Keep
+		// them readable while datasets are migrated, but prefer versioned text when
+		// both representations exist.
+		return s3.get(BillText.generateId(bill.getId()), BillText.class);
 	}
     
     public boolean hasBillText(Bill bill)
