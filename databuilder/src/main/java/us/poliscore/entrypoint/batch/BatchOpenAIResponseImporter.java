@@ -34,6 +34,7 @@ import us.poliscore.ai.BatchOpenAIRequest.CustomOriginData;
 import us.poliscore.ai.BatchOpenAIResponse;
 import us.poliscore.ai.OpenAIModel;
 import us.poliscore.dataset.LegiscanDatasetProvider;
+import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.entrypoint.DatabaseBuilderConfig;
 import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.model.AIAggregateInterpretationMetadata;
@@ -125,7 +126,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	
 	private Map<String,SessionInterpretation> sessionInterpMap = new HashMap<String, SessionInterpretation>();
 	
-	private boolean hasRecalcedLegislators = false;
+	private Set<String> recalculatedLegislatorDatasets = new HashSet<String>();
 	
 	@SneakyThrows
 	public synchronized void process(BuildReport report, File input)
@@ -152,7 +153,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		interpretedBillsWithErrors.clear();
 		sessionInterpMap.clear();
 		erroredLines.clear();
-		hasRecalcedLegislators = false;
+		recalculatedLegislatorDatasets.clear();
 	}
 	
 	@SneakyThrows
@@ -225,12 +226,8 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	}
 	
 	private void importLegislator(final BatchOpenAIResponse resp) {
-		if (!hasRecalcedLegislators) {
-			legInterp.recalculateAllLegislators();
-			hasRecalcedLegislators = true;
-		}
-		
 		val dataset = data.getDataset(resp.getCustomData().getOid());
+		recalculateLegislatorsOnce(dataset);
 		val leg = dataset.get(resp.getCustomData().getOid().replace(LegislatorInterpretation.ID_CLASS_PREFIX, Legislator.ID_CLASS_PREFIX), Legislator.class).orElseThrow();
 		
 		LegislatorInterpretation interp = leg.getInterpretation();
@@ -260,11 +257,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		
 		SessionInterpretation sessionInterp;
 		if (!sessionInterpMap.containsKey(sessionKey)) {
-			if (!hasRecalcedLegislators) {
-				legInterp.recalculateAllLegislators();
-				hasRecalcedLegislators = true;
-			}
-			
+			recalculateLegislatorsOnce(dataset);
 			sessionInterp = partyService.recalculateStats(dataset);
 		} else {
 			sessionInterp = sessionInterpMap.get(sessionKey);
@@ -287,6 +280,12 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 		sessionInterp.setMetadata(openAiService.metadata(responseModel(resp)));
 		
 		sessionInterpMap.put(sessionKey, sessionInterp);
+	}
+
+	private void recalculateLegislatorsOnce(PoliscoreDatasetIF dataset) {
+		if (recalculatedLegislatorDatasets.add(dataset.getKey())) {
+			legInterp.recalculateLegislators(dataset);
+		}
 	}
 
 	@SneakyThrows

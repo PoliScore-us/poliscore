@@ -1,7 +1,6 @@
 package us.poliscore.entrypoint.batch;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -60,13 +59,25 @@ class ReusableGeneratorStateTest {
 	}
 
 	@Test
+	void pressDatasetResetPreservesBuildWideQueryBudget() throws Exception {
+		var generator = new PressBillInterpretationRequestGenerator();
+		setField(generator, "totalQueries", 9);
+		requests(generator).add(null);
+
+		generator.resetDatasetState();
+
+		assertEquals(9, getField(generator, "totalQueries"));
+		assertTrue(requests(generator).isEmpty());
+	}
+
+	@Test
 	void responseImporterClearsAllRunScopedState() throws Exception {
 		var importer = new BatchOpenAIResponseImporter();
 		stringSet(importer, "importedBills").add("stale-bill");
 		billList(importer, "interpretedBillsWithErrors").add(null);
 		sessionMap(importer, "sessionInterpMap").put("stale-session", null);
 		stringList(importer, "erroredLines").add("stale-line");
-		setField(importer, "hasRecalcedLegislators", true);
+		stringSet(importer, "recalculatedLegislatorDatasets").add("us/congress/119");
 
 		importer.beginImport();
 
@@ -74,7 +85,7 @@ class ReusableGeneratorStateTest {
 		assertTrue(billList(importer, "interpretedBillsWithErrors").isEmpty());
 		assertTrue(sessionMap(importer, "sessionInterpMap").isEmpty());
 		assertTrue(stringList(importer, "erroredLines").isEmpty());
-		assertFalse((boolean) getField(importer, "hasRecalcedLegislators"));
+		assertTrue(stringSet(importer, "recalculatedLegislatorDatasets").isEmpty());
 	}
 
 	@SuppressWarnings("unchecked")

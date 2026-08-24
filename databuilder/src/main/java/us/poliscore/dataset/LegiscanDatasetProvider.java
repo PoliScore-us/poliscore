@@ -134,27 +134,37 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 
 	@Override
 	public PoliscoreDatasetIF importDataset(DeploymentConfig ref, BuildReport report) {
-		var state = namespaceToState(ref.getNamespace());
-		val views = legiscan.getDatasetList(state, ref.getYear());
-		
-		PoliscoreDatasetIF dataset;
-		
-		if (views.size() == 1) {
-			dataset = importDataset(views.get(0), ref, null, report);
-		} else {
-			dataset = new PoliscoreCompositeDataset(ref);
-			 
-			val regularView = views.stream().filter(v -> !v.isSpecial()).findFirst().get();
-			val regularDataset = importDataset(regularView, ref, null, report);
-			((PoliscoreCompositeDataset)dataset).addDataset(regularDataset);
-			
-			for (val view : views) {
-				if (view != regularView)
-					((PoliscoreCompositeDataset)dataset).addDataset(importDataset(view, ref, regularDataset, report));
+		clearImportState();
+		try {
+			var state = namespaceToState(ref.getNamespace());
+			val views = legiscan.getDatasetList(state, ref.getYear());
+
+			PoliscoreDatasetIF dataset;
+
+			if (views.size() == 1) {
+				dataset = importDataset(views.get(0), ref, null, report);
+			} else {
+				dataset = new PoliscoreCompositeDataset(ref);
+
+				val regularView = views.stream().filter(v -> !v.isSpecial()).findFirst().get();
+				val regularDataset = importDataset(regularView, ref, null, report);
+				((PoliscoreCompositeDataset)dataset).addDataset(regularDataset);
+
+				for (val view : views) {
+					if (view != regularView)
+						((PoliscoreCompositeDataset)dataset).addDataset(importDataset(view, ref, regularDataset, report));
+				}
 			}
+
+			return dataset;
+		} finally {
+			clearImportState();
 		}
-		
-		return dataset;
+	}
+
+	private void clearImportState() {
+		legiscanIdToBill.clear();
+		legiscanIdToLegislator.clear();
 	}
 	
 	protected PoliscoreDataset importDataset(LegiscanDatasetView view, DeploymentConfig ref, PoliscoreDataset regularDataset) {

@@ -272,8 +272,26 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	@SneakyThrows
 	public List<InterpretationRequest> process(List<PoliscoreDatasetIF> buildDatasets)
 	{
-		Log.info("Scraping press articles");
 		resetRunState();
+		return processLoadedDatasets(buildDatasets);
+	}
+
+	public void beginBuildRun() {
+		totalQueries = 0;
+		resetDatasetState();
+	}
+
+	@SneakyThrows
+	public List<InterpretationRequest> processWithinBuild(List<PoliscoreDatasetIF> buildDatasets)
+	{
+		resetDatasetState();
+		return processLoadedDatasets(buildDatasets);
+	}
+
+	@SneakyThrows
+	private List<InterpretationRequest> processLoadedDatasets(List<PoliscoreDatasetIF> buildDatasets)
+	{
+		Log.info("Scraping press articles");
 		
 		for (val dataset : buildDatasets) {
 			dataset.optimizeExists(s3, BillText.class);
@@ -291,8 +309,12 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	}
 
 	void resetRunState() {
-		totalRequests = 0;
 		totalQueries = 0;
+		resetDatasetState();
+	}
+
+	void resetDatasetState() {
+		totalRequests = 0;
 		requests.clear();
 		dirtyBills.clear();
 		queriedBills.clear();
@@ -590,6 +612,7 @@ public class PressBillInterpretationRequestGenerator implements QuarkusApplicati
 	
 	@Override
     public int run(String... args) throws Exception {
+		data.importAllDatasets();
         process(data.getBuildDatasets());
         
         Quarkus.waitForExit();

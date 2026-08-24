@@ -63,29 +63,39 @@ public class SessionInfoService {
     @SneakyThrows
 	public static void writeSessions(List<PoliscoreDatasetIF> datasets, File path) {
 		val result = buildSessions(datasets);
-		
+		writeSessionMetadata(result, path);
+	}
+
+    @SneakyThrows
+	public static void writeSessionMetadata(List<LegislativeSession> sessions, File path) {
+		cachedSessions = List.copyOf(sessions);
 		System.out.println("Writing sessions to " + path.getAbsolutePath());
-		FileUtils.write(path, PoliscoreUtil.getObjectMapper().writeValueAsString(result), "UTF-8");
+		FileUtils.write(path, PoliscoreUtil.getObjectMapper().writeValueAsString(sessions), "UTF-8");
 	}
     
     @SneakyThrows
 	public static List<LegislativeSession> buildSessions(List<PoliscoreDatasetIF> datasets) {
-		val result = new ArrayList<LegislativeSession>();
-		
-		for (var dataset : datasets) {
-			if (dataset instanceof PoliscoreCompositeDataset) {
-				for (var dataset2 : ((PoliscoreCompositeDataset)dataset).getDatasets()) {
-					result.add(((PoliscoreDataset)dataset2).getSession());
-				}
-			} else {
-				result.add(((PoliscoreDataset)dataset).getSession());
-			}
-		}
-		
+		val result = sessionsForDatasets(datasets);
 		cachedSessions = result;
 		
 		return result;
 	}
+
+    public static List<LegislativeSession> sessionsForDatasets(List<PoliscoreDatasetIF> datasets) {
+        val result = new ArrayList<LegislativeSession>();
+
+        for (var dataset : datasets) {
+            if (dataset instanceof PoliscoreCompositeDataset composite) {
+                for (var child : composite.getDatasets()) {
+                    result.add(((PoliscoreDataset) child).getSession());
+                }
+            } else {
+                result.add(((PoliscoreDataset) dataset).getSession());
+            }
+        }
+
+        return result;
+    }
 
     @SneakyThrows
     public static List<LegislativeSession> getSessions() {

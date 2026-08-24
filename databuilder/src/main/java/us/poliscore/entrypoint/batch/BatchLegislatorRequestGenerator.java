@@ -88,11 +88,9 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 		resetRunState();
 		this.report = report;
 		
-		data.importAllDatasets();
-		
 		int block = 1;
 		
-		for (PoliscoreDatasetIF dataset : data.getBuildDatasets())
+		for (PoliscoreDatasetIF dataset : buildDatasets)
 		{
 			dataset.optimizeExists(s3, LegislatorInterpretation.class);
 			processDataset(dataset, true, block);
@@ -348,6 +346,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	
 	@Override
     public int run(String... args) throws Exception {
+		data.importAllDatasets();
         process(data.getBuildDatasets(), new BuildReport());
         
         Quarkus.waitForExit();

@@ -2,11 +2,14 @@ package us.poliscore.service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import lombok.SneakyThrows;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.bill.Bill;
+import us.poliscore.model.LegislativeSession;
 import us.poliscore.service.storage.MemoryObjectStore;
 import us.poliscore.service.storage.ObjectStorageServiceIF;
 
@@ -43,6 +46,13 @@ public class MemoryObjectService implements ObjectStorageServiceIF {
 	public <T extends Persistable> List<T> query(Class<T> clazz)
 	{
 		return memoryStore.query(clazz);
+	}
+
+	public void clearSessions(List<LegislativeSession> sessions) {
+		Set<String> sessionKeys = sessions.stream()
+				.map(LegislativeSession::getKey)
+				.collect(Collectors.toSet());
+		memoryStore.clearSessions(sessionKeys);
 	}
 
 	@Override

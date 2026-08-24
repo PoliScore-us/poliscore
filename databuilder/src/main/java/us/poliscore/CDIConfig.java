@@ -10,11 +10,12 @@ import us.poliscore.dataset.DatasetProvider;
 import us.poliscore.dataset.PoliscoreDatasetProvider;
 import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.legiscan.service.LegiscanService;
+import us.poliscore.legiscan.view.RefreshFrequency;
 import us.poliscore.service.SecretService;
 
 @ApplicationScoped
 public class CDIConfig {
-	
+
 	@Inject
 	SecretService secret;
 	
@@ -23,12 +24,16 @@ public class CDIConfig {
 
 	@ConfigProperty(name = "poliscore.legiscan.quota-limit", defaultValue = LegiscanService.DEFAULT_REQUEST_QUOTA_LIMIT_CONFIG_VALUE)
 	int legiscanQuotaLimit;
-		
+
+	@ConfigProperty(name = "poliscore.legiscan.freshness", defaultValue = "DAILY")
+	RefreshFrequency legiscanFreshness;
+
 	@Produces
 	@Singleton
 	public CachedLegiscanService produceLegiscanService() {
 		return CachedLegiscanService.builder(secret.getLegiscanSecret())
 				.withRequestQuotaLimit(legiscanQuotaLimit)
+				.withFreshness(legiscanFreshness)
 				.withCacheDirectory(PoliscoreUtil.cacheDir("legiscan"))
 				.build();
 	}

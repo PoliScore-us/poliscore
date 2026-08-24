@@ -4,10 +4,11 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import lombok.SneakyThrows;
 import us.poliscore.model.Persistable;
@@ -15,7 +16,7 @@ import us.poliscore.model.bill.Bill;
 
 public class MemoryObjectStore implements ObjectStorageServiceIF {
 	
-	protected Map<String, Persistable> memoryStore = new HashMap<String,Persistable>();
+	protected Map<String, Persistable> memoryStore = new ConcurrentHashMap<String,Persistable>();
 	
 	public void put(Persistable obj)
 	{
@@ -24,6 +25,18 @@ public class MemoryObjectStore implements ObjectStorageServiceIF {
 		if (obj instanceof Bill) { ((Bill)obj).setText(null); }
 		
 		memoryStore.put(obj.getId(), obj);
+	}
+
+	public void clearSessions(Set<String> sessionKeys) {
+		if (sessionKeys == null || sessionKeys.isEmpty()) return;
+
+		memoryStore.entrySet().removeIf(entry -> sessionKeys.stream()
+				.anyMatch(sessionKey -> belongsToSession(entry.getKey(), sessionKey)));
+	}
+
+	private boolean belongsToSession(String id, String sessionKey) {
+		if (id == null || sessionKey == null) return false;
+		return id.contains("/" + sessionKey + "/") || id.endsWith("/" + sessionKey);
 	}
 	
 	@SuppressWarnings("unchecked")

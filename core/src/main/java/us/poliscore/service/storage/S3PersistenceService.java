@@ -3,11 +3,11 @@ package us.poliscore.service.storage;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.NotImplementedException;
@@ -44,7 +44,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	
 	private S3Client client;
 	
-	private static HashMap<String, Set<String>> objectsInBucket = new HashMap<String, Set<String>>();
+	private static ConcurrentMap<String, Set<String>> objectsInBucket = new ConcurrentHashMap<>();
 	
 	protected String getObjectKey(String id)
 	{
@@ -288,7 +288,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 		
 		if (objectsInBucket.containsKey(storageBucket)) return;
 		
-		objectsInBucket.put(storageBucket, new HashSet<String>());
+		objectsInBucket.put(storageBucket, ConcurrentHashMap.newKeySet());
 		
 		String continuationToken = null;
 		do {

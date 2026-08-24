@@ -65,6 +65,15 @@ public class GovernmentDataService {
 		importedDatasets = new ArrayList<PoliscoreDatasetIF>();
 		didImportDatasets = false;
 	}
+
+	public Optional<PoliscoreDatasetIF> importPreviousDataset(PoliscoreDatasetIF dataset, BuildReport report) {
+		int previousYear = dataset.getStartYear() - 1;
+		return config.getSupportedDeployments().stream()
+				.filter(ref -> ref.getNamespace().equals(dataset.getNamespace()))
+				.filter(ref -> ref.getYear() <= previousYear)
+				.max((left, right) -> Integer.compare(left.getYear(), right.getYear()))
+				.map(ref -> importDataset(ref, report));
+	}
 	
 	public PoliscoreDatasetIF importDataset(LegislativeNamespace namespace, int year) {
 		return importDataset(new DeploymentConfig(namespace, year));

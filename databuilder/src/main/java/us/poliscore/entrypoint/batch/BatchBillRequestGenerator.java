@@ -185,8 +185,6 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 		Log.info("Generating bill interpretation requests");
 
-		data.importAllDatasets();
-
 		for (val dataset : buildDatasets) {
 			dataset.optimizeExists(s3, BillInterpretation.class);
 			dataset.optimizeExists(s3, BillText.class);

@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -51,10 +52,10 @@ class S3PersistenceServiceTest {
 	}
 
 	@SuppressWarnings("unchecked")
-	private HashMap<String, Set<String>> getOptimizedObjectsCache() throws Exception {
+	private Map<String, Set<String>> getOptimizedObjectsCache() throws Exception {
 		Field field = S3PersistenceService.class.getDeclaredField("objectsInBucket");
 		field.setAccessible(true);
-		return (HashMap<String, Set<String>>) field.get(null);
+		return (Map<String, Set<String>>) field.get(null);
 	}
 	
 	private BillText billText(int billNumber, BillTextPublishVersion version) {

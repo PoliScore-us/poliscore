@@ -29,13 +29,19 @@ import us.poliscore.entrypoint.batch.BatchOpenAIResponseImporter;
 import us.poliscore.entrypoint.batch.PressBillInterpretationRequestGenerator;
 import us.poliscore.model.BuildReport;
 import us.poliscore.model.bill.BillInterpretation;
+import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.LegislatorInterpretation;
+import us.poliscore.model.legislator.LegislatorMediaReference;
+import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.model.session.SessionInterpretation;
 import us.poliscore.service.GovernmentDataService;
 import us.poliscore.service.LegislatorInterpretationService;
+import us.poliscore.service.MemoryObjectService;
 import us.poliscore.service.OpenAIService;
 import us.poliscore.service.PartyInterpretationService;
+import us.poliscore.service.PoliscoreConfigService;
+import us.poliscore.service.SessionInfoService;
 import us.poliscore.service.storage.LocalCachedS3Service;
 
 /**
@@ -83,6 +89,12 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 	
 	@Inject
 	private GovernmentDataService data;
+
+	@Inject
+	private PoliscoreConfigService config;
+
+	@Inject
+	private MemoryObjectService memory;
 	
 	@Inject
 	protected OpenAIService openAi;
@@ -103,47 +115,60 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 	public BuildReport process() throws IOException
 	{
 		report = new BuildReport();
+		pressBillInterpGenerator.beginBuildRun();
 
-		data.importAllDatasets(report);
-		
-		val buildDatasets = data.getBuildDatasets();
-		
-		initialDataSetup();
-		
-		if (!runtimeConfig.isAgenticWebSearch())
-			interpretBillPressArticles(buildDatasets);
-		
-		interpretBills(buildDatasets);
-		pressBillInterpGenerator.recordLastPressQueries(); // We want to record that our press query is complete, but only after the bill has been updated and re-interpreted (otherwise we would need to query again if it fails halfway through)
-		
-		interpretLegislators(buildDatasets);
-		interpretPartyStats(buildDatasets);
+		for (var deployment : config.getSupportedDeployments()) {
+			if (!Boolean.TRUE.equals(deployment.getBuild())) continue;
+
+			data.resetImports();
+			try {
+				val dataset = data.importDataset(deployment, report);
+				data.importPreviousDataset(dataset, report);
+				processDataset(dataset);
+			} finally {
+				cleanupImportedDatasets(List.copyOf(data.getAllImportedDatasets()));
+				data.resetImports();
+			}
+
+			if (report.hasBlockingFatal()) break;
+		}
 
 		System.out.println(report.toString());
 		FileUtils.write(new File(Environment.getDeployedPath(), "../buildreport.txt"), report.toString(), "UTF-8");
 		
 		return report;
 	}
+
+	protected void processDataset(PoliscoreDatasetIF dataset) {
+		initialDataSetup(dataset);
+
+		if (!runtimeConfig.isAgenticWebSearch())
+			interpretBillPressArticles(dataset);
+
+		interpretBills(dataset);
+		pressBillInterpGenerator.recordLastPressQueries(); // Record only after this dataset's bill updates have been imported.
+
+		interpretLegislators(dataset);
+		interpretPartyStats(dataset);
+	}
 	
-	protected void initialDataSetup() {
-		for (val dataset : data.getBuildDatasets()) {
-			if (runtimeConfig.isInterpretNewBills()) {
-				data.syncS3LegislatorImages(dataset); // TODO : Doesn't really belong in this if switch but it works for my current usecases
-				data.syncS3BillText(dataset);
-			}
-			
-			dataset.optimizeExists(s3, LegislatorInterpretation.class);
+	protected void initialDataSetup(PoliscoreDatasetIF dataset) {
+		if (runtimeConfig.isInterpretNewBills()) {
+			data.syncS3LegislatorImages(dataset); // TODO : Doesn't really belong in this if switch but it works for my current usecases
+			data.syncS3BillText(dataset);
 		}
-		
-		for (val dataset : data.getAllImportedDatasets()) {
-			dataset.optimizeExists(s3, BillInterpretation.class);
+
+		dataset.optimizeExists(s3, LegislatorInterpretation.class);
+
+		for (val importedDataset : data.getAllImportedDatasets()) {
+			importedDataset.optimizeExists(s3, BillInterpretation.class);
 		}
 	}
 	
 	@SneakyThrows
-	private void interpretBillPressArticles(List<PoliscoreDatasetIF> buildDatasets) {
+	private void interpretBillPressArticles(PoliscoreDatasetIF dataset) {
 		if (runtimeConfig.isInterpretPressBills()) {
-			List<InterpretationRequest> requests = pressBillInterpGenerator.process(buildDatasets);
+			List<InterpretationRequest> requests = pressBillInterpGenerator.processWithinBuild(List.of(dataset));
 			markFlex(requests, runtimeConfig.isFlexRequests());
 			
 			if (requests.size() > 0) {
@@ -156,12 +181,12 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 		}
 	}
 	
-	private void interpretBills(List<PoliscoreDatasetIF> buildDatasets) { interpretBills(buildDatasets, false); }
-	@SneakyThrows private void interpretBills(List<PoliscoreDatasetIF> buildDatasets, boolean isRecursive) {
+	private void interpretBills(PoliscoreDatasetIF dataset) { interpretBills(dataset, false); }
+	@SneakyThrows private void interpretBills(PoliscoreDatasetIF dataset, boolean isRecursive) {
 		if (report.hasBlockingFatal()) return;
 		
 		if (runtimeConfig.isInterpretNewBills()) {
-			List<InterpretationRequest> requests = billRequestGenerator.process(buildDatasets, report, runtimeConfig.isAgenticWebSearch(), isRecursive);
+			List<InterpretationRequest> requests = billRequestGenerator.process(List.of(dataset), report, runtimeConfig.isAgenticWebSearch(), isRecursive);
 			markFlex(requests, runtimeConfig.isFlexRequests());
 			
 			if (requests.size() > 0) {
@@ -179,19 +204,19 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 				}
 				
 				if (!isRecursive)
-					interpretBills(buildDatasets, true);
+					interpretBills(dataset, true);
 			}
 		}
 	}
 	
 	@SneakyThrows
-	private void interpretLegislators(List<PoliscoreDatasetIF> buildDatasets) {
+	private void interpretLegislators(PoliscoreDatasetIF dataset) {
 		
 		// The interpreter will utilize data generated in this process (i.e. aggregate stats)
-		legInterp.recalculateAllLegislators();
+		legInterp.recalculateLegislators(dataset);
 		
 		if (!report.hasBlockingFatal() && runtimeConfig.isReinterpretLegislators()) {
-			List<InterpretationRequest> requests = legislatorRequestGenerator.process(buildDatasets, report);
+			List<InterpretationRequest> requests = legislatorRequestGenerator.process(List.of(dataset), report);
 			markFlex(requests, runtimeConfig.isFlexRequests());
 		
 			if (requests.size() > 0) {
@@ -213,9 +238,9 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 	}
 	
 	@SneakyThrows
-	private void interpretPartyStats(List<PoliscoreDatasetIF> buildDatasets) {
+	private void interpretPartyStats(PoliscoreDatasetIF dataset) {
 		if (!report.hasBlockingFatal() && runtimeConfig.isReinterpretParties()) {
-			List<InterpretationRequest> requests = partyInterpreter.interpret(buildDatasets);
+			List<InterpretationRequest> requests = partyInterpreter.interpret(List.of(dataset));
 			markFlex(requests, runtimeConfig.isFlexRequests());
 			
 			if (requests.size() > 0) {
@@ -234,8 +259,20 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 			}
 		}
 		else {
-			partyInterpreter.recalculateDatasets(buildDatasets);
+			partyInterpreter.recalculateDatasets(List.of(dataset));
 		}
+	}
+
+	protected void cleanupImportedDatasets(List<PoliscoreDatasetIF> importedDatasets) {
+		for (var dataset : importedDatasets) {
+			dataset.clearExistsOptimize(s3, BillInterpretation.class);
+			dataset.clearExistsOptimize(s3, BillText.class);
+			dataset.clearExistsOptimize(s3, LegislatorInterpretation.class);
+			dataset.clearExistsOptimize(s3, LegislatorMediaReference.class);
+			dataset.clearExistsOptimize(s3, PressInterpretation.class);
+			dataset.clearExistsOptimize(s3, SessionInterpretation.class);
+		}
+		memory.clearSessions(SessionInfoService.sessionsForDatasets(importedDatasets));
 	}
 
 	private void markFlex(List<InterpretationRequest> requests, boolean flex) {

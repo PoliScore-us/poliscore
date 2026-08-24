@@ -2,6 +2,7 @@ package us.poliscore.entrypoint;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import lombok.Data;
+import us.poliscore.legiscan.view.RefreshFrequency;
 
 /**
  * Defines global defaults for builder config
@@ -9,7 +10,7 @@ import lombok.Data;
 @ApplicationScoped
 @Data
 public class DatabaseBuilderConfig {
-
+	
 	// What do we want to interpret?
 	private boolean interpretNewBills = true;
 	private boolean reinterpretLegislators = false;
