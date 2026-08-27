@@ -29,6 +29,11 @@ public class InterpretationRequest {
    */
   private Boolean flex;
 
+  /**
+   * Optional class used to constrain a Responses API call to strict structured JSON output.
+   */
+  private Class<?> responseType;
+
   public Boolean getFlex() {
     return Boolean.TRUE.equals(flex);
   }
@@ -40,12 +45,18 @@ public class InterpretationRequest {
 
   public InterpretationRequest(CustomData data, String systemMsg, String userMsg, OpenAIModel requestedModel,
       ReasoningEffort reasoningEffort, Boolean flex) {
+    this(data, systemMsg, userMsg, requestedModel, reasoningEffort, flex, null);
+  }
+
+  public InterpretationRequest(CustomData data, String systemMsg, String userMsg, OpenAIModel requestedModel,
+      ReasoningEffort reasoningEffort, Boolean flex, Class<?> responseType) {
     this.data = data;
     this.systemMsg = systemMsg;
     this.userMsg = userMsg;
     this.requestedModel = requestedModel;
     this.reasoningEffort = reasoningEffort;
     this.flex = flex;
+    this.responseType = responseType;
   }
   
 }

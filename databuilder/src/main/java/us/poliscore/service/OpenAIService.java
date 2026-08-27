@@ -194,7 +194,9 @@ public class OpenAIService {
 		if (_model.isSupportsReasoning())
 			paramBuilder.reasoning(Reasoning.builder().effort(effort).build()); // TODO : In theory you're supposed to be able to get reasoning if you add ".summary(Reasoning.Summary.CONCISE)" (and your organization is verified), but I haven't been able to get it to work. The remote just doesn't include the reasoning in the response.
 			
-		val params = paramBuilder.build();
+		val params = request.getResponseType() == null
+				? paramBuilder.build()
+				: paramBuilder.text(request.getResponseType()).build().rawParams();
 		
 //		BadRequestException.class // OpenAI threw this once saying our prompt was invalid. Seems to be something they do non-deterministically on rare occasion. Try again.
 		// com.openai.errors.BadRequestException: 400: Your input exceeds the context window of this model. Please adjust your input and try again.
