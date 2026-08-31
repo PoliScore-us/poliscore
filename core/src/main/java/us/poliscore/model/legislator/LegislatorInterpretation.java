@@ -56,6 +56,10 @@ public class LegislatorInterpretation extends SessionPersistable
 	protected String reasoning;
 	
 	protected String references;
+
+	protected String constituency;
+
+	protected String campaignFinance;
 	
 	public LegislatorInterpretation(LegislativeNamespace namespace, String sessionKey, String legislatorCode, AIInterpretationMetadata metadata, IssueStats stats)
 	{

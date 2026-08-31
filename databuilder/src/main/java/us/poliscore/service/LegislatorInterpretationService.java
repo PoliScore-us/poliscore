@@ -82,11 +82,12 @@ This is your first section, and it includes several steps. You are to fill out e
 
 Step 1. Identify a right-wing narrative and a left-wing narrative in public discourse. What do people like about this legislator? What do they dislike? Is there any relevant news coverage or national events which may have been written about this legislator? Is the coverage positive? Negative?
 Step 2. Identify the legislator's point of view. You can fetch this from social media, their official website and any official government sources. 
-Step 3. Find out as much as you can about their constituents. Are they republcian, democrat, rural? Are there any large or notable industries at play? Any idea what they may want or need? Median income? Racial makeup? Any recent or relevant polling information? Any notable recent town halls? How do they feel about this legislator? 
-Step 4. Identify patterns in their recent policy history, which has already been sorted and grouped for you.
-Step 5. Query the web to find out the media's current coverage of this legislator. Are there any recent controversies or achievements? Take care not to introduce partisan bias into the analysis at this step.
-Step 6. Identify any problematic or synergistic relationships with funders.
-Step 7. Identify an over-arching narrative, in alignment with the grade they have already received. This narrative should pull-in all the information we previously referenced and should attempt to form a high-level analysis of the legislator and their activity. If the legislator received an F score, create a narrative about why this philosophy is wrong and why it's causing harm to society. If they received a D score, provide an evidence-led mostly-disapproving critique, stressing the substantial shortcomings. If they received a C score, provide a balanced view of both notable strengths and weaknesses. If they received a B score, focus on their strengths while briefly mentioning minor areas of improvement. A scores should receive glowing commendations. 
+Step 3. Research high-level information about their constituency base. Does the district/state lean republican, democrat, rural? Are there any large or notable industries at play? Any idea what they may want or need? Median income? Racial makeup?
+Step 4. Search specifically for direct approval or favorability polling, constituent surveys, election-performance trends, primary challenges, town halls, constituent comments, casework or accessibility reporting, and credible local news coverage. Distinguish evidence about actual constituent opinion from national partisan commentary or the opinions of people outside the constituency. Do not assume that winning an election, representing a strongly partisan district, receiving favorable national coverage, or matching the district's partisan lean proves constituent satisfaction. 
+Step 5. Identify patterns in their recent policy history, which has already been sorted and grouped for you.
+Step 6. Query the web to find out the media's current coverage of this legislator. Are there any recent controversies or achievements? Take care not to introduce partisan bias into the analysis at this step.
+Step 7. Find the legislator’s most recent campaign-finance profile from a reputable aggregate source, and summarize its published top contributors, industries, political action committees, funding trends, and notable relationships; preserve the source’s categories and election cycle, cite it directly. If a reputable, aggregate campagin finance source cannot be found, you may attempt to find relevant informaton from reputable news/media, and/or official filings/records. Conclude by attempting to identify any problematic or synergistic relationships with funders, or, if none exist, mention as such.
+Step 8. Identify an over-arching narrative, in alignment with the grade they have already received. This narrative should pull-in all the information we previously referenced and should attempt to form a high-level analysis of the legislator and their activity. If the legislator received an F score, create a narrative about why this philosophy is wrong and why it's causing harm to society. If they received a D score, provide an evidence-led mostly-disapproving critique, stressing the substantial shortcomings. If they received a C score, provide a balanced view of both notable strengths and weaknesses. If they received a B score, focus on their strengths while briefly mentioning minor areas of improvement. A scores should receive glowing commendations.  
 
 Long Report:
 Generate a well-referenced report of this legislator's recent activity consisting of EXACTLY 6 paragraphs. Each paragraph must be a single paragraph block and must not exceed 120 words. If you feel additional explanation is needed, prioritize summarization over expansion. Never create additional paragraphs to add nuance. The content of your paragraphs are as follows:
@@ -103,6 +104,54 @@ Your audience is the general public, written at the high-school education level.
 
 Short Report:
 Generate a layman's, concise, single sentence describing the primary focuses of the representative, not more than 150 characters. Should start with "Focuses on". Should not include the name of the representative. Do not include any formatting text such as stars or dashes.
+
+Constituency:
+In this section we will compile detailed, machine-readable JSON information about the representative's constituency. In addition to basic information, such as makeup, industry, etc, we will also compile an estimated constituent satisfaction index from -100 to 100 representing how satisfied the legislator's constituents appear to be with their representation.
+
+Evaluate the evidence in this order of importance:
+1. Recent, methodologically credible district- or state-level approval and favorability polling.
+2. Electoral performance relative to prior elections, the constituency's partisan baseline, and comparable same-party candidates.
+3. Constituency-specific surveys, town halls, public meetings, and statements from identifiable local stakeholders.
+4. Credible local reporting about responsiveness, accessibility, casework, fulfilled commitments, controversies, and local accomplishments.
+5. Broader news or online sentiment, used only when it can reasonably be tied to constituents.
+
+The score measures satisfaction, not policy quality, ideological correctness, national popularity, campaign fundraising, or likelihood of reelection. Do not use the supplied letter grade or policy scores as evidence of satisfaction. Legislative activity may affect the estimate only when reliable evidence connects that activity to constituent priorities or reactions.
+
+Use the scale conservatively:
+- +80 to +100: exceptionally strong and broad evidence of satisfaction
+- +40 to +79: clearly more satisfied than dissatisfied
+- +10 to +39: modestly positive
+- -9 to +9: approximately neutral, evenly divided, or indeterminate
+- -10 to -39: modestly negative
+- -40 to -79: clearly more dissatisfied than satisfied
+- -80 to -100: exceptionally strong and broad evidence of dissatisfaction
+
+Assign a confidence score from 0 to 100 based on evidence quality, recency, geographic relevance, agreement among sources, and coverage. Confidence describes confidence in the estimate, not constituent satisfaction. If direct polling is unavailable, normally keep confidence at or below 60. If the estimate relies mainly on election results and news coverage, normally keep confidence at or below 40. If geographically relevant evidence is sparse, return a score near zero with low confidence rather than inventing constituent sentiment.
+
+Your response for this section must consist of only one compact JSON object on a single line, using exactly this format:
+
+{ "density": "RURAL | SUBURB | URBAN", "party_lean": "REPUBLICAN | DEMOCRAT | SWING", "satisfaction": 18, "confidence": 42, "evidenceCoverage": "LOW | MEDIUM | HIGH", "summary": "A concise plain-language explanation of the constituency satisfaction estimate.", "latest_poll": "https://link-to-latest-polling.website" }
+
+Campaign Finance:
+Your response for this section must consist of only one compact JSON object on a single line, using exactly this format:
+
+{ "confidence": 85, "evidenceCoverage": "LOW | MEDIUM | HIGH", "sourceName": "Name of campaign-finance aggregate source", "sourceUrl": "https://example.com/profile", "totalRaisedUsd": 1250000, "topContributors": [ { "name": "Contributor name", "amountUsd": 50000, "contributorType": "ORGANIZATION_AGGREGATE | INDIVIDUAL | PAC | PARTY | SELF_FINANCING | OTHER" } ], "topIndustries": [ { "name": "Industry name", "amountUsd": 75000 } ], "topPacs": [ { "name": "Political action committee name", "amountUsd": 25000 } ], "fundingTrends": [ "Concise description of a funding pattern or change published by the source." ], "notableRelationships": [ { "description": "Concise, evidence-supported description of a relevant relationship.", "sourceUrl": "https://example.com/evidence" } ], "summary": "A concise plain-language summary of who financially supports the legislator.", "limitations": [ "An important limitation or qualification." ] }
+
+Before printing this section, verify:
+1. The output is valid JSON containing exactly the specified top-level keys.
+2. electionCycle identifies the cycle covered by the aggregate source.
+3. asOfDate is {{date}} and reportingThrough is the source's reporting cutoff date, or an empty string if unavailable.
+4. confidence is an integer from 0 to 100 and evidenceCoverage is LOW, MEDIUM, or HIGH.
+5. sourceName and sourceUrl identify the aggregate campaign-finance profile used.
+6. Dollar amounts are non-negative integers copied from the aggregate source, or null when unavailable.
+7. Do not reconstruct, combine, extrapolate, or independently calculate aggregates from individual filings.
+8. Preserve the source's distinctions among contributors, organization aggregates, industries, political action committees, parties, and self-financing.
+9. An ORGANIZATION_AGGREGATE may represent contributions from associated individuals or a political action committee; do not characterize it as a direct corporate contribution unless the source establishes that.
+10. Do not include independent expenditures as contributions to the legislator.
+11. fundingTrends and notableRelationships must be supported by the cited aggregate profile or another cited reputable source.
+12. Do not claim that contributions caused policy decisions or establish corruption, misconduct, or a quid pro quo without specific credible evidence.
+13. Unknown information must be represented by null, an empty string, or an empty array rather than an invented value.
+14. Material reporting gaps, source caveats, and category ambiguities must be disclosed in limitations.
 
 Media References:
 Your written response for this research section should consist of only a compact JSON array of media references, on a single line, of the following format:

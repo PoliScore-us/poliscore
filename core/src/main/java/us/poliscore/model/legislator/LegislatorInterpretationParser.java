@@ -19,6 +19,7 @@ import us.poliscore.model.InterpretationOrigin;
 public class LegislatorInterpretationParser {
 
 	private static Logger logger = LoggerFactory.getLogger(LegislatorInterpretationParser.class);
+	private static final ObjectMapper objectMapper = new ObjectMapper();
 	
 	private State state = null;
 	private LegislatorInterpretation interp;
@@ -29,6 +30,8 @@ public class LegislatorInterpretationParser {
 		SHORT_REPORT(markdownHeader("Short Report")),
 		CASUAL_REPORT(markdownHeader("Casual Report")),
 		LONG_REPORT(markdownHeader("Long Report")),
+		CONSTITUENCY(markdownHeader("Constituency")),
+		CAMPAIGN_FINANCE(markdownHeader("Campaign Finance")),
 		REFERENCES(markdownHeader("References"), markdownHeader("Media References"));
 
 		private List<String> regex;
@@ -55,6 +58,8 @@ public class LegislatorInterpretationParser {
 		interp.setLongExplain("");
 		interp.setReasoning("");
 		interp.setReferences("");
+		interp.setConstituency("");
+		interp.setCampaignFinance("");
 
 		try (final Scanner scanner = new Scanner(text)) {
 			while (scanner.hasNextLine()) {
@@ -70,6 +75,8 @@ public class LegislatorInterpretationParser {
 		interp.setShortExplain(stripMultiLines(interp.getShortExplain()));
 		interp.setCasualExplain(stripMultiLines(interp.getCasualExplain()));
 		interp.setLongExplain(stripMultiLines(interp.getLongExplain()));
+		interp.setConstituency(parseJsonObject(interp.getConstituency(), "constituency"));
+		interp.setCampaignFinance(parseJsonObject(interp.getCampaignFinance(), "campaign finance"));
 		parseMediaReferences();
 		
 		interp.validate();
@@ -148,8 +155,35 @@ public class LegislatorInterpretationParser {
 			interp.setCasualExplain(interp.getCasualExplain() + "\n" + line);
 		} else if (State.REASONING.equals(state)) {
 			interp.setReasoning(interp.getReasoning() + "\n" + line);
+		} else if (State.CONSTITUENCY.equals(state)) {
+			interp.setConstituency(interp.getConstituency() + "\n" + line);
+		} else if (State.CAMPAIGN_FINANCE.equals(state)) {
+			interp.setCampaignFinance(interp.getCampaignFinance() + "\n" + line);
 		} else if (State.REFERENCES.equals(state)) {
 			processReferences(line);
+		}
+	}
+
+	private String parseJsonObject(String raw, String sectionName) {
+		if (StringUtils.isBlank(raw)) return null;
+
+		int start = raw.indexOf('{');
+		int end = raw.lastIndexOf('}');
+		if (start < 0 || end < start) {
+			logger.warn("Unable to find JSON object in {} section", sectionName);
+			return null;
+		}
+
+		try {
+			JsonNode root = objectMapper.readTree(raw.substring(start, end + 1));
+			if (!root.isObject()) {
+				logger.warn("Ignoring non-object JSON in {} section", sectionName);
+				return null;
+			}
+			return root.toString();
+		} catch (Exception invalidJson) {
+			logger.error("Error parsing {} JSON", sectionName, invalidJson);
+			return null;
 		}
 	}
 	
@@ -170,7 +204,7 @@ public class LegislatorInterpretationParser {
 		if (start < 0 || end < start) return;
 
 		try {
-			JsonNode root = new ObjectMapper().readTree(raw.substring(start, end + 1));
+			JsonNode root = objectMapper.readTree(raw.substring(start, end + 1));
 			if (!root.isArray()) return;
 
 			for (JsonNode value : root) {
