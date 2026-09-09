@@ -2,6 +2,7 @@ package us.poliscore.entrypoint.batch;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -21,11 +22,14 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import lombok.Data;
 import lombok.val;
+import us.poliscore.PoliscoreUtil;
 import us.poliscore.ai.BatchOpenAIRequest.CustomData;
 import us.poliscore.ai.OpenAIModel;
 import us.poliscore.bill.BillInterpretationRouter;
+import us.poliscore.bill.BillTextMaterialityDetector;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
+import us.poliscore.model.AIInterpretationMetadata;
 import us.poliscore.model.BuildReport;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
@@ -42,6 +46,7 @@ import us.poliscore.service.storage.LocalCachedS3Service;
 
 @QuarkusMain(name = "BatchBillRequestGenerator")
 public class BatchBillRequestGenerator implements QuarkusApplication {
+	static final String REUSE_REASON_IDENTICAL_SUBSTANTIVE_TEXT = "IDENTICAL_SUBSTANTIVE_TEXT";
 	
 	@Data
 	public static class BillGenerationCriteria {
@@ -59,6 +64,13 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 		public boolean CHECK_S3_EXISTS = true;
 
 		public boolean FORCE_REFRESH = false;
+
+		/**
+		 * Include bills that already have an interpretation, but for an older text
+		 * version. Direct bill-page refreshes retain this default; DatabaseBuilder
+		 * explicitly applies its independently configurable value.
+		 */
+		public boolean REFRESH_STALE_ANALYSES = true;
 	
 		/** Default requested model for these interpretation requests. */
 		public OpenAIModel billProcessModel = OpenAIModel.DEFAULT_FREE_MODEL;
@@ -276,6 +288,14 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 		bill.setText(latestBillText);
 
+		BillInterpretation existingAggregate = billService.getInterpretation(bill, latestBillText, null).orElse(null);
+		boolean pressInterpretationChanged = includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(bill);
+		if (criteria.REFRESH_STALE_ANALYSES && !criteria.FORCE_REFRESH && !pressInterpretationChanged
+				&& isInterpretationOutOfDate(existingAggregate, latestBillText)
+				&& aliasImmaterialTextChange(bill, existingAggregate, latestBillText)) {
+			return;
+		}
+
 		String sBillText = latestBillText.getDocument();
 		if (StringUtils.isBlank(sBillText)) {
 			throw new UnsupportedOperationException("Bill text is empty for " + bill.getId());
@@ -296,8 +316,6 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 				if (!StringUtils.isBlank(slices.get(0).getText()))
 					sBillText = slices.get(0).getText();
 
-				val existingAggregate = billService.getInterpretation(bill)
-						.orElse(null);
 				if (shouldCreateFreshRequest(criteria, existingAggregate, latestBillText)) {
 					createRequest(criteria, BillInterpretation.generateId(bill.getId(), latestBillText.getVersion(), null), bill, null,
 							systemMsg,
@@ -309,7 +327,7 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 				for (int i = 0; i < slices.size(); ++i) {
 					BillSlice slice = slices.get(i);
-					val existingSlice = billService.getInterpretation(bill, slice.getSliceIndex())
+					val existingSlice = billService.getInterpretation(bill, latestBillText, slice.getSliceIndex())
 							.orElse(null);
 
 					if (shouldCreateFreshRequest(criteria, existingSlice, latestBillText)) {
@@ -330,7 +348,6 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 					}
 
 					val oid = BillInterpretation.generateId(bill.getId(), latestBillText.getVersion(), null);
-					val existingAggregate = billService.getInterpretation(bill).orElse(null);
 					if (!shouldCreateFreshRequest(criteria, existingAggregate, latestBillText)) {
 						return;
 					}
@@ -352,8 +369,6 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 				}
 			}
 		} else {
-			val existingAggregate = billService.getInterpretation(bill)
-					.orElse(null);
 			if (shouldCreateFreshRequest(criteria, existingAggregate, latestBillText)) {
 				createRequest(criteria, BillInterpretation.generateId(bill.getId(), latestBillText.getVersion(), null), bill, null, systemMsg, userMsg, sBillText);
 			}
@@ -369,17 +384,74 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 			return true;
 		}
 
-		return !matchesBillText(existing, latestBillText);
+		return criteria.REFRESH_STALE_ANALYSES && isInterpretationOutOfDate(existing, latestBillText);
 	}
 
-	private boolean matchesBillText(BillInterpretation existing, BillText latestBillText) {
-		if (latestBillText == null || existing == null) {
+	static boolean isInterpretationOutOfDate(BillInterpretation existing, BillText latestBillText) {
+		if (existing == null || latestBillText == null) return false;
+		if (StringUtils.isBlank(latestBillText.getVersion())) return false;
+		if (StringUtils.isBlank(existing.getSourceBillTextVersion())) return true;
+		return !StringUtils.equalsIgnoreCase(
+				StringUtils.defaultString(latestBillText.getVersion()),
+				StringUtils.defaultString(existing.getSourceBillTextVersion()));
+	}
+
+	private boolean aliasImmaterialTextChange(Bill bill, BillInterpretation existing, BillText latestBillText) {
+		if (StringUtils.isBlank(existing.getSourceBillTextVersion()) || StringUtils.isBlank(latestBillText.getVersion())) return false;
+		BillText interpretedText = billService.getBillTexts(bill).stream()
+				.filter(text -> StringUtils.equalsIgnoreCase(text.getVersion(), existing.getSourceBillTextVersion()))
+				.findFirst()
+				.orElse(null);
+		if (!BillTextMaterialityDetector.hasSameSubstantiveText(interpretedText, latestBillText)) {
 			return false;
 		}
 
-		return StringUtils.equalsIgnoreCase(
-				StringUtils.defaultString(latestBillText.getVersion()),
-				StringUtils.defaultString(existing.getSourceBillTextVersion()));
+		List<BillInterpretation> sourceInterpretations = billService.getBillInterpretations(bill).stream()
+				.filter(interpretation -> StringUtils.equalsIgnoreCase(
+						interpretation.getSourceBillTextVersion(), existing.getSourceBillTextVersion()))
+				.toList();
+		if (sourceInterpretations.isEmpty()
+				|| sourceInterpretations.stream().anyMatch(interpretation -> interpretation.getMetadata() == null)) {
+			return false;
+		}
+
+		LocalDateTime aliasedAt = LocalDateTime.now();
+		BillInterpretation aggregateAlias = null;
+		for (BillInterpretation interpretation : sourceInterpretations) {
+			String aliasId = BillInterpretation.generateId(bill.getId(), latestBillText.getVersion(), interpretation.getSliceIndex());
+			BillInterpretation storedAlias = s3.get(aliasId, BillInterpretation.class).orElse(null);
+			if (storedAlias != null) {
+				if (storedAlias.getSliceIndex() == null) aggregateAlias = storedAlias;
+				continue;
+			}
+
+			BillInterpretation alias = PoliscoreUtil.getObjectMapper().convertValue(interpretation, BillInterpretation.class);
+			alias.setId(aliasId);
+			alias.setSourceBillTextVersion(latestBillText.getVersion());
+			recordReuseProvenance(alias, interpretation);
+			// Preserve the original first-generation timestamp so this metadata-only
+			// alias is not mistaken for a newly interpreted bill by tracking scans.
+			alias.recordGeneration(aliasedAt, interpretation);
+			s3.put(alias);
+			if (alias.getSliceIndex() == null) aggregateAlias = alias;
+		}
+
+		if (aggregateAlias == null) return false;
+		billService.applyInterpretation(bill, aggregateAlias);
+		Log.info("Reused interpretation for " + bill.getId() + " because bill text versions "
+				+ existing.getSourceBillTextVersion() + " and " + latestBillText.getVersion()
+				+ " have identical substantive legislative text.");
+		return true;
+	}
+
+	static void recordReuseProvenance(BillInterpretation alias, BillInterpretation source) {
+		AIInterpretationMetadata metadata = alias == null ? null : alias.getMetadata();
+		if (metadata == null || source == null) {
+			throw new IllegalArgumentException("Copied interpretations require source and metadata provenance");
+		}
+		metadata.setReusedFromInterpretationId(source.getId());
+		metadata.setReusedFromBillTextVersion(source.getSourceBillTextVersion());
+		metadata.setReuseReason(REUSE_REASON_IDENTICAL_SUBSTANTIVE_TEXT);
 	}
 
 	private Stream<Bill> andNotInList(Stream<Bill> stream, List<String> billExcludeList) {
@@ -387,8 +459,21 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 	}
 	
 	private Stream<Bill> andNotAlreadyInterpreted(BillGenerationCriteria criteria, Stream<Bill> stream, boolean includePressDirtyBills) {
-		return stream.filter(b -> (!criteria.CHECK_S3_EXISTS || getExistingInterpretation(b) == null
-				|| (includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b))));
+		return stream.filter(b -> {
+			if (!criteria.CHECK_S3_EXISTS) return true;
+			BillText latestText = billService.getBillText(b).orElse(null);
+			BillInterpretation existing = getExistingInterpretation(b, latestText);
+			boolean pressDirty = includePressDirtyBills && pressBillInterpGenerator.getDirtyBills().contains(b);
+			return shouldProcessBill(criteria, existing, latestText, pressDirty);
+		});
+	}
+
+	static boolean shouldProcessBill(BillGenerationCriteria criteria, BillInterpretation existing,
+			BillText latestText, boolean pressDirty) {
+		if (criteria.FORCE_REFRESH) return true;
+		if (existing == null) return true;
+		if (isInterpretationOutOfDate(existing, latestText)) return criteria.REFRESH_STALE_ANALYSES;
+		return pressDirty;
 	}
 	
 	private Stream<Bill> andNotAlreadyInterpretedOrInvalid(BillGenerationCriteria criteria, Stream<Bill> stream, boolean includePressDirtyBills) {
@@ -406,6 +491,10 @@ public class BatchBillRequestGenerator implements QuarkusApplication {
 
 	private BillInterpretation getExistingInterpretation(Bill bill) {
 		return billService.getInterpretation(bill).orElse(null);
+	}
+
+	private BillInterpretation getExistingInterpretation(Bill bill, BillText preferredText) {
+		return billService.getInterpretation(bill, preferredText, null).orElse(null);
 	}
 
 	private BillInterpretation requireInterpretation(Bill bill) {

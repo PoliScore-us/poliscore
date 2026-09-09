@@ -13,6 +13,7 @@ public class DatabaseBuilderConfig {
 	
 	// What do we want to interpret?
 	private boolean interpretNewBills = true;
+	private boolean refreshStaleBillAnalyses = false;
 	private boolean reinterpretLegislators = false;
 	private boolean reinterpretParties = false;
 	

@@ -32,6 +32,15 @@ public class AIInterpretationMetadata extends InterpretationMetadata {
 	
 	@NonNull
 	protected LocalDate date;
+
+	/** Interpretation object copied to produce this metadata-compatible alias. */
+	protected String reusedFromInterpretationId;
+
+	/** Bill-text version against which the reused interpretation was originally generated. */
+	protected String reusedFromBillTextVersion;
+
+	/** Machine-readable explanation for why the existing interpretation was reused. */
+	protected String reuseReason;
 	
 	public static AIInterpretationMetadata construct(String provider, String model, int promptVersion, boolean webSearchAgent)
 	{

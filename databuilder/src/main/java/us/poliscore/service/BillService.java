@@ -26,6 +26,7 @@ import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
 import us.poliscore.model.bill.BillIssueStat;
 import us.poliscore.model.bill.BillText;
+import us.poliscore.model.bill.BillTextOrder;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.press.PressInterpretation;
 import us.poliscore.service.storage.LocalCachedS3Service;
@@ -44,7 +45,7 @@ public class BillService {
 	private GovernmentDataService data;
 	
 	protected Comparator<BillText> getBillTextComparator(Bill bill) {
-		return Comparator.comparing(BillText::getLastUpdate);
+		return BillTextOrder.ASCENDING;
 	}
 	
 	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
@@ -69,9 +70,18 @@ public class BillService {
 
 	public void applyInterpretation(Bill b, BillInterpretation interp)
 	{
-		var billLastAction = b.getLastActionDate() == null || interp.getLastUpdate().isAfter(b.getLastActionDate().atStartOfDay()) ? interp.getLastUpdate() : b.getLastActionDate().atStartOfDay();
+		LocalDateTime interpretationUpdate = interp.getLastUpdate();
+		if (interpretationUpdate == null && interp.getMetadata() != null && interp.getMetadata().getDate() != null) {
+			interpretationUpdate = interp.getMetadata().getDate().atStartOfDay();
+		}
+		LocalDateTime billLastAction = b.getLastActionDate() == null ? null : b.getLastActionDate().atStartOfDay();
+		if (interpretationUpdate != null && (billLastAction == null || interpretationUpdate.isAfter(billLastAction))) {
+			billLastAction = interpretationUpdate;
+		}
 		var existingBillLastUpdate = b.getLastUpdate();
-		b.setLastUpdate(existingBillLastUpdate != null && existingBillLastUpdate.isAfter(billLastAction) ? existingBillLastUpdate : billLastAction);
+		if (billLastAction != null && (existingBillLastUpdate == null || billLastAction.isAfter(existingBillLastUpdate))) {
+			b.setLastUpdate(billLastAction);
+		}
 		
 		b.setTexts(getBillTexts(b));
 		var billInterpretations = new ArrayList<>(getBillInterpretations(b).stream()
@@ -113,17 +123,30 @@ public class BillService {
 	}
 
 	public Optional<BillInterpretation> getInterpretation(Bill bill, Integer sliceIndex) {
+		BillText preferredText = getBillText(bill).orElse(null);
+		return getInterpretation(bill, preferredText, sliceIndex);
+	}
+
+	public Optional<BillInterpretation> getInterpretation(Bill bill, BillText preferredText, Integer sliceIndex) {
 		BillInterpretation newestMatch = null;
+		BillInterpretation newestVersionMatch = null;
+		String preferredVersion = preferredText == null ? null : preferredText.getVersion();
 
 		// Interpretations are sorted in ascending date order, so the last matching
-		// interpretation is the newest available one.
+		// interpretation is the newest available one. An interpretation for the
+		// selected bill-text version takes precedence over a later-written object for
+		// a different version.
 		for (BillInterpretation interp : getBillInterpretations(bill)) {
 			if (Objects.equals(sliceIndex, interp.getSliceIndex())) {
 				newestMatch = interp;
+				if (StringUtils.isNotBlank(preferredVersion)
+						&& StringUtils.equalsIgnoreCase(preferredVersion, interp.getSourceBillTextVersion())) {
+					newestVersionMatch = interp;
+				}
 			}
 		}
 
-		return Optional.ofNullable(newestMatch);
+		return Optional.ofNullable(newestVersionMatch != null ? newestVersionMatch : newestMatch);
 	}
 
 	public Optional<BillInterpretation> getInterpretation(String billId) {

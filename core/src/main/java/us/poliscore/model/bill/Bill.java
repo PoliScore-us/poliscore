@@ -65,7 +65,7 @@ public class Bill extends SessionPersistable {
 	
 	public static final String ID_CLASS_PREFIX = "BIL";
 	
-	public static final Comparator<BillText> BILL_TEXT_ORDER = Comparator.comparing(BillText::getLastUpdate, Comparator.nullsFirst(Comparator.naturalOrder()));
+	public static final Comparator<BillText> BILL_TEXT_ORDER = BillTextOrder.ASCENDING;
 	public static final Comparator<BillInterpretation> BILL_INTERPRETATION_ORDER =
 			Comparator.comparing(Bill::getBillInterpretationSortValue, Comparator.nullsFirst(Comparator.naturalOrder())).reversed()
 					.thenComparing(BillInterpretation::getId);
@@ -207,7 +207,31 @@ public class Bill extends SessionPersistable {
 	}
 
 	public BillInterpretation getInterpretation() {
-		return getInterpretations().isEmpty() ? interpretation : getInterpretations().first();
+		NavigableSet<BillInterpretation> available = getInterpretations();
+		if (available.isEmpty()) return interpretation;
+
+		String preferredVersion = getSelectedBillTextVersion();
+		if (StringUtils.isNotBlank(preferredVersion)) {
+			for (BillInterpretation candidate : available) {
+				if (StringUtils.equalsIgnoreCase(preferredVersion, candidate.getSourceBillTextVersion())) {
+					return candidate;
+				}
+			}
+		}
+
+		// Legacy interpretations and partially populated bills may not have enough
+		// version information to establish applicability. Preserve the historical
+		// newest-generation fallback for those objects.
+		return available.first();
+	}
+
+	private String getSelectedBillTextVersion() {
+		if (text != null && StringUtils.isNotBlank(text.getVersion())) {
+			return text.getVersion();
+		}
+
+		NavigableSet<BillText> availableTexts = getTexts();
+		return availableTexts.isEmpty() ? null : availableTexts.last().getVersion();
 	}
 
 	public NavigableSet<BillText> getTexts() {
@@ -246,7 +270,7 @@ public class Bill extends SessionPersistable {
 						.forEach(orderedInterpretations::add);
 		}
 		this.interpretations = new ArrayList<>(orderedInterpretations);
-		this.interpretation = orderedInterpretations.isEmpty() ? null : orderedInterpretations.first();
+		this.interpretation = getInterpretation();
 
 		if (this.interpretation != null && getName() != null && getName().contains(String.valueOf(getNumber()))
 				&& !StringUtils.isBlank(this.interpretation.getGenBillTitle())) {

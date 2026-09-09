@@ -24,6 +24,7 @@ import us.poliscore.PoliscoreUtil;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.entrypoint.batch.BatchBillRequestGenerator;
+import us.poliscore.entrypoint.batch.BatchBillRequestGenerator.BillGenerationCriteria;
 import us.poliscore.entrypoint.batch.BatchLegislatorRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchOpenAIResponseImporter;
 import us.poliscore.entrypoint.batch.PressBillInterpretationRequestGenerator;
@@ -59,6 +60,9 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 
 	@Option(names = "--interpret-new-bills", negatable = true, description = "Whether to interpret new bills.")
 	Boolean interpretNewBills;
+
+	@Option(names = "--refresh-stale-bill-analyses", negatable = true, description = "Whether to reinterpret bills whose analysis targets an older bill-text version.")
+	Boolean refreshStaleBillAnalyses;
 
 	@Option(names = "--reinterpret-legislators", negatable = true, description = "Whether to reinterpret legislators.")
 	Boolean reinterpretLegislators;
@@ -186,7 +190,10 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 		if (report.hasBlockingFatal()) return;
 		
 		if (runtimeConfig.isInterpretNewBills()) {
-			List<InterpretationRequest> requests = billRequestGenerator.process(List.of(dataset), report, runtimeConfig.isAgenticWebSearch(), isRecursive);
+			BillGenerationCriteria criteria = BillGenerationCriteria.defaultCriteria();
+			criteria.enableWebSearch = runtimeConfig.isAgenticWebSearch();
+			criteria.REFRESH_STALE_ANALYSES = runtimeConfig.isRefreshStaleBillAnalyses();
+			List<InterpretationRequest> requests = billRequestGenerator.processDatasets(criteria, List.of(dataset), report, isRecursive);
 			markFlex(requests, runtimeConfig.isFlexRequests());
 			
 			if (requests.size() > 0) {
@@ -307,6 +314,9 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 		if (interpretNewBills != null) {
 			runtimeConfig.setInterpretNewBills(interpretNewBills);
 		}
+		if (refreshStaleBillAnalyses != null) {
+			runtimeConfig.setRefreshStaleBillAnalyses(refreshStaleBillAnalyses);
+		}
 		if (reinterpretLegislators != null) {
 			runtimeConfig.setReinterpretLegislators(reinterpretLegislators);
 		}
@@ -325,6 +335,7 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 		System.out.println("DatabaseBuilder configuration:");
 		System.out.println("  interpret-press-bills=" + runtimeConfig.isInterpretPressBills());
 		System.out.println("  interpret-new-bills=" + runtimeConfig.isInterpretNewBills());
+		System.out.println("  refresh-stale-bill-analyses=" + runtimeConfig.isRefreshStaleBillAnalyses());
 		System.out.println("  reinterpret-legislators=" + runtimeConfig.isReinterpretLegislators());
 		System.out.println("  reinterpret-parties=" + runtimeConfig.isReinterpretParties());
 		System.out.println("  flex-requests=" + runtimeConfig.isFlexRequests());
