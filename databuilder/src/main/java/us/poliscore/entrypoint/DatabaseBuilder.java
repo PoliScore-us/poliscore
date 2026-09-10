@@ -166,6 +166,7 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 
 		for (val importedDataset : data.getAllImportedDatasets()) {
 			importedDataset.optimizeExists(s3, BillInterpretation.class);
+			importedDataset.optimizeExists(s3, BillText.class);
 		}
 	}
 	
