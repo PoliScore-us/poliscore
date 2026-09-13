@@ -37,7 +37,7 @@ public enum OpenAIModel {
 
 	public static final OpenAIModel DEFAULT_MODEL = DEFAULT_FREE_MODEL;
 
-	public static final OpenAIModel DEFAULT_MODEL_MINI = GPT54mini;
+	public static final OpenAIModel DEFAULT_MODEL_MINI = GPT56luna;
 	
 	// Because we have a reasoning model, this max output is important because it gets fed back into the input again, reducing our potential max input tokens
 	public static final int MAX_OUTPUT_TOKENS = 100_000;
