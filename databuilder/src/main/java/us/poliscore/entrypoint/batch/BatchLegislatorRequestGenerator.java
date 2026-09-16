@@ -45,7 +45,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 {
 	public static final List<String> specificFetch = null;
 //	public static final List<String> specificFetch = Arrays.asList(
-//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "L000583"),
+//			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "F000472")
 //			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "H001100"),
 //			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "B000825"),
 //			Legislator.generateId(LegislativeNamespace.US_CONGRESS, "119", "C001137"),
@@ -54,7 +54,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 	
 	public static final LocalDateTime OLDER_THAN = null;
 //	public static final LocalDateTime OLDER_THAN = specificFetch == null ? Period.ofMonths(1) : null;
-//	public static final LocalDateTime OLDER_THAN = LocalDateTime.now().minus(Period.ofMonths(20));
+//	public static final LocalDateTime OLDER_THAN = LocalDateTime.now().minus(Period.ofMonths(6));
 //	public static final LocalDateTime OLDER_THAN = LocalDate.of(2025, 8, 14).atStartOfDay();
 	
 	public static final int MAX_REQUESTS = specificFetch != null ? -1 : 1000;
@@ -62,7 +62,7 @@ public class BatchLegislatorRequestGenerator implements QuarkusApplication
 //	public static final boolean CHECK_S3_EXISTS = false;
 	public static final boolean CHECK_S3_EXISTS = specificFetch == null && OLDER_THAN == null;
 	
-	public static final OpenAIModel interpModel = OpenAIModel.DEFAULT_SUBSCRIBER_MODEL;
+	public static final OpenAIModel interpModel = OpenAIModel.DEFAULT_FREE_MODEL;
 	
 	@Inject
 	private S3PersistenceService s3;
