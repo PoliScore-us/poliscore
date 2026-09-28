@@ -34,6 +34,10 @@ public class MemoryObjectStore implements ObjectStorageServiceIF {
 				.anyMatch(sessionKey -> belongsToSession(entry.getKey(), sessionKey)));
 	}
 
+	public void remove(String id) {
+		if (id != null) memoryStore.remove(id);
+	}
+
 	private boolean belongsToSession(String id, String sessionKey) {
 		if (id == null || sessionKey == null) return false;
 		return id.contains("/" + sessionKey + "/") || id.endsWith("/" + sessionKey);

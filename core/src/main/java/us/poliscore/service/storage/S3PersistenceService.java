@@ -4,8 +4,8 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -30,6 +30,7 @@ import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.Persistable;
 import us.poliscore.service.GovernmentDataService;
@@ -39,12 +40,14 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 {
 	
 	public static final String BUCKET_NAME = "poliscore-archive";
+	private static final long KNOWN_FINGERPRINT_TTL_MILLIS = 5 * 60 * 1000L;
 	
 	@Inject protected GovernmentDataService data;
 	
 	private S3Client client;
 	
-	private static ConcurrentMap<String, Set<String>> objectsInBucket = new ConcurrentHashMap<>();
+	private static ConcurrentMap<String, ConcurrentMap<String, S3ObjectFingerprint>> objectsInBucket = new ConcurrentHashMap<>();
+	private static ConcurrentMap<String, ObservedFingerprint> knownObjectFingerprints = new ConcurrentHashMap<>();
 	
 	protected String getObjectKey(String id)
 	{
@@ -76,6 +79,12 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	@SneakyThrows
 	public void put(Persistable obj)
 	{
+		putWithFingerprint(obj);
+	}
+
+	@SneakyThrows
+	protected S3ObjectFingerprint putWithFingerprint(Persistable obj)
+	{
 		Persistable.validate(obj);
 		
 		String sessionKey = getSessionKey(obj.getId());
@@ -87,21 +96,31 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 			throw new UnsupportedOperationException("Your object's id is " + key + "... Really? I don't think so.");
 		}
 		
-        PutObjectRequest putOb = PutObjectRequest.builder()
-                .bucket(BUCKET_NAME)
-                .key(key)
-                .build();
+		PutObjectRequest putOb = PutObjectRequest.builder()
+				.bucket(BUCKET_NAME)
+				.key(key)
+				.build();
 
-        getClient().putObject(putOb, RequestBody.fromString(PoliscoreUtil.getObjectMapper().writeValueAsString(obj)));
-        
-        if (objectsInBucket.containsKey(idClassPrefix) && !objectsInBucket.get(idClassPrefix).contains(obj.getId()))
-        	objectsInBucket.get(idClassPrefix).add(obj.getId());
-        
-        Log.info("Uploaded to S3 " + key);
+		String json = PoliscoreUtil.getObjectMapper().writeValueAsString(obj);
+		val response = getClient().putObject(putOb, RequestBody.fromString(json));
+		val fingerprint = new S3ObjectFingerprint(normalizeEtag(response.eTag()), json.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
+		rememberFingerprint(obj.getId(), fingerprint);
+
+		if (objectsInBucket.containsKey(idClassPrefix))
+			objectsInBucket.get(idClassPrefix).put(obj.getId(), fingerprint);
+
+		Log.info("Uploaded to S3 " + key);
+		return fingerprint;
 	}
 	
 	@SneakyThrows
 	public <T extends Persistable> Optional<T> get(String id, Class<T> clazz)
+	{
+		return getWithFingerprint(id, clazz).map(S3GetResult::object);
+	}
+
+	@SneakyThrows
+	protected <T extends Persistable> Optional<S3GetResult<T>> getWithFingerprint(String id, Class<T> clazz)
 	{
 		String sessionKey = getSessionKey(id);
 		val idClassPrefix = Persistable.getClassStorageBucket(clazz, sessionKey);
@@ -109,7 +128,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 		val key = getObjectKey(id);
 		
 		// If optimize exists was called, and we know the object doesn't exist, it's actually faster to just return null then it is to go all the way to s3
-		if (objectsInBucket.containsKey(idClassPrefix) && !objectsInBucket.get(idClassPrefix).contains(id)) return Optional.empty();
+		if (objectsInBucket.containsKey(idClassPrefix) && !objectsInBucket.get(idClassPrefix).containsKey(id)) return Optional.empty();
 		
         GetObjectRequest req = GetObjectRequest.builder()
                 .bucket(BUCKET_NAME)
@@ -121,7 +140,11 @@ public class S3PersistenceService implements ObjectStorageServiceIF
         	
 //        	Log.info("Retrieved " + clazz.getSimpleName() + " from S3 " + key);
         	
-        	return Optional.of(PoliscoreUtil.getObjectMapper().readValue(resp, clazz));
+			val fingerprint = new S3ObjectFingerprint(normalizeEtag(resp.response().eTag()), resp.response().contentLength());
+			rememberFingerprint(id, fingerprint);
+			if (objectsInBucket.containsKey(idClassPrefix))
+				objectsInBucket.get(idClassPrefix).put(id, fingerprint);
+			return Optional.of(new S3GetResult<>(PoliscoreUtil.getObjectMapper().readValue(resp, clazz), fingerprint));
         }
         catch (NoSuchKeyException ex)
         {
@@ -135,25 +158,37 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	@SneakyThrows
 	public <T extends Persistable> boolean exists(String id, Class<T> clazz)
 	{
+		return getRemoteFingerprint(id, clazz).isPresent();
+	}
+
+	@SneakyThrows
+	protected <T extends Persistable> Optional<S3ObjectFingerprint> getRemoteFingerprint(String id, Class<T> clazz)
+	{
 		String sessionKey = getSessionKey(id);
-		
-		val idClassPrefix = Persistable.getClassStorageBucket(clazz, sessionKey);
-		if (objectsInBucket.containsKey(idClassPrefix)) return objectsInBucket.get(idClassPrefix).contains(id);
-		
-		val key = getObjectKey(id);
-		
-		try
-		{
-			val resp = getClient().headObject(HeadObjectRequest.builder()
+		val storageBucket = Persistable.getClassStorageBucket(clazz, sessionKey);
+		if (objectsInBucket.containsKey(storageBucket))
+			return Optional.ofNullable(objectsInBucket.get(storageBucket).get(id));
+
+		val known = knownObjectFingerprints.get(id);
+		if (known != null && System.currentTimeMillis() - known.observedAtMillis() <= KNOWN_FINGERPRINT_TTL_MILLIS)
+			return Optional.of(known.fingerprint());
+		if (known != null) knownObjectFingerprints.remove(id, known);
+
+		try {
+			val response = getClient().headObject(HeadObjectRequest.builder()
 					.bucket(BUCKET_NAME)
-					.key(key)
+					.key(getObjectKey(id))
 					.build());
-			
-			return true;
-		}
-		catch (NoSuchKeyException ex)
-		{
-			return false;
+			val fingerprint = new S3ObjectFingerprint(normalizeEtag(response.eTag()), response.contentLength());
+			rememberFingerprint(id, fingerprint);
+			return Optional.of(fingerprint);
+		} catch (NoSuchKeyException ex) {
+			return Optional.empty();
+		} catch (S3Exception ex) {
+			// HEAD responses do not include an error body, so the SDK reports a
+			// missing object as a generic S3Exception rather than NoSuchKeyException.
+			if (ex.statusCode() == 404) return Optional.empty();
+			throw ex;
 		}
 	}
 	
@@ -164,7 +199,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 		val fullPrefix = storageBucket + "/" + objectKeyPrefix;
 		
 		if (objectsInBucket.containsKey(storageBucket)) {
-			return objectsInBucket.get(storageBucket).stream().anyMatch(id -> id.startsWith(fullPrefix));
+			return objectsInBucket.get(storageBucket).keySet().stream().anyMatch(id -> id.startsWith(fullPrefix));
 		}
 		
 		val resp = getClient().listObjectsV2(ListObjectsV2Request.builder()
@@ -235,8 +270,9 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 
 	        val resp = getClient().listObjectsV2(builder.build());
 	        
-	        for (val s3Object : resp.contents()) {
-	            Instant lastModified = s3Object.lastModified();
+			for (val s3Object : resp.contents()) {
+				rememberFingerprint(getObjectIdFromKey(s3Object.key()), fingerprint(s3Object));
+				Instant lastModified = s3Object.lastModified();
 
 	            if ((criteria.getLastModifiedAfter() == null || lastModified.isAfter(criteria.getLastModifiedAfter())) &&
 	                (criteria.getLastModifiedBefore() == null || lastModified.isBefore(criteria.getLastModifiedBefore()))) {
@@ -267,7 +303,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 		val fullPrefix = buildFullPrefix(storageBucket, criteria.getObjectKeyPrefix());
 		Comparator<String> comparator = criteria.isAscending() ? Comparator.naturalOrder() : Comparator.reverseOrder();
 		
-		return Optional.of(objectsInBucket.get(storageBucket).stream()
+		return Optional.of(objectsInBucket.get(storageBucket).keySet().stream()
 				.filter(id -> id.startsWith(fullPrefix))
 				.map(this::getObjectKey)
 				.sorted(comparator)
@@ -288,7 +324,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 		
 		if (objectsInBucket.containsKey(storageBucket)) return;
 		
-		objectsInBucket.put(storageBucket, ConcurrentHashMap.newKeySet());
+		objectsInBucket.put(storageBucket, new ConcurrentHashMap<>());
 		
 		String continuationToken = null;
 		do {
@@ -301,7 +337,12 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 			
 			val resp = getClient().listObjectsV2(builder.build());
 			
-			objectsInBucket.get(storageBucket).addAll(resp.contents().stream().map(o -> FilenameUtils.getPath(o.key()) + FilenameUtils.getBaseName(o.key())).toList());
+			for (val object : resp.contents()) {
+				String id = FilenameUtils.getPath(object.key()) + FilenameUtils.getBaseName(object.key());
+				val fingerprint = fingerprint(object);
+				objectsInBucket.get(storageBucket).put(id, fingerprint);
+				rememberFingerprint(id, fingerprint);
+			}
 			
 			continuationToken = resp.nextContinuationToken();
 		}
@@ -313,6 +354,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 		val storageBucket = Persistable.getClassStorageBucket(clazz, sessionKey);
 		
 		objectsInBucket.remove(storageBucket);
+		knownObjectFingerprints.keySet().removeIf(id -> id.equals(storageBucket) || id.startsWith(storageBucket + "/"));
 	}
 	
 	@SneakyThrows
@@ -335,6 +377,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 			{
 				objectsInBucket.get(idClassPrefix).remove(id);
 			}
+			knownObjectFingerprints.remove(id);
 		}
 		catch (NoSuchKeyException ex)
 		{
@@ -342,6 +385,35 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 			Log.info("Attempted to delete non-existent object from S3 " + key);
 		}
 	}
+
+	protected Map<String, S3ObjectFingerprint> getOptimizedFingerprints(String storageBucket) {
+		val fingerprints = objectsInBucket.get(storageBucket);
+		return fingerprints == null ? Map.of() : Map.copyOf(fingerprints);
+	}
+
+	protected boolean hasOptimizedFingerprints(String storageBucket) {
+		return objectsInBucket.containsKey(storageBucket);
+	}
+
+	private S3ObjectFingerprint fingerprint(software.amazon.awssdk.services.s3.model.S3Object object) {
+		return new S3ObjectFingerprint(normalizeEtag(object.eTag()), object.size());
+	}
+
+	private void rememberFingerprint(String id, S3ObjectFingerprint fingerprint) {
+		knownObjectFingerprints.put(id, new ObservedFingerprint(fingerprint, System.currentTimeMillis()));
+	}
+
+	protected static String normalizeEtag(String eTag) {
+		if (eTag == null) return null;
+		String normalized = eTag.trim();
+		if (normalized.length() >= 2 && normalized.startsWith("\"") && normalized.endsWith("\""))
+			normalized = normalized.substring(1, normalized.length() - 1);
+		return normalized;
+	}
+
+	public record S3ObjectFingerprint(String eTag, long size) { }
+	private record ObservedFingerprint(S3ObjectFingerprint fingerprint, long observedAtMillis) { }
+	protected record S3GetResult<T extends Persistable>(T object, S3ObjectFingerprint fingerprint) { }
 	
 	@Data
 	@Accessors(chain = true)

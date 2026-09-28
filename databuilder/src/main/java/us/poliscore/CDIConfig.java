@@ -25,6 +25,9 @@ public class CDIConfig {
 	@ConfigProperty(name = "poliscore.legiscan.quota-limit", defaultValue = LegiscanService.DEFAULT_REQUEST_QUOTA_LIMIT_CONFIG_VALUE)
 	int legiscanQuotaLimit;
 
+	@ConfigProperty(name = "poliscore.legiscan.request-interval-ms", defaultValue = LegiscanService.DEFAULT_REQUEST_INTERVAL_MILLIS_CONFIG_VALUE)
+	long legiscanRequestIntervalMillis;
+
 	@ConfigProperty(name = "poliscore.legiscan.freshness", defaultValue = "DAILY")
 	RefreshFrequency legiscanFreshness;
 
@@ -33,6 +36,7 @@ public class CDIConfig {
 	public CachedLegiscanService produceLegiscanService() {
 		return CachedLegiscanService.builder(secret.getLegiscanSecret())
 				.withRequestQuotaLimit(legiscanQuotaLimit)
+				.withRequestIntervalMillis(legiscanRequestIntervalMillis)
 				.withFreshness(legiscanFreshness)
 				.withCacheDirectory(PoliscoreUtil.cacheDir("legiscan"))
 				.build();

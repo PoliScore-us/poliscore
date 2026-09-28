@@ -23,6 +23,7 @@ import us.poliscore.Environment;
 import us.poliscore.PoliscoreUtil;
 import us.poliscore.bill.InterpretationRequest;
 import us.poliscore.dataset.PoliscoreDatasetIF;
+import us.poliscore.dataset.augmentation.PoliscoreScrapedLegislatorData;
 import us.poliscore.entrypoint.batch.BatchBillRequestGenerator;
 import us.poliscore.entrypoint.batch.BatchBillRequestGenerator.BillGenerationCriteria;
 import us.poliscore.entrypoint.batch.BatchLegislatorRequestGenerator;
@@ -279,6 +280,7 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 			dataset.clearExistsOptimize(s3, LegislatorMediaReference.class);
 			dataset.clearExistsOptimize(s3, PressInterpretation.class);
 			dataset.clearExistsOptimize(s3, SessionInterpretation.class);
+			dataset.clearExistsOptimize(s3, PoliscoreScrapedLegislatorData.class);
 		}
 		memory.clearSessions(SessionInfoService.sessionsForDatasets(importedDatasets));
 	}

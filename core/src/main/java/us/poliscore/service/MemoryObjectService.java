@@ -55,6 +55,10 @@ public class MemoryObjectService implements ObjectStorageServiceIF {
 		memoryStore.clearSessions(sessionKeys);
 	}
 
+	public void remove(String id) {
+		memoryStore.remove(id);
+	}
+
 	@Override
 	public <T extends Persistable> List<T> query(Class<T> clazz, int pageSize, String index, Boolean ascending,
 			String startKey, String sortKey, String storageBucket) {

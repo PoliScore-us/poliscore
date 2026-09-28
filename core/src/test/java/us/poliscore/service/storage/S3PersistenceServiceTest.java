@@ -5,11 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -39,10 +38,11 @@ class S3PersistenceServiceTest {
 		BillText hr2 = billText(2, BillTextPublishVersion.IH);
 		BillText hr10 = billText(10, BillTextPublishVersion.ENR);
 		
-		getOptimizedObjectsCache().put(storageBucket, new HashSet<>(Set.of(
-				hr10.getId(),
-				hr2.getId(),
-				hr1.getId())));
+		var optimized = new ConcurrentHashMap<String, S3PersistenceService.S3ObjectFingerprint>();
+		optimized.put(hr10.getId(), new S3PersistenceService.S3ObjectFingerprint("hr10", 1));
+		optimized.put(hr2.getId(), new S3PersistenceService.S3ObjectFingerprint("hr2", 1));
+		optimized.put(hr1.getId(), new S3PersistenceService.S3ObjectFingerprint("hr1", 1));
+		getOptimizedObjectsCache().put(storageBucket, optimized);
 		
 		TestS3PersistenceService s3 = new TestS3PersistenceService(hr1, hr2, hr10);
 		
@@ -52,10 +52,10 @@ class S3PersistenceServiceTest {
 	}
 
 	@SuppressWarnings("unchecked")
-	private Map<String, Set<String>> getOptimizedObjectsCache() throws Exception {
+	private Map<String, Map<String, S3PersistenceService.S3ObjectFingerprint>> getOptimizedObjectsCache() throws Exception {
 		Field field = S3PersistenceService.class.getDeclaredField("objectsInBucket");
 		field.setAccessible(true);
-		return (Map<String, Set<String>>) field.get(null);
+		return (Map<String, Map<String, S3PersistenceService.S3ObjectFingerprint>>) field.get(null);
 	}
 	
 	private BillText billText(int billNumber, BillTextPublishVersion version) {
