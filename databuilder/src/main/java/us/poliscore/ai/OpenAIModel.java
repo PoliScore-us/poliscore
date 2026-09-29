@@ -13,6 +13,10 @@ import us.poliscore.service.OpenAIService.Usage;
 @Getter
 @AllArgsConstructor
 public enum OpenAIModel {
+	GPT61sol("gpt-6.1-sol", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 2.0, 10),
+	GPT6astra("gpt-6-astra", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 10.0, 50),
+	GPT6sol("gpt-6-sol", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 2.0, 10),
+	GPT6luna("gpt-6-luna", 1_050_000, 128_000, false, true, true, new RateLimit(180_000_000, 30_000), 0.1, 0.5),
 	GPT56sol("gpt-5.6-sol", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 5.0, 30),
 	GPT56terra("gpt-5.6-terra", 1_050_000, 128_000, false, true, true, new RateLimit(40_000_000, 15_000), 2.0, 12),
 	GPT56luna("gpt-5.6-luna", 1_050_000, 128_000, false, true, true, new RateLimit(180_000_000, 30_000), 0.2, 1.2),
@@ -31,13 +35,13 @@ public enum OpenAIModel {
 	O3("o3", 190_000, 95_000, false, true, true, new RateLimit(30_000_000, 10_000), 0, 0),
 	O3_DEEP_RESEARCH("o3-deep-research", 190_000, 95_000, false, true, true, new RateLimit(30_000_000, 10_000), 0, 0);
 
-	public static final OpenAIModel DEFAULT_FREE_MODEL = GPT56luna;
+	public static final OpenAIModel DEFAULT_FREE_MODEL = GPT6luna;
 
-	public static final OpenAIModel DEFAULT_SUBSCRIBER_MODEL = GPT56sol;
+	public static final OpenAIModel DEFAULT_SUBSCRIBER_MODEL = GPT61sol;
 
 	public static final OpenAIModel DEFAULT_MODEL = DEFAULT_FREE_MODEL;
 
-	public static final OpenAIModel DEFAULT_MODEL_MINI = GPT56luna;
+	public static final OpenAIModel DEFAULT_MODEL_MINI = DEFAULT_FREE_MODEL;
 	
 	// Because we have a reasoning model, this max output is important because it gets fed back into the input again, reducing our potential max input tokens
 	public static final int MAX_OUTPUT_TOKENS = 100_000;
