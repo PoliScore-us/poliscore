@@ -1,16 +1,21 @@
 package us.poliscore;
 
 import java.io.File;
+import java.net.URI;
 import java.net.URL;
-
-import org.apache.commons.lang3.StringUtils;
+import java.nio.file.Path;
 
 public class Environment {
+	private static final String DEPLOY_PATH_PROPERTY = "poliscore.deployed.path";
+	private static final String DEPLOY_PATH_ENVIRONMENT_VARIABLE = "POLISCORE_DEPLOYED_PATH";
 	private static File deployPath = null;
 	
 	/**
-	 * Calculates and returns the deployed path of the currently running application. If we are deployed inside a container, this will return $CATALINA_HOME/webapps/$CONTEXT_PATH
-	 *	 as a resolved absolute path. If we are running inside a jar, this will return the directory that contains the running jar.
+	 * Calculates and returns the deployed path of the currently running application. The
+	 * {@code poliscore.deployed.path} system property or {@code POLISCORE_DEPLOYED_PATH}
+	 * environment variable can provide an explicit path. Otherwise, an exploded deployment
+	 * resolves to its build/application directory and a packaged deployment resolves to the
+	 * directory containing this class's jar.
 	 * 
 	 * @return An absolute file path of the deployed application path.
 	 */
@@ -21,45 +26,99 @@ public class Environment {
 			return deployPath;
 		}
 		
-		String sDeployPath;
-		
-		URL rootPath = Environment.class.getResource("/");
-		if (rootPath != null && !rootPath.getPath().equals(""))
+		String configuredPath = firstNonBlank(
+				System.getProperty(DEPLOY_PATH_PROPERTY),
+				System.getenv(DEPLOY_PATH_ENVIRONMENT_VARIABLE));
+		if (configuredPath != null)
 		{
-			sDeployPath = rootPath.getPath();
-		}
-		else
-		{
-			// If our code lives inside a jar, getResource will return null
-			String path = (new Environment()).getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
-			
-			if (path.endsWith(".jar") || path.endsWith(".war") || path.endsWith(".class"))
-			{
-				path = new File(path).getParent();
-			}
-			
-			sDeployPath = path.replace((new Environment()).getClass().getPackage().getName().replace(".", "/"), "");
-		}
-		
-		if (sDeployPath.endsWith("/"))
-		{
-			sDeployPath = sDeployPath.substring(0, sDeployPath.length() - 1);
-		}
-		
-		if (sDeployPath.endsWith("WEB-INF/classes"))
-		{
-			sDeployPath = sDeployPath.replace("WEB-INF/classes", "");
-		}
-		
-		if (sDeployPath.endsWith("/classes"))
-		{
-			sDeployPath = sDeployPath.replace("/classes", "");
+			deployPath = new File(configuredPath).getAbsoluteFile().toPath().normalize().toFile();
+			return deployPath;
 		}
 
-		// getPath returns spaces as %20 for some reason
-		sDeployPath = sDeployPath.replace("%20", " ");
-		
-		deployPath = new File(sDeployPath);
+		URL rootPath = Environment.class.getResource("/");
+		URL codeSourceLocation = Environment.class.getProtectionDomain().getCodeSource() == null
+				? null
+				: Environment.class.getProtectionDomain().getCodeSource().getLocation();
+		deployPath = resolveDeployedPath(rootPath, codeSourceLocation);
 		return deployPath;
+	}
+
+	static File resolveDeployedPath(URL rootPath, URL codeSourceLocation)
+	{
+		// An exploded classpath root is the behavior the original implementation relied on.
+		// A jar: root is an entry inside an archive, not a writable filesystem directory.
+		if (isFileUrl(rootPath))
+		{
+			return deploymentDirectory(fileFromUrl(rootPath), false);
+		}
+
+		if (isFileUrl(codeSourceLocation))
+		{
+			return deploymentDirectory(fileFromUrl(codeSourceLocation), true);
+		}
+
+		// Native images and unusual class loaders may expose neither URL as a file.
+		return new File(System.getProperty("user.dir")).getAbsoluteFile().toPath().normalize().toFile();
+	}
+
+	private static boolean isFileUrl(URL url)
+	{
+		return url != null && "file".equalsIgnoreCase(url.getProtocol());
+	}
+
+	private static File fileFromUrl(URL url)
+	{
+		try
+		{
+			return new File(URI.create(url.toExternalForm()));
+		}
+		catch (IllegalArgumentException e)
+		{
+			throw new IllegalStateException("Could not convert deployment URL to a filesystem path: " + url, e);
+		}
+	}
+
+	private static File deploymentDirectory(File location, boolean codeSource)
+	{
+		Path path = location.getAbsoluteFile().toPath().normalize();
+		String fileName = path.getFileName() == null ? "" : path.getFileName().toString();
+
+		if (codeSource && isArchiveOrClassFile(fileName))
+		{
+			path = path.getParent();
+		}
+
+		if (path != null && path.getFileName() != null && "classes".equals(path.getFileName().toString()))
+		{
+			path = path.getParent();
+			if (path != null && path.getFileName() != null && "WEB-INF".equals(path.getFileName().toString()))
+			{
+				path = path.getParent();
+			}
+		}
+
+		if (path == null)
+		{
+			throw new IllegalStateException("Could not determine a deployment directory from " + location);
+		}
+		return path.toFile();
+	}
+
+	private static boolean isArchiveOrClassFile(String fileName)
+	{
+		String lowerCaseName = fileName.toLowerCase();
+		return lowerCaseName.endsWith(".jar") || lowerCaseName.endsWith(".war") || lowerCaseName.endsWith(".class");
+	}
+
+	private static String firstNonBlank(String... values)
+	{
+		for (String value : values)
+		{
+			if (value != null && !value.isBlank())
+			{
+				return value.trim();
+			}
+		}
+		return null;
 	}
 }
