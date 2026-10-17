@@ -215,6 +215,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	public <T extends Persistable> List<T> query(Class<T> clazz) {
 //		return query(clazz, sessionKey, null, -1, true);
 		
+		if (clazz.equals(us.poliscore.model.referendum.Referendum.class)) return query(clazz, null);
 		throw new NotImplementedException("You want to query all objects across all legislative sessions? Really?");
 	}
 	

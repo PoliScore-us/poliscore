@@ -17,6 +17,10 @@ public class DatabaseBuilderConfig {
 	private boolean reinterpretLegislators = false;
 	private boolean reinterpretParties = false;
 	
+	private boolean includeReferendums = false;
+	private boolean interpretReferendums = false;
+	private boolean refreshStaleReferendumAnalyses = false;
+
 	// ai knobs
 	private boolean flexRequests = true;
 	private boolean agenticWebSearch = true;

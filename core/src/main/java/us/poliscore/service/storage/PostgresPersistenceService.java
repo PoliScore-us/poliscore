@@ -90,7 +90,7 @@ public class PostgresPersistenceService implements ObjectStorageServiceIF {
 			return;
 		}
 
-		throw unsupported(obj.getClass());
+		extensionRepository((Class<T>) obj.getClass()).orElseThrow(() -> unsupported(obj.getClass())).putIfLatest(obj);
 	}
 	
 	@Override
@@ -132,7 +132,7 @@ public class PostgresPersistenceService implements ObjectStorageServiceIF {
 			return sessionInterpretationRepository.exists(id);
 		}
 
-		throw unsupported(clazz);
+		return extensionRepository(clazz).orElseThrow(() -> unsupported(clazz)).exists(id);
 	}
 
 	@Override
@@ -151,7 +151,7 @@ public class PostgresPersistenceService implements ObjectStorageServiceIF {
 			return castList(sessionInterpretationRepository.query(datasetKey, pageSize, index, ascending, exclusiveStartKey, sortKey));
 		}
 
-		throw unsupported(clazz);
+		return extensionRepository(clazz).orElseThrow(() -> unsupported(clazz)).query(datasetKey, pageSize, index, ascending, exclusiveStartKey, sortKey);
 	}
 
 	@Override
@@ -172,7 +172,7 @@ public class PostgresPersistenceService implements ObjectStorageServiceIF {
 			return castRawList(sessionInterpretationRepository.query(pageSize, index, ascending, startKey, sortKey, storageBucket));
 		}
 
-		throw unsupported(clazz);
+		return extensionRepository(clazz).orElseThrow(() -> unsupported(clazz)).query(pageSize, index, ascending, startKey, sortKey, storageBucket);
 	}
 
 	@Override
@@ -187,7 +187,7 @@ public class PostgresPersistenceService implements ObjectStorageServiceIF {
 			return sessionInterpretationRepository.count();
 		}
 
-		throw unsupported(clazz);
+		return extensionRepository(clazz).orElseThrow(() -> unsupported(clazz)).count();
 	}
 
 	private UnsupportedOperationException unsupported(Class<?> clazz) {

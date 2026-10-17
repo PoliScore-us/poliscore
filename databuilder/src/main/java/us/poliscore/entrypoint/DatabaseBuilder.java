@@ -77,6 +77,14 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 	@Option(names = "--agentic-web-search", negatable = true, description = "Whether bill interpretation should use agentic web search.")
 	Boolean agenticWebSearch;
 	
+    @Option(names = "--include-referendums", negatable = true) Boolean includeReferendums;
+    @Option(names = "--interpret-referendums", negatable = true) Boolean interpretReferendums;
+    @Option(names = "--refresh-stale-referendum-analyses", negatable = true) Boolean refreshStaleReferendumAnalyses;
+    @Option(names = "--referendum-election", description = "Repeatable state:YYYY-MM-DD election selection")
+    List<String> referendumElections = new java.util.ArrayList<>();
+    @Option(names = "--referendums-only", description = "Skip legislative datasets") protected boolean referendumsOnly;
+    @Inject us.poliscore.service.ReferendumBuildService referendumBuilder;
+
 	@Inject
 	private BatchBillRequestGenerator billRequestGenerator;
 	
@@ -122,7 +130,7 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 		report = new BuildReport();
 		pressBillInterpGenerator.beginBuildRun();
 
-		for (var deployment : config.getSupportedDeployments()) {
+		for (var deployment : (referendumsOnly ? java.util.List.<us.poliscore.PoliscoreDataset.DeploymentConfig>of() : config.getSupportedDeployments())) {
 			if (!Boolean.TRUE.equals(deployment.getBuild())) continue;
 
 			data.resetImports();
@@ -138,6 +146,9 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 			if (report.hasBlockingFatal()) break;
 		}
 
+        if (runtimeConfig.isIncludeReferendums()) {
+            for (String election : new java.util.LinkedHashSet<>(referendumElections)) referendumBuilder.process(election, report);
+        }
 		System.out.println(report.toString());
 		FileUtils.write(new File(Environment.getDeployedPath(), "../buildreport.txt"), report.toString(), "UTF-8");
 		
@@ -311,6 +322,16 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 	}
 
 	private void applyCliConfiguration() {
+        if (includeReferendums != null) runtimeConfig.setIncludeReferendums(includeReferendums);
+        if (interpretReferendums != null) runtimeConfig.setInterpretReferendums(interpretReferendums);
+        if (refreshStaleReferendumAnalyses != null) runtimeConfig.setRefreshStaleReferendumAnalyses(refreshStaleReferendumAnalyses);
+        if ((runtimeConfig.isInterpretReferendums() || runtimeConfig.isRefreshStaleReferendumAnalyses() || referendumsOnly) && !runtimeConfig.isIncludeReferendums())
+            throw new IllegalArgumentException("Referendum options require --include-referendums");
+        if (runtimeConfig.isRefreshStaleReferendumAnalyses() && !runtimeConfig.isInterpretReferendums())
+            throw new IllegalArgumentException("Refresh requires --interpret-referendums");
+        if (runtimeConfig.isIncludeReferendums() && referendumElections.isEmpty())
+            throw new IllegalArgumentException("Select --referendum-election=co:2026-11-03");
+
 		if (interpretPressBills != null) {
 			runtimeConfig.setInterpretPressBills(interpretPressBills);
 		}

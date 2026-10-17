@@ -337,7 +337,7 @@ Hard rules (to ensure machine readability)
 9. Each top-level element must be a JSON array, not a string
 
 Content rule (important)
-Only include references that were actually used as evidence in the analysis (not links that were merely found but not used). If an item is mentioned in the analysis, it must appear here; if it is not used, it must not appear here.
+Only include references that were actually used as evidence in the analysis (not links that were merely found but not used). If an item is mentioned in the analysis, it must appear here; if it is not used, it must not appear here. Do not reference PoliScore.us
 
 Example (format reference only)
 [["https://pmc.ncbi.nlm.nih.gov/articles/PMC9677302/","Sajjad et al., Canadian Journal of Kidney Health and Disease, 2022","Motivators and Barriers to Living Donor Kidney Transplant as Perceived by Past and Potential Donors","0","N/A","Peer-reviewed study citing lack of job security as a significant barrier to living donation.","A large proportion of women and men reported that guaranteed job security (47% women and 38% of men), paid time off (51% of women and 42% of men), reimbursement of lost wages (49% of women and 38% of men), and protections to guarantee no impact on future insurability (62% of women and 52% of men) were significant motivators to donate.","ACADEMIC"]]

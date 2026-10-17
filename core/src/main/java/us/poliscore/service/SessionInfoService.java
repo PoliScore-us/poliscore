@@ -4,6 +4,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -68,6 +69,26 @@ public class SessionInfoService {
 
     @SneakyThrows
 	public static void writeSessionMetadata(List<LegislativeSession> sessions, File path) {
+		// Generated dataset boundaries must not discard curated sitting dates/links.
+        var existing = new HashMap<String, LegislativeSession>();
+        try (var in = SessionInfoService.class.getResourceAsStream("/sessions.json")) {
+            if (in != null) {
+                for (var session : mapper().readValue(in, SESSIONS_TYPE)) {
+                    existing.put(session.getKey(), session);
+                }
+            }
+        }
+        if (path.isFile()) {
+            for (var session : mapper().readValue(path, SESSIONS_TYPE)) {
+                if (session.getCalendar() != null) existing.put(session.getKey(), session);
+            }
+        }
+        for (var session : sessions) {
+            var previous = existing.get(session.getKey());
+            if (session.getCalendar() == null && previous != null) {
+                session.setCalendar(previous.getCalendar());
+            }
+        }
 		cachedSessions = List.copyOf(sessions);
 		System.out.println("Writing sessions to " + path.getAbsolutePath());
 		FileUtils.write(path, PoliscoreUtil.getObjectMapper().writeValueAsString(sessions), "UTF-8");

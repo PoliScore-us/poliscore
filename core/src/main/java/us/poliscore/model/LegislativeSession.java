@@ -1,6 +1,9 @@
 package us.poliscore.model;
 
 import java.time.LocalDate;
+import java.util.List;
+
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -8,7 +11,6 @@ import com.fasterxml.jackson.annotation.JsonProperty.Access;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -20,7 +22,6 @@ import us.poliscore.model.LegislativeNamespace.NamespaceDeserializer;
 import us.poliscore.model.LegislativeNamespace.NamespaceSerializer;
 
 @Data
-@AllArgsConstructor
 @EqualsAndHashCode(of = {"code", "namespace"})
 @NoArgsConstructor
 @DynamoDbBean
@@ -33,6 +34,23 @@ public class LegislativeSession {
 	protected LocalDate endDate;
 	
 	protected String code;
+
+    @Getter(onMethod = @__({ @DynamoDbIgnore }))
+    protected List<SessionCalendar> calendar;
+
+    // Retain the dataset constructor; calendar metadata is optional.
+    public LegislativeSession(boolean regular, LocalDate startDate, LocalDate endDate,
+            String code, LegislativeNamespace namespace) {
+        this.regular = regular;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.code = code;
+        this.namespace = namespace;
+    }
+
+    public record SessionCalendar(String label, String startDate, String endDate,
+            String sourceUrl, String linkUrl, String linkType) {}
+
 	
 	@JsonSerialize(using = NamespaceSerializer.class)
 	@JsonDeserialize(using = NamespaceDeserializer.class)

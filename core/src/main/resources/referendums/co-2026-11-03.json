@@ -1,0 +1,109 @@
+{
+  "namespace": "us/co",
+  "electionDate": "2026-11-03",
+  "inventoryUrl": "https://www.coloradosos.gov/pubs/elections/Initiatives/ballot/contacts/2026.html",
+  "blueBookUrl": "https://content.leg.colorado.gov/sites/default/files/2026-blue-book-en-accessible.pdf",
+  "reviewedAt": "2026-10-15",
+  "measures": [
+    {
+      "designation": "Amendment 81",
+      "title": "Initiative #95 - Law Enforcement Reporting Requirements to Federal Authorities",
+      "legalTextUrl": "https://www.coloradosos.gov/pubs/elections/Initiatives/titleBoard/filings/2025-2026/95Final.pdf",
+      "analysisStartPage": 15,
+      "analysisEndPage": 18
+    },
+    {
+      "designation": "Amendment 82",
+      "title": "Initiative #177 - Right to Natural Gas",
+      "legalTextUrl": "https://www.coloradosos.gov/pubs/elections/Initiatives/titleBoard/filings/2025-2026/177Final.pdf",
+      "analysisStartPage": 19,
+      "analysisEndPage": 20
+    },
+    {
+      "designation": "Amendment 83",
+      "title": "Initiative #302 - Constitutional Right to Hunt and Fish",
+      "legalTextUrl": "https://www.coloradosos.gov/pubs/elections/Initiatives/titleBoard/filings/2025-2026/302Final.pdf",
+      "analysisStartPage": 21,
+      "analysisEndPage": 23
+    },
+    {
+      "designation": "Amendment 84",
+      "title": "Initiative #362 - Mail Ballot Voter Identification",
+      "legalTextUrl": "https://www.coloradosos.gov/pubs/elections/Initiatives/titleBoard/filings/2025-2026/362Final.pdf",
+      "analysisStartPage": 24,
+      "analysisEndPage": 26
+    },
+    {
+      "designation": "Amendment 85",
+      "title": "Initiative #234 - Plain Language Ballot Questions",
+      "legalTextUrl": "https://www.coloradosos.gov/pubs/elections/Initiatives/titleBoard/filings/2025-2026/234Final.pdf",
+      "analysisStartPage": 27,
+      "analysisEndPage": 29
+    },
+    {
+      "designation": "Amendment 86",
+      "title": "Initiative #256 - Congressional Redistricting",
+      "legalTextUrl": "https://www.coloradosos.gov/pubs/elections/Initiatives/titleBoard/filings/2025-2026/256Final.pdf",
+      "analysisStartPage": 30,
+      "analysisEndPage": 32
+    },
+    {
+      "designation": "Amendment 87",
+      "title": "Initiative #195 - Graduated Income Tax",
+      "legalTextUrl": "https://www.coloradosos.gov/pubs/elections/Initiatives/titleBoard/filings/2025-2026/195Final.pdf",
+      "analysisStartPage": 33,
+      "analysisEndPage": 40,
+      "passageThreshold": "Passes with a majority vote.",
+      "passageThresholdSource": "Blue Book, PDF page 33"
+    },
+    {
+      "designation": "Proposition NN",
+      "title": "Senate Bill 26-135 \u2013 State Public K-12 Education Funding",
+      "legalTextUrl": "https://leg.colorado.gov/bill_files/116503/download",
+      "analysisStartPage": 41,
+      "analysisEndPage": 47
+    },
+    {
+      "designation": "Proposition 132",
+      "title": "Initiative #85 - Penalties for Fentanyl Crimes",
+      "legalTextUrl": "https://www.coloradosos.gov/pubs/elections/Initiatives/titleBoard/filings/2025-2026/85Final.pdf",
+      "analysisStartPage": 48,
+      "analysisEndPage": 51
+    },
+    {
+      "designation": "Proposition 133",
+      "title": "Initiative #108 - Penalties for Human Trafficking of a Minor",
+      "legalTextUrl": "https://www.coloradosos.gov/pubs/elections/Initiatives/titleBoard/filings/2025-2026/108Final.pdf",
+      "analysisStartPage": 52,
+      "analysisEndPage": 54
+    },
+    {
+      "designation": "Proposition 134",
+      "title": "Initiative #109 - Male and Female Participation in School Sports",
+      "legalTextUrl": "https://www.coloradosos.gov/pubs/elections/Initiatives/titleBoard/filings/2025-2026/109Final.pdf",
+      "analysisStartPage": 55,
+      "analysisEndPage": 58
+    },
+    {
+      "designation": "Proposition 135",
+      "title": "Initiative #110 - Prohibit Certain Surgeries on Minors",
+      "legalTextUrl": "https://www.coloradosos.gov/pubs/elections/Initiatives/titleBoard/filings/2025-2026/110Final.pdf",
+      "analysisStartPage": 59,
+      "analysisEndPage": 61
+    },
+    {
+      "designation": "Proposition 136",
+      "title": "Initiative #232 - Income Tax Rate Cap",
+      "legalTextUrl": "https://www.coloradosos.gov/pubs/elections/Initiatives/titleBoard/filings/2025-2026/232FinalCorrected.pdf",
+      "analysisStartPage": 62,
+      "analysisEndPage": 63
+    },
+    {
+      "designation": "Proposition 137",
+      "title": "Initiative #308 - Designate Sporting Goods Sales Tax Revenue for Conservation",
+      "legalTextUrl": "https://www.coloradosos.gov/pubs/elections/Initiatives/titleBoard/filings/2025-2026/308Final.pdf",
+      "analysisStartPage": 64,
+      "analysisEndPage": 68
+    }
+  ]
+}

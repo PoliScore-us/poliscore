@@ -14,6 +14,8 @@ import us.poliscore.model.legislator.Legislator;
 @RegisterForReflection
 public class BuildReport {
 	
+	public List<String> referendumEvents = new ArrayList<>();
+
 	public List<Bill> interpretedBills = new ArrayList<Bill>();
 	
 	public List<Bill> interpretedBillsWithErrors = new ArrayList<Bill>();
@@ -71,6 +73,8 @@ public class BuildReport {
 		    result += sw.toString();
 		}
 		
+		if (!referendumEvents.isEmpty()) result += "\n\nReferendums:\n" + String.join("\n", referendumEvents);
+
 		if (totalProcessingCost > 0)
 			result += "\nTotal processing cost is $" + totalProcessingCost;
 		
