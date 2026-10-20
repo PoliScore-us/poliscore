@@ -11,6 +11,12 @@ public interface ObjectStorageServiceIF
 {
 	public <T extends Persistable> Optional<T> get(String id, Class<T> clazz);
 
+	/** Scoped read limits for unusually large objects; in-memory stores have no serialized input. */
+	public default <T extends Persistable> Optional<T> getBounded(
+			String id, Class<T> clazz, long maxBytes, int maxStringLength) {
+		return get(id, clazz);
+	}
+
 	public default Optional<Legislator> getLegislatorFirstPage(String id)
 	{
 		return get(id, Legislator.class);

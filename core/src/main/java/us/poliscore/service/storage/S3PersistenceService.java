@@ -122,6 +122,24 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 	@SneakyThrows
 	protected <T extends Persistable> Optional<S3GetResult<T>> getWithFingerprint(String id, Class<T> clazz)
 	{
+		return getWithFingerprint(id, clazz, PoliscoreUtil.getObjectMapper(), Long.MAX_VALUE);
+	}
+
+	@Override
+	@SneakyThrows
+	public <T extends Persistable> Optional<T> getBounded(String id, Class<T> clazz, long maxBytes, int maxStringLength) {
+		if (maxBytes <= 0 || maxStringLength <= 0) throw new IllegalArgumentException("Read limits must be positive");
+		// Do not relax the shared mapper's limits for unrelated entities or API input.
+		var mapper = PoliscoreUtil.getObjectMapper().copy();
+		mapper.getFactory().setStreamReadConstraints(mapper.getFactory().streamReadConstraints().rebuild()
+				.maxStringLength(maxStringLength).build());
+		return getWithFingerprint(id, clazz, mapper, maxBytes).map(S3GetResult::object);
+	}
+
+	@SneakyThrows
+	private <T extends Persistable> Optional<S3GetResult<T>> getWithFingerprint(
+			String id, Class<T> clazz, com.fasterxml.jackson.databind.ObjectMapper mapper, long maxBytes)
+	{
 		String sessionKey = getSessionKey(id);
 		val idClassPrefix = Persistable.getClassStorageBucket(clazz, sessionKey);
 		
@@ -137,6 +155,9 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 
         try {
         	@Cleanup val resp = getClient().getObject(req);
+			if (resp.response().contentLength() > maxBytes) {
+				throw new java.io.IOException("Cached object exceeds the configured byte limit: " + key);
+			}
         	
 //        	Log.info("Retrieved " + clazz.getSimpleName() + " from S3 " + key);
         	
@@ -144,7 +165,7 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 			rememberFingerprint(id, fingerprint);
 			if (objectsInBucket.containsKey(idClassPrefix))
 				objectsInBucket.get(idClassPrefix).put(id, fingerprint);
-			return Optional.of(new S3GetResult<>(PoliscoreUtil.getObjectMapper().readValue(resp, clazz), fingerprint));
+			return Optional.of(new S3GetResult<>(mapper.readValue(resp, clazz), fingerprint));
         }
         catch (NoSuchKeyException ex)
         {
