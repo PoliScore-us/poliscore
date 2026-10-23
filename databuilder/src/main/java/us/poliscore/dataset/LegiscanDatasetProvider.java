@@ -529,7 +529,9 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	        status.setDescription("Passed in " + chamber.getName(ns) + ", Sent to Second Chamber");
 	        status.setProgress(0.4f);
 	    } else if (stat.equals(LegiscanStatus.ENROLLED)) {
-	        status.setDescription("Passed Both Chambers, " + (sessionOver ? "Killed by " : "Sent to ") + executor);
+	        // Enrollment does not establish delivery to the executive or a veto.
+	        // Some enrolled measures go to voters; session end proves neither outcome.
+	        status.setDescription("Passed Both Chambers");
 	        status.setProgress(0.7f);
 	    } else if (stat.equals(LegiscanStatus.PASSED)) {
 	        status.setDescription(view.getBillType().equals(LegiscanBillType.BILL) ? "Law" : "Passed");

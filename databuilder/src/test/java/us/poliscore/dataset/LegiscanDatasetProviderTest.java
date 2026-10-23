@@ -40,6 +40,29 @@ import us.poliscore.model.legislator.Legislator;
 class LegiscanDatasetProviderTest {
 
 	@Test
+	void enrollmentDoesNotInventExecutiveDeliveryOrDeathAfterSessionEnds() {
+		LegiscanBillView view = new LegiscanBillView();
+		view.setBillNumber("SB135");
+		view.setBody("S");
+		view.setStatusId(LegiscanStatus.ENROLLED.getValue());
+		view.setBillTypeId(LegiscanBillType.BILL.getValue());
+		LegislativeSession session = new LegislativeSession(true, LocalDate.of(2026, 1, 1),
+				LocalDate.of(2026, 5, 13), "2243", LegislativeNamespace.US_COLORADO);
+
+		for (LegislativeNamespace namespace : List.of(LegislativeNamespace.US_COLORADO,
+				LegislativeNamespace.US_ARIZONA, LegislativeNamespace.US_CONGRESS)) {
+			session.setNamespace(namespace);
+			for (LocalDate end : List.of(LocalDate.of(2026, 5, 13), LocalDate.of(9999, 12, 31))) {
+				session.setEndDate(end);
+				BillStatus status = LegiscanDatasetProvider.buildStatus(view, session);
+				assertEquals("Enrolled (Passed Both Chambers)", status.getDescription());
+				assertEquals(0.7f, status.getProgress());
+				assertEquals(LegiscanStatus.ENROLLED.getCode(), status.getSourceStatus());
+			}
+		}
+	}
+
+	@Test
 	void buildBillTextVersionUsesGpoIdentityWhenStateLinkProvidesOne() {
 		LegiscanTextMetadataView metadata = new LegiscanTextMetadataView();
 		metadata.setDocId(12345);
