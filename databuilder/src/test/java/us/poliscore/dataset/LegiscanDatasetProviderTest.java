@@ -55,7 +55,7 @@ class LegiscanDatasetProviderTest {
 			for (LocalDate end : List.of(LocalDate.of(2026, 5, 13), LocalDate.of(9999, 12, 31))) {
 				session.setEndDate(end);
 				BillStatus status = LegiscanDatasetProvider.buildStatus(view, session);
-				assertEquals("Enrolled (Passed Both Chambers)", status.getDescription());
+				assertEquals("Passed Both Chambers", status.getDescription());
 				assertEquals(0.7f, status.getProgress());
 				assertEquals(LegiscanStatus.ENROLLED.getCode(), status.getSourceStatus());
 			}

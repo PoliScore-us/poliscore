@@ -33,6 +33,7 @@ public class PostgresSyncService {
 	private static final boolean FORCE_REFRESH_ALL = false;
 	
 	private static final int HOT_REFRESH_LIMIT = 1000;
+	private static final int HOT_REFRESH_CHUNK_SIZE = 100;
 	private static final int BILL_UPSERT_CHUNK_SIZE = 1000;
 	private static final int LEGISLATOR_UPSERT_CHUNK_SIZE = 100;
 
@@ -72,9 +73,10 @@ public class PostgresSyncService {
 		
 		Log.info("Making sure that our postgres database is up-to-date with what exists on s3 (" + dataset.getNamespace().getNamespace() + " " + dataset.getEndYear() + ")");
 		Set<String> updatedSet = syncBillsToPostgres(dataset);
-		refreshHotBills(dataset, updatedSet);
 		syncLegislatorsToPostgres(dataset);
 		syncSessionInterpretationsToPostgres(dataset);
+		// Refresh time-dependent rankings after publishing recalculated legislator stats.
+		refreshHotBills(dataset, updatedSet);
 	}
 
 	private Set<String> syncBillsToPostgres(PoliscoreDatasetIF dataset) {
@@ -157,7 +159,9 @@ public class PostgresSyncService {
 				hottestBills.add(bill);
 			}
 		}
-		billRepository.putAll(hottestBills);
+		for (int start = 0; start < hottestBills.size(); start += HOT_REFRESH_CHUNK_SIZE) {
+			billRepository.refreshHotValues(hottestBills.subList(start, Math.min(start + HOT_REFRESH_CHUNK_SIZE, hottestBills.size())));
+		}
 		Log.info("Refreshed " + hottestBills.size() + " hot bills in postgres");
 	}
 

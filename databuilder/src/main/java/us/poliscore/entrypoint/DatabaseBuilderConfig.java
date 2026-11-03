@@ -15,6 +15,7 @@ public class DatabaseBuilderConfig {
 	private boolean interpretNewBills = true;
 	private boolean refreshStaleBillAnalyses = false;
 	private boolean reinterpretLegislators = false;
+	private boolean includeRealizedSocietalImpact = false;
 	private boolean reinterpretParties = false;
 	
 	private boolean includeReferendums = false;

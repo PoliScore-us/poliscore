@@ -17,6 +17,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.val;
 import us.poliscore.dataset.PoliscoreDatasetIF;
+import us.poliscore.entrypoint.DatabaseBuilderConfig;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.IssueStats;
 import us.poliscore.model.LegislativeChamber;
@@ -26,6 +27,7 @@ import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.VoteStatus;
 import us.poliscore.model.bill.Bill;
 import us.poliscore.model.bill.BillInterpretation;
+import us.poliscore.model.bill.BillStatus;
 import us.poliscore.model.bill.StructuralAnalysis;
 import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorBillInteraction;
@@ -168,6 +170,9 @@ Before printing the final line, internally verify the output is a JSON array of 
 	// Adding "for the voters" was found to sometimes add a nonsense sentence at the end, i.e. "voters should consider positives and negatives... bla bla bla". It's possible Chat GPT gets scared and over-thinks things if it knows it's informing voters.
 	// Even mentioning poliscore can cause AI to generate garbage like "that's why poliscore gave this legislator an a grade" and other garbage. Don't even mention Poliscore, there's no point. 
 	
+	@Inject
+	private DatabaseBuilderConfig runtimeConfig;
+
 	@Inject
 	private LocalCachedS3Service s3;
 	
@@ -319,6 +324,27 @@ Before printing the final line, internally verify the output is a JSON array of 
 		}
 	}
 	
+	/** Uses authoritative bill status: completed resolutions are not necessarily laws. */
+	protected boolean isEnactedBill(String billId) {
+		return data.get(billId, Bill.class).map(bill -> isEnactedStatus(bill.getStatus())).orElse(false);
+	}
+
+	static boolean isEnactedStatus(BillStatus status) {
+		return status != null && ("Law".equalsIgnoreCase(status.getDescription())
+			|| "Veto Overridden".equalsIgnoreCase(status.getDescription())
+			|| (status.getSourceStatus() != null && status.getSourceStatus().startsWith("ENACTED:")));
+	}
+
+	public void calculateRealizedStats(Legislator leg, LegislatorInterpretation interp) {
+		DoubleIssueStats stats = new DoubleIssueStats();
+		for (var interaction : getInteractionsForInterpretation(leg)) {
+			if (interaction.getIssueStats() == null || !isEnactedBill(interaction.getBillId())) continue;
+			stats = stats.sum(interaction.getIssueStats().multiply(interaction.getJudgementWeight()),
+				Math.abs(interaction.getJudgementWeight()));
+		}
+		interp.setRealizedIssueStats(stats.getStats().isEmpty() ? null : stats.divideByTotalSummed().toIssueStats());
+	}
+
 	public DoubleIssueStats calculateAgregateInteractionStats(Legislator leg) {
 		DoubleIssueStats stats = new DoubleIssueStats();
 		
@@ -582,8 +608,14 @@ Before printing the final line, internally verify the output is a JSON array of 
 			if (interactions.size() >= LEG_INTERP_MIN_INTERACTIONS) {
 				DoubleIssueStats stats = calculateAgregateInteractionStats(leg);
 				interp.setIssueStats(stats.toIssueStats());
+				if (runtimeConfig.isIncludeRealizedSocietalImpact()) {
+					calculateRealizedStats(leg, interp);
+				} else {
+					interp.setRealizedIssueStats(null);
+				}
 			} else {
 				interp.setIssueStats(null);
+				interp.setRealizedIssueStats(null);
 				interp.setStructuralStats(null);
 			}
 			
@@ -595,6 +627,7 @@ Before printing the final line, internally verify the output is a JSON array of 
 			leg.setInterpretation(interp);
 			
 			calculateImpactAndRating(leg, interp);
+
 		}
 	}
 }

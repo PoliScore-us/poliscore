@@ -37,7 +37,11 @@ public class LegislatorInterpretation extends SessionPersistable
 		return SessionPersistable.generateId(ID_CLASS_PREFIX, ns, regularSessionCode, legislatorCode);
 	}
 	
+	// Intended Societal Impact remains the primary score for compatibility.
 	protected IssueStats issueStats;
+
+	protected IssueStats realizedIssueStats;
+
 	
 	protected StructuralStats structuralStats;
 	

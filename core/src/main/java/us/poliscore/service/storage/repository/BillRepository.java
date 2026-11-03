@@ -48,6 +48,14 @@ public class BillRepository extends AbstractPostgresEntityRepository<Bill> {
 		executeBatch(upsertIfLatestSql(), bills, this::bindUpsert);
 	}
 
+	/** Refresh the daily ranking without resending bill text and interpretations. */
+	public void refreshHotValues(List<Bill> bills) {
+		executeBatch("UPDATE " + qualifiedTableName() + " SET hot_value = ? WHERE id = ?", bills, (stmt, bill) -> {
+			stmt.setObject(1, canCalculateDerivedMetrics(bill) ? Long.valueOf(bill.getHot()) : null, Types.BIGINT);
+			stmt.setString(2, bill.getId());
+		});
+	}
+
 	public Map<String, LocalDateTime> getLastUpdateMap(String datasetKey) {
 		String storageBucket = Persistable.getClassStorageBucket(Bill.class, datasetKey);
 		List<Tuple> rows = requireEntityManager().createQuery(

@@ -68,6 +68,9 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 	@Option(names = "--reinterpret-legislators", negatable = true, description = "Whether to reinterpret legislators.")
 	Boolean reinterpretLegislators;
 
+	@Option(names = "--include-realized-societal-impact", negatable = true, description = "Include realized societal impact stats (default: false).")
+	Boolean includeRealizedSocietalImpact;
+
 	@Option(names = "--reinterpret-parties", negatable = true, description = "Whether to reinterpret parties.")
 	Boolean reinterpretParties;
 
@@ -316,9 +319,8 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 	public Integer call() throws Exception {
 		applyCliConfiguration();
 		logConfiguration();
-		process();
-		Quarkus.waitForExit();
-		return 0;
+		BuildReport result = process();
+		return result.hasBlockingFatal() ? 1 : 0;
 	}
 
 	private void applyCliConfiguration() {
@@ -341,6 +343,9 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 		if (refreshStaleBillAnalyses != null) {
 			runtimeConfig.setRefreshStaleBillAnalyses(refreshStaleBillAnalyses);
 		}
+		if (includeRealizedSocietalImpact != null) {
+			runtimeConfig.setIncludeRealizedSocietalImpact(includeRealizedSocietalImpact);
+		}
 		if (reinterpretLegislators != null) {
 			runtimeConfig.setReinterpretLegislators(reinterpretLegislators);
 		}
@@ -360,14 +365,35 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 		System.out.println("  interpret-press-bills=" + runtimeConfig.isInterpretPressBills());
 		System.out.println("  interpret-new-bills=" + runtimeConfig.isInterpretNewBills());
 		System.out.println("  refresh-stale-bill-analyses=" + runtimeConfig.isRefreshStaleBillAnalyses());
+		System.out.println("  include-realized-societal-impact=" + runtimeConfig.isIncludeRealizedSocietalImpact());
 		System.out.println("  reinterpret-legislators=" + runtimeConfig.isReinterpretLegislators());
 		System.out.println("  reinterpret-parties=" + runtimeConfig.isReinterpretParties());
 		System.out.println("  flex-requests=" + runtimeConfig.isFlexRequests());
 		System.out.println("  agentic-web-search=" + runtimeConfig.isAgenticWebSearch());
 	}
 	
+	public static void failOnUnsuccessfulExit(int code, Throwable failure) {
+		if (code != 0 || failure != null) {
+			throw new IllegalStateException("DatabaseBuilder failed with exit code " + code, failure);
+		}
+	}
+
+	public static void runApplication(Runnable application) {
+		// Keep Quarkus.run in the entrypoint's class: the IDE/Maven launcher uses
+		// its calling class to locate the application project.
+		runWithShutdown(application, Quarkus::asyncExit);
+	}
+
+	static void runWithShutdown(Runnable application, Runnable shutdown) {
+		try {
+			application.run();
+		} finally {
+			// Close the Maven/IDE launcher too. Do not overwrite a failed build with exit code zero.
+			shutdown.run();
+		}
+	}
+
 	public static void main(String[] args) {
-		Quarkus.run(DatabaseBuilder.class, args);
-		Quarkus.asyncExit(0);
+		runApplication(() -> Quarkus.run(DatabaseBuilder.class, DatabaseBuilder::failOnUnsuccessfulExit, args));
 	}
 }
