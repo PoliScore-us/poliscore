@@ -48,6 +48,17 @@ class SessionInfoServiceTest {
         assertEquals(LocalDate.of(2025, 1, 1), saved.getStartDate());
     }
 
+    @Test
+    void regenerationRetainsSourcedActivationDate(@TempDir Path directory) throws Exception {
+        var file = directory.resolve("activation.json").toFile();
+        var original = new LegislativeSession(true, LocalDate.of(2027,1,1), LocalDate.of(2027,12,31), "activation", LegislativeNamespace.US_COLORADO);
+        original.setAvailableFrom("2027-01-11");
+        SessionInfoService.writeSessionMetadata(List.of(original),file);
+        var replacement = new LegislativeSession(true, LocalDate.of(2027,1,1), LocalDate.of(2027,12,31), "activation", LegislativeNamespace.US_COLORADO);
+        SessionInfoService.writeSessionMetadata(List.of(replacement),file);
+        assertEquals("2027-01-11",SessionInfoService.mapper().readValue(file,LegislativeSession[].class)[0].getAvailableFrom());
+    }
+
 	private PoliscoreDataset dataset(DeploymentConfig config, boolean regular, String code) {
 		var session = new LegislativeSession(regular, LocalDate.of(2026, 1, 1),
 				LocalDate.of(2026, 12, 31), code, LegislativeNamespace.US_COLORADO);

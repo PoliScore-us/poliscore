@@ -25,6 +25,8 @@ public class BuildReport {
 	public List<Throwable> fatalErrors = new ArrayList<Throwable>();
 
 	public List<Throwable> recoveredErrors = new ArrayList<Throwable>();
+
+	public List<String> skippedOptionalDatasets = new ArrayList<>();
 	
 	double totalProcessingCost = 0;
 	
@@ -35,6 +37,10 @@ public class BuildReport {
 	public void fatal(Throwable t) { fatalErrors.add(t); }
 
 	public void recovered(Throwable t) { recoveredErrors.add(t); }
+
+	public void skipOptionalDataset(String dataset) {
+		if (!skippedOptionalDatasets.contains(dataset)) skippedOptionalDatasets.add(dataset);
+	}
 	
 	public boolean hasFatal() { return !fatalErrors.isEmpty(); }
 
@@ -73,6 +79,9 @@ public class BuildReport {
 		    result += sw.toString();
 		}
 		
+		if (!skippedOptionalDatasets.isEmpty())
+			result += "\n\nSkipped optional datasets (not yet available):\n- " + String.join("\n- ", skippedOptionalDatasets);
+
 		if (!referendumEvents.isEmpty()) result += "\n\nReferendums:\n" + String.join("\n", referendumEvents);
 
 		if (totalProcessingCost > 0)

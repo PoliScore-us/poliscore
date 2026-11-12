@@ -255,7 +255,7 @@ Before printing the final line, internally verify the output is a JSON array of 
 				b.setInterpretation(interp);
 				
 				val sponsor = dataset.get(b.getSponsor().getId(), Legislator.class).orElseThrow();
-				val party = sponsor.getTerms().last().getParty();
+				val party = sponsor.getSessionTerm().getParty();
 				val partyCosponsors = b.getCosponsors().stream().filter(sp -> dataset.exists(sp.getId(), Legislator.class) && dataset.get(sp.getId(), Legislator.class).get().getParty().equals(party)).toList();
 						
 				val pbi = new PartyBillInteraction(b.getId(), b.getName(), b.getStatus(), b.getType(), b.getIntroducedDate(), b.getSponsor(), partyCosponsors, b.getRating(), b.getImpact(), b.getInterpretation().getIssueStats().getLetterGrade(dataset.getConfig().getMultiplier()), interp.getShortExplain());
@@ -287,7 +287,7 @@ Before printing the final line, internally verify the output is a JSON array of 
 				
 				lclone.clearInteractions();
 				
-				val t = lclone.getTerms().last();
+				val t = lclone.getSessionTerm();
 				lclone.getTerms().clear();
 				lclone.getTerms().add(t);
 				

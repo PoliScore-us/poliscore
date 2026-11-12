@@ -74,22 +74,28 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 	
 	public void augmentLegislators(PoliscoreDataset dataset) {
 		if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS) && dataset.getCode().equals("118")) return;
-		if (!usc.isEnabled()) return;
 		
 		dataset.optimizeExists(s3, PoliscoreScrapedLegislatorData.class);
 		
 		if (dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS))
 		{
-			var uscDataset = usc.importDataset(dataset.getConfig());
-			
-			for (Legislator leg : dataset.query(Legislator.class)) {
-				val addendum = uscDataset.get(leg.getId(), Legislator.class).orElse(null);
-				
-				if (addendum != null) {
-					leg.setBirthday(addendum.getBirthday());
-					leg.setTerms(addendum.getTerms());
-				}
-			}
+            var references = new java.util.HashMap<String, us.poliscore.view.USCLegislatorView>();
+            for (var view : usc.referenceLegislators()) {
+                if (view.getId() != null) references.put(view.getId().getBioguide(), view);
+            }
+            for (Legislator leg : dataset.query(Legislator.class)) {
+                var view = references.get(leg.getCode());
+                if (view == null) continue;
+                if (view.getBio() != null) leg.setBirthday(view.getBio().getBirthday());
+                if (view.getTerms() == null) continue;
+                var terms = view.getTerms().stream().map(t -> t.convert())
+                        .collect(java.util.stream.Collectors.toCollection(java.util.TreeSet::new));
+                // An upstream reference can lag new appointments. Keep the primary roster's
+                // term unless the reference actually covers the imported session.
+                var session = dataset.getRegularSession();
+                if (terms.stream().anyMatch(t -> t.getStartDate().isBefore(session.getTermEndExclusive())
+                        && t.getEndDate().isAfter(session.getActivationDate()))) leg.setTerms(terms);
+            }
 		}
 		else
 		{
@@ -365,7 +371,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
 
 	    LegislativeNamespace ns = dataset.getNamespace();
 	    Legislator.LegislatorName name = leg.getName();
-	    LegislativeTerm lastTerm = leg.getTerms().last();
+	    LegislativeTerm lastTerm = leg.getSessionTerm();
 
 	    String first;
 	    if (StringUtils.isNotBlank(altFirstName))

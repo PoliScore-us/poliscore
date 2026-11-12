@@ -80,13 +80,21 @@ public class SessionInfoService {
         }
         if (path.isFile()) {
             for (var session : mapper().readValue(path, SESSIONS_TYPE)) {
-                if (session.getCalendar() != null) existing.put(session.getKey(), session);
+                if (session.getCalendar() != null || session.getAvailableFrom() != null) {
+                    var previous = existing.get(session.getKey());
+                    if (previous != null) {
+                        if (session.getCalendar() == null) session.setCalendar(previous.getCalendar());
+                        if (session.getAvailableFrom() == null) session.setAvailableFrom(previous.getAvailableFrom());
+                    }
+                    existing.put(session.getKey(), session);
+                }
             }
         }
         for (var session : sessions) {
             var previous = existing.get(session.getKey());
-            if (session.getCalendar() == null && previous != null) {
-                session.setCalendar(previous.getCalendar());
+            if (previous != null) {
+                if (session.getCalendar() == null) session.setCalendar(previous.getCalendar());
+                if (session.getAvailableFrom() == null) session.setAvailableFrom(previous.getAvailableFrom());
             }
         }
 		cachedSessions = List.copyOf(sessions);
@@ -154,6 +162,33 @@ public class SessionInfoService {
                 .filter(s -> s.getNamespace().equals(namespace) && s.getCode().equals(sessionCode))
                 .findAny()
                 .orElseThrow();
+    }
+
+    /** Default requests use an available session, including during upstream rollover delays. */
+    public static LegislativeSession resolveSession(LegislativeNamespace namespace, Integer year) {
+        return year == null ? latestAvailableSession(namespace, java.time.LocalDate.now())
+                : lookupRegularSession(namespace, year);
+    }
+
+    public static LegislativeSession latestAvailableSession(LegislativeNamespace namespace, java.time.LocalDate date) {
+        return getSessions().stream()
+                .filter(s -> s.isRegular() && s.getNamespace().equals(namespace))
+                .filter(s -> !s.getActivationDate().isAfter(date))
+                .max(java.util.Comparator.comparing(LegislativeSession::getActivationDate))
+                .orElseThrow(() -> new java.util.NoSuchElementException("No available session for " + namespace));
+    }
+
+    /** Importing one dataset must not hide other packaged or already imported sessions. */
+    public static synchronized void registerSessions(List<LegislativeSession> sessions) {
+        var merged = new java.util.LinkedHashMap<String, LegislativeSession>();
+        getSessions().forEach(s -> merged.put(s.getKey(), s));
+        sessions.forEach(s -> {
+            var previous = merged.get(s.getKey());
+            if (s.getCalendar() == null && previous != null) s.setCalendar(previous.getCalendar());
+            if (s.getAvailableFrom() == null && previous != null) s.setAvailableFrom(previous.getAvailableFrom());
+            merged.put(s.getKey(), s);
+        });
+        cachedSessions = List.copyOf(merged.values());
     }
 
     public static LegislativeSession lookupRegularSession(LegislativeNamespace namespace, int year) {

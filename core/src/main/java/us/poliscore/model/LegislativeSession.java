@@ -35,6 +35,9 @@ public class LegislativeSession {
 	
 	protected String code;
 
+    /** Optional sourced date at which this dataset becomes the default; storage years stay unchanged. */
+    protected String availableFrom;
+
     @Getter(onMethod = @__({ @DynamoDbIgnore }))
     protected List<SessionCalendar> calendar;
 
@@ -57,10 +60,24 @@ public class LegislativeSession {
 	@Getter(onMethod = @__({ @DynamoDbConvertedBy(NamespaceConverter.class) }))
 	protected LegislativeNamespace namespace;
 	
-	@JsonIgnore
-	public boolean isOver() {
-		return LocalDate.now().isAfter(endDate);
-	}
+    @JsonIgnore
+    @DynamoDbIgnore
+    public LocalDate getActivationDate() {
+        if (availableFrom != null) return LocalDate.parse(availableFrom);
+        return LegislativeNamespace.US_CONGRESS.equals(namespace)
+                ? CongressionalSession.of(Integer.parseInt(code)).getTermStartDate() : startDate;
+    }
+
+    @JsonIgnore
+    @DynamoDbIgnore
+    public LocalDate getTermEndExclusive() {
+        return LegislativeNamespace.US_CONGRESS.equals(namespace)
+                ? CongressionalSession.of(Integer.parseInt(code)).getTermEndDate() : endDate.plusDays(1);
+    }
+
+    @JsonIgnore
+    public boolean isOver() { return !LocalDate.now().isBefore(getTermEndExclusive()); }
+
 	
 	@JsonIgnore
 	public String getKey() {

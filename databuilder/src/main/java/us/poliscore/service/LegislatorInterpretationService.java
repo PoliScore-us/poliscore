@@ -16,12 +16,14 @@ import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.val;
+import lombok.SneakyThrows;
 import us.poliscore.dataset.PoliscoreDatasetIF;
 import us.poliscore.entrypoint.DatabaseBuilderConfig;
 import us.poliscore.model.DoubleIssueStats;
 import us.poliscore.model.IssueStats;
 import us.poliscore.model.LegislativeChamber;
 import us.poliscore.model.LegislativeNamespace;
+import us.poliscore.PoliscoreUtil;
 import us.poliscore.model.StructuralStats;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.VoteStatus;
@@ -51,6 +53,8 @@ public class LegislatorInterpretationService
 	// Ensure that the x most recent bills are interpreted
 	public static final int LIMIT_BILLS = 999999;
 	
+	private static final float HISTORICAL_INTERACTION_WEIGHT = 0.9f;
+
 //	private static final String PROMPT_TEMPLATE = "The provided text is a summary of the last {{time_period}} of legislative history of United States Legislator {{full_name}}. Please generate a concise (single paragraph) critique of this history, evaluating the performance, highlighting any specific accomplishments or alarming behavior and pointing out major focuses and priorities of the legislator. In your critique, please attempt to reference concrete, notable and specific text of the summarized bills where possible.";
 	
 	private static final String PROMPT_TEMPLATE = """
@@ -222,31 +226,36 @@ Before printing the final line, internally verify the output is a JSON array of 
 		else return 1;
 	}
 	
-	// Backfill the interactions until we get to 1000
-	public void backfillInteractionsFromPreviousSession(Legislator leg, PoliscoreDatasetIF prevDataset)
-	{
-		if (prevDataset == null) return;
-		if (leg.getInteractionsAll().size() >= 1000) return;
-		
-		val prevLeg = prevDataset.get(Legislator.generateId(prevDataset.getNamespace(), prevDataset.getRegularSession().getCode(), leg.getCode()), Legislator.class).orElse(null);
-		if (prevLeg == null) return;
-		
-		updateInteractionsInterp(prevLeg);
-		
-		val prevInteracts = prevLeg.getInteractionsAll().stream().sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()).iterator();
-		
-		int c = leg.getInteractionsAll().size();
-		while (c < 1000 && prevInteracts.hasNext()) {
-			val n = prevInteracts.next();
-			
-			if (n.getIssueStats() != null) {
-				n.setRating(Math.round(n.getIssueStats().getRating() * n.getJudgementWeight() * 0.9f));
-				leg.getInteractionsAll().add(n);
-				c++;
-			}
-		}
+	private boolean isHistoricalInteraction(Legislator leg, LegislatorBillInteraction interaction) {
+		// Carried interactions retain the originating legislator's session-specific ID.
+		return interaction.getLegId() != null && !interaction.getLegId().equals(leg.getId());
 	}
-	
+
+    /** Rebuild carryover from cloned evidence so repeated runs cannot duplicate or mutate history. */
+    @SneakyThrows
+    public void backfillInteractionsFromPreviousSession(Legislator leg, PoliscoreDatasetIF prevDataset) {
+        if (prevDataset == null || (leg.getNamespace().equals(LegislativeNamespace.US_CONGRESS)
+                && leg.getSessionCode().equals("119"))) return;
+        leg.setInteractions(leg.getInteractionsAll().stream().filter(i -> !isHistoricalInteraction(leg, i)).toList());
+        if (getInteractionsForInterpretation(leg).size() >= 1000) return;
+        var previous = prevDataset.get(Legislator.generateId(prevDataset.getNamespace(),
+                prevDataset.getRegularSession().getCode(), leg.getCode()), Legislator.class).orElse(null);
+        if (previous == null) return;
+        var previousCopy = PoliscoreUtil.getObjectMapper().treeToValue(
+                PoliscoreUtil.getObjectMapper().valueToTree(previous), Legislator.class);
+        updateInteractionsInterp(previousCopy);
+        var billIds = leg.getInteractionsAll().stream().map(LegislatorBillInteraction::getBillId)
+                .collect(Collectors.toSet());
+        int count = getInteractionsForInterpretation(leg).size();
+        for (var interaction : getInteractionsForInterpretation(previousCopy)) {
+            if (count >= 1000) break;
+            if (interaction.getIssueStats() == null || !billIds.add(interaction.getBillId())) continue;
+            interaction.setRating(Math.round(interaction.getIssueStats().getRating() * interaction.getJudgementWeight()));
+            leg.addBillInteraction(interaction);
+            count++;
+        }
+    }
+
 	public List<LegislatorBillInteraction> getInteractionsForInterpretation(Legislator leg)
 	{
 		return leg.getInteractions().stream()
@@ -267,14 +276,15 @@ Before printing the final line, internally verify the output is a JSON array of 
 	}
 	
 	/**
-	 * Returns true if the legislator meets all prerequisite criteria for interpretation (i.e. at least 100 bill interactions)
+	 * Returns true if the legislator meets all prerequisite criteria for interpretation (i.e. at least 30 bill interactions)
 	 * 
 	 * @param leg
 	 * @return
 	 */
 	public boolean meetsInterpretationPrereqs(Legislator leg)
 	{
-		return getInteractionsForInterpretation(leg).size() >= LEG_INTERP_MIN_INTERACTIONS;
+		return getInteractionsForInterpretation(leg).stream().filter(i -> i.getIssueStats() != null
+                && i.getIssueStats().hasStat(TrackedIssue.OverallBenefitToSociety)).count() >= LEG_INTERP_MIN_INTERACTIONS;
 	}
 	
 //	protected void interpretMostRecentInteractions(Legislator leg)
@@ -339,8 +349,9 @@ Before printing the final line, internally verify the output is a JSON array of 
 		DoubleIssueStats stats = new DoubleIssueStats();
 		for (var interaction : getInteractionsForInterpretation(leg)) {
 			if (interaction.getIssueStats() == null || !isEnactedBill(interaction.getBillId())) continue;
-			stats = stats.sum(interaction.getIssueStats().multiply(interaction.getJudgementWeight()),
-				Math.abs(interaction.getJudgementWeight()));
+			float weight = interaction.getJudgementWeight()
+				* (isHistoricalInteraction(leg, interaction) ? HISTORICAL_INTERACTION_WEIGHT : 1f);
+			stats = stats.sum(interaction.getIssueStats().multiply(weight), Math.abs(weight));
 		}
 		interp.setRealizedIssueStats(stats.getStats().isEmpty() ? null : stats.divideByTotalSummed().toIssueStats());
 	}
@@ -352,8 +363,10 @@ Before printing the final line, internally verify the output is a JSON array of 
 		{
 			if (interact.getIssueStats() != null)
 			{
-				val weightedStats = interact.getIssueStats().multiply(interact.getJudgementWeight());
-				stats = stats.sum(weightedStats, Math.abs(interact.getJudgementWeight()));
+				float weight = interact.getJudgementWeight()
+					* (isHistoricalInteraction(leg, interact) ? HISTORICAL_INTERACTION_WEIGHT : 1f);
+				val weightedStats = interact.getIssueStats().multiply(weight);
+				stats = stats.sum(weightedStats, Math.abs(weight));
 			}
 		}
 		
@@ -451,7 +464,7 @@ Before printing the final line, internally verify the output is a JSON array of 
 				.replace("{{namespace}}", ns)
 				.replace("{{structural_stats}}", structural_stats)
 				.replace("{{letterGrade}}", grade)
-				.replace("{{politicianType}}", leg.getTerms().last().getChamber() == LegislativeChamber.UPPER ? "Senator" : "House Representative")
+				.replace("{{politicianType}}", leg.getSessionTerm().getChamber() == LegislativeChamber.UPPER ? "Senator" : "House Representative")
 				.replace("{{fullName}}", leg.getName().getOfficial_full())
 				.replace("{{stats}}", stats.toString())
 				.replace("{{analysisType}}",
@@ -514,16 +527,19 @@ Before printing the final line, internally verify the output is a JSON array of 
 		
 		for (LegislatorBillInteraction interact : leg.getInteractions()) {
 			val billInterp = billService.getInterpretation(interact.getBillId()).orElse(null);
+			float historicalMultiplier = isHistoricalInteraction(leg, interact) ? HISTORICAL_INTERACTION_WEIGHT : 1f;
 			
 			if (interact.getIssueStats() != null) {
 				for (TrackedIssue issue : interact.getIssueStats().getStats().keySet()) {
 					val existing = impact.getOrDefault(issue, 0l);
-					impact.put(issue, existing + Long.valueOf(interact.getImpact(issue)));
+					int contribution = Math.round((float) Bill.calculateImpact(interact.getIssueStats().getStat(issue),
+						interact.getStatusProgress(), interact.getCosponsorPercent()) * interact.getJudgementWeight() * historicalMultiplier);
+					impact.put(issue, existing + contribution);
 				}
 				
 				if (interact.getRating() != null) {
-					rating += interact.getRating();
-					total++;
+					rating += interact.getRating() * historicalMultiplier;
+					total += historicalMultiplier;
 				}
 			}
 			
@@ -534,7 +550,7 @@ Before printing the final line, internally verify the output is a JSON array of 
 		
 		leg.setImpactMap(impact);
 		interp.setRating(total == 0 ? 0 : (int)Math.round(rating / total));
-		interp.setStructuralStats(structStats.divideByTotalSummed());
+		interp.setStructuralStats(interp.getIssueStats() == null ? null : structStats.divideByTotalSummed());
 	}
 	
 	public void recalculateAllLegislators() {
@@ -558,54 +574,33 @@ Before printing the final line, internally verify the output is a JSON array of 
 			
 			if (interpOp.isPresent()) { interp = interpOp.get(); }
 			
-			// If there exists an interp from a previous session, backfill the interactions until we get to 1000
-			// We're skipping data from the 118th congress because the data in the 118th congress used a very primitive prompt
-			if (!dataset.getCode().equals("119") && getInteractionsForInterpretation(leg).size() < 1000) {
-				// If an interpretation from this session doesn't exist, grab one from the previous session.
-				var previousDataset = data.getPreviousDataset(dataset);
-				
-				if (previousDataset != null) {
-					// Pull textual interpretation from previous session if ours doesn't exist
-					if (StringUtils.isBlank(interp.getShortExplain()) || StringUtils.isBlank(interp.getLongExplain())) {
-						val prevInterpOp = s3.get(LegislatorInterpretation.generateId(previousDataset.getNamespace(), previousDataset.getRegularSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
-						if (prevInterpOp.isPresent()) {
-							if (StringUtils.isBlank(interp.getCasualExplain()))
-								interp.setCasualExplain(prevInterpOp.get().getCasualExplain());
-							if (StringUtils.isBlank(interp.getShortExplain()))
-								interp.setShortExplain(prevInterpOp.get().getShortExplain());
-							if (StringUtils.isBlank(interp.getLongExplain())) {
-								interp.setLongExplain(prevInterpOp.get().getLongExplain());
-								interp.setLastUpdate(prevInterpOp.get().getLastUpdate());
-								interp.getMetadata().setDate(prevInterpOp.get().getMetadata().getDate());
-							}
-						}
-					}
-					
-					// Pull interactions from previous session if they've been interpreted
-					val prevLeg = previousDataset.get(Legislator.generateId(previousDataset.getNamespace(), previousDataset.getRegularSession().getCode(), leg.getCode()), Legislator.class).orElse(null);
-					if (prevLeg != null) {
-						val prevInteracts = getInteractionsForInterpretation(prevLeg).iterator();
-						while (getInteractionsForInterpretation(leg).size() < 1000 && prevInteracts.hasNext()) {
-							val interact = prevInteracts.next();
-							val interactInterpOp = billService.getInterpretation(interact.getBillId());
-							
-							if (interactInterpOp.isPresent() && interactInterpOp.get().getIssueStats() != null) {
-								var issueStats = interactInterpOp.get().getIssueStats();
-								interact.setRating(Math.round(issueStats.getRating() * interact.getJudgementWeight() * 0.9f));
-								interact.setIssueStats(issueStats);
-								leg.addBillInteraction(interact);
-							}
-						}
-					}
-				}
-			}
-			
+            var previousDataset = data == null ? null : data.getPreviousDataset(dataset);
+            if (!(dataset.getNamespace().equals(LegislativeNamespace.US_CONGRESS) && dataset.getCode().equals("119"))) {
+                backfillInteractionsFromPreviousSession(leg, previousDataset);
+                if (previousDataset != null && StringUtils.isBlank(interp.getLongExplain())) {
+                    var previous = s3.get(LegislatorInterpretation.generateId(previousDataset.getNamespace(),
+                            previousDataset.getRegularSession().getCode(), leg.getCode()), LegislatorInterpretation.class);
+                    if (previous.isPresent()) {
+                        var old = previous.get();
+                        interp.setLongExplain(old.getLongExplain());
+                        interp.setCasualExplain(old.getCasualExplain());
+                        interp.setShortExplain(old.getShortExplain());
+                        interp.setConstituency(old.getConstituency());
+                        interp.setCampaignFinance(old.getCampaignFinance());
+                        interp.setReferences(old.getReferences());
+                        interp.setReasoning(old.getReasoning());
+                        interp.setLastUpdate(old.getLastUpdate());
+                        interp.setMetadata(old.getMetadata());
+                    }
+                }
+            }
+
 			val interactions = getInteractionsForInterpretation(leg);
 			
 			interp.setHash(calculateInterpHashCode(leg));
 			
 			// We don't even calculate the stats unless there's at least LEG_INTERP_MIN_INTERACTIONS. We have some integrity around here.
-			if (interactions.size() >= LEG_INTERP_MIN_INTERACTIONS) {
+			if (meetsInterpretationPrereqs(leg)) {
 				DoubleIssueStats stats = calculateAgregateInteractionStats(leg);
 				interp.setIssueStats(stats.toIssueStats());
 				if (runtimeConfig.isIncludeRealizedSocietalImpact()) {

@@ -133,12 +133,13 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 		report = new BuildReport();
 		pressBillInterpGenerator.beginBuildRun();
 
-		for (var deployment : (referendumsOnly ? java.util.List.<us.poliscore.PoliscoreDataset.DeploymentConfig>of() : config.getSupportedDeployments())) {
+		for (var deployment : (referendumsOnly ? java.util.List.<us.poliscore.PoliscoreDataset.DeploymentConfig>of() : config.getConfiguredDeployments())) {
 			if (!Boolean.TRUE.equals(deployment.getBuild())) continue;
 
 			data.resetImports();
 			try {
-				val dataset = data.importDataset(deployment, report);
+				var dataset = data.importAvailableDataset(deployment, report).orElse(null);
+                if (dataset == null) continue;
 				data.importPreviousDataset(dataset, report);
 				processDataset(dataset);
 			} finally {
@@ -306,7 +307,11 @@ public class DatabaseBuilder implements QuarkusApplication, Callable<Integer>
 	@Override
     public int run(String... args) throws Exception {
 		try {
-			return new CommandLine(this).execute(args);
+			int exitCode = new CommandLine(this).execute(args);
+			// Maven's Quarkus/IDE launcher can discard the application's return code.
+			// Fail the hosting process here so shell scripts stop on a failed build.
+			if (exitCode != 0) System.exit(exitCode);
+			return exitCode;
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

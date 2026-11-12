@@ -66,7 +66,8 @@ public class USCDatasetProvider implements DatasetProvider {
 	
 	public static boolean memorizedRollCall = false;
 	
-	public static boolean updatedLegislatorFiles = false;
+    private java.util.List<USCLegislatorView> referenceLegislators;
+    private java.time.Instant referencesExpireAt = java.time.Instant.MIN;
 	
 	@ConfigProperty(name = "poliscore.usc.data")
     Optional<File> uscDataDir;
@@ -85,7 +86,8 @@ public class USCDatasetProvider implements DatasetProvider {
 	public PoliscoreDatasetIF importDataset(DeploymentConfig ref) {
 		val cses = CongressionalSession.fromYear(ref.getYear());
 		LegislativeSession session = new LegislativeSession(true, cses.getStartDate(), cses.getEndDate(), String.valueOf(cses.getNumber()), LegislativeNamespace.US_CONGRESS);
-		PoliscoreDataset dataset = new PoliscoreDataset(session, ref);
+		session.setAvailableFrom(ref.getAvailableFrom());
+        PoliscoreDataset dataset = new PoliscoreDataset(session, ref);
 		
 		updateUscLegislators();
 		importUSCLegislators(dataset);
@@ -100,21 +102,36 @@ public class USCDatasetProvider implements DatasetProvider {
 		congressionalImageFetcher.syncS3LegislatorImages(dataset);
 	}
 	
-	@SneakyThrows
-	private void updateUscLegislators()
-	{
-		if (updatedLegislatorFiles) return;
-		
-		Log.info("Updating USC legislators resource files");
-		
-		File dbRes = new File(Environment.getDeployedPath(), "../../databuilder/src/main/resources");
-		
-		FileUtils.copyURLToFile(URI.create("https://unitedstates.github.io/congress-legislators/legislators-current.json").toURL(), new File(dbRes, "legislators-current.json"));
-		FileUtils.copyURLToFile(URI.create("https://unitedstates.github.io/congress-legislators/legislators-historical.json").toURL(), new File(dbRes, "legislators-historical.json"));
-		
-		updatedLegislatorFiles = true;
-	}
-	
+    /** Refresh in memory: modifying source resources cannot refresh a running classpath. */
+    @SneakyThrows
+    public synchronized java.util.List<USCLegislatorView> referenceLegislators() {
+        if (referenceLegislators != null && java.time.Instant.now().isBefore(referencesExpireAt)) return referenceLegislators;
+        var mapper = PoliscoreUtil.getObjectMapper();
+        var result = new java.util.ArrayList<USCLegislatorView>();
+        for (String filename : java.util.List.of("legislators-current.json", "legislators-historical.json")) {
+            JsonNode root;
+            try {
+                root = fetchLegislatorReference(filename);
+            } catch (java.io.IOException unavailable) {
+                Log.warn("Using bundled congressional references for " + filename + ": " + unavailable.getMessage());
+                try (var input = USCDatasetProvider.class.getResourceAsStream("/" + filename)) { root = mapper.readTree(input); }
+            }
+            for (var node : root) result.add(mapper.treeToValue(node, USCLegislatorView.class));
+        }
+        referenceLegislators = java.util.List.copyOf(result);
+        referencesExpireAt = java.time.Instant.now().plus(java.time.Duration.ofHours(6));
+        return referenceLegislators;
+    }
+
+    protected JsonNode fetchLegislatorReference(String filename) throws java.io.IOException {
+        var connection = URI.create("https://unitedstates.github.io/congress-legislators/" + filename).toURL().openConnection();
+        connection.setConnectTimeout(10_000);
+        connection.setReadTimeout(20_000);
+        try (var input = connection.getInputStream()) { return PoliscoreUtil.getObjectMapper().readTree(input); }
+    }
+
+    private void updateUscLegislators() { referenceLegislators(); }
+
 //	@Override
 //	public LegislativeSession getPreviousRegularSession(LegislativeSession current) {
 //		val cses = CongressionalSession.of(Integer.valueOf(current.getCode()) - 1);
@@ -126,23 +143,15 @@ public class USCDatasetProvider implements DatasetProvider {
 	{
 		if (dataset.count(Legislator.class) > 0) return;
 		
-		importUSCLegislator(dataset, "/legislators-current.json");
-		importUSCLegislator(dataset, "/legislators-historical.json");
+		for (var view : referenceLegislators()) importUSCLegislator(dataset, view);
 		
 		Log.info("Imported " + dataset.count(Legislator.class) + " politicians");
 	}
 
-	private void importUSCLegislator(PoliscoreDatasetIF dataset, String file) throws IOException, JsonProcessingException {
-		ObjectMapper mapper = PoliscoreUtil.getObjectMapper();
-		JsonNode jn = mapper.readTree(LegislatorService.class.getResourceAsStream(file));
-		Iterator<JsonNode> it = jn.elements();
-		while (it.hasNext())
-		{
-			USCLegislatorView view = mapper.treeToValue(it.next(), USCLegislatorView.class);
-			
+	private void importUSCLegislator(PoliscoreDatasetIF dataset, USCLegislatorView view) {
 			// Skip legislators with terms in historical territories
 	        if (view.getTerms().stream().anyMatch(term -> Set.of("DK", "OL", "PI").contains(term.getState().toUpperCase()))) {
-	            continue;
+	            return;
 	        }
 			
 			Legislator leg = new Legislator();
@@ -159,7 +168,6 @@ public class USCDatasetProvider implements DatasetProvider {
 			{
 				dataset.put(leg);
 			}
-		}
 	}
 
 	static boolean isMemberOfCongressionalSession(USCLegislatorView view, LegislativeSession session) {

@@ -12,5 +12,12 @@
     
     { "namespace": "us/tx",       "year": 2026, "multiplier": 2.0, "build": true },
     
-    { "namespace": "us/ga",       "year": 2026, "multiplier": 2.0, "build": true }
+    { "namespace": "us/ga",       "year": 2026, "multiplier": 2.0, "build": true },
+
+    { "namespace": "us/congress", "year": 2028, "multiplier": 1.7, "build": true, "optional": true, "availableFrom": "2027-01-03" },
+    { "namespace": "us/co",       "year": 2027, "multiplier": 2.0, "build": true, "optional": true, "availableFrom": "2027-01-11" },
+    { "namespace": "us/az",       "year": 2027, "multiplier": 2.0, "build": true, "optional": true, "availableFrom": "2027-01-11" },
+    { "namespace": "us/nm",       "year": 2027, "multiplier": 2.0, "build": true, "optional": true, "availableFrom": "2027-01-19" },
+    { "namespace": "us/tx",       "year": 2028, "multiplier": 2.0, "build": true, "optional": true, "availableFrom": "2027-01-12" },
+    { "namespace": "us/ga",       "year": 2028, "multiplier": 2.0, "build": true, "optional": true, "availableFrom": "2027-01-11" }
 ]

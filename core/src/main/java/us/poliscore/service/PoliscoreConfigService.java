@@ -28,8 +28,13 @@ public class PoliscoreConfigService {
   }
 
   public List<DeploymentConfig> getSupportedDeployments() {
-    return supportedDeployments;
+    return supportedDeployments.stream()
+        .filter(ref -> !ref.isOptional() || SessionInfoService.getSessions().stream().anyMatch(session ->
+            session.isRegular() && session.getNamespace().equals(ref.getNamespace()) && session.isYearWithin(ref.getYear())))
+        .toList();
   }
+
+  public List<DeploymentConfig> getConfiguredDeployments() { return supportedDeployments; }
 
   private List<DeploymentConfig> loadDeploymentsFromJson() {
     val mapper = new ObjectMapper();
@@ -64,10 +69,11 @@ public class PoliscoreConfigService {
     LegislativeNamespace namespace =
         LegislativeNamespace.of(raw.namespace());
 
+    if (raw.availableFrom() != null) java.time.LocalDate.parse(raw.availableFrom());
     float multiplier = raw.multiplier() != null ? raw.multiplier() : 1.0f;
     Boolean build = Boolean.TRUE.equals(raw.build());
 
-    return new DeploymentConfig(namespace, raw.year(), multiplier, build);
+    return new DeploymentConfig(namespace, raw.year(), multiplier, build, Boolean.TRUE.equals(raw.optional()), raw.availableFrom());
   }
 
   /**
@@ -78,6 +84,8 @@ public class PoliscoreConfigService {
       String namespace,
       Integer year,
       Float multiplier,
-      Boolean build
+      Boolean build,
+      Boolean optional,
+      String availableFrom
   ) {}
 }

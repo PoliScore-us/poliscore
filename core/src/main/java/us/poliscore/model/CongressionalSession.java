@@ -1,50 +1,41 @@
 package us.poliscore.model;
 
 import java.time.LocalDate;
-import java.util.Arrays;
+import lombok.Value;
 
-import lombok.Getter;
+/** Logical dataset years stay calendar-aligned; constitutional term dates are separate. */
+@Value
+public class CongressionalSession {
+    public static final CongressionalSession S117 = of(117);
+    public static final CongressionalSession S118 = of(118);
+    public static final CongressionalSession S119 = of(119);
+    public static final CongressionalSession S120 = of(120);
 
-@Getter
-public enum CongressionalSession {
-	S117(117, LocalDate.of(2021, 1, 1), LocalDate.of(2022, 12, 31)),
-	S118(118, LocalDate.of(2023, 1, 1), LocalDate.of(2024, 12, 31)),
-	S119(119, LocalDate.of(2025, 1, 1), LocalDate.of(2026, 12, 31));
-	
-	private int number;
-	
-	private LocalDate startDate;
-	
-	private LocalDate endDate;
-	
-	private CongressionalSession(int number, LocalDate startDate, LocalDate endDate) {
-		this.number = number;
-		this.startDate = startDate;
-		this.endDate = endDate;
-	}
-	
-	public int getStartYear() {
-		return startDate.getYear();
-	}
-	
-	/**
-	 * Returns an 'effective' year, not a precise year.
-	 */
-	public int getEndYear() {
-		return endDate.getYear()-1;
-	}
-	
-	public static CongressionalSession of(Integer session)
-	{
-		return Arrays.asList(CongressionalSession.values()).stream().filter(s -> Integer.valueOf(s.getNumber()).equals(session)).findAny().orElseThrow();
-	}
-	
-	public static CongressionalSession fromYear(Integer year)
-	{
-		return of((int) Math.floor((year - 1789) / 2) + 1);
-	}
+    int number;
+    LocalDate startDate;
+    LocalDate endDate;
 
-	public boolean isOver() {
-		return LocalDate.now().isAfter(endDate);
-	}
+    private CongressionalSession(int number) {
+        if (number < 1 || number > 4105) throw new IllegalArgumentException("Invalid Congress: " + number);
+        this.number = number;
+        int year = 1789 + 2 * (number - 1);
+        this.startDate = LocalDate.of(year, 1, 1);
+        this.endDate = LocalDate.of(year + 1, 12, 31);
+    }
+
+    public static CongressionalSession of(Integer number) {
+        if (number == null) throw new IllegalArgumentException("Congress is required");
+        return new CongressionalSession(number);
+    }
+
+    public static CongressionalSession fromYear(Integer year) {
+        if (year == null || year < 1789) throw new IllegalArgumentException("Invalid congressional year: " + year);
+        return of(Math.floorDiv(year - 1789, 2) + 1);
+    }
+
+    public int getStartYear() { return startDate.getYear(); }
+    public int getEndYear() { return endDate.getYear(); }
+    public LocalDate getTermStartDate() { return LocalDate.of(getStartYear(), 1, 3); }
+    public LocalDate getTermEndDate() { return LocalDate.of(getEndYear() + 1, 1, 3); }
+    public boolean isOver() { return !LocalDate.now().isBefore(getTermEndDate()); }
 }

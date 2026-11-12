@@ -199,6 +199,7 @@ public abstract class LegislatorBillInteraction implements Comparable<Legislator
 	
 	public int getImpact(TrackedIssue issue)
 	{
+		if (issueStats == null) return 0;
 		return Math.round( (float)Bill.calculateImpact(issueStats.getStat(issue), statusProgress, cosponsorPercent) * getJudgementWeight() );
 	}
 	

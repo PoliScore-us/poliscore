@@ -46,6 +46,7 @@ import us.poliscore.images.CongressionalLegislatorImageFetcher;
 import us.poliscore.images.StateLegislatorImageFetcher;
 import us.poliscore.legiscan.LegiscanVoteConverter;
 import us.poliscore.legiscan.cache.CachedLegiscanDatasetResult;
+import us.poliscore.legiscan.exception.LegiscanException;
 import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.legiscan.view.LegiscanBillTextView;
 import us.poliscore.legiscan.view.LegiscanBillType;
@@ -117,6 +118,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	@Inject protected PoliscoreDatasetAugmentor augmentor;
 	@Inject protected StateLegislatorImageFetcher stateImageFetcher;
 	@Inject protected CongressionalLegislatorImageFetcher congressionalImageFetcher;
+    @Inject protected USCDatasetProvider uscReferences;
 	
 	@Inject private LocalCachedS3Service s3;
 	
@@ -137,7 +139,17 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		clearImportState();
 		try {
 			var state = namespaceToState(ref.getNamespace());
-			val views = legiscan.getDatasetList(state, ref.getYear());
+			List<LegiscanDatasetView> views;
+			try {
+				views = legiscan.getDatasetList(state, ref.getYear());
+			} catch (LegiscanException failure) {
+				// The client throws for an empty listing instead of returning an empty list.
+				if (!"Alert response returned from legiscan [Empty result set]".equals(failure.getMessage())) throw failure;
+				throw new DatasetUnavailableException("No regular session for " + ref.getNamespace() + " " + ref.getYear(), failure);
+			}
+            if (views == null || views.stream().noneMatch(v -> !v.isSpecial())) {
+                throw new DatasetUnavailableException("No regular session for " + ref.getNamespace() + " " + ref.getYear());
+            }
 
 			PoliscoreDatasetIF dataset;
 
@@ -179,6 +191,12 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 
 	    var session = buildSession(!view.isSpecial(), cached.getDataset().getSessionId(), cached.getDataset().getState(), cached.getDataset().getYearStart(), cached.getDataset().getYearEnd());
 
+        if (ref.isOptional() && cached.getPeople().isEmpty()) {
+            throw new DatasetUnavailableException("Roster is not yet available for " + session.getKey());
+        }
+        session.setAvailableFrom(ref.getAvailableFrom());
+        us.poliscore.service.SessionInfoService.registerSessions(java.util.List.of(session));
+        var importFailures = new java.util.ArrayList<RuntimeException>();
 	    PoliscoreDataset dataset = new PoliscoreDataset(session, ref);
 	    if (regularDataset == null) {
 	        regularDataset = dataset;
@@ -189,8 +207,11 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    		importLegislator(person, regularDataset);
 	    	} catch (RuntimeException e) {
 				logger.error("Error occurred while importing legislator. session={}, peopleId={}, bioguideId={}, name={}", session.getDescription(), person.getPeopleId(), person.getBioguideId(), person.getName(), e);
+                importFailures.add(e);
 	    	}
 	    }
+
+        failIncompleteImport(session, importFailures, report);
 
 	    if (regularDataset == dataset) {
 	        augmentor.augmentLegislators(dataset);
@@ -201,6 +222,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    		importBill(bill, dataset, regularDataset);
 	    	} catch (RuntimeException e) {
 	    		logger.error("Error occurred while importing bill. session={}, legiscanId={}, billType={}, billNumber={}", session.getDescription(), bill.getBillId(), bill.getBillType(), bill.getBillNumber(), e);
+                importFailures.add(e);
 	    	}
 	    }
 
@@ -209,12 +231,24 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    		importRollCall(vote, dataset, regularDataset);
 	    	} catch (RuntimeException e) {
 	    		logger.error("Error occurred while importing roll call. session={}, legiscanId={}", session.getDescription(), vote.getRollCallId(), e);
+                importFailures.add(e);
 	    	}
 	    }
 
+        failIncompleteImport(session, importFailures, report);
 	    return dataset;
 	}
 	
+    private void failIncompleteImport(LegislativeSession session, java.util.List<RuntimeException> importFailures, BuildReport report) {
+        if (!importFailures.isEmpty()) {
+            var failure = new IllegalStateException("Incomplete session import: " + session.getKey()
+                    + " (" + importFailures.size() + " failures); refusing to publish partial data");
+            importFailures.forEach(failure::addSuppressed);
+            if (report != null) report.fatal(failure);
+            throw failure;
+        }
+    }
+
 	public static LegiscanState namespaceToState(LegislativeNamespace namespace) {
 		if (namespace.equals(LegislativeNamespace.US_CONGRESS))
 			return LegiscanState.CONGRESS;
@@ -568,18 +602,13 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	}
 	
 	protected void importVote(LegiscanRollCallView rollCall, LegiscanVoteDetailView vote, PoliscoreDataset dataset, PoliscoreDataset regularDataset) {
-		Legislator leg = legiscanIdToLegislator.get(vote.getPeopleId());
-		if (leg == null) {
-			Log.warn("Could not find legislator with people id " + vote.getPeopleId());
-			return;
-		}
-		
-		Bill bill = legiscanIdToBill.get(rollCall.getBillId());
-		if (bill == null) {
-			Log.warn("Could not find bill with id " + rollCall.getBillId());
-			return;
-		}
-		
+        Bill bill = legiscanIdToBill.get(rollCall.getBillId());
+        // Bills without usable history are deliberately excluded by importBill().
+        // Their roll calls must not turn an otherwise complete roster into a fatal build.
+        if (bill == null) return;
+        Legislator leg = legiscanIdToLegislator.get(vote.getPeopleId());
+        if (leg == null) throw new IllegalStateException("Could not find legislator with people id " + vote.getPeopleId());
+
 		LegislatorBillVote interaction = LegiscanVoteConverter.convert(rollCall, vote, leg, bill);
 
 		if (interaction != null)
@@ -652,6 +681,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 				existingLeg.setOfficialUrl(leg.getOfficialUrl());
 			
 			existingLeg.getTerms().addAll(leg.getTerms());
+            legiscanIdToLegislator.put(leg.getLegiscanId(), existingLeg);
 			return;
 		}
 		
@@ -704,26 +734,21 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 		return a.equalsIgnoreCase(b);
 	}
 
-	@SneakyThrows
-	private List<USCLegislatorView> congressionalLegislators() {
-		if (congressionalLegislatorLookup != null) return congressionalLegislatorLookup;
-
-		List<USCLegislatorView> views = new ArrayList<>();
-		ObjectMapper mapper = PoliscoreUtil.getObjectMapper();
-		for (String file : List.of("/legislators-current.json", "/legislators-historical.json")) {
-			JsonNode root = mapper.readTree(LegislatorService.class.getResourceAsStream(file));
-			root.elements().forEachRemaining(node -> {
-				try {
-					views.add(mapper.treeToValue(node, USCLegislatorView.class));
-				} catch (Exception e) {
-					throw new RuntimeException(e);
-				}
-			});
-		}
-
-		congressionalLegislatorLookup = views;
-		return congressionalLegislatorLookup;
-	}
+    @SneakyThrows
+    private List<USCLegislatorView> congressionalLegislators() {
+        if (congressionalLegislatorLookup != null) return congressionalLegislatorLookup;
+        if (uscReferences != null) return uscReferences.referenceLegislators();
+        // Standalone/unit-test construction can use the bundled reference fixture.
+        List<USCLegislatorView> views = new ArrayList<>();
+        var mapper = PoliscoreUtil.getObjectMapper();
+        for (String file : List.of("/legislators-current.json", "/legislators-historical.json")) {
+            try (var input = LegislatorService.class.getResourceAsStream(file)) {
+                for (var node : mapper.readTree(input)) views.add(mapper.treeToValue(node, USCLegislatorView.class));
+            }
+        }
+        congressionalLegislatorLookup = views;
+        return views;
+    }
 
 
 	@Override

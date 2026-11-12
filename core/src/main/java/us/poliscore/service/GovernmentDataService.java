@@ -40,8 +40,8 @@ public class GovernmentDataService {
 	public synchronized List<PoliscoreDatasetIF> importAllDatasets(BuildReport report) {
 		if (didImportDatasets) return importedDatasets;
 		
-		for (val cfg : config.getSupportedDeployments()) {
-			importDataset(cfg, report);
+		for (val cfg : config.getConfiguredDeployments()) {
+			importAvailableDataset(cfg, report);
 		}
 		
 		didImportDatasets = true;
@@ -79,6 +79,18 @@ public class GovernmentDataService {
 		return importDataset(new DeploymentConfig(namespace, year));
 	}
 	
+    public Optional<PoliscoreDatasetIF> importAvailableDataset(DeploymentConfig ref, BuildReport report) {
+        try { return Optional.of(importDataset(ref, report)); }
+        catch (us.poliscore.dataset.DatasetUnavailableException unavailable) {
+            boolean published = SessionInfoService.getSessions().stream().anyMatch(session -> session.isRegular()
+                    && session.getNamespace().equals(ref.getNamespace()) && session.isYearWithin(ref.getYear()));
+            if (!ref.isOptional() || published) throw unavailable;
+            LOGGER.info("Skipping optional dataset {} {}: {}", ref.getNamespace(), ref.getYear(), unavailable.getMessage());
+            if (report != null) report.skipOptionalDataset(ref.getNamespace() + " " + ref.getYear());
+            return Optional.empty();
+        }
+    }
+
 	public PoliscoreDatasetIF importDataset(DeploymentConfig ref) {
 		return importDataset(ref, null);
 	}
@@ -94,6 +106,7 @@ public class GovernmentDataService {
 		var dataset = provider.importDataset(ref, report);
 		
 		importedDatasets.add(dataset);
+        SessionInfoService.registerSessions(SessionInfoService.sessionsForDatasets(List.of(dataset)));
 		
 		return dataset;
 	}
@@ -173,7 +186,7 @@ public class GovernmentDataService {
 		PoliscoreDatasetIF mostRecent = null;
 		
 		for (val dataset : importedDatasets) {
-			if (dataset.getNamespace().equals(namespace) && (mostRecent == null || dataset.getEndYear() > mostRecent.getEndYear()))
+			if (dataset.getNamespace().equals(namespace) && !dataset.getRegularSession().getActivationDate().isAfter(java.time.LocalDate.now()) && (mostRecent == null || dataset.getEndYear() > mostRecent.getEndYear()))
 				mostRecent = dataset;
 		}
 		

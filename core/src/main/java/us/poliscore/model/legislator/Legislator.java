@@ -190,7 +190,8 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 	@JsonIgnore
 	public Party getParty()
 	{
-		return this.terms.last().getParty();
+		var term = getSessionTerm();
+        return term == null ? null : term.getParty();
 	}
 	
 	public void setBirthday(LocalDate date) {
@@ -199,19 +200,34 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 		this.birthday = date;
 	}
 	
-//	@JsonIgnore
-//	@DynamoDbIgnore
-//	public LegislativeTerm getCurrentTerm()
-//	{
-//		if (this.terms == null || this.terms.size() == 0) return null;
-//		
-//		return this.terms.stream().filter(t -> t.getStartDate().isBefore(session.getEndDate()) && t.getEndDate().isAfter(session.getStartDate())).findFirst().orElse(null);
-//	}
-	
+    @JsonIgnore
+    @software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore
+    public LegislativeTerm getSessionTerm() {
+        if (terms == null || terms.isEmpty()) return null;
+        LegislativeSession session;
+        try { session = us.poliscore.service.SessionInfoService.sessionForId(getId()); }
+        catch (java.util.NoSuchElementException missing) {
+            if (!LegislativeNamespace.US_CONGRESS.equals(getNamespace())) return null;
+            var congress = us.poliscore.model.CongressionalSession.of(Integer.parseInt(getSessionCode()));
+            session = new LegislativeSession(true, congress.getStartDate(), congress.getEndDate(), getSessionCode(), getNamespace());
+        }
+        return termForSession(session);
+    }
+
+    public LegislativeTerm termForSession(LegislativeSession session) {
+        if (terms == null || session == null) return null;
+        return terms.stream()
+                .filter(t -> t.getStartDate() != null && t.getEndDate() != null)
+                .filter(t -> t.getStartDate().isBefore(session.getTermEndExclusive())
+                        && t.getEndDate().isAfter(session.getActivationDate()))
+                .max(java.util.Comparator.comparing(LegislativeTerm::getStartDate)
+                        .thenComparing(LegislativeTerm::getEndDate)).orElse(null);
+    }
+
 	public boolean isMemberOfSession(LegislativeSession session) {
 		if (this.terms == null || this.terms.size() == 0 || session == null) return false;
 		
-		return this.terms.stream().anyMatch(t -> t.getStartDate().isBefore(session.getEndDate()) && t.getEndDate().isAfter(session.getStartDate()));
+		return termForSession(session) != null;
 		
 //		return this.terms.stream().anyMatch(t -> t.getStartDate().equals(session.getStartDate() && t.getEndDate().equals(session.getEndDate()));
 	}
@@ -239,7 +255,7 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
 //	@DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_HOT_INDEX }) public int getHot() { return (int)(getImpactAbs() * Math.exp(-0.02 * ChronoUnit.DAYS.between(introducedDate, LocalDate.now()))); }
 //	public void setHot(int hot) { }
 	
-	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_LOCATION_INDEX }) public String getLocation() { return this.terms.last().getState() + (this.terms.last().getDistrict() == null ? "" : "/" + this.terms.last().getDistrict() ); }
+	@JsonIgnore @DynamoDbSecondarySortKey(indexNames = { Persistable.OBJECT_BY_LOCATION_INDEX }) public String getLocation() { var term = getSessionTerm(); return term == null ? null : term.getState() + (term.getDistrict() == null ? "" : "/" + term.getDistrict()); }
 	@JsonIgnore public void setLocation(String location) { }
 	
 	public Long getImpact(TrackedIssue issue)

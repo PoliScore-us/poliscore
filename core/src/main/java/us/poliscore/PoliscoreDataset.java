@@ -38,7 +38,16 @@ public class PoliscoreDataset extends MemoryObjectStore implements PoliscoreData
 		
 		protected float multiplier = 1.0f;
 		
-		protected Boolean build;
+        protected Boolean build;
+        protected boolean optional;
+        protected String availableFrom;
+
+        public DeploymentConfig(LegislativeNamespace namespace, Integer year, float multiplier, Boolean build) {
+            this(namespace, year, multiplier, build, false, null);
+        }
+        public DeploymentConfig(LegislativeNamespace namespace, Integer year, float multiplier, Boolean build, boolean optional) {
+            this(namespace, year, multiplier, build, optional, null);
+        }
 	}
 	
 	@NonNull
