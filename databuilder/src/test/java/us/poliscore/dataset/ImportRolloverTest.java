@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import us.poliscore.PoliscoreDataset.DeploymentConfig;
 import us.poliscore.model.*;
+import us.poliscore.model.legislator.Legislator;
 import us.poliscore.legiscan.service.CachedLegiscanService;
 import us.poliscore.legiscan.exception.LegiscanException;
 import us.poliscore.legiscan.cache.CachedLegiscanDatasetResult;
@@ -16,8 +17,56 @@ import us.poliscore.PoliscoreUtil;
 import us.poliscore.PoliscoreDataset;
 import us.poliscore.dataset.augmentation.PoliscoreDatasetAugmentor;
 import us.poliscore.service.GovernmentDataService;
+import us.poliscore.service.SessionInfoService;
 
 class ImportRolloverTest {
+    @ParameterizedTest
+    @CsvSource({"true,false,0", "true,false,", "true,true,0", "false,false,0", "false,true,0", "true,false,7", "true,false,2"})
+    void brokenMembersDoNotBlockHealthyRecords(boolean optional,boolean published,Integer partyId) throws Exception {
+        boolean ready=Objects.equals(partyId,LegiscanParty.REPUBLICAN.getValue());
+        var sessions=SessionInfoService.getSessions();
+        var service=new GovernmentDataService();service.resetImports();
+        var view=new LegiscanDatasetView();view.setStateId(43);view.setSessionId(2278);view.setYearStart(2027);view.setYearEnd(2028);
+        var config=new DeploymentConfig(LegislativeNamespace.US_TEXAS,2028,1f,true,optional);
+        var cached=new CachedLegiscanDatasetResult(null,view,PoliscoreUtil.getObjectMapper());
+        for(int id:new int[]{26687,26688,26689}){
+            var person=new LegiscanPeopleView();person.setPeopleId(id);person.setStateId(43);
+            person.setName(id==26687?"Brett Ligon":"Taylor Rehmet");
+            person.setFirstName("Test");person.setLastName("Member");
+            person.setRoleId(LegiscanRole.SENATOR.getValue());person.setDistrict("SD-001");
+            // A synthetic completed roster; this does not assert either person's actual party.
+            person.setPartyId(id==26689?Integer.valueOf(LegiscanParty.REPUBLICAN.getValue()):partyId);
+            cached.getPeople().put(id,person);
+        }
+        var provider=new LegiscanDatasetProvider();
+        provider.legiscan=new CachedLegiscanService("test",PoliscoreUtil.getObjectMapper(),null,1){
+            @Override public List<LegiscanDatasetView> getDatasetList(LegiscanState state,Integer year){return List.of(view);}
+            @Override public CachedLegiscanDatasetResult cacheDataset(LegiscanDatasetView input){return cached;}
+        };
+        provider.augmentor=new PoliscoreDatasetAugmentor(){@Override public void augmentLegislators(PoliscoreDataset input){}};
+        var field=GovernmentDataService.class.getDeclaredField("provider");field.setAccessible(true);field.set(service,provider);
+        var report=new BuildReport();
+        try{
+            SessionInfoService.buildSessions(List.of());
+            if(published)SessionInfoService.registerSessions(List.of(LegiscanDatasetProvider.buildSession(true,2278,LegiscanState.TEXAS,2027,2028)));
+            var dataset=service.importAvailableDataset(config,report).orElseThrow();
+            assertEquals(ready?3:1,dataset.query(Legislator.class).size());
+            assertTrue(dataset.exists("LEG/us/tx/2278/26689",Legislator.class));
+            assertEquals(ready,dataset.exists("LEG/us/tx/2278/26687",Legislator.class));
+            assertEquals(ready,dataset.exists("LEG/us/tx/2278/26688",Legislator.class));
+            assertEquals(ready?0:2,report.getImportWarnings().size());
+            assertFalse(report.hasRecovered());assertFalse(report.hasFatal());
+            assertTrue(report.getSkippedOptionalDatasets().isEmpty());
+            if(!ready){
+                assertTrue(report.toString().contains("Import warnings (skipped records)"));
+                assertTrue(report.toString().contains("peopleId=26687"));
+                assertFalse(report.toString().contains("RECOVERED ERROR"));
+            }
+        }finally{
+            field=SessionInfoService.class.getDeclaredField("cachedSessions");field.setAccessible(true);field.set(null,sessions);
+            service.resetImports();
+        }
+    }
     @Test void absentDatasetHasAnExplicitRecoverableOutcome() {
         var provider=new LegiscanDatasetProvider();
         provider.legiscan=new CachedLegiscanService("test",PoliscoreUtil.getObjectMapper(),null,1){@Override public List<LegiscanDatasetView> getDatasetList(LegiscanState state,Integer year){return List.of();}};
@@ -75,10 +124,11 @@ class ImportRolloverTest {
         assertEquals("120",session.getCode());
         assertEquals(2028,session.getEndDate().getYear());
     }
-    @Test void malformedMembersMakeTheBuildFailRatherThanPublishingAPartialRoster() {
+    @Test void anEntirelyUnusableRequiredRosterStillFails() {
         var view=new LegiscanDatasetView();view.setStateId(6);view.setSessionId(90001);view.setYearStart(2027);view.setYearEnd(2027);
         var cached=new CachedLegiscanDatasetResult(null,view,PoliscoreUtil.getObjectMapper());
         var malformed=new LegiscanPeopleView();malformed.setName("Malformed member");malformed.setPeopleId(1);
+        malformed.setPartyId(LegiscanParty.REPUBLICAN.getValue());
         cached.getPeople().put(1,malformed);
         var provider=new LegiscanDatasetProvider();
         provider.legiscan=new CachedLegiscanService("test",PoliscoreUtil.getObjectMapper(),null,1){
@@ -87,8 +137,8 @@ class ImportRolloverTest {
         };
         provider.augmentor=new PoliscoreDatasetAugmentor(){@Override public void augmentLegislators(PoliscoreDataset input){}};
         var report=new BuildReport();
-        assertThrows(IllegalStateException.class,()->provider.importDataset(new DeploymentConfig(LegislativeNamespace.US_COLORADO,2027,1f,true,true),report));
+        assertThrows(IllegalStateException.class,()->provider.importDataset(new DeploymentConfig(LegislativeNamespace.US_COLORADO,2027,1f,true,false),report));
         assertTrue(report.hasBlockingFatal());
-        assertTrue(report.getFatalErrors().getFirst().getMessage().contains("Incomplete session import"));
+        assertTrue(report.getFatalErrors().getFirst().getMessage().contains("no usable legislators"));
     }
 }

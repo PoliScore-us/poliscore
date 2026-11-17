@@ -49,6 +49,25 @@ class LegislativeRolloverTest {
         assertEquals("co-old",SessionInfoService.latestAvailableSession(LegislativeNamespace.US_COLORADO,LocalDate.of(2027,1,10)).getCode());
         assertEquals("co-next",SessionInfoService.latestAvailableSession(LegislativeNamespace.US_COLORADO,LocalDate.of(2027,1,11)).getCode());
     }
+    @Test void texasPrefilingActivatesPagesWithoutExpandingSessionMembership() {
+        var next = SessionInfoService.lookupRegularSession(LegislativeNamespace.US_TEXAS, 2028);
+        assertEquals("2278", next.getCode());
+        assertEquals(LocalDate.of(2026,11,9), next.getActivationDate());
+        assertEquals(LocalDate.of(2027,1,1), next.getTermStartDate());
+        assertEquals("2160", SessionInfoService.latestAvailableSession(LegislativeNamespace.US_TEXAS,LocalDate.of(2026,11,8)).getCode());
+        assertEquals(next, SessionInfoService.latestAvailableSession(LegislativeNamespace.US_TEXAS,LocalDate.of(2026,11,16)));
+        assertEquals(next, SessionInfoService.lookupRegularSession(LegislativeNamespace.US_TEXAS,2027));
+        var leg = new Legislator(); leg.setId("LEG/us/tx/2278/test");
+        leg.getTerms().add(new LegislativeTerm(LocalDate.of(2025,1,1),LocalDate.of(2027,1,1),LegiscanState.TEXAS,"1",Party.DEMOCRAT,LegislativeChamber.LOWER));
+        assertFalse(leg.isMemberOfSession(next), "Prefiling must not make an outgoing-only term a member of the next session");
+        leg.getTerms().add(new LegislativeTerm(LocalDate.of(2027,1,1),LocalDate.of(2029,1,1),LegiscanState.TEXAS,"2",Party.REPUBLICAN,LegislativeChamber.UPPER));
+        assertTrue(leg.isMemberOfSession(next));
+        assertEquals(Party.REPUBLICAN,leg.getSessionTerm().getParty());
+        var old = List.of("LEG/us/tx/2160/test","Member");
+        var current = List.of("LEG/us/tx/2278/test","Member");
+        var departed = List.of("LEG/us/tx/2160/departed","Departed");
+        assertEquals(Set.of(current,departed), new HashSet<>(LegislatorIndex.canonicalRows(List.of(old,current,departed),LocalDate.of(2026,11,16))));
+    }
     @Test void futureTermsCannotChangeHistoricalPartyChamberOrLocation() {
         SessionInfoService.registerSessions(List.of(session(119),session(120)));
         var leg = new Legislator(); leg.setId("LEG/us/congress/119/test");

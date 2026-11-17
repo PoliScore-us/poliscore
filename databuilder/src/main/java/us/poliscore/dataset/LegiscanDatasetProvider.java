@@ -195,7 +195,6 @@ public class LegiscanDatasetProvider implements DatasetProvider {
             throw new DatasetUnavailableException("Roster is not yet available for " + session.getKey());
         }
         session.setAvailableFrom(ref.getAvailableFrom());
-        us.poliscore.service.SessionInfoService.registerSessions(java.util.List.of(session));
         var importFailures = new java.util.ArrayList<RuntimeException>();
 	    PoliscoreDataset dataset = new PoliscoreDataset(session, ref);
 	    if (regularDataset == null) {
@@ -206,12 +205,21 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    	try {
 	    		importLegislator(person, regularDataset);
 	    	} catch (RuntimeException e) {
-				logger.error("Error occurred while importing legislator. session={}, peopleId={}, bioguideId={}, name={}", session.getDescription(), person.getPeopleId(), person.getBioguideId(), person.getName(), e);
+                recordImportWarning(report, "Skipped legislator: session=" + session.getKey()
+                        + ", peopleId=" + person.getPeopleId() + ", name=" + person.getName(), e);
                 importFailures.add(e);
 	    	}
 	    }
 
-        failIncompleteImport(session, importFailures, report);
+        if (regularDataset.query(Legislator.class).isEmpty()) {
+            if (ref.isOptional()) {
+                throw new DatasetUnavailableException("No usable roster is available for " + session.getKey());
+            }
+            failUnusableImport(session, "no usable legislators", importFailures, report);
+        }
+        // Register only after a usable roster exists, so pending optional sessions stay pending.
+        us.poliscore.service.SessionInfoService.registerSessions(java.util.List.of(session));
+        importFailures.clear();
 
 	    if (regularDataset == dataset) {
 	        augmentor.augmentLegislators(dataset);
@@ -221,32 +229,38 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	    	try {
 	    		importBill(bill, dataset, regularDataset);
 	    	} catch (RuntimeException e) {
-	    		logger.error("Error occurred while importing bill. session={}, legiscanId={}, billType={}, billNumber={}", session.getDescription(), bill.getBillId(), bill.getBillType(), bill.getBillNumber(), e);
+                recordImportWarning(report, "Skipped bill: session=" + session.getKey()
+                        + ", legiscanId=" + (bill == null ? null : bill.getBillId())
+                        + ", billNumber=" + (bill == null ? null : bill.getBillNumber()), e);
                 importFailures.add(e);
 	    	}
 	    }
 
+        if (!importFailures.isEmpty() && dataset.query(Bill.class).isEmpty()) {
+            failUnusableImport(session, "no usable bills", importFailures, report);
+        }
 	    for (var vote : cached.getVotes().values()) {
 	    	try {
-	    		importRollCall(vote, dataset, regularDataset);
+                importRollCall(vote, dataset, regularDataset, report);
 	    	} catch (RuntimeException e) {
-	    		logger.error("Error occurred while importing roll call. session={}, legiscanId={}", session.getDescription(), vote.getRollCallId(), e);
-                importFailures.add(e);
+                recordImportWarning(report, "Skipped roll call: session=" + session.getKey()
+                        + ", legiscanId=" + (vote == null ? null : vote.getRollCallId()), e);
 	    	}
 	    }
 
-        failIncompleteImport(session, importFailures, report);
 	    return dataset;
 	}
 	
-    private void failIncompleteImport(LegislativeSession session, java.util.List<RuntimeException> importFailures, BuildReport report) {
-        if (!importFailures.isEmpty()) {
-            var failure = new IllegalStateException("Incomplete session import: " + session.getKey()
-                    + " (" + importFailures.size() + " failures); refusing to publish partial data");
-            importFailures.forEach(failure::addSuppressed);
-            if (report != null) report.fatal(failure);
-            throw failure;
-        }
+    private void recordImportWarning(BuildReport report, String message, RuntimeException failure) {
+        logger.warn(message, failure);
+        if (report != null) report.getImportWarnings().add(message + ": " + failure.getMessage());
+    }
+
+    private void failUnusableImport(LegislativeSession session, String reason, java.util.List<RuntimeException> importFailures, BuildReport report) {
+        var failure = new IllegalStateException("Unusable session import: " + session.getKey() + " (" + reason + ")");
+        importFailures.forEach(failure::addSuppressed);
+        if (report != null) report.fatal(failure);
+        throw failure;
     }
 
 	public static LegiscanState namespaceToState(LegislativeNamespace namespace) {
@@ -596,8 +610,17 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	}
 
 	protected void importRollCall(LegiscanRollCallView view, PoliscoreDataset dataset, PoliscoreDataset regularDataset) {
+		importRollCall(view, dataset, regularDataset, null);
+	}
+
+	protected void importRollCall(LegiscanRollCallView view, PoliscoreDataset dataset, PoliscoreDataset regularDataset, BuildReport report) {
 		for (var vote : view.getVotes()) {
-			importVote(view, vote, dataset, regularDataset);
+			try {
+				importVote(view, vote, dataset, regularDataset);
+			} catch (RuntimeException e) {
+				recordImportWarning(report, "Skipped vote: session=" + dataset.getSession().getKey()
+						+ ", rollCallId=" + view.getRollCallId() + ", peopleId=" + (vote == null ? null : vote.getPeopleId()), e);
+			}
 		}
 	}
 	

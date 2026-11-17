@@ -94,7 +94,7 @@ public class PoliscoreDatasetAugmentor implements QuarkusApplication {
                 // term unless the reference actually covers the imported session.
                 var session = dataset.getRegularSession();
                 if (terms.stream().anyMatch(t -> t.getStartDate().isBefore(session.getTermEndExclusive())
-                        && t.getEndDate().isAfter(session.getActivationDate()))) leg.setTerms(terms);
+                        && t.getEndDate().isAfter(session.getTermStartDate()))) leg.setTerms(terms);
             }
 		}
 		else

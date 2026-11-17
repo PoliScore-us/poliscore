@@ -18,6 +18,6 @@
     { "namespace": "us/co",       "year": 2027, "multiplier": 2.0, "build": true, "optional": true, "availableFrom": "2027-01-11" },
     { "namespace": "us/az",       "year": 2027, "multiplier": 2.0, "build": true, "optional": true, "availableFrom": "2027-01-11" },
     { "namespace": "us/nm",       "year": 2027, "multiplier": 2.0, "build": true, "optional": true, "availableFrom": "2027-01-19" },
-    { "namespace": "us/tx",       "year": 2028, "multiplier": 2.0, "build": true, "optional": true, "availableFrom": "2027-01-12" },
+    { "namespace": "us/tx",       "year": 2028, "multiplier": 2.0, "build": true, "optional": true, "availableFrom": "2026-11-09" },
     { "namespace": "us/ga",       "year": 2028, "multiplier": 2.0, "build": true, "optional": true, "availableFrom": "2027-01-11" }
 ]

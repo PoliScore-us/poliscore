@@ -27,6 +27,8 @@ public class BuildReport {
 	public List<Throwable> recoveredErrors = new ArrayList<Throwable>();
 
 	public List<String> skippedOptionalDatasets = new ArrayList<>();
+
+	public List<String> importWarnings = new ArrayList<>();
 	
 	double totalProcessingCost = 0;
 	
@@ -79,6 +81,9 @@ public class BuildReport {
 		    result += sw.toString();
 		}
 		
+		if (!importWarnings.isEmpty())
+			result += "\n\nImport warnings (skipped records):\n- " + String.join("\n- ", importWarnings);
+
 		if (!skippedOptionalDatasets.isEmpty())
 			result += "\n\nSkipped optional datasets (not yet available):\n- " + String.join("\n- ", skippedOptionalDatasets);
 

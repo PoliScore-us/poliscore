@@ -64,6 +64,13 @@ public class LegislativeSession {
     @DynamoDbIgnore
     public LocalDate getActivationDate() {
         if (availableFrom != null) return LocalDate.parse(availableFrom);
+        return getTermStartDate();
+    }
+
+    /** Session membership must not expand into the prior term when prefiling opens. */
+    @JsonIgnore
+    @DynamoDbIgnore
+    public LocalDate getTermStartDate() {
         return LegislativeNamespace.US_CONGRESS.equals(namespace)
                 ? CongressionalSession.of(Integer.parseInt(code)).getTermStartDate() : startDate;
     }

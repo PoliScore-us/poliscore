@@ -219,7 +219,7 @@ public class Legislator extends SessionPersistable implements Comparable<Legisla
         return terms.stream()
                 .filter(t -> t.getStartDate() != null && t.getEndDate() != null)
                 .filter(t -> t.getStartDate().isBefore(session.getTermEndExclusive())
-                        && t.getEndDate().isAfter(session.getActivationDate()))
+                        && t.getEndDate().isAfter(session.getTermStartDate()))
                 .max(java.util.Comparator.comparing(LegislativeTerm::getStartDate)
                         .thenComparing(LegislativeTerm::getEndDate)).orElse(null);
     }
