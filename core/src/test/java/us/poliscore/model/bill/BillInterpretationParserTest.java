@@ -1,17 +1,36 @@
 package us.poliscore.model.bill;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
 import us.poliscore.model.AIInterpretationMetadata;
+import us.poliscore.model.TrackedIssue;
 
 class BillInterpretationParserTest {
 
 	@Test
 	void parsesMultilineAndFencedTopicJsonArrays() {
+		var interp = parseReport("");
+		assertEquals(List.of("Test Act", "Example Act"), interp.getOtherNames());
+		assertEquals(List.of("gun violence", "firearm regulation"), interp.getTopics());
+	}
+
+	@Test
+	void omitsPolicyZerosAndUnassessedIssuesButRetainsOverallZeroAndSignedScores() {
+		var stats = parseReport("Healthcare: 0\nEducation: N/A\nEnergy: -15\nHousing: +30").getIssueStats();
+		assertFalse(stats.hasStat(TrackedIssue.Healthcare));
+		assertFalse(stats.hasStat(TrackedIssue.Education));
+		assertEquals(0, stats.getStats().get(TrackedIssue.OverallBenefitToSociety));
+		assertEquals(-15, stats.getStats().get(TrackedIssue.Energy));
+		assertEquals(30, stats.getStats().get(TrackedIssue.Housing));
+	}
+
+	private BillInterpretation parseReport(String additionalImpactStat) {
 		Bill bill = new Bill();
 		bill.setId("BIL/us/congress/119/hr/1");
 		bill.setName("Test Bill");
@@ -63,7 +82,8 @@ class BillInterpretationParserTest {
 				90
 
 				Impact Stats:
-				Overall Benefit to Society: 10
+				Overall Benefit to Society: 0
+				%s
 
 				Rating:
 				10
@@ -73,9 +93,8 @@ class BillInterpretationParserTest {
 
 				Short Report:
 				This is a plain short report for the parser test.
-				""", null);
+				""".formatted(additionalImpactStat), null);
 
-		assertEquals(java.util.List.of("Test Act", "Example Act"), interp.getOtherNames());
-		assertEquals(java.util.List.of("gun violence", "firearm regulation"), interp.getTopics());
+		return interp;
 	}
 }

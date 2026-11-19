@@ -200,30 +200,6 @@ public class BillInterpretationParser {
 		}
 	}
 
-	private void cleanIssueStats(IssueStats stats) {
-//		int zeroCount = 0;
-//		int totalSet = 0;
-//		for (TrackedIssue issue : TrackedIssue.values()) {
-//			if (issue != TrackedIssue.OverallBenefitToSociety && stats.hasStat(issue)) {
-//				totalSet++;
-//				if (stats.getStat(issue) == 0)
-//					zeroCount++;
-//			}
-//		}
-
-//		if (Math.abs(totalSet - TrackedIssue.values().length) <= 2 && zeroCount > 1) {
-//			logger.error("Malformed AI response for bill [" + this.interp.billId
-//					+ "]: too many tracked issues were assigned a value of 0. Only include an issue if it is truly relevant. Zeros will be removed from issue stats.");
-
-			for (TrackedIssue issue : TrackedIssue.values()) {
-				if (stats.hasStat(issue) && stats.getStat(issue) == 0
-						&& issue != TrackedIssue.OverallBenefitToSociety) {
-					stats.removeStat(issue);
-				}
-			}
-//		}
-	}
-
 	private void clean(String dirty) {
 //		val summaryHeaders = new String[] { "summary of the predicted impact to society and why", "summary of the predicted impact to society", "summary of the bill and predicted impact to society and why", "summary of the bill and predicted impact to society", "summary of the bill and its predicted impact to society and why", "summary of the bill and its predicted impact to society", "Summary of the bill's predicted impact to society and why", "Summary of the bill's predicted impact to society", "summary of predicted impact to society and why", "summary of predicted impact to society", "summary of the impact to society", "summary of impact to society", "summary report", "summary of the impact", "summary of impact", "summary", "explanation" };
 //		val summaryHeaderRegex = " *#*\\** *(" + String.join("|", summaryHeaders) + ") *#*\\** *:? *#*\\** *";
@@ -352,6 +328,33 @@ public class BillInterpretationParser {
 		if (stat != null && stat.getRight() != IssueStats.NA) {
 			interp.getIssueStats().setStat(stat.getLeft(), stat.getRight());
 		}
+	}
+
+	// Models have used 0 for unrelated policy areas despite the prompt asking for N/A.
+	// Counting those zeros dilutes issue averages. Until raw responses distinguish them
+	// reliably, omit policy zeros (including genuine neutrals) and keep the overall score.
+	private void cleanIssueStats(IssueStats stats) {
+//		int zeroCount = 0;
+//		int totalSet = 0;
+//		for (TrackedIssue issue : TrackedIssue.values()) {
+//			if (issue != TrackedIssue.OverallBenefitToSociety && stats.hasStat(issue)) {
+//				totalSet++;
+//				if (stats.getStat(issue) == 0)
+//					zeroCount++;
+//			}
+//		}
+
+//		if (Math.abs(totalSet - TrackedIssue.values().length) <= 2 && zeroCount > 1) {
+//			logger.error("Malformed AI response for bill [" + this.interp.billId
+//					+ "]: too many tracked issues were assigned a value of 0. Only include an issue if it is truly relevant. Zeros will be removed from issue stats.");
+
+			for (TrackedIssue issue : TrackedIssue.values()) {
+				if (stats.hasStat(issue) && stats.getStat(issue) == 0
+						&& issue != TrackedIssue.OverallBenefitToSociety) {
+					stats.removeStat(issue);
+				}
+			}
+//		}
 	}
 
 	private void processRating(String line) {

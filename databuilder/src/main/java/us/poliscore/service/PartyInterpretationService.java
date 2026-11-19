@@ -352,7 +352,7 @@ Before printing the final line, internally verify the output is a JSON array of 
 		
 		msg.add("\n");
 		
-		val grade = interp.getStats().getLetterGrade(1.0f);
+		val grade = interp.getStats().getLetterGrade(dataset.getConfig().getMultiplier());
 		if (grade.equals("A") || grade.equals("B")) {
 			msg.add("Highest \"Overall Benefit to Society\" (Rating) Bills:");
 			msg.add(StringUtils.join(interp.getBestBills().stream().limit(5).map(i -> i.getShortExplainForInterp()).toArray(), "\n"));
@@ -366,7 +366,7 @@ Before printing the final line, internally verify the output is a JSON array of 
 			msg.add(StringUtils.join(interp.getWorstBills().stream().limit(5).map(i -> i.getShortExplainForInterp()).toArray(), "\n"));
 		}
 		
-		for(val issue : getHighlightPolicyAreas(interp.getStats()))
+		for(val issue : getHighlightPolicyAreas(interp.getStats(), grade))
 		{
 			msg.add("\nLargest Contributors To \"" + issue.getName() + "\" Score:\n");
 			
@@ -405,9 +405,8 @@ Before printing the final line, internally verify the output is a JSON array of 
 		        .build());
 	}
 	
-	public static List<TrackedIssue> getHighlightPolicyAreas(IssueStats stats)
+	private static List<TrackedIssue> getHighlightPolicyAreas(IssueStats stats, String grade)
 	{
-		val grade = stats.getLetterGrade(1.0f);
 		List<TrackedIssue> highlightPolicyAreas;
 		
 		if (grade.equals("A") || grade.equals("B")) {
@@ -454,6 +453,6 @@ Before printing the final line, internally verify the output is a JSON array of 
 				.replace("{{letterGrade}}", grade)
 				.replace("{{analysisType}}", grade.equals("A") || grade.equals("B") ? "endorsement" : (grade.equals("C") || grade.equals("D") ? "mixed analysis" : "harsh critique"))
 				.replace("{{behavior}}", grade.equals("A") || grade.equals("B") ? "specific accomplishments" : (grade.equals("C") || grade.equals("D") ? "specific accomplishments or alarming behaviour" : "alarming behaviour"))
-				.replace("{{highlightPolicyAreas}}", String.join(", ", getHighlightPolicyAreas(stats).stream().map(ti -> ti.getName()).toList()));
+				.replace("{{highlightPolicyAreas}}", String.join(", ", getHighlightPolicyAreas(stats, grade).stream().map(ti -> ti.getName()).toList()));
 	}
 }
