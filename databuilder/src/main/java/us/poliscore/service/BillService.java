@@ -44,9 +44,6 @@ public class BillService {
 	@Inject
 	private GovernmentDataService data;
 	
-	protected Comparator<BillText> getBillTextComparator(Bill bill) {
-		return BillTextOrder.ASCENDING;
-	}
 	
 	public static List<String> PROCESS_BILL_TYPE = Arrays.asList(CongressionalBillType.values()).stream().filter(bt -> !CongressionalBillType.getIgnoredBillTypes().contains(bt)).map(bt -> bt.getName().toLowerCase()).collect(Collectors.toList());
 	
@@ -123,30 +120,11 @@ public class BillService {
 	}
 
 	public Optional<BillInterpretation> getInterpretation(Bill bill, Integer sliceIndex) {
-		BillText preferredText = getBillText(bill).orElse(null);
-		return getInterpretation(bill, preferredText, sliceIndex);
+		return getInterpretation(bill.getId(), sliceIndex);
 	}
 
 	public Optional<BillInterpretation> getInterpretation(Bill bill, BillText preferredText, Integer sliceIndex) {
-		BillInterpretation newestMatch = null;
-		BillInterpretation newestVersionMatch = null;
-		String preferredVersion = preferredText == null ? null : preferredText.getVersion();
-
-		// Interpretations are sorted in ascending date order, so the last matching
-		// interpretation is the newest available one. An interpretation for the
-		// selected bill-text version takes precedence over a later-written object for
-		// a different version.
-		for (BillInterpretation interp : getBillInterpretations(bill)) {
-			if (Objects.equals(sliceIndex, interp.getSliceIndex())) {
-				newestMatch = interp;
-				if (StringUtils.isNotBlank(preferredVersion)
-						&& StringUtils.equalsIgnoreCase(preferredVersion, interp.getSourceBillTextVersion())) {
-					newestVersionMatch = interp;
-				}
-			}
-		}
-
-		return Optional.ofNullable(newestVersionMatch != null ? newestVersionMatch : newestMatch);
+		return Bill.selectInterpretation(getBillInterpretations(bill), preferredText == null ? null : preferredText.getVersion(), sliceIndex);
 	}
 
 	public Optional<BillInterpretation> getInterpretation(String billId) {
@@ -154,15 +132,11 @@ public class BillService {
 	}
 
 	public Optional<BillInterpretation> getInterpretation(String billId, Integer sliceIndex) {
-		BillInterpretation newestMatch = null;
-
-		for (BillInterpretation interp : getBillInterpretations(billId)) {
-			if (Objects.equals(sliceIndex, interp.getSliceIndex())) {
-				newestMatch = interp;
-			}
-		}
-
-		return Optional.ofNullable(newestMatch);
+		var candidates = getBillInterpretations(billId).stream()
+				.filter(candidate -> Objects.equals(sliceIndex, candidate.getSliceIndex())).toList();
+		if (candidates.size() < 2) return candidates.stream().findFirst();
+		String version = getBillText(billId).map(BillText::getVersion).orElse(null);
+		return Bill.selectInterpretation(candidates, version, sliceIndex);
 	}
 	
 	public List<PressInterpretation> getPressInterps(String billId) {
@@ -246,23 +220,11 @@ public class BillService {
     @SneakyThrows
 	public Optional<BillText> getBillText(Bill bill)
 	{
-//		val parent = new File(PoliscoreUtil.APP_DATA, "bill-text/" + bill.getCongress() + "/" + bill.getType());
-//		
-//		val text = Arrays.asList(parent.listFiles()).stream()
-//				.filter(f -> f.getName().contains(bill.getCongress() + bill.getType().getName().toLowerCase() + bill.getNumber()))
-//				.sorted((a,b) -> BillTextPublishVersion.parseFromBillTextName(a.getName()).billMaturityCompareTo(BillTextPublishVersion.parseFromBillTextName(b.getName())))
-//				.findFirst();
-//		
-//		if (text.isPresent())
-//		{
-//			return Optional.of(PoliscoreUtil.getObjectMapper().readValue(FileUtils.readFileToString(text.get(), "UTF-8"), BillText.class));
-//		}
-//		else
-//		{
-//			return Optional.empty();
-//		}
-    	
-		val op = getBillTexts(bill).stream().max(getBillTextComparator(bill));
+		return getBillText(bill.getId());
+	}
+
+	private Optional<BillText> getBillText(String billId) {
+		val op = getBillTexts(billId).stream().max(BillTextOrder.ASCENDING);
 
 		if (op.isPresent())
 			return op;
@@ -270,7 +232,7 @@ public class BillService {
 		// Legacy bill text objects were stored at the bill's unversioned key. Keep
 		// them readable while datasets are migrated, but prefer versioned text when
 		// both representations exist.
-		return s3.get(BillText.generateId(bill.getId()), BillText.class);
+		return s3.get(BillText.generateId(billId), BillText.class);
 	}
     
     public boolean hasBillText(Bill bill)
@@ -280,11 +242,15 @@ public class BillService {
     }
     
     public List<BillText> getBillTexts(Bill bill) {
-        String sessionKey = getSessionKey(bill.getId());
-        String objectKey = getVersionedObjectKeyPrefix(bill.getId());
+        return getBillTexts(bill.getId());
+    }
+
+    protected List<BillText> getBillTexts(String billId) {
+        String sessionKey = getSessionKey(billId);
+        String objectKey = getVersionedObjectKeyPrefix(billId);
 
         List<BillText> billTexts = s3.query(BillText.class, sessionKey, objectKey).stream()
-                .filter(bt -> bill.getId().equals(bt.getBillId()))
+                .filter(bt -> billId.equals(bt.getBillId()))
                 .collect(Collectors.toList());
 
         List<String> missingDateIds = billTexts.stream()
@@ -294,12 +260,12 @@ public class BillService {
 
         if (!missingDateIds.isEmpty()) {
             throw new IllegalStateException(
-                    "Bill texts did not have a date for bill " + bill.getId() + ": "
+                    "Bill texts did not have a date for bill " + billId + ": "
                     + String.join("; ", missingDateIds));
         }
 
         return billTexts.stream()
-                .sorted(getBillTextComparator(bill))
+                .sorted(BillTextOrder.ASCENDING)
                 .collect(Collectors.toList());
     }
 

@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeSet;
+import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -207,22 +209,17 @@ public class Bill extends SessionPersistable {
 	}
 
 	public BillInterpretation getInterpretation() {
-		NavigableSet<BillInterpretation> available = getInterpretations();
-		if (available.isEmpty()) return interpretation;
+		return selectInterpretation(getInterpretations(), getSelectedBillTextVersion(), null).orElse(null);
+	}
 
-		String preferredVersion = getSelectedBillTextVersion();
-		if (StringUtils.isNotBlank(preferredVersion)) {
-			for (BillInterpretation candidate : available) {
-				if (StringUtils.equalsIgnoreCase(preferredVersion, candidate.getSourceBillTextVersion())) {
-					return candidate;
-				}
-			}
-		}
-
-		// Legacy interpretations and partially populated bills may not have enough
-		// version information to establish applicability. Preserve the historical
-		// newest-generation fallback for those objects.
-		return available.first();
+	/** Prefer the selected text version, then the newest available analysis for the requested slice. */
+	public static Optional<BillInterpretation> selectInterpretation(Collection<BillInterpretation> available,
+			String preferredVersion, Integer sliceIndex) {
+		Comparator<BillInterpretation> byVersion = Comparator.comparing(candidate ->
+				StringUtils.isBlank(preferredVersion) || !StringUtils.equalsIgnoreCase(preferredVersion, candidate.getSourceBillTextVersion()));
+		return available.stream()
+				.filter(candidate -> Objects.equals(sliceIndex, candidate.getSliceIndex()))
+				.min(byVersion.thenComparing(BILL_INTERPRETATION_ORDER));
 	}
 
 	private String getSelectedBillTextVersion() {
