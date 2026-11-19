@@ -14,6 +14,8 @@ import us.poliscore.model.legislator.Legislator;
 import us.poliscore.model.legislator.LegislatorBillInteraction.LegislatorBillVote;
 
 public class LegiscanVoteConverter {
+	private static final Pattern CHAMBER_VOTE_NUMBER = Pattern.compile(
+			"(?i)\\b(?:RV|(?:House|Senate) Vote)\\s*#\\s*(\\d{1,9})\\b");
 	private static final Set<String> REPORTED_UNCLASSIFIED_ROLL_CALL_DESCRIPTIONS = ConcurrentHashMap.newKeySet();
 	
 	public static LegislatorBillVote convert(LegiscanRollCallView rollCall, LegiscanVoteDetailView vote, Legislator leg, Bill bill) {
@@ -30,12 +32,18 @@ public class LegiscanVoteConverter {
 		interaction.setLegId(leg.getId());
 		interaction.setBillId(bill.getId());
 		interaction.setDate(rollCall.getDate());
+		interaction.setRollCallNumber(chamberVoteNumber(rollCall.getDescription()));
 		interaction.setBillName(bill.getName());
 		interaction.setId(LegislatorBillVote.generateId(interaction.getLegId(), interaction.getDate(), interaction.getBillId()));
 		
 		return interaction;
 	}
 	
+	static Integer chamberVoteNumber(String description) {
+		var match = CHAMBER_VOTE_NUMBER.matcher(description);
+		return match.find() ? Integer.valueOf(match.group(1)) : null;
+	}
+
 	/**
 	 * Whitelisting means that a developer has explicitly reviewed the description and agrees that it is a yes or a no vote on a bill (not procedural).
 	 * 

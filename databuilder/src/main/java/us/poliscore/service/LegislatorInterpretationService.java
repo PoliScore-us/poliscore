@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -259,12 +260,29 @@ Before printing the final line, internally verify the output is a JSON array of 
 	public List<LegislatorBillInteraction> getInteractionsForInterpretation(Legislator leg)
 	{
 		return leg.getInteractions().stream()
-				// Remove duplicate bill interactions, favoring sponsor and co-sponsor over vote
-				.collect(Collectors.groupingBy(LegislatorBillInteraction::getBillId,Collectors.toList())).values().stream()
-					.map(l -> l.size() > 1 ? l.stream().sorted((aa,bb) -> sortPriority(bb) - sortPriority(aa)).findFirst().get() : l.get(0))
-				.filter(i -> isRelevant(i))
-				.sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed())
+				.filter(this::isRelevant)
+				.collect(Collectors.groupingBy(LegislatorBillInteraction::getBillId)).values().stream()
+				.map(this::selectBillInteraction)
+				.flatMap(Optional::stream)
+				.sorted(Comparator.comparing(LegislatorBillInteraction::getDate).reversed()
+						.thenComparing(LegislatorBillInteraction::getBillId))
 				.collect(Collectors.toList());
+	}
+
+	private Optional<LegislatorBillInteraction> selectBillInteraction(List<LegislatorBillInteraction> interactions) {
+		var priority = Comparator.comparingInt(this::sortPriority).thenComparing(LegislatorBillInteraction::getDate);
+		var best = interactions.stream().max(priority).orElseThrow();
+		if (!(best instanceof LegislatorBillVote)) return Optional.of(best);
+
+		var latestVotes = interactions.stream()
+				.filter(i -> i instanceof LegislatorBillVote && i.getDate().equals(best.getDate()))
+				.map(LegislatorBillVote.class::cast).toList();
+		var latest = latestVotes.stream().max(Comparator.comparing(LegislatorBillVote::getRollCallNumber,
+				Comparator.nullsFirst(Integer::compareTo))).orElseThrow();
+		// An unnumbered vote could have occurred last. Count the bill only if every possible last vote agrees.
+		boolean ambiguous = latestVotes.stream().anyMatch(v -> v.getVoteStatus() != latest.getVoteStatus()
+				&& (v.getRollCallNumber() == null || v.getRollCallNumber().equals(latest.getRollCallNumber())));
+		return ambiguous ? Optional.empty() : Optional.of(latest);
 	}
 
 	public List<LegislatorBillInteraction> getInteractionsFirstPage(List<LegislatorBillInteraction> interactions)

@@ -29,6 +29,8 @@ public class USCRollCallData {
 	protected USCRollCallBillView bill;
 	
 	protected String category;
+
+	protected Integer number;
 	
 	protected String chamber;
 	

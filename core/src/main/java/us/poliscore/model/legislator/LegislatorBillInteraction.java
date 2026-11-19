@@ -206,13 +206,16 @@ public abstract class LegislatorBillInteraction implements Comparable<Legislator
 	@Data
 	@EqualsAndHashCode(callSuper=true)
 	@RegisterForReflection
-	@AllArgsConstructor
+	@RequiredArgsConstructor
 	@NoArgsConstructor
 	@DynamoDbBean
 	public static class LegislatorBillVote extends LegislatorBillInteraction {
 		
 		@NonNull
 		protected VoteStatus voteStatus;
+
+		// Chamber roll-call number when the source supplies an ordered sequence.
+		private Integer rollCallNumber;
 		
 		@DynamoDbIgnore
 		@JsonIgnore

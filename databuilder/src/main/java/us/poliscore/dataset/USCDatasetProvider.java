@@ -279,6 +279,7 @@ public class USCDatasetProvider implements DatasetProvider {
 		interaction.setLegId(leg.getId());
 		interaction.setBillId(bill.getId());
 		interaction.setDate(rollCall.getDate().toLocalDate());
+		interaction.setRollCallNumber(rollCall.getNumber());
 		interaction.setBillName(bill.getName());
 		interaction.setId(LegislatorBillVote.generateId(interaction.getLegId(), interaction.getDate(), interaction.getBillId()));
 		

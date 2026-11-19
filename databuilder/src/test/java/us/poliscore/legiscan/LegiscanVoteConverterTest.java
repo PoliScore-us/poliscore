@@ -1,5 +1,7 @@
 package us.poliscore.legiscan;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -8,6 +10,13 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class LegiscanVoteConverterTest {
+
+	@Test
+	void readsOnlyExplicitChamberVoteNumbers() {
+		assertEquals(499, LegiscanVoteConverter.chamberVoteNumber("RV#499"));
+		assertEquals(300, LegiscanVoteConverter.chamberVoteNumber("Agree To Senate Substitute: House Vote #300"));
+		assertNull(LegiscanVoteConverter.chamberVoteNumber("House: RESOLUTIONS Res. 001"));
+	}
 
 	@Test
 	void treatsColoradoCommitteeReportsAsProcedural() {
