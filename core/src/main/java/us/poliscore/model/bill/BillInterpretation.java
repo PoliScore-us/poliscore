@@ -51,6 +51,9 @@ public class BillInterpretation extends SessionPersistable
 {
 	public static Logger logger = LoggerFactory.getLogger(BillInterpretation.class);
 	
+	@Getter(onMethod_ = {@DynamoDbIgnore})
+	protected FundingSnapshot funding;
+
 	public static final String ID_CLASS_PREFIX = "BIT";
 
 	public static String generateId(String billId, String billTextVersion, Integer sliceIndex)

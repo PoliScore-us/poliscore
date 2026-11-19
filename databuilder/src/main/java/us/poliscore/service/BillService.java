@@ -37,6 +37,7 @@ import us.poliscore.service.storage.ObjectStorageServiceIF;
 public class BillService {
 	@Inject
 	private LocalCachedS3Service s3;
+
 	
 	@Inject
 	protected LegislatorService lService;
@@ -80,7 +81,6 @@ public class BillService {
 			b.setLastUpdate(billLastAction);
 		}
 		
-		b.setTexts(getBillTexts(b));
 		var billInterpretations = new ArrayList<>(getBillInterpretations(b).stream()
 				.filter(existingInterp -> Objects.equals(existingInterp.getSliceIndex(), null))
 				.filter(existingInterp -> !Objects.equals(existingInterp.getId(), interp.getId()))
@@ -88,6 +88,14 @@ public class BillService {
 		billInterpretations.forEach(this::populatePressInterps);
 		populatePressInterps(interp);
 		billInterpretations.add(interp);
+        var sources = getBillTexts(b).stream().map(BillText::metadataOnly).toList();
+        for (var source : sources) {
+            billInterpretations.stream().map(BillInterpretation::getFunding)
+                    .filter(snapshot -> snapshot != null && snapshot.appliesTo(source))
+                    .max(Comparator.comparingLong(us.poliscore.model.bill.FundingSnapshot::computedAt))
+                    .ifPresent(source::setFunding);
+        }
+        b.setTexts(sources);
 		b.setInterpretations(billInterpretations);
 	}
 

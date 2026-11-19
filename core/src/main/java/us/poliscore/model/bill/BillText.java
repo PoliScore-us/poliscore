@@ -24,6 +24,8 @@ import us.poliscore.model.SessionPersistable;
 @RegisterForReflection
 public class BillText extends SessionPersistable
 {
+	protected FundingSnapshot funding;
+
 	public static final String ID_CLASS_PREFIX = "BTX";
 	private static final Pattern DUBLIN_CORE_DATE_PATTERN = Pattern.compile("<(?:\\w+:)?date>([^<]+)</(?:\\w+:)?date>");
 	private static final Pattern ACTION_DATE_PATTERN = Pattern.compile("<action-date[^>]*date=\"(\\d{8})\"");
@@ -118,6 +120,7 @@ public class BillText extends SessionPersistable
 		copy.setBillId(getBillId());
 		copy.setVersion(getVersion());
 		copy.setFormat(getFormat());
+		copy.setFunding(funding);
 		copy.setLegiscanId(getLegiscanId());
 		copy.setLastUpdate(getLastUpdate());
 		copy.setStorageBucket(getStorageBucket());

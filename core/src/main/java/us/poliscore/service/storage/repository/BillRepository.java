@@ -14,6 +14,8 @@ import jakarta.transaction.Transactional;
 import us.poliscore.model.Persistable;
 import us.poliscore.model.TrackedIssue;
 import us.poliscore.model.bill.Bill;
+import us.poliscore.model.bill.BillText;
+import us.poliscore.model.bill.FundingSnapshot;
 import us.poliscore.model.bill.BillIssueStat;
 
 @ApplicationScoped
@@ -70,6 +72,73 @@ public class BillRepository extends AbstractPostgresEntityRepository<Bill> {
 		}
 		return result;
 	}
+
+    private void limitFundingStatement(int millis) {
+        requireEntityManager().createNativeQuery("SELECT set_config('statement_timeout', :timeout, true)")
+                .setParameter("timeout", Integer.toString(millis)).getSingleResult();
+    }
+
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public List<Bill> fundingCandidates(Bill bill, int timeoutMillis) {
+        limitFundingStatement(timeoutMillis);
+        String sql = "SELECT b.* FROM " + qualifiedTableName() + """
+                 b WHERE b.id LIKE ? AND b.id <> ? AND b.introduceddate BETWEEN ? AND ?
+                 AND (lower(b.status ->> 'description') = 'law' OR b.status ->> 'sourceStatus' LIKE 'ENACTED:%')
+                 AND (lower(b.name) LIKE '%appropriation%' OR lower(b.name) LIKE '%long bill%')
+                 ORDER BY CASE WHEN lower(b.name) LIKE '%full-year continuing appropriation%' THEN 0 ELSE 1 END,
+                          b.introduceddate DESC, b.id LIMIT 24
+                """;
+        return readOnlyResultList(requireEntityManager().createNativeQuery(sql, Bill.class)
+                .setParameter(1, "BIL/" + bill.getNamespace() + "/%").setParameter(2, bill.getId())
+                .setParameter(3, bill.getIntroducedDate().minusYears(3)).setParameter(4, bill.getIntroducedDate())
+                .setHint("jakarta.persistence.query.timeout", timeoutMillis));
+    }
+
+    /** Patch only the text metadata that we read. Concurrent analysis and bill updates survive. */
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public boolean saveFunding(String billId, BillText text,
+            FundingSnapshot funding, int timeoutMillis) {
+        limitFundingStatement(timeoutMillis);
+        var identity = new HashMap<String,Object>();
+        identity.put("id", text.getId());
+        if (text.getVersion() != null) identity.put("version", text.getVersion());
+        if (text.getLastUpdate() != null) identity.put("lastUpdate", text.getLastUpdate());
+        if (text.getLegiscanId() != null) identity.put("legiscanId", text.getLegiscanId());
+        String sameText = """
+                jsonb_strip_nulls(jsonb_build_object('id', item->'id', 'version', item->'version',
+                    'lastUpdate', item->'lastUpdate', 'legiscanId', item->'legiscanId')) = CAST(:identity AS jsonb)
+                """;
+        String sql = """
+                UPDATE %s SET texts = (SELECT jsonb_agg(CASE WHEN %s
+                    THEN jsonb_set(item, '{funding}', CAST(:funding AS jsonb)) ELSE item END ORDER BY pos)
+                    FROM jsonb_array_elements(texts) WITH ORDINALITY entries(item,pos))
+                WHERE id = :id AND EXISTS (SELECT 1 FROM jsonb_array_elements(texts) item WHERE %s
+                    AND (COALESCE(CAST(item->'funding'->>'extractorVersion' AS integer), 0),
+                         COALESCE(CAST(item->'funding'->>'computedAt' AS bigint), 0)) <= (:revision, :computedAt))
+                """.formatted(qualifiedTableName(), sameText, sameText);
+        return requireEntityManager().createNativeQuery(sql).setParameter("id", billId)
+                .setParameter("identity", toJson(identity)).setParameter("funding", toJson(funding))
+                .setParameter("revision", funding.extractorVersion()).setParameter("computedAt", funding.computedAt())
+                .setHint("jakarta.persistence.query.timeout", timeoutMillis).executeUpdate() == 1;
+    }
+
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public boolean restoreFundingText(Bill original, BillText text, int timeoutMillis) {
+        limitFundingStatement(timeoutMillis);
+        String sql = "UPDATE " + qualifiedTableName() + """
+                SET texts = COALESCE(texts, CAST('[]' AS jsonb)) || jsonb_build_array(CAST(:text AS jsonb))
+                WHERE id = :id AND last_update_value IS NOT DISTINCT FROM CAST(:stamp AS text)
+                    AND interpretation->>'id' IS NOT DISTINCT FROM CAST(:interp AS text)
+                    AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(texts) t
+                                    WHERE t->>'version' IS NOT DISTINCT FROM CAST(:version AS text))
+                """;
+        var interp = original.getInterpretation();
+        return requireEntityManager().createNativeQuery(sql)
+                .setParameter("text", toJson(text)).setParameter("id", original.getId())
+                .setParameter("version", text.getVersion()).setParameter("interp", interp == null ? null : interp.getId())
+                .setParameter("stamp", original.getLastUpdate() == null ? null : original.getLastUpdate().toString())
+                .setHint("jakarta.persistence.query.timeout", timeoutMillis).executeUpdate() == 1;
+    }
 
 	public List<BillIssueStat> queryIssueStats(int pageSize, String index, Boolean ascending, String startKey, String storageBucket) {
 		TrackedIssue issue = issueFromStorageBucket(storageBucket);

@@ -88,6 +88,9 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 	
 	@Inject
 	private BillService billService;
+
+	@Inject
+	private us.poliscore.funding.BillFundingService funding;
 	
 	@Inject
 	private LegislatorService legService;
@@ -384,6 +387,7 @@ public class BatchOpenAIResponseImporter implements QuarkusApplication
 			bi.recordGeneration(generatedAt, s3.get(bi.getId(), BillInterpretation.class).orElse(null));
 			
 			if (bi.getOrigin().equals(InterpretationOrigin.POLISCORE) && sliceIndex == null) {
+				funding.prepare(bill, sourceBillText, bi);
 				billService.applyInterpretation(bill, bi);
 				importedBills.add(billId);
 			}

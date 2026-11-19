@@ -76,6 +76,41 @@ public class S3PersistenceService implements ObjectStorageServiceIF
 		return client;
 	}
 	
+    /** Direct archive access with a caller-supplied I/O budget (also covers SDK retries). */
+    public record ArchiveJson<T>(T value, String etag) {}
+
+    public <T> Optional<T> readJson(String key, Class<T> type, java.time.Duration timeout) {
+        return readJsonWithEtag(key, type, timeout).map(ArchiveJson::value);
+    }
+
+    @SneakyThrows
+    public <T> Optional<ArchiveJson<T>> readJsonWithEtag(String key, Class<T> type, java.time.Duration timeout) {
+        var request = GetObjectRequest.builder().bucket(BUCKET_NAME).key(key)
+                .overrideConfiguration(c -> c.apiCallTimeout(timeout)).build();
+        try {
+            ArchiveJson<T> json = getClient().getObject(request, (response, input) ->
+                    new ArchiveJson<>(PoliscoreUtil.getObjectMapper().readValue(input, type), response.eTag()));
+            return Optional.of(json);
+        } catch (S3Exception e) {
+            if (e.statusCode() == 404) return Optional.empty();
+            throw e;
+        }
+    }
+
+    public software.amazon.awssdk.services.s3.model.ListObjectsV2Response listJsonPage(
+            String prefix, String continuation, java.time.Duration timeout) {
+        return getClient().listObjectsV2(r -> r.bucket(BUCKET_NAME).prefix(prefix).continuationToken(continuation)
+                .overrideConfiguration(c -> c.apiCallTimeout(timeout)));
+    }
+
+    @SneakyThrows
+    public void writeJsonIfUnchanged(String key, byte[] json, String etag, java.time.Duration timeout) {
+        var request = PutObjectRequest.builder().bucket(BUCKET_NAME).key(key)
+                .overrideConfiguration(c -> c.apiCallTimeout(timeout)
+                        .putHeader(etag == null ? "If-None-Match" : "If-Match", etag == null ? "*" : etag)).build();
+        getClient().putObject(request, RequestBody.fromBytes(json));
+    }
+
 	@SneakyThrows
 	public void put(Persistable obj)
 	{
