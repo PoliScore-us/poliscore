@@ -83,8 +83,8 @@ public class BillRepository extends AbstractPostgresEntityRepository<Bill> {
         limitFundingStatement(timeoutMillis);
         String sql = "SELECT b.* FROM " + qualifiedTableName() + """
                  b WHERE b.id LIKE ? AND b.id <> ? AND b.introduceddate BETWEEN ? AND ?
-                 AND (lower(b.status ->> 'description') = 'law' OR b.status ->> 'sourceStatus' LIKE 'ENACTED:%')
-                 AND (lower(b.name) LIKE '%appropriation%' OR lower(b.name) LIKE '%long bill%')
+                 AND (lower(b.status ->> 'description') IN ('law', 'veto overridden') OR b.status ->> 'sourceStatus' LIKE 'ENACTED:%')
+                 AND (lower(b.name) LIKE '%appropriat%' OR lower(b.name) LIKE '%long bill%')
                  ORDER BY CASE WHEN lower(b.name) LIKE '%full-year continuing appropriation%' THEN 0 ELSE 1 END,
                           b.introduceddate DESC, b.id LIMIT 24
                 """;

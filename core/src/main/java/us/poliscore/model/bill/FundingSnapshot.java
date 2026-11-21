@@ -2,13 +2,16 @@ package us.poliscore.model.bill;
 
 import java.util.List;
 import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 @RegisterForReflection
+@JsonIgnoreProperties("sourceUrl") // Older state snapshots included the page-level recovery URL.
 public record FundingSnapshot(int extractorVersion, String version, String sourceRevision, Integer sourceDocumentId,
         java.time.LocalDateTime sourceUpdated, long computedAt,
-        List<FundingRow> rows, List<String> citedPriorBills) {
-    public static final int EXTRACTOR_VERSION = 1;
+        List<FundingRow> rows, List<String> citedPriorBills, boolean verifiedEmpty) {
+    public static final int EXTRACTOR_VERSION = 2;
+    public static final int STATE_BUDGET_EXTRACTOR_VERSION = 4;
 
     @RegisterForReflection
     public record FundingRow(String label, long current, Long prior, String priorBill, int year, String evidence) {}
@@ -18,7 +21,8 @@ public record FundingSnapshot(int extractorVersion, String version, String sourc
     }
 
     public boolean appliesTo(BillText text) {
-        return extractorVersion == EXTRACTOR_VERSION && rows != null && citedPriorBills != null
+        return (extractorVersion == EXTRACTOR_VERSION || extractorVersion == STATE_BUDGET_EXTRACTOR_VERSION)
+                && rows != null && (!rows.isEmpty() || verifiedEmpty) && citedPriorBills != null
                 && Objects.equals(version, text.getVersion()) && Objects.equals(sourceRevision, revision(text));
     }
 }

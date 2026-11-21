@@ -10,7 +10,6 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -24,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.jsoup.Jsoup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,6 +74,7 @@ import us.poliscore.model.bill.BillStatus;
 import us.poliscore.model.bill.BillText;
 import us.poliscore.model.bill.BillTextFormat;
 import us.poliscore.model.bill.BillTextIdentity;
+import us.poliscore.parsing.BillTextPlaceholder;
 import us.poliscore.parsing.PDFToText;
 import us.poliscore.model.bill.CongressionalBillType;
 import us.poliscore.model.legislator.Legislator;
@@ -99,9 +98,6 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	private static final Charset WINDOWS_1252 = Charset.forName("windows-1252");
 	private static final Pattern HTML_CHARSET = Pattern.compile("(?is)<meta\\b[^>]*charset\\s*=\\s*[\"']?([^\\s\"'>;]+)");
 	private static final Pattern RTF_ANSI_CODE_PAGE = Pattern.compile("\\\\ansicpg(\\d+)");
-	private static final Pattern UNAVAILABLE_FORMAT_NOTICE = Pattern.compile("\\b(html|word|rtf|text|pdf)\\b.{0,100}\\b(version|versions|copy|copies|document|documents)\\b.{0,100}\\b(not\\s+available|unavailable|not\\s+provided|cannot\\s+be\\s+displayed)\\b|\\b(not\\s+available|unavailable|not\\s+provided|cannot\\s+be\\s+displayed)\\b.{0,100}\\b(html|word|rtf|text|pdf)\\b", Pattern.CASE_INSENSITIVE);
-	private static final Pattern FORMAT_REDIRECT_NOTICE = Pattern.compile("\\b(see|view|open|refer\\s+to|consult|download)\\b.{0,100}\\b(pdf|word|html|website|site|link|document)\\b|\\b(pdf|word|html)\\b.{0,100}\\b(content\\s+of\\s+(this\\s+)?bill|bill\\s+content|full\\s+text)\\b", Pattern.CASE_INSENSITIVE);
-	private static final Pattern LEGISLATIVE_TEXT_MARKER = Pattern.compile("\\b(be\\s+it\\s+enacted|resolved,|section\\s+\\d+|sec\\.\\s+\\d+|article\\s+[ivxlcdm0-9]+|chapter\\s+\\d+|subchapter\\s+[a-z0-9]+|amend(ed|ing)|appropriat(e|ion)|whereas)\\b", Pattern.CASE_INSENSITIVE);
 	
 //	@Inject
 //	private SecretService secret;
@@ -938,34 +934,7 @@ public class LegiscanDatasetProvider implements DatasetProvider {
 	}
 
 	protected boolean isUnsupportedBillTextPlaceholder(String text) {
-		String normalized = normalizeBillTextPlaceholderNotice(text);
-		if (normalized.isBlank() || normalized.length() > 1_500 || LEGISLATIVE_TEXT_MARKER.matcher(normalized).find()) {
-			return false;
-		}
-
-		return UNAVAILABLE_FORMAT_NOTICE.matcher(normalized).find()
-				&& FORMAT_REDIRECT_NOTICE.matcher(normalized).find();
-	}
-
-	private String normalizeBillTextPlaceholderNotice(String text) {
-		if (StringUtils.isBlank(text)) {
-			return "";
-		}
-
-		String value = text;
-		if (looksLikeHtml(value)) {
-			value = Jsoup.parse(value).text();
-		}
-
-		return value
-				.replace('\u00A0', ' ')
-				.replaceAll("\\s+", " ")
-				.trim()
-				.toLowerCase(Locale.ROOT);
-	}
-
-	private boolean looksLikeHtml(String text) {
-		return Pattern.compile("(?is)<\\s*(html|head|body|p|div|span|table|tr|td|br)\\b").matcher(text).find();
+		return BillTextPlaceholder.isPlaceholder(text);
 	}
 
 	private String decodeHtmlBillText(byte[] textBytes) {

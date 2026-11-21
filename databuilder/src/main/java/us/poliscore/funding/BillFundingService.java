@@ -19,6 +19,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 import us.poliscore.PoliscoreUtil;
+import us.poliscore.model.LegislativeNamespace;
 import us.poliscore.model.bill.*;
 import us.poliscore.model.bill.FundingSnapshot.FundingRow;
 import us.poliscore.service.storage.S3PersistenceService;
@@ -49,26 +50,33 @@ public class BillFundingService {
         int millis() { return Math.toIntExact(Math.max(1, left().toMillis())); }
     }
 
-    static String key(BillText meta) {
+    static String key(BillText meta, int extractorVersion) {
         return "funding/" + BillText.generateId(meta.getBillId(), meta.getVersion()) + "/"
-                + FundingSnapshot.EXTRACTOR_VERSION + "/" + FundingSnapshot.revision(meta) + ".json";
+                + extractorVersion + "/" + FundingSnapshot.revision(meta) + ".json";
     }
 
-    static boolean current(BillText meta) {
-        return meta.getFunding() != null && meta.getFunding().appliesTo(meta);
+    private static boolean current(FundingSnapshot funding, BillText meta, int extractorVersion) {
+        return funding != null && funding.extractorVersion() == extractorVersion && funding.appliesTo(meta);
+    }
+
+    private static int extractorVersion(Bill bill) {
+        return bill.getNamespace() == LegislativeNamespace.US_CONGRESS
+                ? FundingSnapshot.EXTRACTOR_VERSION : FundingSnapshot.STATE_BUDGET_EXTRACTOR_VERSION;
     }
 
     /** Called before a new interpretation is archived or its bill is published. */
     public void prepare(Bill bill, BillText source, BillInterpretation interp) {
         try {
-            if (interp.getFunding() != null && interp.getFunding().appliesTo(source)) {
+            int version = extractorVersion(bill);
+            if (current(interp.getFunding(), source, version)) {
                 source.setFunding(interp.getFunding());
                 return;
             }
-            var snapshot = resolve(bill, source, Budget.of(BUILD_BUDGET));
+            var snapshot = resolve(bill, source, Budget.of(BUILD_BUDGET), version);
             source.setFunding(snapshot);
             interp.setFunding(snapshot);
         } catch (Exception e) {
+            source.setFunding(null);
             interp.setFunding(null);
             Log.warnf("Funding unavailable while publishing %s (%s): %s", bill.getId(), source.getVersion(), e);
         }
@@ -79,22 +87,23 @@ public class BillFundingService {
         var texts = bill.getTexts();
         var interpretation = bill.getInterpretation();
         if (StringUtils.isNotBlank(requestedVersion)) {
-            interpretation = bill.getInterpretations().stream()
-                    .filter(i -> requestedVersion.equalsIgnoreCase(i.getSourceBillTextVersion())).findFirst().orElse(null);
-            if (interpretation == null) return;
+            var matchingVersion = bill.getInterpretations().stream()
+                    .filter(i -> requestedVersion.equalsIgnoreCase(i.getSourceBillTextVersion())).toList();
+            interpretation = Bill.selectInterpretation(matchingVersion, requestedVersion, null).orElse(null);
         }
-        String version = interpretation == null ? null : interpretation.getSourceBillTextVersion();
-        // A legacy bill may have only its selected interpretation and an unversioned archived text.
-        BillText meta = texts.stream().filter(t -> version != null && version.equalsIgnoreCase(t.getVersion()))
+        if (interpretation == null) return;
+        String version = StringUtils.defaultIfBlank(interpretation.getSourceBillTextVersion(), null);
+        // A legacy interpretation without a version can only use its unversioned text.
+        BillText meta = texts.stream().filter(t -> StringUtils.equalsIgnoreCase(version, t.getVersion()))
                 .findFirst().orElse(null);
-        if (meta == null && version == null && !texts.isEmpty()) meta = texts.last();
         boolean recoverMetadata = meta == null;
         if (recoverMetadata) meta = BillText.factory(bill.getId(), null, null, null, version, null);
-        if (current(meta)) {
-            if (interpretation != null) interpretation.setFunding(meta.getFunding());
+        int extractor = extractorVersion(bill);
+        if (current(meta.getFunding(), meta, extractor)) {
+            interpretation.setFunding(meta.getFunding());
             return;
         }
-        if (interpretation != null && interpretation.getFunding() != null && interpretation.getFunding().appliesTo(meta)) {
+        if (current(interpretation.getFunding(), meta, extractor)) {
             meta.setFunding(interpretation.getFunding());
             texts.add(meta);
             bill.setTexts(texts);
@@ -102,12 +111,12 @@ public class BillFundingService {
         }
         // Workers never mutate the bill being served, including after a timeout.
         meta.setFunding(null);
-        if (interpretation != null) interpretation.setFunding(null);
+        interpretation.setFunding(null);
         bill.setTexts(texts);
         BillText selected = meta;
-        BillText completed = guarded(key(selected), budget, () -> {
+        BillText completed = guarded(key(selected, extractor), budget, () -> {
             BillText source = recoverMetadata ? readText(bill.getId(), selected, budget).orElseThrow() : selected;
-            var snapshot = resolve(bill, source, budget);
+            var snapshot = resolve(bill, source, budget, extractor);
             var published = source.metadataOnly();
             published.setFunding(snapshot);
             boolean saved = recoverMetadata ? bills.restoreFundingText(bill, published, budget.millis())
@@ -119,7 +128,7 @@ public class BillFundingService {
             texts.remove(selected);
             texts.add(completed);
             bill.setTexts(texts);
-            if (interpretation != null) interpretation.setFunding(completed.getFunding());
+            interpretation.setFunding(completed.getFunding());
         }
     }
 
@@ -156,38 +165,58 @@ public class BillFundingService {
         }
     }
 
-    private FundingSnapshot resolve(Bill bill, BillText meta, Budget budget) throws Exception {
-        var stored = archive.readJsonWithEtag(key(meta), FundingSnapshot.class, budget.left());
+    private FundingSnapshot resolve(Bill bill, BillText meta, Budget budget, int extractor) throws Exception {
+        String key = key(meta, extractor);
+        var stored = archive.readJsonWithEtag(key, FundingSnapshot.class, budget.left());
         var cached = stored.map(S3PersistenceService.ArchiveJson::value);
-        if (cached.isPresent() && cached.get().appliesTo(meta)) {
+        if (current(cached.orElse(null), meta, extractor)) {
             return cached.get();
         }
-        BillText source = StringUtils.isNotBlank(meta.getDocument()) ? meta : readText(bill.getId(), meta, budget).orElseThrow();
-        var lines = BillFunding.extract(source.getDocument());
+        String document = StringUtils.isNotBlank(meta.getDocument()) ? meta.getDocument()
+                : readText(bill.getId(), meta, budget).map(BillText::getDocument).orElseThrow();
+        var lines = BillFunding.extract(document);
+        if (lines.isEmpty() && !BillFunding.verifiesNoFunding(document)) {
+            throw new IllegalStateException("Bill text is unavailable or its funding format is unsupported");
+        }
         var priorYears = lines.stream().filter(line -> line.year() > 0).map(line -> line.year() - 1).collect(Collectors.toSet());
         List<FundingRow> previous = new ArrayList<>();
+        // The Texas biennial recap already supplies the first fiscal year's amounts for its second year.
+        if (bill.getNamespace() == LegislativeNamespace.US_TEXAS) {
+            for (var line : lines) {
+                if (priorYears.contains(line.year())) {
+                    previous.add(new FundingRow(line.label(), line.amount(), null, null, line.year(), line.evidence()));
+                }
+            }
+        }
         var cited = new LinkedHashSet<String>();
         if (bill.getIntroducedDate() != null && !priorYears.isEmpty()) {
-            String citations = BillFunding.citationText(source.getDocument());
+            String citations = bill.getNamespace() == LegislativeNamespace.US_CONGRESS
+                    ? BillFunding.citationText(document) : null;
             var candidatesForYear = bills.fundingCandidates(bill, budget.millis());
             for (var candidate : candidatesForYear) {
                 var candidates = candidate.getTexts();
                 var finalText = candidates.descendingSet().stream().filter(t -> isFinal(t.getVersion())).findFirst();
-                if (finalText.isEmpty() && !candidates.isEmpty()) continue;
-                var archived = readText(candidate.getId(), finalText.orElse(null), budget);
-                if (archived.isEmpty()) continue;
-                var prior = archived.get();
-                if (!isFinal(prior.getVersion())) continue;
-                if (BillFunding.citesPriorAppropriation(citations, prior.getDocument(), priorYears)) cited.add(candidate.getId());
-                for (var line : BillFunding.extract(prior.getDocument())) {
-                    previous.add(new FundingRow(line.label(), line.amount(), null, candidate.getId(), line.year(), line.evidence()));
+                var priorText = finalText.orElseGet(() -> candidates.stream()
+                        .filter(text -> StringUtils.isBlank(text.getVersion())).findFirst().orElse(null));
+                if (priorText == null && !candidates.isEmpty()) continue;
+                var archived = readText(candidate.getId(), priorText, budget)
+                        .filter(text -> isFinal(text.getVersion()) || StringUtils.isBlank(text.getVersion()));
+                String priorDocument = archived.map(BillText::getDocument).orElse(null);
+                if (citations != null && priorDocument != null
+                        && BillFunding.citesPriorAppropriation(citations, priorDocument, priorYears)) {
+                    cited.add(candidate.getId());
+                }
+                for (var line : BillFunding.extract(priorDocument)) {
+                    if (priorYears.contains(line.year())) {
+                        previous.add(new FundingRow(line.label(), line.amount(), null, candidate.getId(), line.year(), line.evidence()));
+                    }
                 }
             }
         }
-        var snapshot = new FundingSnapshot(FundingSnapshot.EXTRACTOR_VERSION, meta.getVersion(), FundingSnapshot.revision(meta),
-                meta.getLegiscanId(), meta.getLastUpdate(), System.currentTimeMillis(), BillFunding.compareFunding(lines, previous), List.copyOf(cited));
+        var snapshot = new FundingSnapshot(extractor, meta.getVersion(), FundingSnapshot.revision(meta),
+                meta.getLegiscanId(), meta.getLastUpdate(), System.currentTimeMillis(), BillFunding.compareFunding(lines, previous), List.copyOf(cited), lines.isEmpty());
         byte[] json = PoliscoreUtil.getObjectMapper().writeValueAsBytes(snapshot);
-        archive.writeJsonIfUnchanged(key(meta), json, stored.map(S3PersistenceService.ArchiveJson::etag).orElse(null), budget.left());
+        archive.writeJsonIfUnchanged(key, json, stored.map(S3PersistenceService.ArchiveJson::etag).orElse(null), budget.left());
         return snapshot;
     }
 
@@ -198,7 +227,7 @@ public class BillFundingService {
         if (text.isEmpty() && version != null) {
             text = archive.readJson(BillText.generateId(billId) + ".json", BillText.class, budget.left());
         }
-        if (text.isEmpty() && version == null) {
+        if (text.isEmpty() && expected == null) {
             // Some pre-metadata bills only have versioned archive objects.
             BillText latest = null;
             String prefix = id + "/";
@@ -218,7 +247,7 @@ public class BillFundingService {
         if (text.isEmpty()) return Optional.empty();
         var found = text.get();
         if (!billId.equals(found.getBillId()) || StringUtils.isBlank(found.getDocument())
-                || version != null && !version.equalsIgnoreCase(found.getVersion())
+                || expected != null && !StringUtils.equalsIgnoreCase(version, found.getVersion())
                 || expected != null && expected.getLastUpdate() != null && !Objects.equals(expected.getLastUpdate(), found.getLastUpdate())
                 || expected != null && expected.getLegiscanId() != null && !Objects.equals(expected.getLegiscanId(), found.getLegiscanId())) {
             throw new IllegalStateException("Archive does not match " + id);

@@ -14,20 +14,31 @@ import java.io.IOException;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.parser.Parser;
+import us.poliscore.parsing.BillTextPlaceholder;
 
 /** Extract explicit appropriations only. Authorization ceilings and unpriced CR formulas have no row. */
 public final class BillFunding {
     public record Line(String label, long amount, int year, String evidence) {}
+    private static final Pattern ENACTING_TEXT = Pattern.compile("(?i)\\b(?:be\\s+it\\s+enacted|resolved(?:,|\\s+by\\b))");
+    private static final Pattern FUNDING_CUE = Pattern.compile("(?i)\\p{Sc}|\\b(?:dollars?|cents?|USD|budget authority|"
+            + "shall be appropriated|is appropriated|are appropriated|at the rate for operations)\\b");
     private static final String MONEY = "\\$([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?![0-9,.]\\d)";
-    private static final Pattern GRANT = Pattern.compile("(?i)^For (?:necessary expenses|expenses necessary|payments|the acquisition|salaries and expenses)\\b[^$:]{0,3500}?[,;]\\s*" + MONEY + "(?!\\s+(?:thousand|million|billion|trillion)\\b)(?=[.,;:\\s]|$)");
-    private static final Pattern YEAR = Pattern.compile("(?i)appropriations act,?\\s+(20\\d{2})");
+    private static final Pattern GRANT = Pattern.compile("(?i)^For (?:necessary expenses|expenses(?:, not otherwise provided for,)? necessary|payments|the acquisition|salaries(?: and expenses)?|pay, allowances|compensation of officers|Department of Energy expenses)\\b[^$:]{0,3500}?[,;]\\s*" + MONEY + "(?!\\s+(?:thousand|million|billion|trillion)\\b)(?=[.,;:\\s]|$)");
+    private static final Pattern YEAR = Pattern.compile("(?i)appropriations(?: and extensions)? act,?\\s+(20\\d{2})");
     private static final Pattern STATE_YEAR = Pattern.compile("(?i)fiscal year beginning July 1,?\\s+(20\\d{2})");
     private static final Pattern PART = Pattern.compile("(?im)^\\s*TOTALS PART [IVXLCDM]+\\s*\\(([A-Z\\s&'/-]{1,150})\\)\\d*\\s*" + MONEY);
     private static final Pattern STATE_CLAUSE = Pattern.compile("(?i)(?<![\\w$-])" + MONEY + " is appropriated to (?:the )?([a-z][a-z ,&'-]{2,120}?) for (?:use by |the |implementation|allocation|distribution)");
     private static final Pattern PLAIN_GRANT = Pattern.compile("(?im)^[ \\t]*([A-Za-z][A-Za-z &,'–—-]{2,90})[ \\t]*\\R(?:\\s*\\([^()]{1,80}\\)\\s*\\R)?\\s*(For (?:necessary expenses|expenses necessary|payments|salaries and expenses)\\b[^$:]{0,3500}?[,;]\\s*\\$[\\d,]+)(?!\\s+(?:thousand|million|billion|trillion)\\b)(?=[.,;:\\s]|$)");
 
     private static final Pattern ACCOUNT_LEVEL = Pattern.compile("^" + MONEY + " for ", Pattern.CASE_INSENSITIVE);
-    private static final Pattern ACCOUNT_LIST = Pattern.compile("(?i)levels? for (?:each of the following|appropriations) accounts\\b");
+    private static final Pattern ACCOUNT_LIST = Pattern.compile(
+            "(?i)^(?:notwithstanding section \\d+[^:]{0,120}, )?the levels? for (?:each of )?(?:the following[^:]{0,70} accounts|appropriations accounts)\\b");
+    private static final Pattern QUOTED_ACCOUNT_AMOUNT = Pattern.compile("^,\\s*" + MONEY);
+    private static final Pattern SINGLE_ACCOUNT = Pattern.compile("(?i)^notwithstanding section \\d+(?: of this Act)?, the level for ");
+    private static final Pattern SINGLE_ACCOUNT_AMOUNT = Pattern.compile(
+            "(?i)^ shall be (?:applied by substituting )?" + MONEY + "(?=[:.,; ]|$)");
+    private static final Pattern DEFENSE_TITLE = Pattern.compile("(?i)^(?:making appropriations for the )?department of defense\\b");
+    private static final Pattern FEDERAL_YEAR = Pattern.compile("(?i)fiscal year ending September 30,?\\s+(20\\d{2})");
     private static final Pattern FISCAL_YEAR = Pattern.compile("(?i)for fiscal year (20\\d{2})");
     private static final Pattern ADVANCE = Pattern.compile("(?i)^,\\s*(?:plus reimbursements,\\s*)?(?:which )?shall become available on October 1, (20\\d{2})");
 
@@ -46,10 +57,12 @@ public final class BillFunding {
     }
 
     public static List<Line> extract(String source) {
-        if (source == null || !source.contains("$")) return List.of();
+        if (source == null || !source.contains("$") && !source.contains("expressed in thousands of dollars")) return List.of();
         List<Line> rows = new ArrayList<>();
         if (source.contains("<appropriations-") || source.contains("<division") && source.contains("<section")) {
             var doc = parse(source, Parser.xmlParser());
+            int billYear = federalYear(doc);
+            List<String> fundedSuballocations = new ArrayList<>();
             for (Element block : doc.select("appropriations-small, appropriations-intermediate, appropriations-major")) {
                 checkInterrupted();
                 Element text = block.selectFirst(":root > text");
@@ -68,7 +81,7 @@ public final class BillFunding {
                     if (!label.isBlank() && !label.startsWith("(")) path.add(0, label);
                     // A qualifier can occupy its own block immediately after an empty account heading.
                     Element previous = node.previousElementSibling();
-                    boolean qualifiedHeading = label.startsWith("(") && previous != null
+                    boolean qualifiedHeading = (label.isBlank() || label.startsWith("(")) && previous != null
                             && headingRank(previous) == level && previous.selectFirst(":root > text") == null;
                     rank = qualifiedHeading ? level : level - 1;
                 }
@@ -78,26 +91,59 @@ public final class BillFunding {
                 if (titleHeader != null) path.add(0, titleHeader.text());
                 var division = block.closest("division");
                 var heading = division == null ? doc.selectFirst("official-title") : division.selectFirst(":root > header");
-                int year = year(YEAR, heading == null ? "" : heading.text());
+                if (heading != null && DEFENSE_TITLE.matcher(heading.text()).find()) {
+                    path.add(0, "Department of Defense");
+                }
+                int year = appropriationsYear(heading, billYear);
                 Matcher advance = ADVANCE.matcher(clause.substring(amount.end()));
                 if (advance.find()) year = Integer.parseInt(advance.group(1)) + 1;
-                rows.add(new Line(String.join(" / ", path), dollars(amount.group(1)), year, amount.group()));
+                String label = String.join(" / ", path);
+                if (fundedSuballocations.stream().anyMatch(label::startsWith)) continue;
+                if (clause.substring(amount.end()).toLowerCase(Locale.ROOT).contains("from this appropriation as follows")) {
+                    fundedSuballocations.add(label + " / ");
+                }
+                rows.add(new Line(label, dollars(amount.group(1)), year, amount.group()));
             }
             for (Element section : doc.select("division section")) {
                 checkInterrupted();
                 Element intro = section.selectFirst(":root > text");
-                if (intro == null || !ACCOUNT_LIST.matcher(intro.text()).find()) continue;
-                int fy = year(FISCAL_YEAR, intro.text());
+                int fy = intro == null ? 0 : year(FISCAL_YEAR, intro.text());
                 if (fy == 0) {
                     Element heading = section.closest("division").selectFirst(":root > header");
-                    fy = year(YEAR, heading == null ? "" : heading.text());
+                    fy = appropriationsYear(heading, billYear);
+                }
+                if (intro == null || !ACCOUNT_LIST.matcher(intro.text()).find()) {
+                    for (Element text : section.select(":root > text, :root > subsection > text")) {
+                        var prefix = SINGLE_ACCOUNT.matcher(text.text());
+                        var account = text.selectFirst(":root > quote");
+                        if (account == null || !prefix.find() || !text.text().startsWith(account.text(), prefix.end())) continue;
+                        var amount = SINGLE_ACCOUNT_AMOUNT.matcher(text.text().substring(prefix.end() + account.text().length()));
+                        if (amount.find()) {
+                            rows.add(new Line(account.text().replaceAll("\\s*—\\s*", " / "),
+                                    dollars(amount.group(1)), fy, text.text()));
+                        }
+                    }
+                    continue;
                 }
                 for (Element text : section.select(":root > paragraph > text, :root > subsection > text")) {
                     checkInterrupted();
                     Element account = text.selectFirst(":root > quote");
-                    Matcher amount = ACCOUNT_LEVEL.matcher(text.text());
-                    if (account == null || !amount.find() || !text.text().substring(amount.end()).startsWith(account.text())) continue;
-                    rows.add(new Line(account.text().replaceAll("\\s*—\\s*", " / "), dollars(amount.group(1)), fy, text.text()));
+                    if (account == null) continue;
+                    String clause = text.text();
+                    String name = account.text();
+                    Matcher amount = ACCOUNT_LEVEL.matcher(clause);
+                    if (!amount.find() || !clause.substring(amount.end()).startsWith(name)) {
+                        if (!clause.startsWith(name)) continue;
+                        amount = QUOTED_ACCOUNT_AMOUNT.matcher(clause.substring(name.length()));
+                        if (!amount.find()) continue;
+                    }
+                    String path = name.replaceAll("\\s*—\\s*", " / ");
+                    if (path.equals(name)) {
+                        Element title = section.closest("title");
+                        Element header = title == null ? null : title.selectFirst(":root > header");
+                        if (header != null) path = header.text() + " / " + name;
+                    }
+                    rows.add(new Line(path, dollars(amount.group(1)), fy, clause));
                 }
             }
             if (!rows.isEmpty() || source.contains("<appropriations-")) return rows;
@@ -105,9 +151,13 @@ public final class BillFunding {
         String text = source;
         if (source.stripLeading().startsWith("<")) {
             var doc = parse(source, Parser.htmlParser());
+            var stateRows = StateBudgetTables.arizona(doc);
+            if (!stateRows.isEmpty()) return stateRows;
             doc.select("del, s, strike").remove();
             text = doc.body().wholeText();
         }
+        var stateRows = StateBudgetTables.extract(text);
+        if (!stateRows.isEmpty()) return stateRows;
         int fy = year(STATE_YEAR, text);
         // Later sections of Long Bills amend prior appropriations and repeat department totals.
         var section = Pattern.compile("(?im)^\\s*SECTION 2\\.\\s*Appropriation\\.").matcher(text);
@@ -132,6 +182,13 @@ public final class BillFunding {
             rows.add(new Line(state.group(2), dollars(state.group(1)), 0, state.group()));
         }
         return rows;
+    }
+
+    static boolean verifiesNoFunding(String source) {
+        if (source == null || source.isBlank() || BillTextPlaceholder.isPlaceholder(source)) return false;
+        // An empty match is inconclusive for unfamiliar formats or legislation with monetary cues.
+        String text = source.stripLeading().startsWith("<") ? parse(source, Parser.htmlParser()).text() : source;
+        return ENACTING_TEXT.matcher(text).find() && !FUNDING_CUE.matcher(text).find();
     }
 
     static String citationText(String source) {
@@ -189,12 +246,28 @@ public final class BillFunding {
         var shorter = a.size() < b.size() ? a : b;
         var longer = shorter == a ? b : a;
         if (shorter.size() < 2 || !shorter.getLast().equals(longer.getLast())) return false;
+        if (a.size() > 1 && b.size() > 1 && a.get(a.size() - 2).equals(b.get(b.size() - 2))) return true;
         int i = 0;
         for (var part : longer) {
             checkInterrupted();
             if (part.equals(shorter.get(i)) && ++i == shorter.size()) return true;
         }
         return false;
+    }
+
+    private static int federalYear(Document doc) {
+        Element officialTitle = doc.selectFirst("form > official-title");
+        int year = appropriationsYear(officialTitle, 0);
+        if (year != 0) return year;
+        Element opening = doc.selectFirst("legis-body > section > text");
+        return opening == null ? 0 : year(FEDERAL_YEAR, opening.text());
+    }
+
+    private static int appropriationsYear(Element heading, int fallback) {
+        if (heading == null) return fallback;
+        int year = year(YEAR, heading.text());
+        if (year == 0) year = year(FEDERAL_YEAR, heading.text());
+        return year == 0 ? fallback : year;
     }
 
     private static int headingRank(Element element) {
